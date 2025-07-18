@@ -5,25 +5,25 @@ import { Plus, Download, Upload, FileText } from "lucide-react"
 
 export default function Dashboard() {
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex flex-col space-y-3 md:space-y-0 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground">Dashboard</h1>
+          <p className="text-sm md:text-base text-muted-foreground">
             Welcome to Emerald HRIS - Your complete HR management solution
           </p>
         </div>
-        <div className="flex space-x-2">
-          <Button variant="outline" size="sm">
-            <Upload className="mr-2 h-4 w-4" />
+        <div className="flex flex-col sm:flex-row gap-2">
+          <Button variant="outline" size="sm" className="text-xs md:text-sm">
+            <Upload className="mr-2 h-3 w-3 md:h-4 md:w-4" />
             Import Data
           </Button>
-          <Button variant="outline" size="sm">
-            <Download className="mr-2 h-4 w-4" />
+          <Button variant="outline" size="sm" className="text-xs md:text-sm">
+            <Download className="mr-2 h-3 w-3 md:h-4 md:w-4" />
             Export Reports
           </Button>
-          <Button size="sm">
-            <Plus className="mr-2 h-4 w-4" />
+          <Button size="sm" className="text-xs md:text-sm">
+            <Plus className="mr-2 h-3 w-3 md:h-4 md:w-4" />
             Add Employee
           </Button>
         </div>
@@ -31,7 +31,7 @@ export default function Dashboard() {
 
       <DashboardStats />
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 md:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
         <Card className="border-border/50 shadow-sm">
           <CardHeader>
             <CardTitle className="flex items-center text-primary">

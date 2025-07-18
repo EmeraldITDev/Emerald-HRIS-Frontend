@@ -88,36 +88,36 @@ export default function Employees() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "Active":
-        return <Badge className="bg-success/10 text-success border-success/20">Active</Badge>
+        return <Badge className="bg-success/10 text-success border-success/20 text-xs">Active</Badge>
       case "On Leave":
-        return <Badge className="bg-warning/10 text-warning border-warning/20">On Leave</Badge>
+        return <Badge className="bg-warning/10 text-warning border-warning/20 text-xs">On Leave</Badge>
       case "Inactive":
-        return <Badge className="bg-destructive/10 text-destructive border-destructive/20">Inactive</Badge>
+        return <Badge className="bg-destructive/10 text-destructive border-destructive/20 text-xs">Inactive</Badge>
       default:
-        return <Badge variant="secondary">{status}</Badge>
+        return <Badge variant="secondary" className="text-xs">{status}</Badge>
     }
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex flex-col space-y-3 md:space-y-0 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Employee Records</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground">Employee Records</h1>
+          <p className="text-sm md:text-base text-muted-foreground">
             Manage comprehensive employee information and records
           </p>
         </div>
-        <div className="flex space-x-2">
-          <Button variant="outline" size="sm">
-            <Upload className="mr-2 h-4 w-4" />
+        <div className="flex flex-col sm:flex-row gap-2">
+          <Button variant="outline" size="sm" className="text-xs md:text-sm">
+            <Upload className="mr-2 h-3 w-3 md:h-4 md:w-4" />
             Import CSV
           </Button>
-          <Button variant="outline" size="sm">
-            <Download className="mr-2 h-4 w-4" />
+          <Button variant="outline" size="sm" className="text-xs md:text-sm">
+            <Download className="mr-2 h-3 w-3 md:h-4 md:w-4" />
             Export Data
           </Button>
-          <Button size="sm">
-            <Plus className="mr-2 h-4 w-4" />
+          <Button size="sm" className="text-xs md:text-sm">
+            <Plus className="mr-2 h-3 w-3 md:h-4 md:w-4" />
             Add Employee
           </Button>
         </div>
@@ -143,64 +143,69 @@ export default function Employees() {
           </div>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Employee ID</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Department</TableHead>
-                <TableHead>Position</TableHead>
-                <TableHead>Salary</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Join Date</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredEmployees.map((employee) => (
-                <TableRow key={employee.id} className="hover:bg-accent/30">
-                  <TableCell className="font-medium">{employee.id}</TableCell>
-                  <TableCell>
-                    <div>
-                      <div className="font-medium">{employee.name}</div>
-                      <div className="text-sm text-muted-foreground">{employee.email}</div>
-                    </div>
-                  </TableCell>
-                  <TableCell>{employee.department}</TableCell>
-                  <TableCell>{employee.position}</TableCell>
-                  <TableCell className="font-medium">{employee.salary}</TableCell>
-                  <TableCell>{getStatusBadge(employee.status)}</TableCell>
-                  <TableCell>{employee.joinDate}</TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="bg-popover border shadow-lg">
-                        <DropdownMenuItem>
-                          <Eye className="mr-2 h-4 w-4" />
-                          View Details
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <Edit className="mr-2 h-4 w-4" />
-                          Edit Employee
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <Download className="mr-2 h-4 w-4" />
-                          Download Profile
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
+          {/* Mobile-responsive table wrapper */}
+          <div className="overflow-x-auto -mx-3 md:mx-0">
+            <Table className="min-w-full">
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-xs md:text-sm">Employee ID</TableHead>
+                  <TableHead className="text-xs md:text-sm">Name</TableHead>
+                  <TableHead className="hidden sm:table-cell text-xs md:text-sm">Department</TableHead>
+                  <TableHead className="hidden md:table-cell text-xs md:text-sm">Position</TableHead>
+                  <TableHead className="hidden lg:table-cell text-xs md:text-sm">Salary</TableHead>
+                  <TableHead className="text-xs md:text-sm">Status</TableHead>
+                  <TableHead className="hidden xl:table-cell text-xs md:text-sm">Join Date</TableHead>
+                  <TableHead className="text-right text-xs md:text-sm">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredEmployees.map((employee) => (
+                  <TableRow key={employee.id} className="hover:bg-accent/30">
+                    <TableCell className="font-medium text-xs md:text-sm">{employee.id}</TableCell>
+                    <TableCell className="min-w-0">
+                      <div>
+                        <div className="font-medium text-xs md:text-sm truncate">{employee.name}</div>
+                        <div className="text-xs text-muted-foreground truncate">{employee.email}</div>
+                        {/* Show department on mobile when hidden */}
+                        <div className="text-xs text-muted-foreground sm:hidden">{employee.department}</div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="hidden sm:table-cell text-xs md:text-sm">{employee.department}</TableCell>
+                    <TableCell className="hidden md:table-cell text-xs md:text-sm">{employee.position}</TableCell>
+                    <TableCell className="hidden lg:table-cell font-medium text-xs md:text-sm">{employee.salary}</TableCell>
+                    <TableCell>{getStatusBadge(employee.status)}</TableCell>
+                    <TableCell className="hidden xl:table-cell text-xs md:text-sm">{employee.joinDate}</TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="h-6 w-6 md:h-8 md:w-8 p-0">
+                            <MoreHorizontal className="h-3 w-3 md:h-4 md:w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="bg-popover border shadow-lg">
+                          <DropdownMenuItem className="text-xs md:text-sm">
+                            <Eye className="mr-2 h-3 w-3 md:h-4 md:w-4" />
+                            View Details
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="text-xs md:text-sm">
+                            <Edit className="mr-2 h-3 w-3 md:h-4 md:w-4" />
+                            Edit Employee
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="text-xs md:text-sm">
+                            <Download className="mr-2 h-3 w-3 md:h-4 md:w-4" />
+                            Download Profile
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
                 </TableRow>
               ))}
-            </TableBody>
-          </Table>
+              </TableBody>
+            </Table>
+          </div>
           
           {filteredEmployees.length === 0 && (
-            <div className="text-center py-8 text-muted-foreground">
+            <div className="text-center py-8 text-muted-foreground text-sm">
               No employees found matching your search criteria.
             </div>
           )}

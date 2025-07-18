@@ -27,6 +27,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
+import { useIsMobile } from "@/hooks/use-mobile"
 
 const navigationItems = [
   { title: "Dashboard", url: "/", icon: Home },
@@ -53,6 +54,7 @@ export function AppSidebar() {
   const location = useLocation()
   const currentPath = location.pathname
   const isCollapsed = state === "collapsed"
+  const isMobile = useIsMobile()
 
   const isActive = (path: string) => currentPath === path
 
@@ -63,11 +65,11 @@ export function AppSidebar() {
   }
 
   return (
-    <Sidebar className={isCollapsed ? "w-14" : "w-64"} collapsible="icon">
+    <Sidebar className={isCollapsed || isMobile ? "w-14" : "w-64"} collapsible="icon">
       <SidebarContent className="bg-card border-r">
         <SidebarGroup>
-          <SidebarGroupLabel className="text-primary font-semibold">
-            Main Navigation
+          <SidebarGroupLabel className="text-primary font-semibold text-xs">
+            {!isCollapsed && !isMobile ? "Main Navigation" : "Main"}
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -79,8 +81,8 @@ export function AppSidebar() {
                       end 
                       className={`${getNavClasses(item.url)} flex items-center space-x-3 px-3 py-2 rounded-md transition-colors`}
                     >
-                      <item.icon className="h-5 w-5 flex-shrink-0" />
-                      {!isCollapsed && <span>{item.title}</span>}
+                      <item.icon className="h-4 w-4 md:h-5 md:w-5 flex-shrink-0" />
+                      {(!isCollapsed && !isMobile) && <span className="text-sm">{item.title}</span>}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -90,8 +92,8 @@ export function AppSidebar() {
         </SidebarGroup>
 
         <SidebarGroup>
-          <SidebarGroupLabel className="text-primary font-semibold">
-            System Tools
+          <SidebarGroupLabel className="text-primary font-semibold text-xs">
+            {!isCollapsed && !isMobile ? "System Tools" : "Tools"}
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -103,8 +105,8 @@ export function AppSidebar() {
                       end 
                       className={`${getNavClasses(item.url)} flex items-center space-x-3 px-3 py-2 rounded-md transition-colors`}
                     >
-                      <item.icon className="h-5 w-5 flex-shrink-0" />
-                      {!isCollapsed && <span>{item.title}</span>}
+                      <item.icon className="h-4 w-4 md:h-5 md:w-5 flex-shrink-0" />
+                      {(!isCollapsed && !isMobile) && <span className="text-sm">{item.title}</span>}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

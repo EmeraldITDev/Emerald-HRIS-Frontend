@@ -250,7 +250,7 @@ export default function Employees() {
                       <SelectValue placeholder="Select vacation days" />
                     </SelectTrigger>
                     <SelectContent className="bg-popover border shadow-lg">
-                      {[15, 20, 25, 30].map((days) => (
+                      {Array.from({length: 24}, (_, i) => i + 7).map((days) => (
                         <SelectItem key={days} value={days.toString()}>{days} days</SelectItem>
                       ))}
                     </SelectContent>

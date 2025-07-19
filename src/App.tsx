@@ -8,6 +8,7 @@ import Dashboard from "./pages/Dashboard";
 import Employees from "./pages/Employees";
 import Attendance from "./pages/Attendance";
 import Payroll from "./pages/Payroll";
+import Recruitment from "./pages/Recruitment";
 import ComingSoon from "./pages/ComingSoon";
 import NotFound from "./pages/NotFound";
 
@@ -24,7 +25,7 @@ const App = () => (
             <Route path="/" element={<Dashboard />} />
             <Route path="/employees" element={<Employees />} />
             <Route path="/attendance" element={<Attendance />} />
-            <Route path="/recruitment" element={<ComingSoon title="Recruitment Tracker" description="Manage job openings and candidate applications" />} />
+            <Route path="/recruitment" element={<Recruitment />} />
             <Route path="/payroll" element={<Payroll />} />
             <Route path="/performance" element={<ComingSoon title="Performance Reviews" description="Manage employee performance evaluations" />} />
             <Route path="/training" element={<ComingSoon title="Training & Development" description="Track training programs and certifications" />} />

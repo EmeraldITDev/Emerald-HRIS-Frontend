@@ -31,7 +31,7 @@ export default function Layout({ children }: LayoutProps) {
                 />
                 <div className="min-w-0 flex-1">
                   <h1 className="text-sm md:text-xl font-semibold text-primary truncate">
-                    {isMobile ? "HRIS" : "Emerald HRIS"}
+                    HRIS
                   </h1>
                   {!isMobile && (
                     <p className="text-xs text-muted-foreground hidden sm:block">

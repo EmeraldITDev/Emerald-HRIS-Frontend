@@ -2,7 +2,16 @@ import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { 
   Table, 
   TableBody, 
@@ -28,62 +37,116 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
-// Sample employee data
+// Sample employee data with updated fields
 const employees = [
   {
     id: "EMP001",
-    name: "Adebayo Johnson",
+    firstName: "Adebayo",
+    lastName: "Johnson",
     email: "adebayo.johnson@company.com",
     department: "Engineering",
     position: "Senior Software Engineer",
     salary: "₦2,500,000",
     status: "Active",
     joinDate: "2022-03-15",
-    phone: "+234 803 123 4567"
+    phone: "+234 803 123 4567",
+    vacationDays: 25,
+    employmentType: "FTE"
   },
   {
-    id: "EMP002", 
-    name: "Fatima Abdul",
+    id: "EMP002",
+    firstName: "Fatima",
+    lastName: "Abdul",
     email: "fatima.abdul@company.com",
-    department: "Human Resources",
+    department: "Accounting",
     position: "HR Manager",
     salary: "₦1,800,000",
     status: "Active",
     joinDate: "2021-08-20",
-    phone: "+234 807 654 3210"
+    phone: "+234 807 654 3210",
+    vacationDays: 30,
+    employmentType: "FTE"
   },
   {
     id: "EMP003",
-    name: "Chinedu Okafor",
-    email: "chinedu.okafor@company.com", 
-    department: "Finance",
+    firstName: "Chinedu",
+    lastName: "Okafor",
+    email: "chinedu.okafor@company.com",
+    department: "Supply Chain",
     position: "Financial Analyst",
     salary: "₦1,200,000",
     status: "On Leave",
     joinDate: "2023-01-10",
-    phone: "+234 815 987 6543"
+    phone: "+234 815 987 6543",
+    vacationDays: 20,
+    employmentType: "Consultant"
   },
   {
     id: "EMP004",
-    name: "Kemi Adeleke",
+    firstName: "Kemi",
+    lastName: "Adeleke",
     email: "kemi.adeleke@company.com",
     department: "Marketing",
-    position: "Marketing Specialist", 
+    position: "Marketing Specialist",
     salary: "₦950,000",
     status: "Active",
     joinDate: "2023-06-05",
-    phone: "+234 809 246 8135"
+    phone: "+234 809 246 8135",
+    vacationDays: 25,
+    employmentType: "FTE"
   }
 ]
 
 export default function Employees() {
   const [searchTerm, setSearchTerm] = useState("")
 
+  const [showAddEmployee, setShowAddEmployee] = useState(false)
+  const [newEmployee, setNewEmployee] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    department: "",
+    position: "",
+    vacationDays: "",
+    employmentType: "",
+    phone: ""
+  })
+
+  const departments = [
+    "Accounting", "Info Technology", "Supply Chain", "Executive", 
+    "Business Development", "Technician", "Engineering", "Administration", "Marketing"
+  ]
+
   const filteredEmployees = employees.filter(employee =>
-    employee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    `${employee.firstName} ${employee.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
     employee.department.toLowerCase().includes(searchTerm.toLowerCase()) ||
     employee.position.toLowerCase().includes(searchTerm.toLowerCase())
   )
+
+  const handleAddEmployee = () => {
+    const empId = `EMP${String(employees.length + 1).padStart(3, '0')}`
+    const employee = {
+      id: empId,
+      ...newEmployee,
+      salary: "₦0",
+      status: "Active",
+      joinDate: new Date().toISOString().split('T')[0],
+      vacationDays: parseInt(newEmployee.vacationDays) || 20
+    }
+    
+    employees.push(employee)
+    setNewEmployee({
+      firstName: "",
+      lastName: "",
+      email: "",
+      department: "",
+      position: "",
+      vacationDays: "",
+      employmentType: "",
+      phone: ""
+    })
+    setShowAddEmployee(false)
+  }
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -116,10 +179,117 @@ export default function Employees() {
             <Download className="mr-2 h-3 w-3 md:h-4 md:w-4" />
             Export Data
           </Button>
-          <Button size="sm" className="text-xs md:text-sm">
-            <Plus className="mr-2 h-3 w-3 md:h-4 md:w-4" />
-            Add Employee
-          </Button>
+          <Dialog open={showAddEmployee} onOpenChange={setShowAddEmployee}>
+            <DialogTrigger asChild>
+              <Button size="sm" className="text-xs md:text-sm">
+                <Plus className="mr-2 h-3 w-3 md:h-4 md:w-4" />
+                Add Employee
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Add New Employee</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="firstName">First Name *</Label>
+                    <Input
+                      id="firstName"
+                      value={newEmployee.firstName}
+                      onChange={(e) => setNewEmployee({...newEmployee, firstName: e.target.value})}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="lastName">Last Name *</Label>
+                    <Input
+                      id="lastName"
+                      value={newEmployee.lastName}
+                      onChange={(e) => setNewEmployee({...newEmployee, lastName: e.target.value})}
+                    />
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email *</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={newEmployee.email}
+                    onChange={(e) => setNewEmployee({...newEmployee, email: e.target.value})}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="department">Department *</Label>
+                  <Select value={newEmployee.department} onValueChange={(value) => setNewEmployee({...newEmployee, department: value})}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select department" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover border shadow-lg">
+                      {departments.map((dept) => (
+                        <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="position">Position *</Label>
+                  <Input
+                    id="position"
+                    value={newEmployee.position}
+                    onChange={(e) => setNewEmployee({...newEmployee, position: e.target.value})}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="vacationDays">Vacation Days</Label>
+                  <Select value={newEmployee.vacationDays} onValueChange={(value) => setNewEmployee({...newEmployee, vacationDays: value})}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select vacation days" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover border shadow-lg">
+                      {[15, 20, 25, 30].map((days) => (
+                        <SelectItem key={days} value={days.toString()}>{days} days</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="employmentType">Employment Type *</Label>
+                  <Select value={newEmployee.employmentType} onValueChange={(value) => setNewEmployee({...newEmployee, employmentType: value})}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select type" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover border shadow-lg">
+                      <SelectItem value="FTE">Full-Time Employee (FTE)</SelectItem>
+                      <SelectItem value="Consultant">Consultant</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Phone</Label>
+                  <Input
+                    id="phone"
+                    value={newEmployee.phone}
+                    onChange={(e) => setNewEmployee({...newEmployee, phone: e.target.value})}
+                  />
+                </div>
+                
+                <div className="flex justify-end space-x-2 pt-4">
+                  <Button variant="outline" onClick={() => setShowAddEmployee(false)}>
+                    Cancel
+                  </Button>
+                  <Button onClick={handleAddEmployee}>
+                    Add Employee
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
@@ -152,9 +322,9 @@ export default function Employees() {
                   <TableHead className="text-xs md:text-sm">Name</TableHead>
                   <TableHead className="hidden sm:table-cell text-xs md:text-sm">Department</TableHead>
                   <TableHead className="hidden md:table-cell text-xs md:text-sm">Position</TableHead>
-                  <TableHead className="hidden lg:table-cell text-xs md:text-sm">Salary</TableHead>
+                  <TableHead className="hidden lg:table-cell text-xs md:text-sm">Vacation Days</TableHead>
+                  <TableHead className="hidden lg:table-cell text-xs md:text-sm">Employment Type</TableHead>
                   <TableHead className="text-xs md:text-sm">Status</TableHead>
-                  <TableHead className="hidden xl:table-cell text-xs md:text-sm">Join Date</TableHead>
                   <TableHead className="text-right text-xs md:text-sm">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -164,7 +334,7 @@ export default function Employees() {
                     <TableCell className="font-medium text-xs md:text-sm">{employee.id}</TableCell>
                     <TableCell className="min-w-0">
                       <div>
-                        <div className="font-medium text-xs md:text-sm truncate">{employee.name}</div>
+                        <div className="font-medium text-xs md:text-sm truncate">{employee.firstName} {employee.lastName}</div>
                         <div className="text-xs text-muted-foreground truncate">{employee.email}</div>
                         {/* Show department on mobile when hidden */}
                         <div className="text-xs text-muted-foreground sm:hidden">{employee.department}</div>
@@ -172,9 +342,13 @@ export default function Employees() {
                     </TableCell>
                     <TableCell className="hidden sm:table-cell text-xs md:text-sm">{employee.department}</TableCell>
                     <TableCell className="hidden md:table-cell text-xs md:text-sm">{employee.position}</TableCell>
-                    <TableCell className="hidden lg:table-cell font-medium text-xs md:text-sm">{employee.salary}</TableCell>
+                    <TableCell className="hidden lg:table-cell text-xs md:text-sm">{employee.vacationDays} days</TableCell>
+                    <TableCell className="hidden lg:table-cell text-xs md:text-sm">
+                      <Badge variant={employee.employmentType === 'FTE' ? 'default' : 'secondary'} className="text-xs">
+                        {employee.employmentType}
+                      </Badge>
+                    </TableCell>
                     <TableCell>{getStatusBadge(employee.status)}</TableCell>
-                    <TableCell className="hidden xl:table-cell text-xs md:text-sm">{employee.joinDate}</TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>

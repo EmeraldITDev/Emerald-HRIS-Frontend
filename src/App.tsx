@@ -6,6 +6,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
 import Employees from "./pages/Employees";
+import Attendance from "./pages/Attendance";
+import Payroll from "./pages/Payroll";
 import ComingSoon from "./pages/ComingSoon";
 import NotFound from "./pages/NotFound";
 
@@ -21,9 +23,9 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/employees" element={<Employees />} />
-            <Route path="/attendance" element={<ComingSoon title="Attendance & Leave" description="Track employee attendance and manage leave requests" />} />
+            <Route path="/attendance" element={<Attendance />} />
             <Route path="/recruitment" element={<ComingSoon title="Recruitment Tracker" description="Manage job openings and candidate applications" />} />
-            <Route path="/payroll" element={<ComingSoon title="Nigerian Payroll" description="Generate payroll with full Nigerian tax compliance" />} />
+            <Route path="/payroll" element={<Payroll />} />
             <Route path="/performance" element={<ComingSoon title="Performance Reviews" description="Manage employee performance evaluations" />} />
             <Route path="/training" element={<ComingSoon title="Training & Development" description="Track training programs and certifications" />} />
             <Route path="/benefits" element={<ComingSoon title="Benefits Administration" description="Manage employee benefits and enrollments" />} />

@@ -154,6 +154,10 @@ export default function Employees() {
         return <Badge className="bg-success/10 text-success border-success/20 text-xs">Active</Badge>
       case "On Leave":
         return <Badge className="bg-warning/10 text-warning border-warning/20 text-xs">On Leave</Badge>
+      case "Terminated":
+        return <Badge className="bg-destructive/10 text-destructive border-destructive/20 text-xs">Terminated</Badge>
+      case "Resigned":
+        return <Badge className="bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400 text-xs">Resigned</Badge>
       case "Inactive":
         return <Badge className="bg-destructive/10 text-destructive border-destructive/20 text-xs">Inactive</Badge>
       default:

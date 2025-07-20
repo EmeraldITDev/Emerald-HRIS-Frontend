@@ -7,7 +7,8 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { Upload, Users, Calendar, FileText } from "lucide-react"
+import { Upload, Users, Calendar, FileText, Edit2, Trash2, MoreHorizontal } from "lucide-react"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { useToast } from "@/hooks/use-toast"
 
 interface Candidate {
@@ -52,6 +53,7 @@ export default function Recruitment() {
   })
 
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [editingCandidate, setEditingCandidate] = useState<Candidate | null>(null)
   const { toast } = useToast()
 
   const positions = [
@@ -110,6 +112,25 @@ export default function Recruitment() {
     toast({
       title: "Candidate added",
       description: `${candidate.name} has been added to the recruitment pipeline.`
+    })
+  }
+
+  const handleEditStatus = (candidate: Candidate, newStatus: Candidate['status']) => {
+    setCandidates(candidates.map(c => 
+      c.id === candidate.id ? { ...c, status: newStatus } : c
+    ))
+    toast({
+      title: "Status updated",
+      description: `${candidate.name}'s status has been updated to ${newStatus}.`
+    })
+  }
+
+  const handleDeleteCandidate = (candidateId: string) => {
+    const candidate = candidates.find(c => c.id === candidateId)
+    setCandidates(candidates.filter(c => c.id !== candidateId))
+    toast({
+      title: "Candidate deleted",
+      description: `${candidate?.name} has been removed from the recruitment pipeline.`
     })
   }
 
@@ -299,6 +320,7 @@ export default function Recruitment() {
                   <TableHead>Status</TableHead>
                   <TableHead className="hidden lg:table-cell">Applied Date</TableHead>
                   <TableHead className="hidden md:table-cell">Resume</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -309,9 +331,25 @@ export default function Recruitment() {
                     <TableCell className="hidden md:table-cell">{candidate.email}</TableCell>
                     <TableCell>{candidate.position}</TableCell>
                     <TableCell>
-                      <Badge className={getStatusColor(candidate.status)}>
-                        {candidate.status}
-                      </Badge>
+                      <Select
+                        value={candidate.status}
+                        onValueChange={(value) => handleEditStatus(candidate, value as Candidate['status'])}
+                      >
+                        <SelectTrigger className="w-auto h-8 border-none shadow-none p-0">
+                          <Badge className={getStatusColor(candidate.status)}>
+                            {candidate.status}
+                          </Badge>
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="New">New</SelectItem>
+                          <SelectItem value="Reviewing">Reviewing</SelectItem>
+                          <SelectItem value="Interview Scheduled">Interview Scheduled</SelectItem>
+                          <SelectItem value="Interviewed">Interviewed</SelectItem>
+                          <SelectItem value="Offered">Offered</SelectItem>
+                          <SelectItem value="Hired">Hired</SelectItem>
+                          <SelectItem value="Rejected">Rejected</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </TableCell>
                     <TableCell className="hidden lg:table-cell">{candidate.appliedDate}</TableCell>
                     <TableCell className="hidden md:table-cell">
@@ -323,6 +361,28 @@ export default function Recruitment() {
                       ) : (
                         <span className="text-muted-foreground text-sm">No file</span>
                       )}
+                    </TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => setEditingCandidate(candidate)}>
+                            <Edit2 className="mr-2 h-4 w-4" />
+                            Edit Details
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={() => handleDeleteCandidate(candidate.id)}
+                            className="text-destructive"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 ))}

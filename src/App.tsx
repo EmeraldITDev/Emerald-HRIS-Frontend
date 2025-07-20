@@ -11,6 +11,11 @@ import Payroll from "./pages/Payroll";
 import Recruitment from "./pages/Recruitment";
 import ComingSoon from "./pages/ComingSoon";
 import NotFound from "./pages/NotFound";
+import Performance from "./pages/Performance";
+import Training from "./pages/Training";
+import Benefits from "./pages/Benefits";
+import Analytics from "./pages/Analytics";
+import Reports from "./pages/Reports";
 
 const queryClient = new QueryClient();
 
@@ -27,12 +32,12 @@ const App = () => (
             <Route path="/attendance" element={<Attendance />} />
             <Route path="/recruitment" element={<Recruitment />} />
             <Route path="/payroll" element={<Payroll />} />
-            <Route path="/performance" element={<ComingSoon title="Performance Reviews" description="Manage employee performance evaluations" />} />
-            <Route path="/training" element={<ComingSoon title="Training & Development" description="Track training programs and certifications" />} />
-            <Route path="/benefits" element={<ComingSoon title="Benefits Administration" description="Manage employee benefits and enrollments" />} />
-            <Route path="/analytics" element={<ComingSoon title="People Analytics" description="View comprehensive HR reports and insights" />} />
+            <Route path="/performance" element={<Performance />} />
+            <Route path="/training" element={<Training />} />
+            <Route path="/benefits" element={<Benefits />} />
+            <Route path="/analytics" element={<Analytics />} />
             <Route path="/time" element={<ComingSoon title="Time Tracking" description="Advanced time and attendance tracking" />} />
-            <Route path="/reports" element={<ComingSoon title="Reports" description="Generate and export detailed HR reports" />} />
+            <Route path="/reports" element={<Reports />} />
             <Route path="/announcements" element={<ComingSoon title="Announcements" description="Internal company announcements and communications" />} />
             <Route path="/security" element={<ComingSoon title="Security & Admin" description="System security controls and user management" />} />
             <Route path="/settings" element={<ComingSoon title="Settings" description="System configuration and preferences" />} />

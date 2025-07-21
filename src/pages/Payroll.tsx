@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Calculator, Download, FileText, Lock, Settings } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
 
 // Sample payroll data
 const payrollRecords = [
@@ -73,6 +74,7 @@ export default function Payroll() {
     bonuses: "",
     medicalAllowance: "",
   })
+  const { toast } = useToast()
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-NG', {
@@ -139,6 +141,60 @@ export default function Payroll() {
   }
 
   const calculations = calculatePayroll()
+
+  const savePayroll = () => {
+    if (!selectedEmployee || !selectedPeriod) return
+
+    const selectedEmp = employees.find(emp => emp.id === selectedEmployee)
+    if (!selectedEmp) return
+
+    // Update employee salary in the system
+    const employeeIndex = employees.findIndex(emp => emp.id === selectedEmployee)
+    if (employeeIndex !== -1) {
+      employees[employeeIndex].basicSalary = calculations.netPay
+    }
+
+    // Create payroll record
+    const newPayrollRecord = {
+      id: `PAY${String(payrollRecords.length + 1).padStart(3, '0')}`,
+      employeeId: selectedEmployee,
+      employeeName: selectedEmp.name,
+      basicSalary: parseFloat(payrollData.basicSalary) || 0,
+      allowances: (parseFloat(payrollData.housingAllowance) || 0) + 
+                  (parseFloat(payrollData.transportAllowance) || 0) + 
+                  (parseFloat(payrollData.mealAllowance) || 0) + 
+                  (parseFloat(payrollData.medicalAllowance) || 0) + 
+                  (parseFloat(payrollData.bonuses) || 0) + calculations.overtimePay,
+      grossPay: calculations.grossPay,
+      paye: calculations.paye,
+      pension: calculations.pensionEmployee,
+      nhf: calculations.nhf,
+      netPay: calculations.netPay,
+      period: selectedPeriod,
+      status: "Processed"
+    }
+
+    payrollRecords.push(newPayrollRecord)
+
+    toast({
+      title: "Payroll Saved",
+      description: `Payroll for ${selectedEmp.name} has been saved and employee salary updated to ${formatCurrency(calculations.netPay)}.`
+    })
+
+    // Reset form
+    setPayrollData({
+      basicSalary: "",
+      housingAllowance: "",
+      transportAllowance: "",
+      mealAllowance: "",
+      overtimeHours: "",
+      overtimeRate: "",
+      bonuses: "",
+      medicalAllowance: "",
+    })
+    setSelectedEmployee("")
+    setSelectedPeriod("")
+  }
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -410,6 +466,17 @@ export default function Payroll() {
                     </div>
                   </div>
                 </div>
+              </div>
+
+              {/* Save Payroll Button */}
+              <div className="flex justify-end border-t pt-4">
+                <Button 
+                  onClick={() => savePayroll()}
+                  disabled={!selectedEmployee || !selectedPeriod}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                >
+                  Save Payroll & Update Employee Record
+                </Button>
               </div>
             </div>
           </CardContent>

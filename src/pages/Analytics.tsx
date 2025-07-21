@@ -35,6 +35,15 @@ const employmentTypeData = [
   { name: "Consultants", value: 1, color: "#f59e0b" }
 ]
 
+const salaryData = [
+  { month: "Jan", totalSalary: 6500000 },
+  { month: "Feb", totalSalary: 6500000 },
+  { month: "Mar", totalSalary: 6500000 },
+  { month: "Apr", totalSalary: 6500000 },
+  { month: "May", totalSalary: 6500000 },
+  { month: "Jun", totalSalary: 6650000 }
+]
+
 const COLORS = ['#10b981', '#f59e0b', '#3b82f6', '#ef4444']
 
 export default function Analytics() {
@@ -45,6 +54,7 @@ export default function Analytics() {
 
   const totalHires = hiringData.reduce((sum, month) => sum + month.hires, 0)
   const avgAttendance = attendanceData.reduce((sum, month) => sum + month.present, 0) / attendanceData.length
+  const totalSalaryExpense = salaryData[salaryData.length - 1].totalSalary
 
   return (
     <div className="space-y-6">
@@ -54,7 +64,7 @@ export default function Analytics() {
       </div>
 
       {/* Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Employees</CardTitle>
@@ -96,6 +106,17 @@ export default function Analytics() {
           <CardContent>
             <div className="text-2xl font-bold text-purple-600">{vacationUtilization.toFixed(1)}%</div>
             <p className="text-xs text-muted-foreground">Of allocated days</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Salary Expense</CardTitle>
+            <Briefcase className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-indigo-600">₦{(totalSalaryExpense / 1000000).toFixed(1)}M</div>
+            <p className="text-xs text-muted-foreground">Monthly payroll</p>
           </CardContent>
         </Card>
       </div>
@@ -172,7 +193,7 @@ export default function Analytics() {
       </div>
 
       {/* Charts Row 2 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Hiring Trends */}
         <Card>
           <CardHeader>
@@ -213,6 +234,25 @@ export default function Analytics() {
                 <Tooltip />
                 <Bar dataKey="present" fill="#10b981" name="Present %" />
                 <Bar dataKey="absent" fill="#ef4444" name="Absent %" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Salary Expense Trends */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Salary Expense Trends</CardTitle>
+            <CardDescription>Monthly salary expenses in millions</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={salaryData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" />
+                <YAxis tickFormatter={(value) => `₦${(value / 1000000).toFixed(1)}M`} />
+                <Tooltip formatter={(value) => [`₦${(Number(value) / 1000000).toFixed(2)}M`, 'Salary Expense']} />
+                <Bar dataKey="totalSalary" fill="#6366f1" name="Total Salary" />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>

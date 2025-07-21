@@ -15,6 +15,8 @@ interface PerformanceReview {
   id: string
   employeeId: string
   employeeName: string
+  managerId: string
+  managerName: string
   reviewPeriod: string
   status: 'Completed' | 'Pending' | 'In Progress'
   overallRating: 'Exceptional' | 'Exceeds Expectations' | 'Meets Expectations' | 'Needs Improvement' | 'Below Expectations'
@@ -37,6 +39,8 @@ export default function Performance() {
       id: '1',
       employeeId: 'EMP001',
       employeeName: 'Adebayo Johnson',
+      managerId: 'EMP002',
+      managerName: 'Fatima Abdul',
       reviewPeriod: '2024 Q1',
       status: 'Pending',
       overallRating: 'Meets Expectations',
@@ -49,6 +53,8 @@ export default function Performance() {
       id: '2',
       employeeId: 'EMP002',
       employeeName: 'Fatima Abdul',
+      managerId: 'EMP001',
+      managerName: 'Adebayo Johnson',
       reviewPeriod: '2024 Q1',
       status: 'Pending',
       overallRating: 'Meets Expectations',
@@ -61,6 +67,8 @@ export default function Performance() {
       id: '3',
       employeeId: 'EMP003',
       employeeName: 'Chinedu Okafor',
+      managerId: 'EMP002',
+      managerName: 'Fatima Abdul',
       reviewPeriod: '2024 Q1',
       status: 'Completed',
       overallRating: 'Exceeds Expectations',
@@ -73,6 +81,8 @@ export default function Performance() {
       id: '4',
       employeeId: 'EMP004',
       employeeName: 'Kemi Adeleke',
+      managerId: 'EMP001',
+      managerName: 'Adebayo Johnson',
       reviewPeriod: '2024 Q1',
       status: 'Pending',
       overallRating: 'Meets Expectations',
@@ -82,6 +92,17 @@ export default function Performance() {
       lastUpdated: '2024-01-20'
     }
   ])
+
+  // Email notification function for June and December reviews
+  const sendManagerNotification = (review: PerformanceReview) => {
+    const currentMonth = new Date().getMonth() + 1
+    if (currentMonth === 6 || currentMonth === 12) {
+      toast({
+        title: "Manager Notification Sent",
+        description: `Email sent to ${review.managerName} about performance review due for ${review.employeeName}`
+      })
+    }
+  }
 
   const [selectedReview, setSelectedReview] = useState<PerformanceReview | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -95,6 +116,9 @@ export default function Performance() {
         ? { ...selectedReview, status: 'Completed', lastUpdated: new Date().toISOString().split('T')[0] }
         : review
     ))
+
+    // Send notification if it's June or December
+    sendManagerNotification(selectedReview)
 
     toast({
       title: "Review saved",
@@ -205,6 +229,7 @@ export default function Performance() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Employee</TableHead>
+                  <TableHead>Manager</TableHead>
                   <TableHead>Review Period</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Overall Rating</TableHead>
@@ -216,6 +241,7 @@ export default function Performance() {
                 {reviews.map((review) => (
                   <TableRow key={review.id}>
                     <TableCell className="font-medium">{review.employeeName}</TableCell>
+                    <TableCell>{review.managerName}</TableCell>
                     <TableCell>{review.reviewPeriod}</TableCell>
                     <TableCell>{getStatusBadge(review.status)}</TableCell>
                     <TableCell>{getRatingBadge(review.overallRating)}</TableCell>
@@ -253,6 +279,32 @@ export default function Performance() {
           
           {selectedReview && (
             <div className="grid gap-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="manager">Assigned Manager</Label>
+                <Select 
+                  value={selectedReview.managerId} 
+                  onValueChange={(value) => {
+                    const manager = employees.find(emp => emp.id === value)
+                    if (manager) {
+                      setSelectedReview({
+                        ...selectedReview, 
+                        managerId: value,
+                        managerName: manager.name
+                      })
+                    }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {employees.map((emp) => (
+                      <SelectItem key={emp.id} value={emp.id}>{emp.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="achievements">Key Achievements</Label>
                 <Textarea

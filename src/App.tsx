@@ -17,6 +17,7 @@ import Benefits from "./pages/Benefits";
 import Analytics from "./pages/Analytics";
 import Reports from "./pages/Reports";
 import Security from "./pages/Security";
+import Announcements from "./pages/Announcements";
 
 const queryClient = new QueryClient();
 
@@ -39,7 +40,7 @@ const App = () => (
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/time" element={<ComingSoon title="Time Tracking" description="Advanced time and attendance tracking" />} />
             <Route path="/reports" element={<Reports />} />
-            <Route path="/announcements" element={<ComingSoon title="Announcements" description="Internal company announcements and communications" />} />
+            <Route path="/announcements" element={<Announcements />} />
             <Route path="/security" element={<Security />} />
             <Route path="/settings" element={<ComingSoon title="Settings" description="System configuration and preferences" />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

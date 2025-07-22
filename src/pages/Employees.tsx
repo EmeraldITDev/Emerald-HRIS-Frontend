@@ -110,7 +110,9 @@ export default function Employees() {
 
   const [showAddEmployee, setShowAddEmployee] = useState(false)
   const [showViewDetails, setShowViewDetails] = useState(false)
+  const [showEditEmployee, setShowEditEmployee] = useState(false)
   const [selectedEmployee, setSelectedEmployee] = useState<any>(null)
+  const [editEmployee, setEditEmployee] = useState<any>(null)
   const [newEmployee, setNewEmployee] = useState({
     // Personal Information
     firstName: "",
@@ -240,12 +242,26 @@ export default function Employees() {
     setShowViewDetails(true)
   }
 
+  const handleEditEmployee = (employee: any) => {
+    setEditEmployee({ ...employee })
+    setShowEditEmployee(true)
+  }
+
+  const handleUpdateEmployee = () => {
+    const index = employees.findIndex(emp => emp.id === editEmployee.id)
+    if (index !== -1) {
+      employees[index] = editEmployee
+    }
+    setShowEditEmployee(false)
+    setEditEmployee(null)
+  }
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "Active":
         return <Badge className="bg-success/10 text-success border-success/20 text-xs">Active</Badge>
       case "On Leave":
-        return <Badge className="bg-warning/10 text-warning border-warning/20 text-xs">On Leave</Badge>
+        return <Badge className="bg-warning/10 text-warning border-warning/20 text-xs whitespace-nowrap">On Leave</Badge>
       case "Terminated":
         return <Badge className="bg-destructive/10 text-destructive border-destructive/20 text-xs">Terminated</Badge>
       case "Resigned":
@@ -282,21 +298,21 @@ export default function Employees() {
                 Add Employee
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
               <DialogHeader>
                 <DialogTitle>Add New Employee</DialogTitle>
               </DialogHeader>
               <Tabs defaultValue="personal" className="w-full">
-                <TabsList className="grid w-full grid-cols-5">
-                  <TabsTrigger value="personal">Personal</TabsTrigger>
-                  <TabsTrigger value="job">Job Info</TabsTrigger>
-                  <TabsTrigger value="financial">Financial</TabsTrigger>
-                  <TabsTrigger value="government">Gov IDs</TabsTrigger>
-                  <TabsTrigger value="additional">Additional</TabsTrigger>
+                <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-1">
+                  <TabsTrigger value="personal" className="text-xs sm:text-sm">Personal</TabsTrigger>
+                  <TabsTrigger value="job" className="text-xs sm:text-sm">Job Info</TabsTrigger>
+                  <TabsTrigger value="financial" className="text-xs sm:text-sm">Financial</TabsTrigger>
+                  <TabsTrigger value="government" className="text-xs sm:text-sm">Gov IDs</TabsTrigger>
+                  <TabsTrigger value="additional" className="text-xs sm:text-sm">Additional</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="personal" className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="firstName">First Name *</Label>
                       <Input
@@ -315,7 +331,7 @@ export default function Employees() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Date of Birth</Label>
                       <Popover>
@@ -847,7 +863,7 @@ export default function Employees() {
                             <Eye className="mr-2 h-3 w-3 md:h-4 md:w-4" />
                             View Details
                           </DropdownMenuItem>
-                          <DropdownMenuItem className="text-xs md:text-sm">
+                          <DropdownMenuItem className="text-xs md:text-sm" onClick={() => handleEditEmployee(employee)}>
                             <Edit className="mr-2 h-3 w-3 md:h-4 md:w-4" />
                             Edit Employee
                           </DropdownMenuItem>
@@ -874,22 +890,22 @@ export default function Employees() {
 
       {/* View Details Dialog */}
       <Dialog open={showViewDetails} onOpenChange={setShowViewDetails}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle>Employee Details</DialogTitle>
           </DialogHeader>
           {selectedEmployee && (
             <Tabs defaultValue="personal" className="w-full">
-              <TabsList className="grid w-full grid-cols-5">
-                <TabsTrigger value="personal">Personal</TabsTrigger>
-                <TabsTrigger value="job">Job Info</TabsTrigger>
-                <TabsTrigger value="financial">Financial</TabsTrigger>
-                <TabsTrigger value="government">Gov IDs</TabsTrigger>
-                <TabsTrigger value="additional">Additional</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-1">
+                <TabsTrigger value="personal" className="text-xs sm:text-sm">Personal</TabsTrigger>
+                <TabsTrigger value="job" className="text-xs sm:text-sm">Job Info</TabsTrigger>
+                <TabsTrigger value="financial" className="text-xs sm:text-sm">Financial</TabsTrigger>
+                <TabsTrigger value="government" className="text-xs sm:text-sm">Gov IDs</TabsTrigger>
+                <TabsTrigger value="additional" className="text-xs sm:text-sm">Additional</TabsTrigger>
               </TabsList>
 
               <TabsContent value="personal" className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label className="text-sm font-medium text-muted-foreground">First Name</Label>
                     <p className="text-sm">{selectedEmployee.firstName || 'N/A'}</p>
@@ -1077,6 +1093,178 @@ export default function Employees() {
                   <p className="text-sm">{selectedEmployee.assetAllocation || 'No asset allocation recorded'}</p>
                 </div>
               </TabsContent>
+            </Tabs>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Employee Dialog */}
+      <Dialog open={showEditEmployee} onOpenChange={setShowEditEmployee}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
+          <DialogHeader>
+            <DialogTitle>Edit Employee</DialogTitle>
+          </DialogHeader>
+          {editEmployee && (
+            <Tabs defaultValue="personal" className="w-full">
+              <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-1">
+                <TabsTrigger value="personal" className="text-xs sm:text-sm">Personal</TabsTrigger>
+                <TabsTrigger value="job" className="text-xs sm:text-sm">Job Info</TabsTrigger>
+                <TabsTrigger value="financial" className="text-xs sm:text-sm">Financial</TabsTrigger>
+                <TabsTrigger value="government" className="text-xs sm:text-sm">Gov IDs</TabsTrigger>
+                <TabsTrigger value="additional" className="text-xs sm:text-sm">Additional</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="personal" className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="editFirstName">First Name *</Label>
+                    <Input
+                      id="editFirstName"
+                      value={editEmployee.firstName || ''}
+                      onChange={(e) => setEditEmployee({...editEmployee, firstName: e.target.value})}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="editLastName">Last Name *</Label>
+                    <Input
+                      id="editLastName"
+                      value={editEmployee.lastName || ''}
+                      onChange={(e) => setEditEmployee({...editEmployee, lastName: e.target.value})}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="editPhoneNumber">Phone Number *</Label>
+                    <Input
+                      id="editPhoneNumber"
+                      value={editEmployee.phone || editEmployee.phoneNumber || ''}
+                      onChange={(e) => setEditEmployee({...editEmployee, phone: e.target.value})}
+                      placeholder="+234 XXX XXX XXXX"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="editEmail">Email Address *</Label>
+                    <Input
+                      id="editEmail"
+                      type="email"
+                      value={editEmployee.email || ''}
+                      onChange={(e) => setEditEmployee({...editEmployee, email: e.target.value})}
+                      placeholder="employee@company.com"
+                    />
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="job" className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="editJobTitle">Job Title *</Label>
+                    <Input
+                      id="editJobTitle"
+                      value={editEmployee.position || ''}
+                      onChange={(e) => setEditEmployee({...editEmployee, position: e.target.value})}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="editDepartment">Department *</Label>
+                    <Select value={editEmployee.department || ''} onValueChange={(value) => setEditEmployee({...editEmployee, department: value})}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select department" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover border shadow-lg">
+                        {departments.map((dept) => (
+                          <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="editEmploymentType">Employment Type *</Label>
+                    <Select value={editEmployee.employmentType || ''} onValueChange={(value) => setEditEmployee({...editEmployee, employmentType: value})}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select type" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover border shadow-lg">
+                        <SelectItem value="FTE">Full-time</SelectItem>
+                        <SelectItem value="Contract">Contract</SelectItem>
+                        <SelectItem value="Part-time">Part-time</SelectItem>
+                        <SelectItem value="Consultant">Consultant</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="editStatus">Employment Status</Label>
+                    <Select value={editEmployee.status || ''} onValueChange={(value) => setEditEmployee({...editEmployee, status: value})}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover border shadow-lg">
+                        <SelectItem value="Active">Active</SelectItem>
+                        <SelectItem value="On Leave">On Leave</SelectItem>
+                        <SelectItem value="Resigned">Resigned</SelectItem>
+                        <SelectItem value="Terminated">Terminated</SelectItem>
+                        <SelectItem value="Retired">Retired</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="editVacationDays">Vacation Days</Label>
+                  <Input
+                    id="editVacationDays"
+                    type="number"
+                    value={editEmployee.vacationDays || ''}
+                    onChange={(e) => setEditEmployee({...editEmployee, vacationDays: parseInt(e.target.value) || 0})}
+                    placeholder="25"
+                  />
+                </div>
+              </TabsContent>
+
+              <TabsContent value="financial" className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="editSalary">Gross Salary</Label>
+                  <Input
+                    id="editSalary"
+                    value={editEmployee.salary || ''}
+                    onChange={(e) => setEditEmployee({...editEmployee, salary: e.target.value})}
+                    placeholder="₦2,500,000"
+                  />
+                </div>
+              </TabsContent>
+
+              <TabsContent value="government" className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="editEmployeeId">Employee ID</Label>
+                  <Input
+                    id="editEmployeeId"
+                    value={editEmployee.id || ''}
+                    onChange={(e) => setEditEmployee({...editEmployee, id: e.target.value})}
+                    disabled
+                  />
+                </div>
+              </TabsContent>
+
+              <TabsContent value="additional" className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Additional Information</Label>
+                  <p className="text-sm text-muted-foreground">Extended employee information can be added here in future updates.</p>
+                </div>
+              </TabsContent>
+
+              <div className="flex justify-end space-x-2 pt-4 border-t">
+                <Button variant="outline" onClick={() => setShowEditEmployee(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleUpdateEmployee}>
+                  Update Employee
+                </Button>
+              </div>
             </Tabs>
           )}
         </DialogContent>

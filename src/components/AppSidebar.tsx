@@ -65,11 +65,11 @@ export function AppSidebar() {
   }
 
   return (
-    <Sidebar className={isCollapsed || isMobile ? "w-14" : "w-64"} collapsible="icon">
+    <Sidebar className={isCollapsed ? "w-14" : "w-64"} collapsible="icon">
       <SidebarContent className="bg-card border-r">
         <SidebarGroup>
           <SidebarGroupLabel className="text-primary font-semibold text-xs">
-            {!isCollapsed && !isMobile ? "Main Navigation" : "Main"}
+            {!isCollapsed ? "Main Navigation" : "Main"}
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -82,7 +82,7 @@ export function AppSidebar() {
                       className={`${getNavClasses(item.url)} flex items-center space-x-3 px-3 py-2 rounded-md transition-colors`}
                     >
                       <item.icon className="h-4 w-4 md:h-5 md:w-5 flex-shrink-0" />
-                      {(!isCollapsed && !isMobile) && <span className="text-sm">{item.title}</span>}
+                      {!isCollapsed && <span className="text-sm">{item.title}</span>}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -93,7 +93,7 @@ export function AppSidebar() {
 
         <SidebarGroup>
           <SidebarGroupLabel className="text-primary font-semibold text-xs">
-            {!isCollapsed && !isMobile ? "System Tools" : "Tools"}
+            {!isCollapsed ? "System Tools" : "Tools"}
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -106,7 +106,7 @@ export function AppSidebar() {
                       className={`${getNavClasses(item.url)} flex items-center space-x-3 px-3 py-2 rounded-md transition-colors`}
                     >
                       <item.icon className="h-4 w-4 md:h-5 md:w-5 flex-shrink-0" />
-                      {(!isCollapsed && !isMobile) && <span className="text-sm">{item.title}</span>}
+                      {!isCollapsed && <span className="text-sm">{item.title}</span>}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

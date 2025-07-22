@@ -16,6 +16,7 @@ import Training from "./pages/Training";
 import Benefits from "./pages/Benefits";
 import Analytics from "./pages/Analytics";
 import Reports from "./pages/Reports";
+import Security from "./pages/Security";
 
 const queryClient = new QueryClient();
 
@@ -39,7 +40,7 @@ const App = () => (
             <Route path="/time" element={<ComingSoon title="Time Tracking" description="Advanced time and attendance tracking" />} />
             <Route path="/reports" element={<Reports />} />
             <Route path="/announcements" element={<ComingSoon title="Announcements" description="Internal company announcements and communications" />} />
-            <Route path="/security" element={<ComingSoon title="Security & Admin" description="System security controls and user management" />} />
+            <Route path="/security" element={<Security />} />
             <Route path="/settings" element={<ComingSoon title="Settings" description="System configuration and preferences" />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

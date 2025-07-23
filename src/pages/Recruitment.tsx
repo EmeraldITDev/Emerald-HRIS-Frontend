@@ -48,7 +48,8 @@ export default function Recruitment() {
     name: '',
     phone: '',
     email: '',
-    position: '',
+    department: '',
+    roleApplied: '',
     resumeFile: null as File | null
   })
 
@@ -56,17 +57,17 @@ export default function Recruitment() {
   const [editingCandidate, setEditingCandidate] = useState<Candidate | null>(null)
   const { toast } = useToast()
 
-  const positions = [
-    'Software Engineer',
-    'Marketing Manager',
-    'Accountant',
-    'HR Manager',
-    'Sales Representative',
-    'Project Manager',
-    'Data Analyst',
-    'Business Analyst',
-    'DevOps Engineer',
-    'UI/UX Designer'
+  const departments = [
+    'Engineering',
+    'Marketing',
+    'Finance',
+    'Human Resources',
+    'Sales',
+    'Operations',
+    'Product',
+    'Design',
+    'Customer Service',
+    'Legal'
   ]
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -85,7 +86,7 @@ export default function Recruitment() {
   }
 
   const handleAddCandidate = () => {
-    if (!newCandidate.name || !newCandidate.phone || !newCandidate.email || !newCandidate.position) {
+    if (!newCandidate.name || !newCandidate.phone || !newCandidate.email || !newCandidate.department || !newCandidate.roleApplied) {
       toast({
         title: "Missing information",
         description: "Please fill in all required fields.",
@@ -99,14 +100,14 @@ export default function Recruitment() {
       name: newCandidate.name,
       phone: newCandidate.phone,
       email: newCandidate.email,
-      position: newCandidate.position,
+      position: newCandidate.roleApplied,
       resumeFile: newCandidate.resumeFile || undefined,
       status: 'New',
       appliedDate: new Date().toISOString().split('T')[0]
     }
 
     setCandidates([candidate, ...candidates])
-    setNewCandidate({ name: '', phone: '', email: '', position: '', resumeFile: null })
+    setNewCandidate({ name: '', phone: '', email: '', department: '', roleApplied: '', resumeFile: null })
     setIsDialogOpen(false)
     
     toast({
@@ -204,17 +205,27 @@ export default function Recruitment() {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="position">Position Applied *</Label>
-                <Select onValueChange={(value) => setNewCandidate({...newCandidate, position: value})}>
+                <Label htmlFor="department">Department Applied *</Label>
+                <Select onValueChange={(value) => setNewCandidate({...newCandidate, department: value})}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select position" />
+                    <SelectValue placeholder="Select department" />
                   </SelectTrigger>
                   <SelectContent>
-                    {positions.map((position) => (
-                      <SelectItem key={position} value={position}>{position}</SelectItem>
+                    {departments.map((department) => (
+                      <SelectItem key={department} value={department}>{department}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="roleApplied">Role Applied *</Label>
+                <Input
+                  id="roleApplied"
+                  value={newCandidate.roleApplied}
+                  onChange={(e) => setNewCandidate({...newCandidate, roleApplied: e.target.value})}
+                  placeholder="Enter specific role (e.g., Senior Software Engineer)"
+                />
               </div>
               
               <div className="space-y-2">

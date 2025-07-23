@@ -261,7 +261,7 @@ export default function Employees() {
       case "Active":
         return <Badge className="bg-success/10 text-success border-success/20 text-xs">Active</Badge>
       case "On Leave":
-        return <Badge className="bg-warning/10 text-warning border-warning/20 text-xs whitespace-nowrap">On Leave</Badge>
+        return <Badge className="bg-warning/10 text-warning border-warning/20 text-xs whitespace-nowrap shrink-0">On Leave</Badge>
       case "Terminated":
         return <Badge className="bg-destructive/10 text-destructive border-destructive/20 text-xs">Terminated</Badge>
       case "Resigned":
@@ -904,138 +904,140 @@ export default function Employees() {
                 <TabsTrigger value="additional" className="text-xs sm:text-sm">Additional</TabsTrigger>
               </TabsList>
 
-              <TabsContent value="personal" className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
+              <TabsContent value="personal" className="space-y-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="space-y-2">
                     <Label className="text-sm font-medium text-muted-foreground">First Name</Label>
-                    <p className="text-sm">{selectedEmployee.firstName || 'N/A'}</p>
+                    <p className="text-base font-medium">{selectedEmployee.firstName || 'N/A'}</p>
                   </div>
-                  <div>
+                  <div className="space-y-2">
                     <Label className="text-sm font-medium text-muted-foreground">Last Name</Label>
-                    <p className="text-sm">{selectedEmployee.lastName || 'N/A'}</p>
+                    <p className="text-base font-medium">{selectedEmployee.lastName || 'N/A'}</p>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="space-y-2">
                     <Label className="text-sm font-medium text-muted-foreground">Date of Birth</Label>
-                    <p className="text-sm">{selectedEmployee.dateOfBirth ? format(selectedEmployee.dateOfBirth, "PPP") : 'N/A'}</p>
+                    <p className="text-base">{selectedEmployee.dateOfBirth ? format(selectedEmployee.dateOfBirth, "PPP") : 'N/A'}</p>
                   </div>
-                  <div>
+                  <div className="space-y-2">
                     <Label className="text-sm font-medium text-muted-foreground">Gender</Label>
-                    <p className="text-sm">{selectedEmployee.gender || 'N/A'}</p>
+                    <p className="text-base">{selectedEmployee.gender || 'N/A'}</p>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="space-y-2">
                     <Label className="text-sm font-medium text-muted-foreground">Marital Status</Label>
-                    <p className="text-sm">{selectedEmployee.maritalStatus || 'N/A'}</p>
+                    <p className="text-base">{selectedEmployee.maritalStatus || 'N/A'}</p>
                   </div>
-                  <div>
+                  <div className="space-y-2">
                     <Label className="text-sm font-medium text-muted-foreground">Nationality</Label>
-                    <p className="text-sm">{selectedEmployee.nationality || 'N/A'}</p>
+                    <p className="text-base">{selectedEmployee.nationality || 'N/A'}</p>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="space-y-2">
                     <Label className="text-sm font-medium text-muted-foreground">Phone Number</Label>
-                    <p className="text-sm">{selectedEmployee.phone || selectedEmployee.phoneNumber || 'N/A'}</p>
+                    <p className="text-base">{selectedEmployee.phone || selectedEmployee.phoneNumber || 'N/A'}</p>
                   </div>
-                  <div>
+                  <div className="space-y-2">
                     <Label className="text-sm font-medium text-muted-foreground">Email Address</Label>
-                    <p className="text-sm">{selectedEmployee.email || 'N/A'}</p>
+                    <p className="text-base break-words">{selectedEmployee.email || 'N/A'}</p>
                   </div>
                 </div>
-                <div>
+                <div className="space-y-2">
                   <Label className="text-sm font-medium text-muted-foreground">Home Address</Label>
-                  <p className="text-sm">{selectedEmployee.homeAddress || 'N/A'}</p>
+                  <p className="text-base">{selectedEmployee.homeAddress || 'N/A'}</p>
                 </div>
-                <div>
+                <div className="space-y-2">
                   <Label className="text-sm font-medium text-muted-foreground">Emergency Contact</Label>
-                  <p className="text-sm">{selectedEmployee.emergencyContact || 'N/A'}</p>
+                  <p className="text-base">{selectedEmployee.emergencyContact || 'N/A'}</p>
                 </div>
               </TabsContent>
 
-              <TabsContent value="job" className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
+              <TabsContent value="job" className="space-y-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="space-y-2">
                     <Label className="text-sm font-medium text-muted-foreground">Job Title</Label>
-                    <p className="text-sm">{selectedEmployee.position || selectedEmployee.jobTitle || 'N/A'}</p>
+                    <p className="text-base font-medium">{selectedEmployee.position || selectedEmployee.jobTitle || 'N/A'}</p>
                   </div>
-                  <div>
+                  <div className="space-y-2">
                     <Label className="text-sm font-medium text-muted-foreground">Department</Label>
-                    <p className="text-sm">{selectedEmployee.department || 'N/A'}</p>
+                    <p className="text-base">{selectedEmployee.department || 'N/A'}</p>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="space-y-2">
                     <Label className="text-sm font-medium text-muted-foreground">Employment Type</Label>
-                    <p className="text-sm">{selectedEmployee.employmentType || 'N/A'}</p>
+                    <p className="text-base">{selectedEmployee.employmentType || 'N/A'}</p>
                   </div>
-                  <div>
+                  <div className="space-y-2">
                     <Label className="text-sm font-medium text-muted-foreground">Grade Level</Label>
-                    <p className="text-sm">{selectedEmployee.gradeLevel || 'N/A'}</p>
+                    <p className="text-base">{selectedEmployee.gradeLevel || 'N/A'}</p>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="space-y-2">
                     <Label className="text-sm font-medium text-muted-foreground">Supervisor Name</Label>
-                    <p className="text-sm">{selectedEmployee.supervisorName || 'N/A'}</p>
+                    <p className="text-base">{selectedEmployee.supervisorName || 'N/A'}</p>
                   </div>
-                  <div>
+                  <div className="space-y-2">
                     <Label className="text-sm font-medium text-muted-foreground">Work Location</Label>
-                    <p className="text-sm">{selectedEmployee.workLocation || 'N/A'}</p>
+                    <p className="text-base">{selectedEmployee.workLocation || 'N/A'}</p>
                   </div>
                 </div>
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  <div className="space-y-2">
                     <Label className="text-sm font-medium text-muted-foreground">Hire Date</Label>
-                    <p className="text-sm">{selectedEmployee.joinDate || selectedEmployee.hireDate ? format(new Date(selectedEmployee.joinDate || selectedEmployee.hireDate), "PPP") : 'N/A'}</p>
+                    <p className="text-base">{selectedEmployee.joinDate || selectedEmployee.hireDate ? format(new Date(selectedEmployee.joinDate || selectedEmployee.hireDate), "PPP") : 'N/A'}</p>
                   </div>
-                  <div>
+                  <div className="space-y-2">
                     <Label className="text-sm font-medium text-muted-foreground">Probation Period</Label>
-                    <p className="text-sm">{selectedEmployee.probationPeriod || 'N/A'}</p>
+                    <p className="text-base">{selectedEmployee.probationPeriod || 'N/A'}</p>
                   </div>
-                  <div>
+                  <div className="space-y-2">
                     <Label className="text-sm font-medium text-muted-foreground">Confirmation Date</Label>
-                    <p className="text-sm">{selectedEmployee.confirmationDate ? format(selectedEmployee.confirmationDate, "PPP") : 'N/A'}</p>
+                    <p className="text-base">{selectedEmployee.confirmationDate ? format(selectedEmployee.confirmationDate, "PPP") : 'N/A'}</p>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="space-y-2">
                     <Label className="text-sm font-medium text-muted-foreground">Employment Status</Label>
-                    {getStatusBadge(selectedEmployee.status || selectedEmployee.employmentStatus)}
+                    <div className="flex items-start">
+                      {getStatusBadge(selectedEmployee.status || selectedEmployee.employmentStatus)}
+                    </div>
                   </div>
-                  <div>
+                  <div className="space-y-2">
                     <Label className="text-sm font-medium text-muted-foreground">Vacation Days</Label>
-                    <p className="text-sm">{selectedEmployee.vacationDays || 'N/A'} days</p>
+                    <p className="text-base">{selectedEmployee.vacationDays || 'N/A'} days</p>
                   </div>
                 </div>
               </TabsContent>
 
-              <TabsContent value="financial" className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
+              <TabsContent value="financial" className="space-y-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="space-y-2">
                     <Label className="text-sm font-medium text-muted-foreground">Gross Salary</Label>
-                    <p className="text-sm">{selectedEmployee.salary || selectedEmployee.grossSalary || 'N/A'}</p>
+                    <p className="text-base font-semibold text-primary">{selectedEmployee.salary || selectedEmployee.grossSalary || 'N/A'}</p>
                   </div>
-                  <div>
+                  <div className="space-y-2">
                     <Label className="text-sm font-medium text-muted-foreground">Meal Allowance</Label>
-                    <p className="text-sm">{selectedEmployee.mealAllowance || 'N/A'}</p>
+                    <p className="text-base">{selectedEmployee.mealAllowance || 'N/A'}</p>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="space-y-2">
                     <Label className="text-sm font-medium text-muted-foreground">Housing Allowance</Label>
-                    <p className="text-sm">{selectedEmployee.housingAllowance || 'N/A'}</p>
+                    <p className="text-base">{selectedEmployee.housingAllowance || 'N/A'}</p>
                   </div>
-                  <div>
+                  <div className="space-y-2">
                     <Label className="text-sm font-medium text-muted-foreground">Transport Allowance</Label>
-                    <p className="text-sm">{selectedEmployee.transportAllowance || 'N/A'}</p>
+                    <p className="text-base">{selectedEmployee.transportAllowance || 'N/A'}</p>
                   </div>
                 </div>
-                <div>
+                <div className="space-y-2">
                   <Label className="text-sm font-medium text-muted-foreground">Bank Account</Label>
-                  <p className="text-sm">{selectedEmployee.bankAccount || 'N/A'}</p>
+                  <p className="text-base">{selectedEmployee.bankAccount || 'N/A'}</p>
                 </div>
               </TabsContent>
 

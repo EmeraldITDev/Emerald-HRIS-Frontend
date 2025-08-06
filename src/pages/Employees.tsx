@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -44,6 +44,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { useToast } from "@/hooks/use-toast"
+import { parseCSVFile, formatDataForPHP, type EmployeeData } from "@/utils/csvImport"
 
 // Sample employee data with updated fields
 const employees = [
@@ -107,6 +109,9 @@ const employees = [
 
 export default function Employees() {
   const [searchTerm, setSearchTerm] = useState("")
+  const [employeeList, setEmployeeList] = useState<EmployeeData[]>(employees)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const { toast } = useToast()
 
   const [showAddEmployee, setShowAddEmployee] = useState(false)
   const [showViewDetails, setShowViewDetails] = useState(false)
@@ -166,11 +171,71 @@ export default function Employees() {
     "Business Development", "Technician", "Engineering", "Administration", "Marketing"
   ]
 
-  const filteredEmployees = employees.filter(employee =>
+  const filteredEmployees = employeeList.filter(employee =>
     `${employee.firstName} ${employee.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
     employee.department.toLowerCase().includes(searchTerm.toLowerCase()) ||
     employee.position.toLowerCase().includes(searchTerm.toLowerCase())
   )
+
+  // CSV Import functionality
+  const handleImportCSV = () => {
+    fileInputRef.current?.click()
+  }
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    if (!file.name.endsWith('.csv')) {
+      toast({
+        title: "Invalid File Type",
+        description: "Please select a CSV file",
+        variant: "destructive"
+      })
+      return
+    }
+
+    try {
+      const result = await parseCSVFile(file, employeeList)
+      
+      if (result.success && result.data.length > 0) {
+        // Add imported employees to the list
+        setEmployeeList(prev => [...prev, ...result.data])
+        
+        // For future PHP integration, log the formatted data
+        const phpData = formatDataForPHP(result.data)
+        console.log('Data formatted for PHP backend:', phpData)
+        
+        toast({
+          title: "Import Successful",
+          description: `Successfully imported ${result.data.length} employees`,
+        })
+      } else if (result.errors.length > 0) {
+        toast({
+          title: "Import Failed",
+          description: result.errors.join(', '),
+          variant: "destructive"
+        })
+      } else {
+        toast({
+          title: "No Data Found",
+          description: "No valid employee data found in the CSV file",
+          variant: "destructive"
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Import Error",
+        description: "An error occurred while importing the CSV file",
+        variant: "destructive"
+      })
+    }
+
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
 
   const handleAddEmployee = () => {
     const empId = newEmployee.employeeId || `EMP${String(employees.length + 1).padStart(3, '0')}`
@@ -195,7 +260,7 @@ export default function Employees() {
       ...newEmployee
     }
     
-    employees.push(fullEmployee as any)
+    setEmployeeList(prev => [...prev, fullEmployee as any])
     setNewEmployee({
       firstName: "",
       lastName: "",
@@ -248,10 +313,9 @@ export default function Employees() {
   }
 
   const handleUpdateEmployee = () => {
-    const index = employees.findIndex(emp => emp.id === editEmployee.id)
-    if (index !== -1) {
-      employees[index] = editEmployee
-    }
+    setEmployeeList(prev => 
+      prev.map(emp => emp.id === editEmployee.id ? editEmployee : emp)
+    )
     setShowEditEmployee(false)
     setEditEmployee(null)
   }
@@ -283,10 +347,17 @@ export default function Employees() {
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
-          <Button variant="outline" size="sm" className="text-xs md:text-sm">
+          <Button variant="outline" size="sm" className="text-xs md:text-sm" onClick={handleImportCSV}>
             <Upload className="mr-2 h-3 w-3 md:h-4 md:w-4" />
             Import CSV
           </Button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".csv"
+            onChange={handleFileChange}
+            style={{ display: 'none' }}
+          />
           <Button variant="outline" size="sm" className="text-xs md:text-sm">
             <Download className="mr-2 h-3 w-3 md:h-4 md:w-4" />
             Export Data

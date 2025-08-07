@@ -3,7 +3,6 @@ import {
   Users,
   Calendar,
   UserPlus,
-  DollarSign,
   TrendingUp,
   Award,
   Heart,
@@ -15,6 +14,17 @@ import {
   FileText,
   Settings
 } from "lucide-react"
+
+// Custom Naira symbol component
+const NairaIcon = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M6 3v18"/>
+    <path d="M18 3v18"/>
+    <path d="M6 9h12"/>
+    <path d="M6 15h12"/>
+    <path d="M9 3l6 18"/>
+  </svg>
+)
 
 import {
   Sidebar,
@@ -34,7 +44,7 @@ const navigationItems = [
   { title: "Employee Records", url: "/employees", icon: Users },
   { title: "Attendance & Leave", url: "/attendance", icon: Calendar },
   { title: "Recruitment", url: "/recruitment", icon: UserPlus },
-  { title: "Payroll ₦", url: "/payroll", icon: DollarSign },
+  { title: "Payroll ₦", url: "/payroll", icon: NairaIcon },
   { title: "Performance", url: "/performance", icon: TrendingUp },
   { title: "Training", url: "/training", icon: Award },
   { title: "Benefits", url: "/benefits", icon: Heart },

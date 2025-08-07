@@ -50,7 +50,9 @@ export default function Recruitment() {
     email: '',
     department: '',
     roleApplied: '',
-    resumeFile: null as File | null
+    resumeFile: null as File | null,
+    certificationsFile: null as File | null,
+    otherDocumentsFile: null as File | null
   })
 
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -70,15 +72,15 @@ export default function Recruitment() {
     'Legal'
   ]
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>, fileType: 'resumeFile' | 'certificationsFile' | 'otherDocumentsFile') => {
     const file = event.target.files?.[0]
     if (file) {
-      if (file.type === 'application/pdf' || file.type === 'application/msword' || file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-        setNewCandidate({...newCandidate, resumeFile: file})
+      if (file.type === 'application/pdf' || file.type === 'application/msword' || file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || file.type.startsWith('image/')) {
+        setNewCandidate({...newCandidate, [fileType]: file})
       } else {
         toast({
           title: "Invalid file type",
-          description: "Please upload a PDF or Word document.",
+          description: "Please upload a PDF, Word document, or image file.",
           variant: "destructive"
         })
       }
@@ -107,7 +109,7 @@ export default function Recruitment() {
     }
 
     setCandidates([candidate, ...candidates])
-    setNewCandidate({ name: '', phone: '', email: '', department: '', roleApplied: '', resumeFile: null })
+    setNewCandidate({ name: '', phone: '', email: '', department: '', roleApplied: '', resumeFile: null, certificationsFile: null, otherDocumentsFile: null })
     setIsDialogOpen(false)
     
     toast({
@@ -228,24 +230,57 @@ export default function Recruitment() {
                 />
               </div>
               
-              <div className="space-y-2">
-                <Label htmlFor="resume">Resume Upload</Label>
-                <div className="flex items-center space-x-2">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="resume">Resume Upload</Label>
                   <Input
                     id="resume"
                     type="file"
                     accept=".pdf,.doc,.docx"
-                    onChange={handleFileUpload}
+                    onChange={(e) => handleFileUpload(e, 'resumeFile')}
                     className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100"
                   />
+                  {newCandidate.resumeFile && (
+                    <p className="text-sm text-muted-foreground">
+                      Selected: {newCandidate.resumeFile.name}
+                    </p>
+                  )}
                 </div>
-                {newCandidate.resumeFile && (
-                  <p className="text-sm text-muted-foreground">
-                    Selected: {newCandidate.resumeFile.name}
-                  </p>
-                )}
+                
+                <div className="space-y-2">
+                  <Label htmlFor="certifications">Certifications</Label>
+                  <Input
+                    id="certifications"
+                    type="file"
+                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                    onChange={(e) => handleFileUpload(e, 'certificationsFile')}
+                    className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100"
+                  />
+                  {newCandidate.certificationsFile && (
+                    <p className="text-sm text-muted-foreground">
+                      Selected: {newCandidate.certificationsFile.name}
+                    </p>
+                  )}
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="otherDocuments">Other Supporting Documents</Label>
+                  <Input
+                    id="otherDocuments"
+                    type="file"
+                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                    onChange={(e) => handleFileUpload(e, 'otherDocumentsFile')}
+                    className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100"
+                  />
+                  {newCandidate.otherDocumentsFile && (
+                    <p className="text-sm text-muted-foreground">
+                      Selected: {newCandidate.otherDocumentsFile.name}
+                    </p>
+                  )}
+                </div>
+                
                 <p className="text-xs text-muted-foreground">
-                  Supported formats: PDF, DOC, DOCX
+                  Supported formats: PDF, DOC, DOCX, JPG, PNG
                 </p>
               </div>
             </div>

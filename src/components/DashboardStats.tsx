@@ -10,18 +10,18 @@ const stats = [
     changeType: "positive" as const,
   },
   {
-    title: "Active Employees",
-    value: "235",
-    change: "95.1% active rate",
+    title: "Contract Employees",
+    value: "68",
+    change: "27.5% of workforce",
     icon: UserCheck,
-    changeType: "positive" as const,
+    changeType: "neutral" as const,
   },
   {
-    title: "On Leave Today",
-    value: "23",
-    change: "9.3% of workforce",
-    icon: UserX,
-    changeType: "neutral" as const,
+    title: "FTE (Full-Time Equivalents)",
+    value: "179",
+    change: "72.5% of workforce",
+    icon: Users,
+    changeType: "positive" as const,
   },
   {
     title: "Monthly Payroll",
@@ -30,11 +30,18 @@ const stats = [
     icon: DollarSign,
     changeType: "positive" as const,
   },
+  {
+    title: "Onboarded Employees",
+    value: "15",
+    change: "This quarter",
+    icon: UserCheck,
+    changeType: "positive" as const,
+  },
 ]
 
 export function DashboardStats() {
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
       {stats.map((stat) => (
         <Card key={stat.title} className="border-border/50 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

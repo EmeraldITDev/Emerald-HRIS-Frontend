@@ -55,24 +55,23 @@ const payrollRecords = [
 ]
 
 const employees = [
-  { id: "EMP001", name: "Adebayo Johnson", basicSalary: 2500000, pensionId: "PEN123456", taxId: "TIN789012" },
-  { id: "EMP002", name: "Fatima Abdul", basicSalary: 1800000, pensionId: "PEN654321", taxId: "TIN345678" },
-  { id: "EMP003", name: "Chinedu Okafor", basicSalary: 1200000, pensionId: "PEN111222", taxId: "TIN999888" },
-  { id: "EMP004", name: "Kemi Adeleke", basicSalary: 950000, pensionId: "PEN333444", taxId: "TIN777666" },
+  { id: "EMP001", name: "Adebayo Johnson", basicSalary: 2500000, pensionId: "PEN123456", taxId: "TIN789012", employmentType: "Full-time" },
+  { id: "EMP002", name: "Fatima Abdul", basicSalary: 1800000, pensionId: "PEN654321", taxId: "TIN345678", employmentType: "Full-time" },
+  { id: "EMP003", name: "Chinedu Okafor", basicSalary: 1200000, pensionId: "PEN111222", taxId: "TIN999888", employmentType: "Contract" },
+  { id: "EMP004", name: "Kemi Adeleke", basicSalary: 950000, pensionId: "PEN333444", taxId: "TIN777666", employmentType: "Full-time" },
 ]
 
 export default function Payroll() {
   const [selectedEmployee, setSelectedEmployee] = useState("")
   const [selectedPeriod, setSelectedPeriod] = useState("")
   const [payrollData, setPayrollData] = useState({
-    basicSalary: "",
+    grossSalary: "",
     housingAllowance: "",
     transportAllowance: "",
-    mealAllowance: "",
+    otherAllowance: "",
     overtimeHours: "",
     overtimeRate: "",
     bonuses: "",
-    medicalAllowance: "",
   })
   const { toast } = useToast()
 
@@ -85,17 +84,16 @@ export default function Payroll() {
   }
 
   const calculatePayroll = () => {
-    const basic = parseFloat(payrollData.basicSalary) || 0
+    const gross = parseFloat(payrollData.grossSalary) || 0
     const housing = parseFloat(payrollData.housingAllowance) || 0
     const transport = parseFloat(payrollData.transportAllowance) || 0
-    const meal = parseFloat(payrollData.mealAllowance) || 0
-    const medical = parseFloat(payrollData.medicalAllowance) || 0
+    const other = parseFloat(payrollData.otherAllowance) || 0
     const bonuses = parseFloat(payrollData.bonuses) || 0
     const overtimeHours = parseFloat(payrollData.overtimeHours) || 0
     const overtimeRate = parseFloat(payrollData.overtimeRate) || 0
     
     const overtimePay = overtimeHours * overtimeRate
-    const grossPay = basic + housing + transport + meal + medical + bonuses + overtimePay
+    const grossPay = gross + housing + transport + other + bonuses + overtimePay
     
     // Nigerian statutory deductions
     const pensionEmployee = grossPay * 0.08 // Employee 8%
@@ -159,11 +157,10 @@ export default function Payroll() {
       id: `PAY${String(payrollRecords.length + 1).padStart(3, '0')}`,
       employeeId: selectedEmployee,
       employeeName: selectedEmp.name,
-      basicSalary: parseFloat(payrollData.basicSalary) || 0,
+      basicSalary: parseFloat(payrollData.grossSalary) || 0,
       allowances: (parseFloat(payrollData.housingAllowance) || 0) + 
                   (parseFloat(payrollData.transportAllowance) || 0) + 
-                  (parseFloat(payrollData.mealAllowance) || 0) + 
-                  (parseFloat(payrollData.medicalAllowance) || 0) + 
+                  (parseFloat(payrollData.otherAllowance) || 0) + 
                   (parseFloat(payrollData.bonuses) || 0) + calculations.overtimePay,
       grossPay: calculations.grossPay,
       paye: calculations.paye,
@@ -183,14 +180,13 @@ export default function Payroll() {
 
     // Reset form
     setPayrollData({
-      basicSalary: "",
+      grossSalary: "",
       housingAllowance: "",
       transportAllowance: "",
-      mealAllowance: "",
+      otherAllowance: "",
       overtimeHours: "",
       overtimeRate: "",
       bonuses: "",
-      medicalAllowance: "",
     })
     setSelectedEmployee("")
     setSelectedPeriod("")
@@ -277,48 +273,52 @@ export default function Payroll() {
 
             <div className="space-y-3">
               <div>
-                <Label htmlFor="basicSalary">Basic Salary (₦)</Label>
+                <Label htmlFor="grossSalary">Gross Salary (₦)</Label>
                 <Input
-                  id="basicSalary"
+                  id="grossSalary"
                   type="number"
                   placeholder="2,500,000"
-                  value={payrollData.basicSalary}
-                  onChange={(e) => setPayrollData({...payrollData, basicSalary: e.target.value})}
+                  value={payrollData.grossSalary}
+                  onChange={(e) => setPayrollData({...payrollData, grossSalary: e.target.value})}
                 />
               </div>
 
-              <div>
-                <Label htmlFor="housingAllowance">Housing Allowance (₦)</Label>
-                <Input
-                  id="housingAllowance"
-                  type="number"
-                  placeholder="500,000"
-                  value={payrollData.housingAllowance}
-                  onChange={(e) => setPayrollData({...payrollData, housingAllowance: e.target.value})}
-                />
-              </div>
+              {selectedEmployee && employees.find(emp => emp.id === selectedEmployee)?.employmentType === "Full-time" && (
+                <>
+                  <div>
+                    <Label htmlFor="housingAllowance">Housing Allowance (₦)</Label>
+                    <Input
+                      id="housingAllowance"
+                      type="number"
+                      placeholder="300,000"
+                      value={payrollData.housingAllowance}
+                      onChange={(e) => setPayrollData({...payrollData, housingAllowance: e.target.value})}
+                    />
+                  </div>
 
-              <div>
-                <Label htmlFor="transportAllowance">Transport Allowance (₦)</Label>
-                <Input
-                  id="transportAllowance"
-                  type="number"
-                  placeholder="200,000"
-                  value={payrollData.transportAllowance}
-                  onChange={(e) => setPayrollData({...payrollData, transportAllowance: e.target.value})}
-                />
-              </div>
+                  <div>
+                    <Label htmlFor="transportAllowance">Transport Allowance (₦)</Label>
+                    <Input
+                      id="transportAllowance"
+                      type="number"
+                      placeholder="100,000"
+                      value={payrollData.transportAllowance}
+                      onChange={(e) => setPayrollData({...payrollData, transportAllowance: e.target.value})}
+                    />
+                  </div>
 
-              <div>
-                <Label htmlFor="mealAllowance">Meal Allowance (₦)</Label>
-                <Input
-                  id="mealAllowance"
-                  type="number"
-                  placeholder="100,000"
-                  value={payrollData.mealAllowance}
-                  onChange={(e) => setPayrollData({...payrollData, mealAllowance: e.target.value})}
-                />
-              </div>
+                  <div>
+                    <Label htmlFor="otherAllowance">Other Allowance (₦)</Label>
+                    <Input
+                      id="otherAllowance"
+                      type="number"
+                      placeholder="50,000"
+                      value={payrollData.otherAllowance}
+                      onChange={(e) => setPayrollData({...payrollData, otherAllowance: e.target.value})}
+                    />
+                  </div>
+                </>
+              )}
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
@@ -373,27 +373,27 @@ export default function Payroll() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
-                      <span>Basic Salary:</span>
-                      <span>{formatCurrency(parseFloat(payrollData.basicSalary) || 0)}</span>
+                      <span>Gross Salary:</span>
+                      <span>{formatCurrency(parseFloat(payrollData.grossSalary) || 0)}</span>
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span>Housing Allowance:</span>
-                      <span>{formatCurrency(parseFloat(payrollData.housingAllowance) || 0)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span>Transport Allowance:</span>
-                      <span>{formatCurrency(parseFloat(payrollData.transportAllowance) || 0)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span>Meal Allowance:</span>
-                      <span>{formatCurrency(parseFloat(payrollData.mealAllowance) || 0)}</span>
-                    </div>
+                    {selectedEmployee && employees.find(emp => emp.id === selectedEmployee)?.employmentType === "Full-time" && (
+                      <>
+                        <div className="flex justify-between text-sm">
+                          <span>Housing Allowance:</span>
+                          <span>{formatCurrency(parseFloat(payrollData.housingAllowance) || 0)}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span>Transport Allowance:</span>
+                          <span>{formatCurrency(parseFloat(payrollData.transportAllowance) || 0)}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span>Other Allowance:</span>
+                          <span>{formatCurrency(parseFloat(payrollData.otherAllowance) || 0)}</span>
+                        </div>
+                      </>
+                    )}
                   </div>
                   <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>Medical Allowance:</span>
-                      <span>{formatCurrency(parseFloat(payrollData.medicalAllowance) || 0)}</span>
-                    </div>
                     <div className="flex justify-between text-sm">
                       <span>Overtime Pay:</span>
                       <span>{formatCurrency(calculations.overtimePay)}</span>
@@ -472,7 +472,7 @@ export default function Payroll() {
               <div className="flex justify-end border-t pt-4">
                 <Button 
                   onClick={() => savePayroll()}
-                  disabled={!selectedEmployee || !selectedPeriod}
+                  disabled={!selectedEmployee || !selectedPeriod || !payrollData.grossSalary}
                   className="bg-emerald-600 hover:bg-emerald-700 text-white"
                 >
                   Save Payroll & Update Employee Record

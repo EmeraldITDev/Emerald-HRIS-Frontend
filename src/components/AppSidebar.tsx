@@ -34,7 +34,7 @@ const navigationItems = [
   { title: "Employee Records", url: "/employees", icon: Users },
   { title: "Attendance & Leave", url: "/attendance", icon: Calendar },
   { title: "Recruitment", url: "/recruitment", icon: UserPlus },
-  { title: "Payroll", url: "/payroll", icon: DollarSign },
+  { title: "Payroll ₦", url: "/payroll", icon: DollarSign },
   { title: "Performance", url: "/performance", icon: TrendingUp },
   { title: "Training", url: "/training", icon: Award },
   { title: "Benefits", url: "/benefits", icon: Heart },

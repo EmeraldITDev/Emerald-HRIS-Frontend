@@ -46,6 +46,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { useToast } from "@/hooks/use-toast"
 import { parseCSVFile, formatDataForPHP, type EmployeeData } from "@/utils/csvImport"
+import { downloadCSVTemplate } from "@/utils/csvTemplate"
 
 // Sample employee data with updated fields
 const employees = [
@@ -121,6 +122,7 @@ export default function Employees() {
   const [newEmployee, setNewEmployee] = useState({
     // Personal Information
     firstName: "",
+    middleName: "",
     lastName: "",
     dateOfBirth: undefined as Date | undefined,
     gender: "",
@@ -145,14 +147,15 @@ export default function Employees() {
     
     // Financial Information
     grossSalary: "",
-    mealAllowance: "",
     housingAllowance: "",
     transportAllowance: "",
+    otherAllowance: "",
     bankAccount: "",
     
     // Government IDs
     employeeId: "",
     nationalId: "",
+    passportNumber: "",
     bvn: "",
     tin: "",
     pensionPin: "",
@@ -161,9 +164,14 @@ export default function Employees() {
     
     // Additional Fields
     vacationDays: "",
-    supportingDocuments: [] as File[],
-    performanceHistory: "",
-    assetAllocation: ""
+    
+    // Document uploads
+    ninDocument: null as File | null,
+    passportPhoto: null as File | null,
+    certifications: [] as File[],
+    cv: null as File | null,
+    educationCertificate: null as File | null,
+    otherDocuments: [] as File[]
   })
 
   const departments = [
@@ -263,6 +271,7 @@ export default function Employees() {
     setEmployeeList(prev => [...prev, fullEmployee as any])
     setNewEmployee({
       firstName: "",
+      middleName: "",
       lastName: "",
       dateOfBirth: undefined,
       gender: "",
@@ -283,21 +292,25 @@ export default function Employees() {
       confirmationDate: undefined,
       employmentStatus: "Active",
       grossSalary: "",
-      mealAllowance: "",
       housingAllowance: "",
       transportAllowance: "",
+      otherAllowance: "",
       bankAccount: "",
       employeeId: "",
       nationalId: "",
+      passportNumber: "",
       bvn: "",
       tin: "",
       pensionPin: "",
       nhfNumber: "",
       taxId: "",
       vacationDays: "",
-      supportingDocuments: [],
-      performanceHistory: "",
-      assetAllocation: ""
+      ninDocument: null,
+      passportPhoto: null,
+      certifications: [],
+      cv: null,
+      educationCertificate: null,
+      otherDocuments: []
     })
     setShowAddEmployee(false)
   }
@@ -347,6 +360,10 @@ export default function Employees() {
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
+          <Button variant="outline" size="sm" className="text-xs md:text-sm" onClick={downloadCSVTemplate}>
+            <FileText className="mr-2 h-3 w-3 md:h-4 md:w-4" />
+            Download Template
+          </Button>
           <Button variant="outline" size="sm" className="text-xs md:text-sm" onClick={handleImportCSV}>
             <Upload className="mr-2 h-3 w-3 md:h-4 md:w-4" />
             Import CSV
@@ -383,13 +400,21 @@ export default function Employees() {
                 </TabsList>
 
                 <TabsContent value="personal" className="space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="firstName">First Name *</Label>
                       <Input
                         id="firstName"
                         value={newEmployee.firstName}
                         onChange={(e) => setNewEmployee({...newEmployee, firstName: e.target.value})}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="middleName">Middle Name</Label>
+                      <Input
+                        id="middleName"
+                        value={newEmployee.middleName}
+                        onChange={(e) => setNewEmployee({...newEmployee, middleName: e.target.value})}
                       />
                     </div>
                     <div className="space-y-2">
@@ -559,7 +584,7 @@ export default function Employees() {
                         id="gradeLevel"
                         value={newEmployee.gradeLevel}
                         onChange={(e) => setNewEmployee({...newEmployee, gradeLevel: e.target.value})}
-                        placeholder="e.g., Level 8"
+                        placeholder="Junior, Middle, Senior"
                       />
                     </div>
                   </div>
@@ -680,47 +705,50 @@ export default function Employees() {
                 </TabsContent>
 
                 <TabsContent value="financial" className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="grossSalary">Gross Salary</Label>
-                      <Input
-                        id="grossSalary"
-                        value={newEmployee.grossSalary}
-                        onChange={(e) => setNewEmployee({...newEmployee, grossSalary: e.target.value})}
-                        placeholder="₦2,500,000"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="mealAllowance">Meal Allowance</Label>
-                      <Input
-                        id="mealAllowance"
-                        value={newEmployee.mealAllowance}
-                        onChange={(e) => setNewEmployee({...newEmployee, mealAllowance: e.target.value})}
-                        placeholder="₦50,000"
-                      />
-                    </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="grossSalary">Gross Salary</Label>
+                    <Input
+                      id="grossSalary"
+                      value={newEmployee.grossSalary}
+                      onChange={(e) => setNewEmployee({...newEmployee, grossSalary: e.target.value})}
+                      placeholder="₦2,500,000"
+                    />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="housingAllowance">Housing Allowance</Label>
-                      <Input
-                        id="housingAllowance"
-                        value={newEmployee.housingAllowance}
-                        onChange={(e) => setNewEmployee({...newEmployee, housingAllowance: e.target.value})}
-                        placeholder="₦300,000"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="transportAllowance">Transport Allowance</Label>
-                      <Input
-                        id="transportAllowance"
-                        value={newEmployee.transportAllowance}
-                        onChange={(e) => setNewEmployee({...newEmployee, transportAllowance: e.target.value})}
-                        placeholder="₦100,000"
-                      />
-                    </div>
-                  </div>
+                  {newEmployee.employmentType === "Full-time" && (
+                    <>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="housingAllowance">Housing Allowance</Label>
+                          <Input
+                            id="housingAllowance"
+                            value={newEmployee.housingAllowance}
+                            onChange={(e) => setNewEmployee({...newEmployee, housingAllowance: e.target.value})}
+                            placeholder="₦300,000"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="transportAllowance">Transport Allowance</Label>
+                          <Input
+                            id="transportAllowance"
+                            value={newEmployee.transportAllowance}
+                            onChange={(e) => setNewEmployee({...newEmployee, transportAllowance: e.target.value})}
+                            placeholder="₦100,000"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="otherAllowance">Other Allowance</Label>
+                        <Input
+                          id="otherAllowance"
+                          value={newEmployee.otherAllowance}
+                          onChange={(e) => setNewEmployee({...newEmployee, otherAllowance: e.target.value})}
+                          placeholder="₦50,000"
+                        />
+                      </div>
+                    </>
+                  )}
 
                   <div className="space-y-2">
                     <Label htmlFor="bankAccount">Bank Account for Salary Payments</Label>
@@ -745,12 +773,26 @@ export default function Employees() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="nationalId">National ID (NIN)</Label>
+                      <Label htmlFor="nationalId">National ID (NIN) *</Label>
                       <Input
                         id="nationalId"
                         value={newEmployee.nationalId}
                         onChange={(e) => setNewEmployee({...newEmployee, nationalId: e.target.value})}
                         placeholder="11-digit NIN"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="passportNumber">Passport Number *</Label>
+                      <Input
+                        id="passportNumber"
+                        value={newEmployee.passportNumber}
+                        onChange={(e) => setNewEmployee({...newEmployee, passportNumber: e.target.value})}
+                        placeholder="Passport Number"
+                        required
                       />
                     </div>
                   </div>
@@ -809,46 +851,96 @@ export default function Employees() {
                 </TabsContent>
 
                 <TabsContent value="additional" className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="supportingDocuments">Supporting Documents</Label>
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium">Document Uploads</h3>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="ninDocument">NIN Document</Label>
+                        <Input
+                          id="ninDocument"
+                          type="file"
+                          accept=".pdf,.jpg,.jpeg,.png"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0] || null;
+                            setNewEmployee({...newEmployee, ninDocument: file});
+                          }}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="passportPhoto">Passport Photo</Label>
+                        <Input
+                          id="passportPhoto"
+                          type="file"
+                          accept=".jpg,.jpeg,.png"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0] || null;
+                            setNewEmployee({...newEmployee, passportPhoto: file});
+                          }}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="cv">CV/Resume</Label>
+                        <Input
+                          id="cv"
+                          type="file"
+                          accept=".pdf,.doc,.docx"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0] || null;
+                            setNewEmployee({...newEmployee, cv: file});
+                          }}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="educationCertificate">Certificate of Highest Educational Level</Label>
+                        <Input
+                          id="educationCertificate"
+                          type="file"
+                          accept=".pdf,.jpg,.jpeg,.png"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0] || null;
+                            setNewEmployee({...newEmployee, educationCertificate: file});
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="certifications">Professional Certifications</Label>
                       <Input
-                        id="supportingDocuments"
+                        id="certifications"
                         type="file"
                         multiple
-                        accept=".pdf,.doc,.docx"
+                        accept=".pdf,.jpg,.jpeg,.png"
                         onChange={(e) => {
                           const files = Array.from(e.target.files || []);
-                          setNewEmployee({...newEmployee, supportingDocuments: files});
+                          setNewEmployee({...newEmployee, certifications: files});
                         }}
-                        className="w-full"
                       />
-                      <p className="text-sm text-muted-foreground mt-2">
-                        Upload CV, Contract, ID, Certificates (PDF or DOCX format)
+                      <p className="text-sm text-muted-foreground">
+                        Upload multiple certification documents
                       </p>
                     </div>
-                  </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="performanceHistory">Performance History</Label>
-                    <Textarea
-                      id="performanceHistory"
-                      value={newEmployee.performanceHistory}
-                      onChange={(e) => setNewEmployee({...newEmployee, performanceHistory: e.target.value})}
-                      placeholder="Records of reviews, ratings, and feedback"
-                      rows={4}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="assetAllocation">Asset Allocation History</Label>
-                    <Textarea
-                      id="assetAllocation"
-                      value={newEmployee.assetAllocation}
-                      onChange={(e) => setNewEmployee({...newEmployee, assetAllocation: e.target.value})}
-                      placeholder="Laptops, ID cards, equipment issued to the employee"
-                      rows={4}
-                    />
+                    <div className="space-y-2">
+                      <Label htmlFor="otherDocuments">Other Supporting Documents</Label>
+                      <Input
+                        id="otherDocuments"
+                        type="file"
+                        multiple
+                        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                        onChange={(e) => {
+                          const files = Array.from(e.target.files || []);
+                          setNewEmployee({...newEmployee, otherDocuments: files});
+                        }}
+                      />
+                      <p className="text-sm text-muted-foreground">
+                        Upload any other relevant documents (contracts, references, etc.)
+                      </p>
+                    </div>
                   </div>
                 </TabsContent>
 

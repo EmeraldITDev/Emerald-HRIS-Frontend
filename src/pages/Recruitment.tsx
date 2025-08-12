@@ -230,58 +230,85 @@ export default function Recruitment() {
                 />
               </div>
               
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="resume">Resume Upload</Label>
-                  <Input
-                    id="resume"
-                    type="file"
-                    accept=".pdf,.doc,.docx"
-                    onChange={(e) => handleFileUpload(e, 'resumeFile')}
-                    className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100"
-                  />
-                  {newCandidate.resumeFile && (
-                    <p className="text-sm text-muted-foreground">
-                      Selected: {newCandidate.resumeFile.name}
-                    </p>
-                  )}
+              <div className="space-y-6">
+                <h3 className="text-lg font-medium text-foreground">Document Uploads</h3>
+                
+                <div className="grid gap-6">
+                  <div className="space-y-3">
+                    <Label htmlFor="resume" className="text-sm font-medium">Resume Upload</Label>
+                    <div className="flex flex-col gap-2">
+                      <div className="relative">
+                        <Input
+                          id="resume"
+                          type="file"
+                          accept=".pdf,.doc,.docx"
+                          onChange={(e) => handleFileUpload(e, 'resumeFile')}
+                          className="file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary/10 file:text-primary hover:file:bg-primary/20 file:cursor-pointer cursor-pointer h-11"
+                        />
+                      </div>
+                      {newCandidate.resumeFile && (
+                        <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-md border border-green-200 dark:border-green-800">
+                          <FileText className="h-4 w-4 text-green-600 dark:text-green-400" />
+                          <p className="text-sm text-green-700 dark:text-green-300 font-medium">
+                            {newCandidate.resumeFile.name}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <Label htmlFor="certifications" className="text-sm font-medium">Professional Certifications</Label>
+                    <div className="flex flex-col gap-2">
+                      <div className="relative">
+                        <Input
+                          id="certifications"
+                          type="file"
+                          accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                          onChange={(e) => handleFileUpload(e, 'certificationsFile')}
+                          className="file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary/10 file:text-primary hover:file:bg-primary/20 file:cursor-pointer cursor-pointer h-11"
+                        />
+                      </div>
+                      {newCandidate.certificationsFile && (
+                        <div className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-md border border-blue-200 dark:border-blue-800">
+                          <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                          <p className="text-sm text-blue-700 dark:text-blue-300 font-medium">
+                            {newCandidate.certificationsFile.name}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <Label htmlFor="otherDocuments" className="text-sm font-medium">Other Supporting Documents</Label>
+                    <div className="flex flex-col gap-2">
+                      <div className="relative">
+                        <Input
+                          id="otherDocuments"
+                          type="file"
+                          accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                          onChange={(e) => handleFileUpload(e, 'otherDocumentsFile')}
+                          className="file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary/10 file:text-primary hover:file:bg-primary/20 file:cursor-pointer cursor-pointer h-11"
+                        />
+                      </div>
+                      {newCandidate.otherDocumentsFile && (
+                        <div className="flex items-center gap-2 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-md border border-purple-200 dark:border-purple-800">
+                          <FileText className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                          <p className="text-sm text-purple-700 dark:text-purple-300 font-medium">
+                            {newCandidate.otherDocumentsFile.name}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
                 
-                <div className="space-y-2">
-                  <Label htmlFor="certifications">Certifications</Label>
-                  <Input
-                    id="certifications"
-                    type="file"
-                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                    onChange={(e) => handleFileUpload(e, 'certificationsFile')}
-                    className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100"
-                  />
-                  {newCandidate.certificationsFile && (
-                    <p className="text-sm text-muted-foreground">
-                      Selected: {newCandidate.certificationsFile.name}
-                    </p>
-                  )}
+                <div className="bg-muted/50 p-4 rounded-lg border border-dashed border-muted-foreground/20">
+                  <p className="text-xs text-muted-foreground text-center">
+                    <strong>Supported formats:</strong> PDF, DOC, DOCX, JPG, PNG • <strong>Max file size:</strong> 10MB per file
+                  </p>
                 </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="otherDocuments">Other Supporting Documents</Label>
-                  <Input
-                    id="otherDocuments"
-                    type="file"
-                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                    onChange={(e) => handleFileUpload(e, 'otherDocumentsFile')}
-                    className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100"
-                  />
-                  {newCandidate.otherDocumentsFile && (
-                    <p className="text-sm text-muted-foreground">
-                      Selected: {newCandidate.otherDocumentsFile.name}
-                    </p>
-                  )}
-                </div>
-                
-                <p className="text-xs text-muted-foreground">
-                  Supported formats: PDF, DOC, DOCX, JPG, PNG
-                </p>
               </div>
             </div>
             

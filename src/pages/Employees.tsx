@@ -163,11 +163,6 @@ export default function Employees() {
     // Banking Information
     bankName: "",
     accountNumber: "",
-    routingNumber: "",
-    accountType: "",
-    sortCode: "",
-    iban: "",
-    swiftCode: "",
     
     // Government IDs
     employeeId: "",
@@ -399,11 +394,6 @@ export default function Employees() {
       // Banking Information
       bankName: "",
       accountNumber: "",
-      routingNumber: "",
-      accountType: "",
-      sortCode: "",
-      iban: "",
-      swiftCode: "",
       
       employeeId: "",
       nationalId: "",
@@ -1047,79 +1037,6 @@ export default function Employees() {
                         />
                       </div>
                     </div>
-
-                    {/* Additional fields based on nationality */}
-                    {newEmployee.nationality === "American" && (
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="routingNumber">Routing Number</Label>
-                          <Input
-                            id="routingNumber"
-                            value={newEmployee.routingNumber || ""}
-                            onChange={(e) => setNewEmployee({...newEmployee, routingNumber: e.target.value})}
-                            placeholder="9-digit routing number"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="accountType">Account Type</Label>
-                          <Select value={newEmployee.accountType || ""} onValueChange={(value) => setNewEmployee({...newEmployee, accountType: value})}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select account type" />
-                            </SelectTrigger>
-                            <SelectContent className="bg-popover border shadow-lg">
-                              <SelectItem value="checking">Checking</SelectItem>
-                              <SelectItem value="savings">Savings</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                    )}
-
-                    {newEmployee.nationality === "British" && (
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="sortCode">Sort Code</Label>
-                          <Input
-                            id="sortCode"
-                            value={newEmployee.sortCode || ""}
-                            onChange={(e) => setNewEmployee({...newEmployee, sortCode: e.target.value})}
-                            placeholder="XX-XX-XX"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="iban">IBAN (Optional)</Label>
-                          <Input
-                            id="iban"
-                            value={newEmployee.iban || ""}
-                            onChange={(e) => setNewEmployee({...newEmployee, iban: e.target.value})}
-                            placeholder="GB00 0000 0000 0000 00"
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    {newEmployee.nationality && !["Nigerian", "American", "British"].includes(newEmployee.nationality) && (
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="swiftCode">SWIFT Code</Label>
-                          <Input
-                            id="swiftCode"
-                            value={newEmployee.swiftCode || ""}
-                            onChange={(e) => setNewEmployee({...newEmployee, swiftCode: e.target.value})}
-                            placeholder="8 or 11 character SWIFT code"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="iban">IBAN</Label>
-                          <Input
-                            id="iban"
-                            value={newEmployee.iban || ""}
-                            onChange={(e) => setNewEmployee({...newEmployee, iban: e.target.value})}
-                            placeholder="International Bank Account Number"
-                          />
-                        </div>
-                      </div>
-                    )}
                   </div>
                 </TabsContent>
 
@@ -1616,42 +1533,6 @@ export default function Employees() {
                       <p className="text-base">{selectedEmployee.accountNumber || selectedEmployee.bankAccount || 'N/A'}</p>
                     </div>
                   </div>
-                  {selectedEmployee.routingNumber && (
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium text-muted-foreground">Routing Number</Label>
-                        <p className="text-base">{selectedEmployee.routingNumber}</p>
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium text-muted-foreground">Account Type</Label>
-                        <p className="text-base">{selectedEmployee.accountType || 'N/A'}</p>
-                      </div>
-                    </div>
-                  )}
-                  {selectedEmployee.sortCode && (
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium text-muted-foreground">Sort Code</Label>
-                        <p className="text-base">{selectedEmployee.sortCode}</p>
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium text-muted-foreground">IBAN</Label>
-                        <p className="text-base">{selectedEmployee.iban || 'N/A'}</p>
-                      </div>
-                    </div>
-                  )}
-                  {selectedEmployee.swiftCode && (
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium text-muted-foreground">SWIFT Code</Label>
-                        <p className="text-base">{selectedEmployee.swiftCode}</p>
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium text-muted-foreground">IBAN</Label>
-                        <p className="text-base">{selectedEmployee.iban || 'N/A'}</p>
-                      </div>
-                    </div>
-                  )}
                 </div>
               </TabsContent>
 

@@ -160,6 +160,15 @@ export default function Employees() {
     otherAllowance: "",
     bankAccount: "",
     
+    // Banking Information
+    bankName: "",
+    accountNumber: "",
+    routingNumber: "",
+    accountType: "",
+    sortCode: "",
+    iban: "",
+    swiftCode: "",
+    
     // Government IDs
     employeeId: "",
     nationalId: "",
@@ -386,6 +395,16 @@ export default function Employees() {
       transportAllowance: "",
       otherAllowance: "",
       bankAccount: "",
+      
+      // Banking Information
+      bankName: "",
+      accountNumber: "",
+      routingNumber: "",
+      accountType: "",
+      sortCode: "",
+      iban: "",
+      swiftCode: "",
+      
       employeeId: "",
       nationalId: "",
       passportNumber: "",
@@ -970,14 +989,137 @@ export default function Employees() {
                     </>
                   )}
 
-                  <div className="space-y-2">
-                    <Label htmlFor="bankAccount">Bank Account for Salary Payments</Label>
-                    <Input
-                      id="bankAccount"
-                      value={newEmployee.bankAccount}
-                      onChange={(e) => setNewEmployee({...newEmployee, bankAccount: e.target.value})}
-                      placeholder="Bank Name - Account Number"
-                    />
+                  <div className="space-y-4">
+                    <h3 className="text-base font-medium">Bank Account for Salary Payments</h3>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="bankName">Bank Name</Label>
+                        <Select value={newEmployee.bankName || ""} onValueChange={(value) => setNewEmployee({...newEmployee, bankName: value})}>
+                          <SelectTrigger>
+                            <SelectValue placeholder={newEmployee.nationality ? `Select ${newEmployee.nationality} bank` : "Select nationality first"} />
+                          </SelectTrigger>
+                          <SelectContent className="bg-popover border shadow-lg">
+                            {newEmployee.nationality === "Nigerian" && [
+                              <SelectItem key="access" value="Access Bank">Access Bank</SelectItem>,
+                              <SelectItem key="gtb" value="Guaranty Trust Bank">Guaranty Trust Bank</SelectItem>,
+                              <SelectItem key="zenith" value="Zenith Bank">Zenith Bank</SelectItem>,
+                              <SelectItem key="uba" value="United Bank for Africa">United Bank for Africa</SelectItem>,
+                              <SelectItem key="firstbank" value="First Bank of Nigeria">First Bank of Nigeria</SelectItem>,
+                              <SelectItem key="fidelity" value="Fidelity Bank">Fidelity Bank</SelectItem>,
+                              <SelectItem key="union" value="Union Bank">Union Bank</SelectItem>,
+                              <SelectItem key="sterling" value="Sterling Bank">Sterling Bank</SelectItem>,
+                              <SelectItem key="fcmb" value="First City Monument Bank">First City Monument Bank</SelectItem>,
+                              <SelectItem key="ecobank" value="Ecobank">Ecobank</SelectItem>
+                            ]}
+                            {newEmployee.nationality === "American" && [
+                              <SelectItem key="chase" value="JPMorgan Chase">JPMorgan Chase</SelectItem>,
+                              <SelectItem key="boa" value="Bank of America">Bank of America</SelectItem>,
+                              <SelectItem key="wells" value="Wells Fargo">Wells Fargo</SelectItem>,
+                              <SelectItem key="citi" value="Citibank">Citibank</SelectItem>,
+                              <SelectItem key="pnc" value="PNC Bank">PNC Bank</SelectItem>,
+                              <SelectItem key="capital" value="Capital One">Capital One</SelectItem>,
+                              <SelectItem key="td" value="TD Bank">TD Bank</SelectItem>,
+                              <SelectItem key="usbank" value="U.S. Bank">U.S. Bank</SelectItem>
+                            ]}
+                            {newEmployee.nationality === "British" && [
+                              <SelectItem key="barclays" value="Barclays">Barclays</SelectItem>,
+                              <SelectItem key="lloyds" value="Lloyds Bank">Lloyds Bank</SelectItem>,
+                              <SelectItem key="hsbc" value="HSBC UK">HSBC UK</SelectItem>,
+                              <SelectItem key="natwest" value="NatWest">NatWest</SelectItem>,
+                              <SelectItem key="santander" value="Santander UK">Santander UK</SelectItem>,
+                              <SelectItem key="halifax" value="Halifax">Halifax</SelectItem>,
+                              <SelectItem key="nationwide" value="Nationwide">Nationwide</SelectItem>
+                            ]}
+                            {!["Nigerian", "American", "British"].includes(newEmployee.nationality) && newEmployee.nationality && [
+                              <SelectItem key="other" value="Other International Bank">Other International Bank</SelectItem>
+                            ]}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="accountNumber">Account Number</Label>
+                        <Input
+                          id="accountNumber"
+                          value={newEmployee.accountNumber || ""}
+                          onChange={(e) => setNewEmployee({...newEmployee, accountNumber: e.target.value})}
+                          placeholder="Account number"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Additional fields based on nationality */}
+                    {newEmployee.nationality === "American" && (
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="routingNumber">Routing Number</Label>
+                          <Input
+                            id="routingNumber"
+                            value={newEmployee.routingNumber || ""}
+                            onChange={(e) => setNewEmployee({...newEmployee, routingNumber: e.target.value})}
+                            placeholder="9-digit routing number"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="accountType">Account Type</Label>
+                          <Select value={newEmployee.accountType || ""} onValueChange={(value) => setNewEmployee({...newEmployee, accountType: value})}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select account type" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-popover border shadow-lg">
+                              <SelectItem value="checking">Checking</SelectItem>
+                              <SelectItem value="savings">Savings</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    )}
+
+                    {newEmployee.nationality === "British" && (
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="sortCode">Sort Code</Label>
+                          <Input
+                            id="sortCode"
+                            value={newEmployee.sortCode || ""}
+                            onChange={(e) => setNewEmployee({...newEmployee, sortCode: e.target.value})}
+                            placeholder="XX-XX-XX"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="iban">IBAN (Optional)</Label>
+                          <Input
+                            id="iban"
+                            value={newEmployee.iban || ""}
+                            onChange={(e) => setNewEmployee({...newEmployee, iban: e.target.value})}
+                            placeholder="GB00 0000 0000 0000 00"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {newEmployee.nationality && !["Nigerian", "American", "British"].includes(newEmployee.nationality) && (
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="swiftCode">SWIFT Code</Label>
+                          <Input
+                            id="swiftCode"
+                            value={newEmployee.swiftCode || ""}
+                            onChange={(e) => setNewEmployee({...newEmployee, swiftCode: e.target.value})}
+                            placeholder="8 or 11 character SWIFT code"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="iban">IBAN</Label>
+                          <Input
+                            id="iban"
+                            value={newEmployee.iban || ""}
+                            onChange={(e) => setNewEmployee({...newEmployee, iban: e.target.value})}
+                            placeholder="International Bank Account Number"
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </TabsContent>
 
@@ -1462,9 +1604,54 @@ export default function Employees() {
                     <p className="text-base">{selectedEmployee.transportAllowance || 'N/A'}</p>
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-muted-foreground">Bank Account</Label>
-                  <p className="text-base">{selectedEmployee.bankAccount || 'N/A'}</p>
+                <div className="space-y-4">
+                  <h3 className="text-base font-medium">Banking Information</h3>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-muted-foreground">Bank Name</Label>
+                      <p className="text-base">{selectedEmployee.bankName || 'N/A'}</p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-muted-foreground">Account Number</Label>
+                      <p className="text-base">{selectedEmployee.accountNumber || selectedEmployee.bankAccount || 'N/A'}</p>
+                    </div>
+                  </div>
+                  {selectedEmployee.routingNumber && (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium text-muted-foreground">Routing Number</Label>
+                        <p className="text-base">{selectedEmployee.routingNumber}</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium text-muted-foreground">Account Type</Label>
+                        <p className="text-base">{selectedEmployee.accountType || 'N/A'}</p>
+                      </div>
+                    </div>
+                  )}
+                  {selectedEmployee.sortCode && (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium text-muted-foreground">Sort Code</Label>
+                        <p className="text-base">{selectedEmployee.sortCode}</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium text-muted-foreground">IBAN</Label>
+                        <p className="text-base">{selectedEmployee.iban || 'N/A'}</p>
+                      </div>
+                    </div>
+                  )}
+                  {selectedEmployee.swiftCode && (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium text-muted-foreground">SWIFT Code</Label>
+                        <p className="text-base">{selectedEmployee.swiftCode}</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium text-muted-foreground">IBAN</Label>
+                        <p className="text-base">{selectedEmployee.iban || 'N/A'}</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </TabsContent>
 
@@ -1664,6 +1851,31 @@ export default function Employees() {
                     onChange={(e) => setEditEmployee({...editEmployee, salary: e.target.value})}
                     placeholder="₦2,500,000"
                   />
+                </div>
+
+                <div className="space-y-4">
+                  <h3 className="text-base font-medium">Banking Information</h3>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="editBankName">Bank Name</Label>
+                      <Input
+                        id="editBankName"
+                        value={editEmployee.bankName || ''}
+                        onChange={(e) => setEditEmployee({...editEmployee, bankName: e.target.value})}
+                        placeholder="Bank name"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="editAccountNumber">Account Number</Label>
+                      <Input
+                        id="editAccountNumber"
+                        value={editEmployee.accountNumber || ''}
+                        onChange={(e) => setEditEmployee({...editEmployee, accountNumber: e.target.value})}
+                        placeholder="Account number"
+                      />
+                    </div>
+                  </div>
                 </div>
               </TabsContent>
 

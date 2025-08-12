@@ -137,7 +137,8 @@ export default function Employees() {
     email: "",
     homeAddress: "",
     emergencyContact: "",
-    nextOfKin: "",
+      nextOfKinName: "",
+      nextOfKinRelationship: "",
     
     // Job Information
     jobTitle: "",
@@ -218,10 +219,10 @@ export default function Employees() {
       if (!newEmployee.department.trim()) errors.department = true
       if (!newEmployee.employmentType.trim()) errors.employmentType = true
       if (!newEmployee.hireDate) errors.hireDate = true
-    } else if (tab === "government") {
-      if (!newEmployee.nationalId.trim()) errors.nationalId = true
-      if (!newEmployee.passportNumber.trim()) errors.passportNumber = true
-    }
+      } else if (tab === "government") {
+        if (!newEmployee.nationalId.trim()) errors.nationalId = true
+        // Passport Number is now optional
+      }
     
     setFormErrors(errors)
     return Object.keys(errors).length === 0
@@ -366,7 +367,8 @@ export default function Employees() {
       email: "",
       homeAddress: "",
       emergencyContact: "",
-      nextOfKin: "",
+      nextOfKinName: "",
+      nextOfKinRelationship: "",
       jobTitle: "",
       department: "",
       employmentType: "",
@@ -715,14 +717,25 @@ export default function Employees() {
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="nextOfKin">Next of Kin</Label>
-                    <Input
-                      id="nextOfKin"
-                      value={newEmployee.nextOfKin}
-                      onChange={(e) => setNewEmployee({...newEmployee, nextOfKin: e.target.value})}
-                      placeholder="Name and relationship"
-                    />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="nextOfKinName">Next of Kin Name</Label>
+                      <Input
+                        id="nextOfKinName"
+                        value={newEmployee.nextOfKinName}
+                        onChange={(e) => setNewEmployee({...newEmployee, nextOfKinName: e.target.value})}
+                        placeholder="Full name"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="nextOfKinRelationship">Next of Kin Relationship</Label>
+                      <Input
+                        id="nextOfKinRelationship"
+                        value={newEmployee.nextOfKinRelationship}
+                        onChange={(e) => setNewEmployee({...newEmployee, nextOfKinRelationship: e.target.value})}
+                        placeholder="e.g., Spouse, Parent, Sibling"
+                      />
+                    </div>
                   </div>
                 </TabsContent>
 
@@ -876,7 +889,6 @@ export default function Employees() {
                         </SelectTrigger>
                         <SelectContent className="bg-popover border shadow-lg">
                           <SelectItem value="On-board">On-board</SelectItem>
-                          <SelectItem value="Active">Active</SelectItem>
                           <SelectItem value="Resigned">Resigned</SelectItem>
                           <SelectItem value="Terminated">Terminated</SelectItem>
                           <SelectItem value="Retired">Retired</SelectItem>
@@ -982,14 +994,12 @@ export default function Employees() {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="passportNumber">Passport Number *</Label>
+                      <Label htmlFor="passportNumber">Passport Number</Label>
                       <Input
                         id="passportNumber"
                         value={newEmployee.passportNumber}
                         onChange={(e) => setNewEmployee({...newEmployee, passportNumber: e.target.value})}
                         placeholder="Passport Number"
-                        className={formErrors.passportNumber ? "border-destructive" : ""}
-                        required
                       />
                     </div>
                   </div>
@@ -1152,6 +1162,23 @@ export default function Employees() {
                       />
                       <p className="text-sm text-muted-foreground">
                         Upload any other relevant documents (contracts, references, etc.)
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="companyAssets">Company Asset Documents</Label>
+                      <Input
+                        id="companyAssets"
+                        type="file"
+                        multiple
+                        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                        onChange={(e) => {
+                          const files = Array.from(e.target.files || []);
+                          setNewEmployee({...newEmployee, companyAssets: files});
+                        }}
+                      />
+                      <p className="text-sm text-muted-foreground">
+                        Upload laptop agreements, company asset submissions, etc.
                       </p>
                     </div>
                   </div>

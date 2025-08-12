@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Calendar, Plus, Clock, CalendarDays } from "lucide-react"
+import { Calendar, Plus, Clock, CalendarDays, LogIn, LogOut } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
 // Sample employee data for dropdown
@@ -30,7 +30,29 @@ const employees = [
   { id: "EMP004", name: "Kemi Adeleke", vacationDays: 25, usedDays: 3 },
 ]
 
-// Sample leave records
+// Sample attendance records
+const attendanceRecords = [
+  {
+    id: 1,
+    employeeId: "EMP001",
+    employeeName: "Adebayo Johnson",
+    date: "2024-01-15",
+    clockIn: "08:30",
+    clockOut: "17:00",
+    status: "Present"
+  },
+  {
+    id: 2,
+    employeeId: "EMP002",
+    employeeName: "Fatima Abdul", 
+    date: "2024-01-15",
+    clockIn: "09:00",
+    clockOut: "17:30",
+    status: "Present"
+  },
+]
+
+// Sample leave records with multi-level approval
 const leaveRecords = [
   {
     id: 1,
@@ -41,6 +63,8 @@ const leaveRecords = [
     endDate: "2024-01-19",
     days: 5,
     status: "Approved",
+    supervisorApproval: "Approved",
+    hrApproval: "Approved",
     appliedDate: "2024-01-01"
   },
   {
@@ -51,7 +75,9 @@ const leaveRecords = [
     startDate: "2024-01-22",
     endDate: "2024-01-24",
     days: 3,
-    status: "Approved",
+    status: "Pending",
+    supervisorApproval: "Approved",
+    hrApproval: "Pending",
     appliedDate: "2024-01-20"
   },
 ]
@@ -62,6 +88,9 @@ export default function Attendance() {
   const [startDate, setStartDate] = useState("")
   const [endDate, setEndDate] = useState("")
   const [records, setRecords] = useState(leaveRecords)
+  const [attendance, setAttendance] = useState(attendanceRecords)
+  const [clockInEmployee, setClockInEmployee] = useState("")
+  const [currentTime] = useState(new Date())
   const { toast } = useToast()
 
   const calculateDays = () => {
@@ -109,6 +138,8 @@ export default function Attendance() {
       endDate,
       days,
       status: "Pending",
+      supervisorApproval: "Pending",
+      hrApproval: "Pending",
       appliedDate: new Date().toISOString().split('T')[0]
     }
 
@@ -132,6 +163,71 @@ export default function Attendance() {
     })
   }
 
+  const handleClockIn = () => {
+    if (!clockInEmployee) {
+      toast({
+        title: "Error",
+        description: "Please select an employee to clock in",
+        variant: "destructive",
+      })
+      return
+    }
+
+    const selectedEmp = employees.find(emp => emp.id === clockInEmployee)
+    const today = new Date().toISOString().split('T')[0]
+    
+    // Check if already clocked in today
+    const existingRecord = attendance.find(record => 
+      record.employeeId === clockInEmployee && record.date === today
+    )
+    
+    if (existingRecord && !existingRecord.clockOut) {
+      toast({
+        title: "Error",
+        description: "Employee is already clocked in today",
+        variant: "destructive",
+      })
+      return
+    }
+
+    const newAttendance = {
+      id: attendance.length + 1,
+      employeeId: clockInEmployee,
+      employeeName: selectedEmp?.name || "",
+      date: today,
+      clockIn: currentTime.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+      clockOut: "",
+      status: "Present"
+    }
+
+    setAttendance([newAttendance, ...attendance])
+    setClockInEmployee("")
+    
+    toast({
+      title: "Success",
+      description: `${selectedEmp?.name} clocked in successfully`,
+    })
+  }
+
+  const handleClockOut = (attendanceId: number) => {
+    const updatedAttendance = attendance.map(record => {
+      if (record.id === attendanceId) {
+        return {
+          ...record,
+          clockOut: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+        }
+      }
+      return record
+    })
+    
+    setAttendance(updatedAttendance)
+    
+    toast({
+      title: "Success",
+      description: "Clocked out successfully",
+    })
+  }
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "Approved":
@@ -152,6 +248,74 @@ export default function Attendance() {
         <p className="text-sm md:text-base text-muted-foreground">
           Manage employee leave requests and track attendance records
         </p>
+      </div>
+
+      {/* Attendance Tracking Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-6">
+        <Card className="border-border/50 shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-primary flex items-center">
+              <LogIn className="mr-2 h-5 w-5" />
+              Clock In/Out System
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label>Select Employee</Label>
+              <Select value={clockInEmployee} onValueChange={setClockInEmployee}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select employee to clock in" />
+                </SelectTrigger>
+                <SelectContent className="bg-popover border shadow-lg">
+                  {employees.map((emp) => (
+                    <SelectItem key={emp.id} value={emp.id}>
+                      {emp.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button onClick={handleClockIn} className="w-full">
+              <LogIn className="mr-2 h-4 w-4" />
+              Clock In
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/50 shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-primary flex items-center">
+              <Clock className="mr-2 h-5 w-5" />
+              Today's Attendance
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {attendance
+                .filter(record => record.date === new Date().toISOString().split('T')[0])
+                .map((record) => (
+                  <div key={record.id} className="flex justify-between items-center p-2 bg-accent/50 rounded-lg">
+                    <div>
+                      <div className="font-medium text-sm">{record.employeeName}</div>
+                      <div className="text-xs text-muted-foreground">
+                        In: {record.clockIn} {record.clockOut && `• Out: ${record.clockOut}`}
+                      </div>
+                    </div>
+                    {!record.clockOut && (
+                      <Button size="sm" onClick={() => handleClockOut(record.id)} variant="outline">
+                        <LogOut className="mr-1 h-3 w-3" />
+                        Clock Out
+                      </Button>
+                    )}
+                  </div>
+                ))
+              }
+              {attendance.filter(record => record.date === new Date().toISOString().split('T')[0]).length === 0 && (
+                <p className="text-sm text-muted-foreground">No attendance records for today</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
@@ -260,6 +424,8 @@ export default function Attendance() {
                     <TableHead className="hidden md:table-cell text-xs md:text-sm">Start Date</TableHead>
                     <TableHead className="hidden md:table-cell text-xs md:text-sm">End Date</TableHead>
                     <TableHead className="text-xs md:text-sm">Days</TableHead>
+                    <TableHead className="text-xs md:text-sm">Supervisor</TableHead>
+                    <TableHead className="text-xs md:text-sm">HR</TableHead>
                     <TableHead className="text-xs md:text-sm">Status</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -273,6 +439,8 @@ export default function Attendance() {
                       <TableCell className="hidden md:table-cell text-xs md:text-sm">{record.startDate}</TableCell>
                       <TableCell className="hidden md:table-cell text-xs md:text-sm">{record.endDate}</TableCell>
                       <TableCell className="text-xs md:text-sm">{record.days}</TableCell>
+                      <TableCell>{getStatusBadge(record.supervisorApproval)}</TableCell>
+                      <TableCell>{getStatusBadge(record.hrApproval)}</TableCell>
                       <TableCell>{getStatusBadge(record.status)}</TableCell>
                     </TableRow>
                   ))}

@@ -137,6 +137,7 @@ export default function Employees() {
     email: "",
     homeAddress: "",
     emergencyContact: "",
+    emergencyContactNumber: "",
       nextOfKinName: "",
       nextOfKinRelationship: "",
     
@@ -367,6 +368,7 @@ export default function Employees() {
       email: "",
       homeAddress: "",
       emergencyContact: "",
+      emergencyContactNumber: "",
       nextOfKinName: "",
       nextOfKinRelationship: "",
       jobTitle: "",
@@ -707,14 +709,25 @@ export default function Employees() {
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="emergencyContact">Emergency Contact</Label>
-                    <Input
-                      id="emergencyContact"
-                      value={newEmployee.emergencyContact}
-                      onChange={(e) => setNewEmployee({...newEmployee, emergencyContact: e.target.value})}
-                      placeholder="Name and phone number"
-                    />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="emergencyContact">Emergency Contact Name</Label>
+                      <Input
+                        id="emergencyContact"
+                        value={newEmployee.emergencyContact}
+                        onChange={(e) => setNewEmployee({...newEmployee, emergencyContact: e.target.value})}
+                        placeholder="Full name"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="emergencyContactNumber">Emergency Contact Number</Label>
+                      <Input
+                        id="emergencyContactNumber"
+                        value={newEmployee.emergencyContactNumber}
+                        onChange={(e) => setNewEmployee({...newEmployee, emergencyContactNumber: e.target.value})}
+                        placeholder="Phone number"
+                      />
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
@@ -1359,9 +1372,15 @@ export default function Employees() {
                   <Label className="text-sm font-medium text-muted-foreground">Home Address</Label>
                   <p className="text-base">{selectedEmployee.homeAddress || 'N/A'}</p>
                 </div>
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-muted-foreground">Emergency Contact</Label>
-                  <p className="text-base">{selectedEmployee.emergencyContact || 'N/A'}</p>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-muted-foreground">Emergency Contact Name</Label>
+                    <p className="text-base">{selectedEmployee.emergencyContact || 'N/A'}</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-muted-foreground">Emergency Contact Number</Label>
+                    <p className="text-base">{selectedEmployee.emergencyContactNumber || 'N/A'}</p>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-muted-foreground">Next of Kin</Label>

@@ -14,7 +14,11 @@ export default function Dashboard() {
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
-          <Button size="sm" className="text-xs md:text-sm">
+          <Button 
+            size="sm" 
+            className="text-xs md:text-sm"
+            onClick={() => window.location.href = '/employees?add=true'}
+          >
             <Plus className="mr-2 h-3 w-3 md:h-4 md:w-4" />
             Add Employee
           </Button>

@@ -1,4 +1,4 @@
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -36,7 +36,8 @@ import {
   Eye, 
   MoreHorizontal,
   CalendarIcon,
-  FileText
+  FileText,
+  Trash2
 } from "lucide-react"
 import {
   DropdownMenu,
@@ -47,6 +48,8 @@ import {
 import { useToast } from "@/hooks/use-toast"
 import { parseCSVFile, formatDataForPHP, type EmployeeData } from "@/utils/csvImport"
 import { downloadCSVTemplate } from "@/utils/csvTemplate"
+import jsPDF from 'jspdf'
+import * as XLSX from 'xlsx'
 
 // Sample employee data with updated fields
 const employees = [
@@ -113,6 +116,8 @@ export default function Employees() {
   const [employeeList, setEmployeeList] = useState<EmployeeData[]>(employees)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { toast } = useToast()
+  const [formErrors, setFormErrors] = useState<{[key: string]: boolean}>({})
+  const [currentTab, setCurrentTab] = useState("personal")
 
   const [showAddEmployee, setShowAddEmployee] = useState(false)
   const [showViewDetails, setShowViewDetails] = useState(false)
@@ -132,6 +137,7 @@ export default function Employees() {
     email: "",
     homeAddress: "",
     emergencyContact: "",
+    nextOfKin: "",
     
     // Job Information
     jobTitle: "",
@@ -143,7 +149,7 @@ export default function Employees() {
     hireDate: undefined as Date | undefined,
     probationPeriod: "",
     confirmationDate: undefined as Date | undefined,
-    employmentStatus: "Active",
+    employmentStatus: "On-board",
     
     // Financial Information
     grossSalary: "",
@@ -171,7 +177,8 @@ export default function Employees() {
     certifications: [] as File[],
     cv: null as File | null,
     educationCertificate: null as File | null,
-    otherDocuments: [] as File[]
+    otherDocuments: [] as File[],
+    companyAssets: [] as File[]
   })
 
   const departments = [
@@ -179,11 +186,68 @@ export default function Employees() {
     "Business Development", "Technician", "Engineering", "Administration", "Marketing"
   ]
 
+  const gradeLevels = ["Junior", "Middle", "Senior", "Executive"]
+
+  // Check if Add Employee dialog should open on page load
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search)
+    if (urlParams.get('add') === 'true') {
+      setShowAddEmployee(true)
+      // Clean up URL
+      window.history.replaceState({}, document.title, window.location.pathname)
+    }
+  }, [])
+
   const filteredEmployees = employeeList.filter(employee =>
     `${employee.firstName} ${employee.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
     employee.department.toLowerCase().includes(searchTerm.toLowerCase()) ||
     employee.position.toLowerCase().includes(searchTerm.toLowerCase())
   )
+
+  // Validate required fields
+  const validateRequiredFields = (tab: string) => {
+    const errors: {[key: string]: boolean} = {}
+    
+    if (tab === "personal") {
+      if (!newEmployee.firstName.trim()) errors.firstName = true
+      if (!newEmployee.lastName.trim()) errors.lastName = true
+      if (!newEmployee.phoneNumber.trim()) errors.phoneNumber = true
+      if (!newEmployee.email.trim()) errors.email = true
+    } else if (tab === "job") {
+      if (!newEmployee.jobTitle.trim()) errors.jobTitle = true
+      if (!newEmployee.department.trim()) errors.department = true
+      if (!newEmployee.employmentType.trim()) errors.employmentType = true
+      if (!newEmployee.hireDate) errors.hireDate = true
+    } else if (tab === "government") {
+      if (!newEmployee.nationalId.trim()) errors.nationalId = true
+      if (!newEmployee.passportNumber.trim()) errors.passportNumber = true
+    }
+    
+    setFormErrors(errors)
+    return Object.keys(errors).length === 0
+  }
+
+  // Function to check if user can proceed to next tab
+  const canProceedToTab = (targetTab: string) => {
+    const tabOrder = ["personal", "job", "financial", "government", "additional"]
+    const currentIndex = tabOrder.indexOf(currentTab)
+    const targetIndex = tabOrder.indexOf(targetTab)
+    
+    if (targetIndex <= currentIndex) return true
+    
+    // Check all required tabs before target
+    for (let i = 0; i < targetIndex; i++) {
+      if (!validateRequiredFields(tabOrder[i])) {
+        toast({
+          title: "Required Fields Missing",
+          description: `Please fill all required fields in the ${tabOrder[i]} section before proceeding.`,
+          variant: "destructive"
+        })
+        return false
+      }
+    }
+    return true
+  }
 
   // CSV Import functionality
   const handleImportCSV = () => {
@@ -232,9 +296,10 @@ export default function Employees() {
         })
       }
     } catch (error) {
+      console.error('CSV Import Error:', error)
       toast({
-        title: "Import Error",
-        description: "An error occurred while importing the CSV file",
+        title: "Import Error", 
+        description: error instanceof Error ? error.message : "An error occurred while importing the CSV file. Please check the file format and try again.",
         variant: "destructive"
       })
     }
@@ -246,7 +311,27 @@ export default function Employees() {
   }
 
   const handleAddEmployee = () => {
-    const empId = newEmployee.employeeId || `EMP${String(employees.length + 1).padStart(3, '0')}`
+    // Validate all required fields before adding
+    const allTabs = ["personal", "job", "government"]
+    let hasErrors = false
+    
+    for (const tab of allTabs) {
+      if (!validateRequiredFields(tab)) {
+        hasErrors = true
+        break
+      }
+    }
+    
+    if (hasErrors) {
+      toast({
+        title: "Required Fields Missing",
+        description: "Please fill all required fields before adding the employee.",
+        variant: "destructive"
+      })
+      return
+    }
+    
+    const empId = newEmployee.employeeId || `EMP${String(employeeList.length + 1).padStart(3, '0')}`
     const employee = {
       id: empId,
       firstName: newEmployee.firstName,
@@ -281,6 +366,7 @@ export default function Employees() {
       email: "",
       homeAddress: "",
       emergencyContact: "",
+      nextOfKin: "",
       jobTitle: "",
       department: "",
       employmentType: "",
@@ -290,7 +376,7 @@ export default function Employees() {
       hireDate: undefined,
       probationPeriod: "",
       confirmationDate: undefined,
-      employmentStatus: "Active",
+      employmentStatus: "On-board",
       grossSalary: "",
       housingAllowance: "",
       transportAllowance: "",
@@ -310,9 +396,17 @@ export default function Employees() {
       certifications: [],
       cv: null,
       educationCertificate: null,
-      otherDocuments: []
+      otherDocuments: [],
+      companyAssets: []
     })
+    setFormErrors({})
+    setCurrentTab("personal")
     setShowAddEmployee(false)
+    
+    toast({
+      title: "Employee Added",
+      description: `${newEmployee.firstName} ${newEmployee.lastName} has been successfully added to the system.`,
+    })
   }
 
   const handleViewDetails = (employee: any) => {
@@ -331,10 +425,86 @@ export default function Employees() {
     )
     setShowEditEmployee(false)
     setEditEmployee(null)
+    
+    toast({
+      title: "Employee Updated",
+      description: `${editEmployee.firstName} ${editEmployee.lastName}'s information has been updated.`,
+    })
+  }
+
+  const handleDeleteEmployee = (employee: any) => {
+    setEmployeeList(prev => prev.filter(emp => emp.id !== employee.id))
+    toast({
+      title: "Employee Deleted",
+      description: `${employee.firstName} ${employee.lastName} has been removed from the system.`,
+    })
+  }
+
+  const handleDownloadProfile = (employee: any) => {
+    const pdf = new jsPDF()
+    
+    // Title
+    pdf.setFontSize(20)
+    pdf.text('Employee Profile', 20, 30)
+    
+    // Employee basic info
+    pdf.setFontSize(12)
+    pdf.text(`Name: ${employee.firstName} ${employee.lastName}`, 20, 50)
+    pdf.text(`Employee ID: ${employee.id}`, 20, 60)
+    pdf.text(`Email: ${employee.email}`, 20, 70)
+    pdf.text(`Phone: ${employee.phone || employee.phoneNumber || 'N/A'}`, 20, 80)
+    pdf.text(`Department: ${employee.department}`, 20, 90)
+    pdf.text(`Position: ${employee.position || employee.jobTitle}`, 20, 100)
+    pdf.text(`Employment Type: ${employee.employmentType}`, 20, 110)
+    pdf.text(`Status: ${employee.status || employee.employmentStatus}`, 20, 120)
+    pdf.text(`Hire Date: ${employee.joinDate || employee.hireDate || 'N/A'}`, 20, 130)
+    
+    // Financial info
+    pdf.text(`Salary: ${employee.salary || employee.grossSalary || 'N/A'}`, 20, 150)
+    if (employee.housingAllowance) pdf.text(`Housing Allowance: ${employee.housingAllowance}`, 20, 160)
+    if (employee.transportAllowance) pdf.text(`Transport Allowance: ${employee.transportAllowance}`, 20, 170)
+    if (employee.otherAllowance) pdf.text(`Other Allowance: ${employee.otherAllowance}`, 20, 180)
+    
+    pdf.save(`${employee.firstName}_${employee.lastName}_profile.pdf`)
+    
+    toast({
+      title: "Profile Downloaded",
+      description: `${employee.firstName} ${employee.lastName}'s profile has been downloaded as PDF.`,
+    })
+  }
+
+  const handleExportData = () => {
+    const exportData = employeeList.map((emp: any) => ({
+      'Employee ID': emp.id,
+      'First Name': emp.firstName,
+      'Last Name': emp.lastName,
+      'Email': emp.email,
+      'Phone': emp.phone || emp.phoneNumber || '',
+      'Department': emp.department,
+      'Position': emp.position || emp.jobTitle || '',
+      'Employment Type': emp.employmentType,
+      'Status': emp.status || emp.employmentStatus || '',
+      'Hire Date': emp.joinDate || emp.hireDate || '',
+      'Salary': emp.salary || emp.grossSalary || '',
+      'Vacation Days': emp.vacationDays || 0
+    }))
+    
+    const worksheet = XLSX.utils.json_to_sheet(exportData)
+    const workbook = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Employees')
+    
+    XLSX.writeFile(workbook, 'employees_export.xlsx')
+    
+    toast({
+      title: "Data Exported",
+      description: "Employee data has been exported to Excel file.",
+    })
   }
 
   const getStatusBadge = (status: string) => {
     switch (status) {
+      case "On-board":
+        return <Badge className="bg-primary/10 text-primary border-primary/20 text-xs">On-board</Badge>
       case "Active":
         return <Badge className="bg-success/10 text-success border-success/20 text-xs">Active</Badge>
       case "On Leave":
@@ -375,7 +545,7 @@ export default function Employees() {
             onChange={handleFileChange}
             style={{ display: 'none' }}
           />
-          <Button variant="outline" size="sm" className="text-xs md:text-sm">
+          <Button variant="outline" size="sm" className="text-xs md:text-sm" onClick={handleExportData}>
             <Download className="mr-2 h-3 w-3 md:h-4 md:w-4" />
             Export Data
           </Button>
@@ -390,7 +560,11 @@ export default function Employees() {
               <DialogHeader>
                 <DialogTitle>Add New Employee</DialogTitle>
               </DialogHeader>
-              <Tabs defaultValue="personal" className="w-full">
+              <Tabs value={currentTab} onValueChange={(tab) => {
+                if (canProceedToTab(tab)) {
+                  setCurrentTab(tab)
+                }
+              }} className="w-full">
                 <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-1">
                   <TabsTrigger value="personal" className="text-xs sm:text-sm">Personal</TabsTrigger>
                   <TabsTrigger value="job" className="text-xs sm:text-sm">Job Info</TabsTrigger>
@@ -407,6 +581,7 @@ export default function Employees() {
                         id="firstName"
                         value={newEmployee.firstName}
                         onChange={(e) => setNewEmployee({...newEmployee, firstName: e.target.value})}
+                        className={formErrors.firstName ? "border-destructive" : ""}
                       />
                     </div>
                     <div className="space-y-2">
@@ -423,6 +598,7 @@ export default function Employees() {
                         id="lastName"
                         value={newEmployee.lastName}
                         onChange={(e) => setNewEmployee({...newEmployee, lastName: e.target.value})}
+                        className={formErrors.lastName ? "border-destructive" : ""}
                       />
                     </div>
                   </div>
@@ -503,6 +679,7 @@ export default function Employees() {
                         value={newEmployee.phoneNumber}
                         onChange={(e) => setNewEmployee({...newEmployee, phoneNumber: e.target.value})}
                         placeholder="+234 XXX XXX XXXX"
+                        className={formErrors.phoneNumber ? "border-destructive" : ""}
                       />
                     </div>
                     <div className="space-y-2">
@@ -513,6 +690,7 @@ export default function Employees() {
                         value={newEmployee.email}
                         onChange={(e) => setNewEmployee({...newEmployee, email: e.target.value})}
                         placeholder="employee@company.com"
+                        className={formErrors.email ? "border-destructive" : ""}
                       />
                     </div>
                   </div>
@@ -536,6 +714,16 @@ export default function Employees() {
                       placeholder="Name and phone number"
                     />
                   </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="nextOfKin">Next of Kin</Label>
+                    <Input
+                      id="nextOfKin"
+                      value={newEmployee.nextOfKin}
+                      onChange={(e) => setNewEmployee({...newEmployee, nextOfKin: e.target.value})}
+                      placeholder="Name and relationship"
+                    />
+                  </div>
                 </TabsContent>
 
                 <TabsContent value="job" className="space-y-4">
@@ -546,12 +734,13 @@ export default function Employees() {
                         id="jobTitle"
                         value={newEmployee.jobTitle}
                         onChange={(e) => setNewEmployee({...newEmployee, jobTitle: e.target.value})}
+                        className={formErrors.jobTitle ? "border-destructive" : ""}
                       />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="department">Department *</Label>
                       <Select value={newEmployee.department} onValueChange={(value) => setNewEmployee({...newEmployee, department: value})}>
-                        <SelectTrigger>
+                        <SelectTrigger className={formErrors.department ? "border-destructive" : ""}>
                           <SelectValue placeholder="Select department" />
                         </SelectTrigger>
                         <SelectContent className="bg-popover border shadow-lg">
@@ -567,7 +756,7 @@ export default function Employees() {
                     <div className="space-y-2">
                       <Label htmlFor="employmentType">Employment Type *</Label>
                       <Select value={newEmployee.employmentType} onValueChange={(value) => setNewEmployee({...newEmployee, employmentType: value})}>
-                        <SelectTrigger>
+                        <SelectTrigger className={formErrors.employmentType ? "border-destructive" : ""}>
                           <SelectValue placeholder="Select type" />
                         </SelectTrigger>
                         <SelectContent className="bg-popover border shadow-lg">
@@ -580,12 +769,16 @@ export default function Employees() {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="gradeLevel">Grade Level</Label>
-                      <Input
-                        id="gradeLevel"
-                        value={newEmployee.gradeLevel}
-                        onChange={(e) => setNewEmployee({...newEmployee, gradeLevel: e.target.value})}
-                        placeholder="Junior, Middle, Senior"
-                      />
+                      <Select value={newEmployee.gradeLevel} onValueChange={(value) => setNewEmployee({...newEmployee, gradeLevel: value})}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select grade level" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-popover border shadow-lg">
+                          {gradeLevels.map((level) => (
+                            <SelectItem key={level} value={level}>{level}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
 
@@ -618,7 +811,8 @@ export default function Employees() {
                             variant="outline"
                             className={cn(
                               "w-full justify-start text-left font-normal",
-                              !newEmployee.hireDate && "text-muted-foreground"
+                              !newEmployee.hireDate && "text-muted-foreground",
+                              formErrors.hireDate ? "border-destructive" : ""
                             )}
                           >
                             <CalendarIcon className="mr-2 h-4 w-4" />
@@ -681,6 +875,7 @@ export default function Employees() {
                           <SelectValue placeholder="Select status" />
                         </SelectTrigger>
                         <SelectContent className="bg-popover border shadow-lg">
+                          <SelectItem value="On-board">On-board</SelectItem>
                           <SelectItem value="Active">Active</SelectItem>
                           <SelectItem value="Resigned">Resigned</SelectItem>
                           <SelectItem value="Terminated">Terminated</SelectItem>
@@ -779,6 +974,7 @@ export default function Employees() {
                         value={newEmployee.nationalId}
                         onChange={(e) => setNewEmployee({...newEmployee, nationalId: e.target.value})}
                         placeholder="11-digit NIN"
+                        className={formErrors.nationalId ? "border-destructive" : ""}
                         required
                       />
                     </div>
@@ -792,6 +988,7 @@ export default function Employees() {
                         value={newEmployee.passportNumber}
                         onChange={(e) => setNewEmployee({...newEmployee, passportNumber: e.target.value})}
                         placeholder="Passport Number"
+                        className={formErrors.passportNumber ? "border-destructive" : ""}
                         required
                       />
                     </div>
@@ -852,6 +1049,22 @@ export default function Employees() {
 
                 <TabsContent value="additional" className="space-y-4">
                   <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="companyAssets">Company Asset Documents</Label>
+                      <Input
+                        id="companyAssets"
+                        type="file"
+                        multiple
+                        accept=".pdf,.doc,.docx,.jpg,.png"
+                        onChange={(e) => {
+                          const files = Array.from(e.target.files || [])
+                          setNewEmployee({...newEmployee, companyAssets: files})
+                        }}
+                      />
+                      <p className="text-sm text-muted-foreground">
+                        Upload laptop agreements, asset submission forms, etc. (PDF, DOC, DOCX, JPG, PNG)
+                      </p>
+                    </div>
                     <h3 className="text-lg font-medium">Document Uploads</h3>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1030,9 +1243,16 @@ export default function Employees() {
                             <Edit className="mr-2 h-3 w-3 md:h-4 md:w-4" />
                             Edit Employee
                           </DropdownMenuItem>
-                          <DropdownMenuItem className="text-xs md:text-sm">
+                          <DropdownMenuItem className="text-xs md:text-sm" onClick={() => handleDownloadProfile(employee)}>
                             <Download className="mr-2 h-3 w-3 md:h-4 md:w-4" />
                             Download Profile
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            className="text-xs md:text-sm text-destructive focus:text-destructive" 
+                            onClick={() => handleDeleteEmployee(employee)}
+                          >
+                            <Trash2 className="mr-2 h-3 w-3 md:h-4 md:w-4" />
+                            Delete Employee
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -1116,6 +1336,10 @@ export default function Employees() {
                   <Label className="text-sm font-medium text-muted-foreground">Emergency Contact</Label>
                   <p className="text-base">{selectedEmployee.emergencyContact || 'N/A'}</p>
                 </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-muted-foreground">Next of Kin</Label>
+                  <p className="text-base">{selectedEmployee.nextOfKin || 'N/A'}</p>
+                </div>
               </TabsContent>
 
               <TabsContent value="job" className="space-y-6">
@@ -1178,15 +1402,9 @@ export default function Employees() {
               </TabsContent>
 
               <TabsContent value="financial" className="space-y-6">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-muted-foreground">Gross Salary</Label>
-                    <p className="text-base font-semibold text-primary">{selectedEmployee.salary || selectedEmployee.grossSalary || 'N/A'}</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-muted-foreground">Meal Allowance</Label>
-                    <p className="text-base">{selectedEmployee.mealAllowance || 'N/A'}</p>
-                  </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-muted-foreground">Gross Salary</Label>
+                  <p className="text-base font-semibold text-primary">{selectedEmployee.salary || selectedEmployee.grossSalary || 'N/A'}</p>
                 </div>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <div className="space-y-2">

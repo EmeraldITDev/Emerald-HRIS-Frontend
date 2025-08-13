@@ -27,7 +27,7 @@ const stats = [
     title: "Monthly Payroll",
     value: "₦47.2M",
     change: "+8.2% from last month",
-    icon: NairaIcon,
+    icon: "₦",
     changeType: "positive" as const,
   },
   {

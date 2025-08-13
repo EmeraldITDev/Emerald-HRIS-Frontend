@@ -31,7 +31,7 @@ const stats = [
     changeType: "positive" as const,
   },
   {
-    title: "Onboarded Employees",
+    title: "Onboard Employees",
     value: "15",
     change: "This quarter",
     icon: UserCheck,

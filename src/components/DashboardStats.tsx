@@ -27,7 +27,7 @@ const stats = [
     title: "Monthly Payroll",
     value: "₦47.2M",
     change: "+8.2% from last month",
-    icon: DollarSign,
+    icon: null,
     changeType: "positive" as const,
   },
   {
@@ -48,7 +48,7 @@ export function DashboardStats() {
             <CardTitle className="text-sm font-medium text-muted-foreground">
               {stat.title}
             </CardTitle>
-            <stat.icon className="h-4 w-4 text-primary" />
+            {stat.icon && <stat.icon className="h-4 w-4 text-primary" />}
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">{stat.value}</div>

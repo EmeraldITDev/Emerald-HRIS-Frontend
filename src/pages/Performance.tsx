@@ -126,6 +126,67 @@ export default function Performance() {
   const [currentReviewId, setCurrentReviewId] = useState<string | null>(null)
   const [currentUserRole] = useState<'employee' | 'manager' | 'hr'>('manager') // This would come from auth context
 
+  // Transform PerformanceReview to PerformanceReviewData for form component
+  const transformReviewToFormData = (review: PerformanceReview) => {
+    const employee = employees.find(emp => emp.id === review.employeeId)
+    const manager = employees.find(emp => emp.id === review.managerId)
+    
+    // Map status to form-compatible values
+    const mapStatus = (status: string): 'draft' | 'submitted' | 'completed' => {
+      switch (status) {
+        case 'in-review':
+        case 'overdue':
+          return 'draft'
+        case 'submitted':
+          return 'submitted'
+        case 'completed':
+          return 'completed'
+        default:
+          return 'draft'
+      }
+    }
+    
+    return {
+      employeeName: review.employeeName,
+      employeeId: review.employeeId,
+      department: review.department,
+      jobTitle: review.jobTitle,
+      reportingManager: review.managerName,
+      appraisalPeriod: { 
+        from: new Date(new Date().getFullYear(), 0, 1),
+        to: new Date(new Date().getFullYear(), 11, 31)
+      },
+      kpas: [
+        { id: '1', name: 'Goal Achievement', description: 'Ability to meet and exceed set objectives and targets', rating: Math.floor(review.overallRating || 3), justification: '' },
+        { id: '2', name: 'Quality of Work', description: 'Consistency and excellence in work output and deliverables', rating: Math.floor(review.overallRating || 3), justification: '' },
+        { id: '3', name: 'Productivity & Efficiency', description: 'Effective use of time and resources to maximize output', rating: Math.floor(review.overallRating || 3), justification: '' },
+        { id: '4', name: 'Problem Solving & Decision Making', description: 'Ability to analyze issues and make sound decisions', rating: Math.floor(review.overallRating || 3), justification: '' },
+        { id: '5', name: 'Initiative & Innovation', description: 'Proactive approach and creative problem-solving abilities', rating: Math.floor(review.overallRating || 3), justification: '' },
+        { id: '6', name: 'Teamwork & Collaboration', description: 'Effective collaboration and contribution to team success', rating: Math.floor(review.overallRating || 3), justification: '' },
+        { id: '7', name: 'Communication Skills', description: 'Clear and effective verbal and written communication', rating: Math.floor(review.overallRating || 3), justification: '' },
+      ],
+      competencies: [
+        { id: '1', name: 'Adaptability & Flexibility', rating: Math.floor(review.overallRating || 3), comment: '' },
+        { id: '2', name: 'Professionalism & Integrity', rating: Math.floor(review.overallRating || 3), comment: '' },
+        { id: '3', name: 'Learning & Development Mindset', rating: Math.floor(review.overallRating || 3), comment: '' },
+        { id: '4', name: 'Customer/Stakeholder Orientation', rating: Math.floor(review.overallRating || 3), comment: '' },
+      ],
+      strengths: '',
+      areasForImprovement: '',
+      trainingNeeds: '',
+      careerAspirations: '',
+      overallRating: review.overallRating,
+      performanceSummary: '',
+      managerComment: '',
+      employeeComment: '',
+      employeeSignOff: review.status === 'completed',
+      managerSignOff: review.status === 'completed',
+      hrSignOff: review.status === 'completed',
+      stage: review.stage,
+      status: mapStatus(review.status)
+    }
+  }
+
   const { toast } = useToast()
 
   // Filtered reviews based on search and status
@@ -149,6 +210,25 @@ export default function Performance() {
   }
 
   const handleSaveReview = (reviewData: any) => {
+    if (currentReviewId) {
+      // Update existing review
+      setReviews(prev => prev.map(review => 
+        review.id === currentReviewId 
+          ? { 
+              ...review, 
+              employeeName: reviewData.employeeName,
+              employeeId: reviewData.employeeId,
+              department: reviewData.department,
+              jobTitle: reviewData.jobTitle,
+              managerName: reviewData.reportingManager,
+              overallRating: reviewData.overallRating,
+              lastUpdated: new Date().toISOString().split('T')[0],
+              progress: Math.min(100, review.progress + 10)
+            }
+          : review
+      ))
+    }
+    
     toast({
       title: "Review saved",
       description: "Performance review has been saved as draft."
@@ -159,9 +239,45 @@ export default function Performance() {
     if (currentReviewId) {
       setReviews(prev => prev.map(review => 
         review.id === currentReviewId 
-          ? { ...review, status: 'submitted', progress: 100, lastUpdated: new Date().toISOString().split('T')[0] }
+          ? { 
+              ...review, 
+              employeeName: reviewData.employeeName,
+              employeeId: reviewData.employeeId,
+              department: reviewData.department,
+              jobTitle: reviewData.jobTitle,
+              managerName: reviewData.reportingManager,
+              overallRating: reviewData.overallRating,
+              status: reviewData.employeeSignOff && reviewData.managerSignOff && reviewData.hrSignOff 
+                ? 'completed' 
+                : 'submitted',
+              stage: reviewData.stage,
+              progress: 100,
+              lastUpdated: new Date().toISOString().split('T')[0]
+            }
           : review
       ))
+    } else {
+      // Create new review
+      const newReview: PerformanceReview = {
+        id: (reviews.length + 1).toString(),
+        employeeName: reviewData.employeeName,
+        employeeId: reviewData.employeeId,
+        department: reviewData.department,
+        jobTitle: reviewData.jobTitle,
+        managerId: 'EMP002', // Default manager - would come from form
+        managerName: reviewData.reportingManager,
+        reviewPeriod: '2024 Annual Review',
+        status: reviewData.employeeSignOff && reviewData.managerSignOff && reviewData.hrSignOff 
+          ? 'completed' 
+          : 'submitted',
+        stage: reviewData.stage,
+        overallRating: reviewData.overallRating,
+        lastUpdated: new Date().toISOString().split('T')[0],
+        dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 30 days from now
+        progress: 100
+      }
+      
+      setReviews(prev => [...prev, newReview])
     }
 
     toast({
@@ -250,6 +366,8 @@ export default function Performance() {
 
   if (showReviewForm) {
     const currentReview = currentReviewId ? reviews.find(r => r.id === currentReviewId) : undefined
+    const formData = currentReview ? transformReviewToFormData(currentReview) : undefined
+    
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-4">
@@ -267,10 +385,11 @@ export default function Performance() {
         </div>
         
         <PerformanceReviewForm
-          reviewData={currentReview as any}
+          reviewData={formData}
           onSave={handleSaveReview}
           onSubmit={handleSubmitReview}
           currentUserRole={currentUserRole}
+          isReadOnly={currentReview?.status === 'completed'}
         />
       </div>
     )

@@ -113,8 +113,9 @@ export default function Payroll() {
     const grossPay = basic + housing + transport + other + earnings
     
     // Nigerian statutory deductions
-    const pensionEmployee = grossPay * 0.08 // Employee 8%
-    const pensionEmployer = grossPay * 0.10 // Employer 10%
+    const pensionableIncome = basic + housing + transport // Pensionable income excludes other allowances
+    const pensionEmployee = pensionableIncome * 0.08 // Employee 8%
+    const pensionEmployer = pensionableIncome * 0.10 // Employer 10%
     const nhf = grossPay * 0.025 // 2.5%
     const nsitf = grossPay * 0.01 // 1% (employer paid)
     const itf = grossPay * 0.01 // 1% (employer paid)

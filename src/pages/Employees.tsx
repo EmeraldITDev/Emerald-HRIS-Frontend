@@ -138,8 +138,11 @@ export default function Employees() {
     homeAddress: "",
     emergencyContact: "",
     emergencyContactNumber: "",
-      nextOfKinName: "",
-      nextOfKinRelationship: "",
+    nextOfKinName: "",
+    nextOfKinRelationship: "",
+    nextOfKinPhone: "",
+    nextOfKinAddress: "",
+    nextOfKinEmail: "",
     
     // Job Information
     jobTitle: "",
@@ -151,10 +154,11 @@ export default function Employees() {
     hireDate: undefined as Date | undefined,
     probationPeriod: "",
     confirmationDate: undefined as Date | undefined,
-    employmentStatus: "On-board",
+    employmentStatus: "Active",
     
     // Financial Information
     grossSalary: "",
+    basicSalary: "",
     housingAllowance: "",
     transportAllowance: "",
     otherAllowance: "",
@@ -163,12 +167,13 @@ export default function Employees() {
     // Banking Information
     bankName: "",
     accountNumber: "",
+    nurban: "",
+    sortCode: "",
     
     // Government IDs
     employeeId: "",
     nationalId: "",
     passportNumber: "",
-    bvn: "",
     tin: "",
     pensionPin: "",
     nhfNumber: "",
@@ -184,12 +189,13 @@ export default function Employees() {
     cv: null as File | null,
     educationCertificate: null as File | null,
     otherDocuments: [] as File[],
-    companyAssets: [] as File[]
+    companyAssets: [] as File[],
+    lastCompanyAsset: null as File | null
   })
 
   const departments = [
-    "Accounting", "Info Technology", "Supply Chain", "Executive", 
-    "Business Development", "Technician", "Engineering", "Administration", "Marketing"
+    "Executive", "Business Development", "Technical Operations", "Operations", 
+    "Legal", "Supply Chain", "Finance", "Human Resource", "IT"
   ]
 
   const gradeLevels = ["Junior", "Middle", "Senior", "Executive"]
@@ -219,15 +225,16 @@ export default function Employees() {
       if (!newEmployee.lastName.trim()) errors.lastName = true
       if (!newEmployee.phoneNumber.trim()) errors.phoneNumber = true
       if (!newEmployee.email.trim()) errors.email = true
+      if (!newEmployee.nationality.trim()) errors.nationality = true
     } else if (tab === "job") {
       if (!newEmployee.jobTitle.trim()) errors.jobTitle = true
       if (!newEmployee.department.trim()) errors.department = true
       if (!newEmployee.employmentType.trim()) errors.employmentType = true
       if (!newEmployee.hireDate) errors.hireDate = true
-      } else if (tab === "government") {
-        if (!newEmployee.nationalId.trim()) errors.nationalId = true
-        // Passport Number is now optional
-      }
+    } else if (tab === "government") {
+      if (!newEmployee.nationalId.trim()) errors.nationalId = true
+      // Passport Number is now optional
+    }
     
     setFormErrors(errors)
     return Object.keys(errors).length === 0
@@ -375,6 +382,9 @@ export default function Employees() {
       emergencyContactNumber: "",
       nextOfKinName: "",
       nextOfKinRelationship: "",
+      nextOfKinPhone: "",
+      nextOfKinAddress: "",
+      nextOfKinEmail: "",
       jobTitle: "",
       department: "",
       employmentType: "",
@@ -384,8 +394,9 @@ export default function Employees() {
       hireDate: undefined,
       probationPeriod: "",
       confirmationDate: undefined,
-      employmentStatus: "On-board",
+      employmentStatus: "Active",
       grossSalary: "",
+      basicSalary: "",
       housingAllowance: "",
       transportAllowance: "",
       otherAllowance: "",
@@ -394,11 +405,12 @@ export default function Employees() {
       // Banking Information
       bankName: "",
       accountNumber: "",
+      nurban: "",
+      sortCode: "",
       
       employeeId: "",
       nationalId: "",
       passportNumber: "",
-      bvn: "",
       tin: "",
       pensionPin: "",
       nhfNumber: "",
@@ -410,7 +422,8 @@ export default function Employees() {
       cv: null,
       educationCertificate: null,
       otherDocuments: [],
-      companyAssets: []
+      companyAssets: [],
+      lastCompanyAsset: null
     })
     setFormErrors({})
     setCurrentTab("personal")
@@ -499,7 +512,18 @@ export default function Employees() {
       'Status': emp.status || emp.employmentStatus || '',
       'Hire Date': emp.joinDate || emp.hireDate || '',
       'Salary': emp.salary || emp.grossSalary || '',
-      'Vacation Days': emp.vacationDays || 0
+      'Vacation Days': emp.vacationDays || 0,
+      'Gender': emp.gender || '',
+      'Nationality': emp.nationality || '',
+      'Home Address': emp.homeAddress || '',
+      'Emergency Contact': emp.emergencyContact || '',
+      'Next of Kin': emp.nextOfKinName || '',
+      'Bank Name': emp.bankName || '',
+      'Account Number': emp.accountNumber || '',
+      'National ID': emp.nationalId || '',
+      'TIN': emp.tin || '',
+      'Pension PIN': emp.pensionPin || ''
+      // Note: Excluding additional documents as requested
     }))
     
     const worksheet = XLSX.utils.json_to_sheet(exportData)
@@ -510,16 +534,20 @@ export default function Employees() {
     
     toast({
       title: "Data Exported",
-      description: "Employee data has been exported to Excel file.",
+      description: "Employee data has been exported to Excel file (excluding additional documents).",
     })
   }
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case "On-board":
-        return <Badge className="bg-primary/10 text-primary border-primary/20 text-xs">On-board</Badge>
       case "Active":
         return <Badge className="bg-success/10 text-success border-success/20 text-xs">Active</Badge>
+      case "On-Leave":
+        return <Badge className="bg-warning/10 text-warning border-warning/20 text-xs whitespace-nowrap shrink-0">On-Leave</Badge>
+      case "Time-Off":
+        return <Badge className="bg-info/10 text-info border-info/20 text-xs whitespace-nowrap shrink-0">Time-Off</Badge>
+      case "On-board":
+        return <Badge className="bg-primary/10 text-primary border-primary/20 text-xs">On-board</Badge>
       case "On Leave":
         return <Badge className="bg-warning/10 text-warning border-warning/20 text-xs whitespace-nowrap shrink-0">On Leave</Badge>
       case "Terminated":
@@ -674,12 +702,13 @@ export default function Employees() {
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="nationality">Nationality</Label>
+                      <Label htmlFor="nationality">Nationality *</Label>
                       <Input
                         id="nationality"
                         value={newEmployee.nationality}
                         onChange={(e) => setNewEmployee({...newEmployee, nationality: e.target.value})}
                         placeholder="e.g., Nigerian"
+                        className={formErrors.nationality ? "border-destructive" : ""}
                       />
                     </div>
                   </div>
@@ -758,6 +787,38 @@ export default function Employees() {
                         placeholder="e.g., Spouse, Parent, Sibling"
                       />
                     </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="nextOfKinPhone">Next of Kin Phone Number</Label>
+                      <Input
+                        id="nextOfKinPhone"
+                        value={newEmployee.nextOfKinPhone}
+                        onChange={(e) => setNewEmployee({...newEmployee, nextOfKinPhone: e.target.value})}
+                        placeholder="+234 XXX XXX XXXX"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="nextOfKinEmail">Next of Kin Email</Label>
+                      <Input
+                        id="nextOfKinEmail"
+                        type="email"
+                        value={newEmployee.nextOfKinEmail}
+                        onChange={(e) => setNewEmployee({...newEmployee, nextOfKinEmail: e.target.value})}
+                        placeholder="nextofkin@email.com"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="nextOfKinAddress">Next of Kin Address</Label>
+                    <Textarea
+                      id="nextOfKinAddress"
+                      value={newEmployee.nextOfKinAddress}
+                      onChange={(e) => setNewEmployee({...newEmployee, nextOfKinAddress: e.target.value})}
+                      placeholder="Full address of next of kin"
+                    />
                   </div>
                 </TabsContent>
 
@@ -910,6 +971,9 @@ export default function Employees() {
                           <SelectValue placeholder="Select status" />
                         </SelectTrigger>
                         <SelectContent className="bg-popover border shadow-lg">
+                          <SelectItem value="Active">Active</SelectItem>
+                          <SelectItem value="On-Leave">On-Leave</SelectItem>
+                          <SelectItem value="Time-Off">Time-Off</SelectItem>
                           <SelectItem value="On-board">On-board</SelectItem>
                           <SelectItem value="Resigned">Resigned</SelectItem>
                           <SelectItem value="Terminated">Terminated</SelectItem>
@@ -935,49 +999,73 @@ export default function Employees() {
 
                 <TabsContent value="financial" className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="grossSalary">Gross Salary</Label>
+                    <Label htmlFor="grossSalary">Gross Pay *</Label>
                     <Input
                       id="grossSalary"
+                      type="number"
                       value={newEmployee.grossSalary}
-                      onChange={(e) => setNewEmployee({...newEmployee, grossSalary: e.target.value})}
-                      placeholder="₦2,500,000"
+                      onChange={(e) => {
+                        const grossPay = parseFloat(e.target.value) || 0;
+                        const housing = Math.round(grossPay * 0.20);
+                        const basic = Math.round(grossPay * 0.40);
+                        const transport = Math.round(grossPay * 0.09);
+                        const other = Math.round(grossPay * 0.31);
+                        
+                        setNewEmployee({
+                          ...newEmployee, 
+                          grossSalary: e.target.value,
+                          housingAllowance: housing.toString(),
+                          basicSalary: basic.toString(),
+                          transportAllowance: transport.toString(),
+                          otherAllowance: other.toString()
+                        });
+                      }}
+                      placeholder="2500000"
                     />
+                    <p className="text-xs text-muted-foreground">Enter amount in Naira (₦). All allowances will be auto-calculated.</p>
                   </div>
 
-                  {newEmployee.employmentType === "Full-time" && (
-                    <>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="housingAllowance">Housing Allowance</Label>
-                          <Input
-                            id="housingAllowance"
-                            value={newEmployee.housingAllowance}
-                            onChange={(e) => setNewEmployee({...newEmployee, housingAllowance: e.target.value})}
-                            placeholder="₦300,000"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="transportAllowance">Transport Allowance</Label>
-                          <Input
-                            id="transportAllowance"
-                            value={newEmployee.transportAllowance}
-                            onChange={(e) => setNewEmployee({...newEmployee, transportAllowance: e.target.value})}
-                            placeholder="₦100,000"
-                          />
-                        </div>
-                      </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="housingAllowance">Housing Allowance (20%)</Label>
+                      <Input
+                        id="housingAllowance"
+                        value={newEmployee.housingAllowance ? `₦${parseInt(newEmployee.housingAllowance).toLocaleString()}` : "₦0"}
+                        readOnly
+                        className="bg-muted"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="basicSalary">Basic Salary (40%)</Label>
+                      <Input
+                        id="basicSalary"
+                        value={newEmployee.basicSalary ? `₦${parseInt(newEmployee.basicSalary).toLocaleString()}` : "₦0"}
+                        readOnly
+                        className="bg-muted"
+                      />
+                    </div>
+                  </div>
 
-                      <div className="space-y-2">
-                        <Label htmlFor="otherAllowance">Other Allowance</Label>
-                        <Input
-                          id="otherAllowance"
-                          value={newEmployee.otherAllowance}
-                          onChange={(e) => setNewEmployee({...newEmployee, otherAllowance: e.target.value})}
-                          placeholder="₦50,000"
-                        />
-                      </div>
-                    </>
-                  )}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="transportAllowance">Transport Allowance (9%)</Label>
+                      <Input
+                        id="transportAllowance"
+                        value={newEmployee.transportAllowance ? `₦${parseInt(newEmployee.transportAllowance).toLocaleString()}` : "₦0"}
+                        readOnly
+                        className="bg-muted"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="otherAllowance">Other Allowances (31%)</Label>
+                      <Input
+                        id="otherAllowance"
+                        value={newEmployee.otherAllowance ? `₦${parseInt(newEmployee.otherAllowance).toLocaleString()}` : "₦0"}
+                        readOnly
+                        className="bg-muted"
+                      />
+                    </div>
+                  </div>
 
                   <div className="space-y-4">
                     <h3 className="text-base font-medium">Bank Account for Salary Payments</h3>
@@ -1037,6 +1125,27 @@ export default function Employees() {
                         />
                       </div>
                     </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="nurban">Nurban</Label>
+                        <Input
+                          id="nurban"
+                          value={newEmployee.nurban}
+                          onChange={(e) => setNewEmployee({...newEmployee, nurban: e.target.value})}
+                          placeholder="NURBAN code"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="sortCode">Sort Code</Label>
+                        <Input
+                          id="sortCode"
+                          value={newEmployee.sortCode}
+                          onChange={(e) => setNewEmployee({...newEmployee, sortCode: e.target.value})}
+                          placeholder="Bank sort code"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </TabsContent>
 
@@ -1077,15 +1186,6 @@ export default function Employees() {
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="bvn">BVN</Label>
-                      <Input
-                        id="bvn"
-                        value={newEmployee.bvn}
-                        onChange={(e) => setNewEmployee({...newEmployee, bvn: e.target.value})}
-                        placeholder="11-digit BVN"
-                      />
-                    </div>
                     <div className="space-y-2">
                       <Label htmlFor="tin">TIN</Label>
                       <Input
@@ -1547,11 +1647,7 @@ export default function Employees() {
                     <p className="text-sm">{selectedEmployee.nationalId || 'N/A'}</p>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-sm font-medium text-muted-foreground">BVN</Label>
-                    <p className="text-sm">{selectedEmployee.bvn || 'N/A'}</p>
-                  </div>
+                <div className="grid grid-cols-1 gap-4">
                   <div>
                     <Label className="text-sm font-medium text-muted-foreground">TIN</Label>
                     <p className="text-sm">{selectedEmployee.tin || 'N/A'}</p>

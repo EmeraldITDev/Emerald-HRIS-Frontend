@@ -269,8 +269,8 @@ export default function Performance() {
 
       {/* Performance Review Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[700px]">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-[700px] my-8">
+          <DialogHeader className="mb-4">
             <DialogTitle>Performance Review - {selectedReview?.employeeName}</DialogTitle>
             <DialogDescription>
               {selectedReview?.reviewPeriod} Performance Evaluation

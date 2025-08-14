@@ -33,7 +33,7 @@ const stats = [
   {
     title: "Onboard Employees",
     value: "15",
-    change: "This quarter",
+    change: "Today",
     icon: UserCheck,
     changeType: "positive" as const,
   },

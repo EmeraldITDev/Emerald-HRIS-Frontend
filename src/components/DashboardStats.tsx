@@ -17,7 +17,7 @@ const stats = [
     changeType: "neutral" as const,
   },
   {
-    title: "FTE (Full-Time Equivalents)",
+    title: "FTE (Full-Time Employees)",
     value: "179",
     change: "72.5% of workforce",
     icon: Users,

@@ -356,7 +356,7 @@ export default function Payroll() {
             <div className="space-y-6">
               {/* Earnings */}
               <div>
-                <h3 className="font-semibold text-lg mb-3">Earnings</h3>
+                <h3 className="font-semibold text-lg mb-3">Payroll Structure</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">

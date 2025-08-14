@@ -389,7 +389,7 @@ export default function Performance() {
           onSave={handleSaveReview}
           onSubmit={handleSubmitReview}
           currentUserRole={currentUserRole}
-          isReadOnly={currentReview?.status === 'completed'}
+          isReadOnly={false}
         />
       </div>
     )

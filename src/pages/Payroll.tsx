@@ -72,6 +72,8 @@ export default function Payroll() {
     housingAllowance: "",
     transportAllowance: "",
     otherAllowance: "",
+    earnings: "",
+    deduction: "",
   })
   const { toast } = useToast()
 
@@ -88,6 +90,9 @@ export default function Payroll() {
     const employmentType = selectedEmp?.employmentType || "Full-time"
     
     const gross = parseFloat(payrollData.grossSalary) || 0
+    const earnings = parseFloat(payrollData.earnings) || 0
+    const deduction = parseFloat(payrollData.deduction) || 0
+    
     let basic, housing, transport, other;
     
     if (employmentType === "Full-time") {
@@ -104,7 +109,8 @@ export default function Payroll() {
       other = 0
     }
     
-    const grossPay = basic + housing + transport + other
+    // Add earnings to gross pay
+    const grossPay = basic + housing + transport + other + earnings
     
     // Nigerian statutory deductions
     const pensionEmployee = grossPay * 0.08 // Employee 8%
@@ -140,7 +146,8 @@ export default function Payroll() {
       tax = grossPay * 0.05
     }
     
-    const totalDeductions = pensionEmployee + nhf + tax
+    // Add personal deduction to total deductions
+    const totalDeductions = pensionEmployee + nhf + tax + deduction
     const netPay = grossPay - totalDeductions
     const totalEmployerCost = grossPay + pensionEmployer + nsitf + itf
     
@@ -150,6 +157,8 @@ export default function Payroll() {
       housing,
       transport,
       other,
+      earnings,
+      deduction,
       pensionEmployee,
       pensionEmployer,
       nhf,
@@ -207,6 +216,8 @@ export default function Payroll() {
       housingAllowance: "",
       transportAllowance: "",
       otherAllowance: "",
+      earnings: "",
+      deduction: "",
     })
     setSelectedEmployee("")
     setSelectedPeriod("")
@@ -340,6 +351,28 @@ export default function Payroll() {
                 </>
               )}
 
+              <div>
+                <Label htmlFor="earnings">Additional Earnings (₦)</Label>
+                <Input
+                  id="earnings"
+                  type="number"
+                  placeholder="50,000"
+                  value={payrollData.earnings}
+                  onChange={(e) => setPayrollData({...payrollData, earnings: e.target.value})}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="deduction">Personal Deduction (₦)</Label>
+                <Input
+                  id="deduction"
+                  type="number"
+                  placeholder="25,000"
+                  value={payrollData.deduction}
+                  onChange={(e) => setPayrollData({...payrollData, deduction: e.target.value})}
+                />
+              </div>
+
             </div>
           </CardContent>
         </Card>
@@ -377,18 +410,24 @@ export default function Payroll() {
                           <span>Transport Allowance (9%):</span>
                           <span>{formatCurrency(calculations.transport)}</span>
                         </div>
-                        <div className="flex justify-between text-sm">
-                          <span>Other Allowance (31%):</span>
-                          <span>{formatCurrency(calculations.other)}</span>
-                        </div>
-                      </>
-                    )}
-                    {calculations.employmentType === "Contract" && (
-                      <div className="flex justify-between text-sm">
-                        <span>Contract Amount:</span>
-                        <span>{formatCurrency(calculations.basic)}</span>
-                      </div>
-                    )}
+                         <div className="flex justify-between text-sm">
+                           <span>Other Allowance (31%):</span>
+                           <span>{formatCurrency(calculations.other)}</span>
+                         </div>
+                       </>
+                     )}
+                     {calculations.employmentType === "Contract" && (
+                       <div className="flex justify-between text-sm">
+                         <span>Contract Amount:</span>
+                         <span>{formatCurrency(calculations.basic)}</span>
+                       </div>
+                     )}
+                     {calculations.earnings > 0 && (
+                       <div className="flex justify-between text-sm border-t pt-2 mt-2">
+                         <span>Additional Earnings:</span>
+                         <span className="text-success font-medium">{formatCurrency(calculations.earnings)}</span>
+                       </div>
+                     )}
                   </div>
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
@@ -420,6 +459,12 @@ export default function Payroll() {
                       <span>NHF (2.5%):</span>
                       <span>{formatCurrency(calculations.nhf)}</span>
                     </div>
+                    {calculations.deduction > 0 && (
+                      <div className="flex justify-between text-sm border-t pt-2 mt-2">
+                        <span>Personal Deduction:</span>
+                        <span className="text-destructive font-medium">{formatCurrency(calculations.deduction)}</span>
+                      </div>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm font-semibold border-t pt-2">

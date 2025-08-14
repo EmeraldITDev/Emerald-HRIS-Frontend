@@ -315,42 +315,6 @@ export default function Payroll() {
                 />
               </div>
 
-              {selectedEmployee && onboardEmployees.find(emp => emp.id === selectedEmployee)?.employmentType === "Full-time" && (
-                <>
-                  <div>
-                    <Label htmlFor="housingAllowance">Housing Allowance (₦)</Label>
-                    <Input
-                      id="housingAllowance"
-                      type="number"
-                      placeholder="300,000"
-                      value={payrollData.housingAllowance}
-                      onChange={(e) => setPayrollData({...payrollData, housingAllowance: e.target.value})}
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="transportAllowance">Transport Allowance (₦)</Label>
-                    <Input
-                      id="transportAllowance"
-                      type="number"
-                      placeholder="100,000"
-                      value={payrollData.transportAllowance}
-                      onChange={(e) => setPayrollData({...payrollData, transportAllowance: e.target.value})}
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="otherAllowance">Other Allowance (₦)</Label>
-                    <Input
-                      id="otherAllowance"
-                      type="number"
-                      placeholder="50,000"
-                      value={payrollData.otherAllowance}
-                      onChange={(e) => setPayrollData({...payrollData, otherAllowance: e.target.value})}
-                    />
-                  </div>
-                </>
-              )}
 
               <div>
                 <Label htmlFor="earnings">Additional Earnings (₦)</Label>

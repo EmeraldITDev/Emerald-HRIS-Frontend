@@ -1326,9 +1326,29 @@ export default function Employees() {
                     <p className="text-base">{selectedEmployee.emergencyContactNumber || 'N/A'}</p>
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-muted-foreground">Next of Kin</Label>
-                  <p className="text-base">{selectedEmployee.nextOfKin || 'N/A'}</p>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-muted-foreground">Next of Kin Name</Label>
+                    <p className="text-base">{selectedEmployee.nextOfKinName || 'N/A'}</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-muted-foreground">Next of Kin Relationship</Label>
+                    <p className="text-base">{selectedEmployee.nextOfKinRelationship || 'N/A'}</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-muted-foreground">Next of Kin Phone</Label>
+                    <p className="text-base">{selectedEmployee.nextOfKinPhone || 'N/A'}</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-muted-foreground">Next of Kin Email</Label>
+                    <p className="text-base break-words">{selectedEmployee.nextOfKinEmail || 'N/A'}</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-muted-foreground">Next of Kin Address</Label>
+                    <p className="text-base">{selectedEmployee.nextOfKinAddress || 'N/A'}</p>
+                  </div>
                 </div>
               </TabsContent>
 

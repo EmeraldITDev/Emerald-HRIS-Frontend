@@ -176,6 +176,60 @@ export default function Payroll() {
 
   const calculations = calculatePayroll()
 
+  const handleTaxSettings = () => {
+    toast({
+      title: "Tax Settings",
+      description: "Tax settings panel will be available in the next update."
+    })
+  }
+
+  const handleExportPayroll = () => {
+    const exportData = payrollRecords.map(record => ({
+      'Employee ID': record.employeeId,
+      'Employee Name': record.employeeName,
+      'Basic Salary': record.basicSalary,
+      'Allowances': record.allowances,
+      'Gross Pay': record.grossPay,
+      'PAYE': record.paye,
+      'Pension': record.pension,
+      'NHF': record.nhf,
+      'Net Pay': record.netPay,
+      'Period': record.period,
+      'Status': record.status
+    }))
+
+    // Convert to CSV
+    const headers = Object.keys(exportData[0] || {})
+    const csvContent = [
+      headers.join(','),
+      ...exportData.map(row => headers.map(header => row[header as keyof typeof row]).join(','))
+    ].join('\n')
+
+    // Download CSV
+    const blob = new Blob([csvContent], { type: 'text/csv' })
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `payroll_export_${new Date().toISOString().split('T')[0]}.csv`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    window.URL.revokeObjectURL(url)
+
+    toast({
+      title: "Export Complete",
+      description: "Payroll data has been exported successfully."
+    })
+  }
+
+  const handleLockPeriod = () => {
+    toast({
+      title: "Lock Period",
+      description: "Period locking functionality will be available in the next update.",
+      variant: "default"
+    })
+  }
+
   const savePayroll = () => {
     if (!selectedEmployee || !selectedPeriod) return
 
@@ -247,15 +301,15 @@ export default function Payroll() {
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={handleTaxSettings}>
             <Settings className="mr-2 h-4 w-4" />
             Tax Settings
           </Button>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={handleExportPayroll}>
             <Download className="mr-2 h-4 w-4" />
             Export Payroll
           </Button>
-          <Button size="sm">
+          <Button size="sm" onClick={handleLockPeriod}>
             <Lock className="mr-2 h-4 w-4" />
             Lock Period
           </Button>

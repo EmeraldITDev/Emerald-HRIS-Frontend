@@ -429,28 +429,62 @@ export default function Employees() {
   };
   const handleExportData = () => {
     const exportData = employeeList.map((emp: any) => ({
-      'Employee ID': emp.id,
-      'First Name': emp.firstName,
-      'Last Name': emp.lastName,
-      'Email': emp.email,
-      'Phone': emp.phone || emp.phoneNumber || '',
-      'Department': emp.department,
-      'Position': emp.position || emp.jobTitle || '',
-      'Employment Type': emp.employmentType,
-      'Status': emp.status || emp.employmentStatus || '',
-      'Hire Date': emp.joinDate || emp.hireDate || '',
-      'Salary': emp.salary || emp.grossSalary || '',
-      'Vacation Days': emp.vacationDays || 0,
+      // Personal Information
+      'Employee ID': emp.id || emp.employeeId || '',
+      'First Name': emp.firstName || '',
+      'Middle Name': emp.middleName || '',
+      'Last Name': emp.lastName || '',
+      'Date of Birth': emp.dateOfBirth ? format(new Date(emp.dateOfBirth), 'yyyy-MM-dd') : '',
       'Gender': emp.gender || '',
+      'Marital Status': emp.maritalStatus || '',
       'Nationality': emp.nationality || '',
+      'Phone Number': emp.phone || emp.phoneNumber || '',
+      'Email': emp.email || '',
       'Home Address': emp.homeAddress || '',
-      'Emergency Contact': emp.emergencyContact || '',
-      'Next of Kin': emp.nextOfKinName || '',
+      'Emergency Contact Name': emp.emergencyContact || '',
+      'Emergency Contact Number': emp.emergencyContactNumber || '',
+      'Next of Kin Name': emp.nextOfKinName || '',
+      'Next of Kin Relationship': emp.nextOfKinRelationship || '',
+      'Next of Kin Phone': emp.nextOfKinPhone || '',
+      'Next of Kin Address': emp.nextOfKinAddress || '',
+      'Next of Kin Email': emp.nextOfKinEmail || '',
+      
+      // Job Information  
+      'Job Title': emp.position || emp.jobTitle || '',
+      'Department': emp.department || '',
+      'Employment Type': emp.employmentType || '',
+      'Grade Level': emp.gradeLevel || '',
+      'Supervisor Name': emp.supervisorName || '',
+      'Work Location': emp.workLocation || '',
+      'Hire Date': emp.joinDate || emp.hireDate || '',
+      'Probation Period': emp.probationPeriod || '',
+      'Confirmation Date': emp.confirmationDate ? format(new Date(emp.confirmationDate), 'yyyy-MM-dd') : '',
+      'Employment Status': emp.status || emp.employmentStatus || '',
+      
+      // Financial Information
+      'Gross Salary': emp.salary || emp.grossSalary || '',
+      'Basic Salary': emp.basicSalary || '',
+      'Housing Allowance': emp.housingAllowance || '',
+      'Transport Allowance': emp.transportAllowance || '',
+      'Other Allowances': emp.otherAllowance || '',
+      'Bank Account': emp.bankAccount || '',
+      
+      // Banking Information
       'Bank Name': emp.bankName || '',
       'Account Number': emp.accountNumber || '',
+      'Nurban': emp.nurban || '',
+      'Sort Code': emp.sortCode || '',
+      
+      // Government IDs
       'National ID': emp.nationalId || '',
+      'Passport Number': emp.passportNumber || '',
       'TIN': emp.tin || '',
-      'Pension PIN': emp.pensionPin || ''
+      'Pension PIN': emp.pensionPin || '',
+      'NHF Number': emp.nhfNumber || '',
+      'Tax ID': emp.taxId || '',
+      
+      // Additional Fields
+      'Vacation Days': emp.vacationDays || 0
       // Note: Excluding additional documents as requested
     }));
     const worksheet = XLSX.utils.json_to_sheet(exportData);
@@ -1234,10 +1268,14 @@ export default function Employees() {
               </TabsList>
 
               <TabsContent value="personal" className="space-y-6">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   <div className="space-y-2">
                     <Label className="text-sm font-medium text-muted-foreground">First Name</Label>
                     <p className="text-base font-medium">{selectedEmployee.firstName || 'N/A'}</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-muted-foreground">Middle Name</Label>
+                    <p className="text-base">{selectedEmployee.middleName || 'N/A'}</p>
                   </div>
                   <div className="space-y-2">
                     <Label className="text-sm font-medium text-muted-foreground">Last Name</Label>
@@ -1360,12 +1398,22 @@ export default function Employees() {
                 </div>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <div className="space-y-2">
+                    <Label className="text-sm font-medium text-muted-foreground">Basic Salary</Label>
+                    <p className="text-base">{selectedEmployee.basicSalary || 'N/A'}</p>
+                  </div>
+                  <div className="space-y-2">
                     <Label className="text-sm font-medium text-muted-foreground">Housing Allowance</Label>
                     <p className="text-base">{selectedEmployee.housingAllowance || 'N/A'}</p>
                   </div>
+                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label className="text-sm font-medium text-muted-foreground">Transport Allowance</Label>
                     <p className="text-base">{selectedEmployee.transportAllowance || 'N/A'}</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-muted-foreground">Other Allowances</Label>
+                    <p className="text-base">{selectedEmployee.otherAllowance || 'N/A'}</p>
                   </div>
                 </div>
                 <div className="space-y-4">
@@ -1378,6 +1426,16 @@ export default function Employees() {
                     <div className="space-y-2">
                       <Label className="text-sm font-medium text-muted-foreground">Account Number</Label>
                       <p className="text-base">{selectedEmployee.accountNumber || selectedEmployee.bankAccount || 'N/A'}</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-muted-foreground">Nurban</Label>
+                      <p className="text-base">{selectedEmployee.nurban || 'N/A'}</p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-muted-foreground">Sort Code</Label>
+                      <p className="text-base">{selectedEmployee.sortCode || 'N/A'}</p>
                     </div>
                   </div>
                 </div>
@@ -1394,7 +1452,11 @@ export default function Employees() {
                     <p className="text-sm">{selectedEmployee.nationalId || 'N/A'}</p>
                   </div>
                 </div>
-                <div className="grid grid-cols-1 gap-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-sm font-medium text-muted-foreground">Passport Number</Label>
+                    <p className="text-sm">{selectedEmployee.passportNumber || 'N/A'}</p>
+                  </div>
                   <div>
                     <Label className="text-sm font-medium text-muted-foreground">TIN</Label>
                     <p className="text-sm">{selectedEmployee.tin || 'N/A'}</p>
@@ -1453,20 +1515,96 @@ export default function Employees() {
               </TabsList>
 
               <TabsContent value="personal" className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="editFirstName">First Name *</Label>
                     <Input id="editFirstName" value={editEmployee.firstName || ''} onChange={e => setEditEmployee({
-                  ...editEmployee,
-                  firstName: e.target.value
-                })} />
+                      ...editEmployee,
+                      firstName: e.target.value
+                    })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="editMiddleName">Middle Name</Label>
+                    <Input id="editMiddleName" value={editEmployee.middleName || ''} onChange={e => setEditEmployee({
+                      ...editEmployee,
+                      middleName: e.target.value
+                    })} />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="editLastName">Last Name *</Label>
                     <Input id="editLastName" value={editEmployee.lastName || ''} onChange={e => setEditEmployee({
-                  ...editEmployee,
-                  lastName: e.target.value
-                })} />
+                      ...editEmployee,
+                      lastName: e.target.value
+                    })} />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Date of Birth</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !editEmployee.dateOfBirth && "text-muted-foreground")}>
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {editEmployee.dateOfBirth ? format(new Date(editEmployee.dateOfBirth), "PPP") : "Pick a date"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar 
+                          mode="single" 
+                          selected={editEmployee.dateOfBirth ? new Date(editEmployee.dateOfBirth) : undefined} 
+                          onSelect={(date) => setEditEmployee({
+                            ...editEmployee,
+                            dateOfBirth: date
+                          })} 
+                          initialFocus 
+                          className="p-3 pointer-events-auto" 
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="editGender">Gender</Label>
+                    <Select value={editEmployee.gender || ''} onValueChange={value => setEditEmployee({
+                      ...editEmployee,
+                      gender: value
+                    })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select gender" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover border shadow-lg">
+                        <SelectItem value="Male">Male</SelectItem>
+                        <SelectItem value="Female">Female</SelectItem>
+                        <SelectItem value="Other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="editMaritalStatus">Marital Status</Label>
+                    <Select value={editEmployee.maritalStatus || ''} onValueChange={value => setEditEmployee({
+                      ...editEmployee,
+                      maritalStatus: value
+                    })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover border shadow-lg">
+                        <SelectItem value="Single">Single</SelectItem>
+                        <SelectItem value="Married">Married</SelectItem>
+                        <SelectItem value="Divorced">Divorced</SelectItem>
+                        <SelectItem value="Widowed">Widowed</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="editNationality">Nationality *</Label>
+                    <Input id="editNationality" value={editEmployee.nationality || ''} onChange={e => setEditEmployee({
+                      ...editEmployee,
+                      nationality: e.target.value
+                    })} placeholder="e.g., Nigerian" />
                   </div>
                 </div>
 
@@ -1474,17 +1612,85 @@ export default function Employees() {
                   <div className="space-y-2">
                     <Label htmlFor="editPhoneNumber">Phone Number *</Label>
                     <Input id="editPhoneNumber" value={editEmployee.phone || editEmployee.phoneNumber || ''} onChange={e => setEditEmployee({
-                  ...editEmployee,
-                  phone: e.target.value
-                })} placeholder="+234 XXX XXX XXXX" />
+                      ...editEmployee,
+                      phone: e.target.value,
+                      phoneNumber: e.target.value
+                    })} placeholder="+234 XXX XXX XXXX" />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="editEmail">Email Address *</Label>
                     <Input id="editEmail" type="email" value={editEmployee.email || ''} onChange={e => setEditEmployee({
-                  ...editEmployee,
-                  email: e.target.value
-                })} placeholder="employee@company.com" />
+                      ...editEmployee,
+                      email: e.target.value
+                    })} placeholder="employee@company.com" />
                   </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="editHomeAddress">Home Address</Label>
+                  <Textarea id="editHomeAddress" value={editEmployee.homeAddress || ''} onChange={e => setEditEmployee({
+                    ...editEmployee,
+                    homeAddress: e.target.value
+                  })} placeholder="Full residential address" />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="editEmergencyContact">Emergency Contact Name</Label>
+                    <Input id="editEmergencyContact" value={editEmployee.emergencyContact || ''} onChange={e => setEditEmployee({
+                      ...editEmployee,
+                      emergencyContact: e.target.value
+                    })} placeholder="Full name" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="editEmergencyContactNumber">Emergency Contact Number</Label>
+                    <Input id="editEmergencyContactNumber" value={editEmployee.emergencyContactNumber || ''} onChange={e => setEditEmployee({
+                      ...editEmployee,
+                      emergencyContactNumber: e.target.value
+                    })} placeholder="Phone number" />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="editNextOfKinName">Next of Kin Name</Label>
+                    <Input id="editNextOfKinName" value={editEmployee.nextOfKinName || ''} onChange={e => setEditEmployee({
+                      ...editEmployee,
+                      nextOfKinName: e.target.value
+                    })} placeholder="Full name" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="editNextOfKinRelationship">Next of Kin Relationship</Label>
+                    <Input id="editNextOfKinRelationship" value={editEmployee.nextOfKinRelationship || ''} onChange={e => setEditEmployee({
+                      ...editEmployee,
+                      nextOfKinRelationship: e.target.value
+                    })} placeholder="e.g., Spouse, Parent, Sibling" />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="editNextOfKinPhone">Next of Kin Phone Number</Label>
+                    <Input id="editNextOfKinPhone" value={editEmployee.nextOfKinPhone || ''} onChange={e => setEditEmployee({
+                      ...editEmployee,
+                      nextOfKinPhone: e.target.value
+                    })} placeholder="+234 XXX XXX XXXX" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="editNextOfKinEmail">Next of Kin Email</Label>
+                    <Input id="editNextOfKinEmail" type="email" value={editEmployee.nextOfKinEmail || ''} onChange={e => setEditEmployee({
+                      ...editEmployee,
+                      nextOfKinEmail: e.target.value
+                    })} placeholder="nextofkin@email.com" />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="editNextOfKinAddress">Next of Kin Address</Label>
+                  <Textarea id="editNextOfKinAddress" value={editEmployee.nextOfKinAddress || ''} onChange={e => setEditEmployee({
+                    ...editEmployee,
+                    nextOfKinAddress: e.target.value
+                  })} placeholder="Full address of next of kin" />
                 </div>
               </TabsContent>
 
@@ -1492,17 +1698,18 @@ export default function Employees() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="editJobTitle">Job Title *</Label>
-                    <Input id="editJobTitle" value={editEmployee.position || ''} onChange={e => setEditEmployee({
-                  ...editEmployee,
-                  position: e.target.value
-                })} />
+                    <Input id="editJobTitle" value={editEmployee.position || editEmployee.jobTitle || ''} onChange={e => setEditEmployee({
+                      ...editEmployee,
+                      position: e.target.value,
+                      jobTitle: e.target.value
+                    })} />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="editDepartment">Department *</Label>
                     <Select value={editEmployee.department || ''} onValueChange={value => setEditEmployee({
-                  ...editEmployee,
-                  department: value
-                })}>
+                      ...editEmployee,
+                      department: value
+                    })}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select department" />
                       </SelectTrigger>
@@ -1517,14 +1724,14 @@ export default function Employees() {
                   <div className="space-y-2">
                     <Label htmlFor="editEmploymentType">Employment Type *</Label>
                     <Select value={editEmployee.employmentType || ''} onValueChange={value => setEditEmployee({
-                  ...editEmployee,
-                  employmentType: value
-                })}>
+                      ...editEmployee,
+                      employmentType: value
+                    })}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select type" />
                       </SelectTrigger>
                       <SelectContent className="bg-popover border shadow-lg">
-                        <SelectItem value="FTE">Full-time</SelectItem>
+                        <SelectItem value="Full-time">Full-time</SelectItem>
                         <SelectItem value="Contract">Contract</SelectItem>
                         <SelectItem value="Part-time">Part-time</SelectItem>
                         <SelectItem value="Consultant">Consultant</SelectItem>
@@ -1532,41 +1739,165 @@ export default function Employees() {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="editStatus">Employment Status</Label>
-                    <Select value={editEmployee.status || ''} onValueChange={value => setEditEmployee({
-                  ...editEmployee,
-                  status: value
-                })}>
+                    <Label htmlFor="editGradeLevel">Grade Level</Label>
+                    <Select value={editEmployee.gradeLevel || ''} onValueChange={value => setEditEmployee({
+                      ...editEmployee,
+                      gradeLevel: value
+                    })}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select status" />
+                        <SelectValue placeholder="Select grade level" />
                       </SelectTrigger>
                       <SelectContent className="bg-popover border shadow-lg">
-                        <SelectItem value="Active">Active</SelectItem>
-                        <SelectItem value="On Leave">On Leave</SelectItem>
-                        <SelectItem value="Resigned">Resigned</SelectItem>
-                        <SelectItem value="Terminated">Terminated</SelectItem>
-                        <SelectItem value="Retired">Retired</SelectItem>
+                        {gradeLevels.map(level => <SelectItem key={level} value={level}>{level}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="editVacationDays">Vacation Days</Label>
-                  <Input id="editVacationDays" type="number" value={editEmployee.vacationDays || ''} onChange={e => setEditEmployee({
-                ...editEmployee,
-                vacationDays: parseInt(e.target.value) || 0
-              })} placeholder="25" />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="editSupervisorName">Supervisor Name</Label>
+                    <Input id="editSupervisorName" value={editEmployee.supervisorName || ''} onChange={e => setEditEmployee({
+                      ...editEmployee,
+                      supervisorName: e.target.value
+                    })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="editWorkLocation">Work Location</Label>
+                    <Input id="editWorkLocation" value={editEmployee.workLocation || ''} onChange={e => setEditEmployee({
+                      ...editEmployee,
+                      workLocation: e.target.value
+                    })} placeholder="e.g., Lagos Office" />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label>Hire Date *</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !editEmployee.hireDate && !editEmployee.joinDate && "text-muted-foreground")}>
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {editEmployee.hireDate || editEmployee.joinDate ? format(new Date(editEmployee.hireDate || editEmployee.joinDate), "PPP") : "Pick a date"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar 
+                          mode="single" 
+                          selected={editEmployee.hireDate ? new Date(editEmployee.hireDate) : editEmployee.joinDate ? new Date(editEmployee.joinDate) : undefined} 
+                          onSelect={date => setEditEmployee({
+                            ...editEmployee,
+                            hireDate: date,
+                            joinDate: date ? format(date, 'yyyy-MM-dd') : undefined
+                          })} 
+                          initialFocus 
+                          className="p-3 pointer-events-auto" 
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="editProbationPeriod">Probation Period</Label>
+                    <Input id="editProbationPeriod" value={editEmployee.probationPeriod || ''} onChange={e => setEditEmployee({
+                      ...editEmployee,
+                      probationPeriod: e.target.value
+                    })} placeholder="e.g., 3 months" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Confirmation Date</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !editEmployee.confirmationDate && "text-muted-foreground")}>
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {editEmployee.confirmationDate ? format(new Date(editEmployee.confirmationDate), "PPP") : "Pick a date"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar 
+                          mode="single" 
+                          selected={editEmployee.confirmationDate ? new Date(editEmployee.confirmationDate) : undefined} 
+                          onSelect={date => setEditEmployee({
+                            ...editEmployee,
+                            confirmationDate: date
+                          })} 
+                          initialFocus 
+                          className="p-3 pointer-events-auto" 
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="editStatus">Employment Status</Label>
+                    <Select value={editEmployee.status || editEmployee.employmentStatus || ''} onValueChange={value => setEditEmployee({
+                      ...editEmployee,
+                      status: value,
+                      employmentStatus: value
+                    })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover border shadow-lg">
+                        <SelectItem value="Active">Active</SelectItem>
+                        <SelectItem value="On-Leave">On-Leave</SelectItem>
+                        <SelectItem value="Time-Off">Time-Off</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="editVacationDays">Vacation Days</Label>
+                    <Input id="editVacationDays" type="number" value={editEmployee.vacationDays || ''} onChange={e => setEditEmployee({
+                      ...editEmployee,
+                      vacationDays: parseInt(e.target.value) || 0
+                    })} placeholder="25" />
+                  </div>
                 </div>
               </TabsContent>
 
               <TabsContent value="financial" className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="editSalary">Gross Salary</Label>
-                  <Input id="editSalary" value={editEmployee.salary || ''} onChange={e => setEditEmployee({
-                ...editEmployee,
-                salary: e.target.value
-              })} placeholder="₦2,500,000" />
+                  <Label htmlFor="editGrossSalary">Gross Salary</Label>
+                  <Input id="editGrossSalary" value={editEmployee.salary || editEmployee.grossSalary || ''} onChange={e => setEditEmployee({
+                    ...editEmployee,
+                    salary: e.target.value,
+                    grossSalary: e.target.value
+                  })} placeholder="₦2,500,000" />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="editBasicSalary">Basic Salary</Label>
+                    <Input id="editBasicSalary" value={editEmployee.basicSalary || ''} onChange={e => setEditEmployee({
+                      ...editEmployee,
+                      basicSalary: e.target.value
+                    })} placeholder="₦1,000,000" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="editHousingAllowance">Housing Allowance</Label>
+                    <Input id="editHousingAllowance" value={editEmployee.housingAllowance || ''} onChange={e => setEditEmployee({
+                      ...editEmployee,
+                      housingAllowance: e.target.value
+                    })} placeholder="₦500,000" />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="editTransportAllowance">Transport Allowance</Label>
+                    <Input id="editTransportAllowance" value={editEmployee.transportAllowance || ''} onChange={e => setEditEmployee({
+                      ...editEmployee,
+                      transportAllowance: e.target.value
+                    })} placeholder="₦225,000" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="editOtherAllowance">Other Allowances</Label>
+                    <Input id="editOtherAllowance" value={editEmployee.otherAllowance || ''} onChange={e => setEditEmployee({
+                      ...editEmployee,
+                      otherAllowance: e.target.value
+                    })} placeholder="₦775,000" />
+                  </div>
                 </div>
 
                 <div className="space-y-4">
@@ -1576,28 +1907,98 @@ export default function Employees() {
                     <div className="space-y-2">
                       <Label htmlFor="editBankName">Bank Name</Label>
                       <Input id="editBankName" value={editEmployee.bankName || ''} onChange={e => setEditEmployee({
-                    ...editEmployee,
-                    bankName: e.target.value
-                  })} placeholder="Bank name" />
+                        ...editEmployee,
+                        bankName: e.target.value
+                      })} placeholder="Bank name" />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="editAccountNumber">Account Number</Label>
-                      <Input id="editAccountNumber" value={editEmployee.accountNumber || ''} onChange={e => setEditEmployee({
-                    ...editEmployee,
-                    accountNumber: e.target.value
-                  })} placeholder="Account number" />
+                      <Input id="editAccountNumber" value={editEmployee.accountNumber || editEmployee.bankAccount || ''} onChange={e => setEditEmployee({
+                        ...editEmployee,
+                        accountNumber: e.target.value,
+                        bankAccount: e.target.value
+                      })} placeholder="Account number" />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="editNurban">Nurban</Label>
+                      <Input id="editNurban" value={editEmployee.nurban || ''} onChange={e => setEditEmployee({
+                        ...editEmployee,
+                        nurban: e.target.value
+                      })} placeholder="Nurban code" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="editSortCode">Sort Code</Label>
+                      <Input id="editSortCode" value={editEmployee.sortCode || ''} onChange={e => setEditEmployee({
+                        ...editEmployee,
+                        sortCode: e.target.value
+                      })} placeholder="Sort code" />
                     </div>
                   </div>
                 </div>
               </TabsContent>
 
               <TabsContent value="government" className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="editEmployeeId">Employee ID</Label>
+                    <Input id="editEmployeeId" value={editEmployee.id || editEmployee.employeeId || ''} onChange={e => setEditEmployee({
+                      ...editEmployee,
+                      id: e.target.value,
+                      employeeId: e.target.value
+                    })} disabled />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="editNationalId">National ID (NIN)</Label>
+                    <Input id="editNationalId" value={editEmployee.nationalId || ''} onChange={e => setEditEmployee({
+                      ...editEmployee,
+                      nationalId: e.target.value
+                    })} placeholder="National ID" />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="editPassportNumber">Passport Number</Label>
+                    <Input id="editPassportNumber" value={editEmployee.passportNumber || ''} onChange={e => setEditEmployee({
+                      ...editEmployee,
+                      passportNumber: e.target.value
+                    })} placeholder="Passport number" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="editTin">TIN</Label>
+                    <Input id="editTin" value={editEmployee.tin || ''} onChange={e => setEditEmployee({
+                      ...editEmployee,
+                      tin: e.target.value
+                    })} placeholder="TIN" />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="editPensionPin">Pension PIN</Label>
+                    <Input id="editPensionPin" value={editEmployee.pensionPin || ''} onChange={e => setEditEmployee({
+                      ...editEmployee,
+                      pensionPin: e.target.value
+                    })} placeholder="Pension PIN" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="editNhfNumber">NHF Number</Label>
+                    <Input id="editNhfNumber" value={editEmployee.nhfNumber || ''} onChange={e => setEditEmployee({
+                      ...editEmployee,
+                      nhfNumber: e.target.value
+                    })} placeholder="NHF Number" />
+                  </div>
+                </div>
+
                 <div className="space-y-2">
-                  <Label htmlFor="editEmployeeId">Employee ID</Label>
-                  <Input id="editEmployeeId" value={editEmployee.id || ''} onChange={e => setEditEmployee({
-                ...editEmployee,
-                id: e.target.value
-              })} disabled />
+                  <Label htmlFor="editTaxId">Tax ID</Label>
+                  <Input id="editTaxId" value={editEmployee.taxId || ''} onChange={e => setEditEmployee({
+                    ...editEmployee,
+                    taxId: e.target.value
+                  })} placeholder="Tax ID" />
                 </div>
               </TabsContent>
 

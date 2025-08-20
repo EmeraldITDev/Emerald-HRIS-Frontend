@@ -174,9 +174,9 @@ export default function Employees() {
       employee.department.toLowerCase().includes(searchTerm.toLowerCase()) || 
       employee.position.toLowerCase().includes(searchTerm.toLowerCase())
     
-    const matchesLocation = !filterLocation || (employee.workLocation && employee.workLocation === filterLocation)
-    const matchesDepartment = !filterDepartment || employee.department === filterDepartment
-    const matchesEmploymentType = !filterEmploymentType || employee.employmentType === filterEmploymentType
+    const matchesLocation = !filterLocation || filterLocation === "all" || (employee.workLocation && employee.workLocation === filterLocation)
+    const matchesDepartment = !filterDepartment || filterDepartment === "all" || employee.department === filterDepartment
+    const matchesEmploymentType = !filterEmploymentType || filterEmploymentType === "all" || employee.employmentType === filterEmploymentType
     const matchesStartDate = !filterStartDate || (employee.joinDate && employee.joinDate >= filterStartDate)
     
     return matchesSearch && matchesLocation && matchesDepartment && matchesEmploymentType && matchesStartDate
@@ -1203,7 +1203,7 @@ export default function Employees() {
                   <SelectValue placeholder="Filter by Location" />
                 </SelectTrigger>
                 <SelectContent className="bg-popover border shadow-lg">
-                  <SelectItem value="">All Locations</SelectItem>
+                  <SelectItem value="all">All Locations</SelectItem>
                   {uniqueLocations.map(location => (
                     <SelectItem key={location} value={location}>{location}</SelectItem>
                   ))}
@@ -1215,7 +1215,7 @@ export default function Employees() {
                   <SelectValue placeholder="Filter by Department" />
                 </SelectTrigger>
                 <SelectContent className="bg-popover border shadow-lg">
-                  <SelectItem value="">All Departments</SelectItem>
+                  <SelectItem value="all">All Departments</SelectItem>
                   {uniqueDepartments.map(department => (
                     <SelectItem key={department} value={department}>{department}</SelectItem>
                   ))}
@@ -1227,7 +1227,7 @@ export default function Employees() {
                   <SelectValue placeholder="Filter by Type" />
                 </SelectTrigger>
                 <SelectContent className="bg-popover border shadow-lg">
-                  <SelectItem value="">All Types</SelectItem>
+                  <SelectItem value="all">All Types</SelectItem>
                   {uniqueEmploymentTypes.map(type => (
                     <SelectItem key={type} value={type}>{type}</SelectItem>
                   ))}

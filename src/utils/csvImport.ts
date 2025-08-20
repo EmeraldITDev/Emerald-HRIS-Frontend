@@ -13,6 +13,7 @@ export interface EmployeeData {
   phone: string;
   vacationDays: number;
   employmentType: string;
+  workLocation?: string;
 }
 
 export interface CSVImportResult {

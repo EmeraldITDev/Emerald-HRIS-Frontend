@@ -19,16 +19,75 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Calendar, Plus, Clock, CalendarDays, LogIn, LogOut } from "lucide-react"
+import { Calendar, Plus, Clock, CalendarDays, LogIn, LogOut, Bell, Cake, Award } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
 // Sample employee data for dropdown
 const employees = [
-  { id: "EMP001", name: "Adebayo Johnson", vacationDays: 25, usedDays: 5 },
-  { id: "EMP002", name: "Fatima Abdul", vacationDays: 30, usedDays: 12 },
-  { id: "EMP003", name: "Chinedu Okafor", vacationDays: 20, usedDays: 8 },
-  { id: "EMP004", name: "Kemi Adeleke", vacationDays: 25, usedDays: 3 },
+  { id: "EMP001", name: "Adebayo Johnson", vacationDays: 25, usedDays: 5, birthday: "1990-01-20", joinDate: "2020-01-15", confirmationDate: "2024-01-20" },
+  { id: "EMP002", name: "Fatima Abdul", vacationDays: 30, usedDays: 12, birthday: "1988-01-25", joinDate: "2019-03-10", confirmationDate: "2024-01-25" },
+  { id: "EMP003", name: "Chinedu Okafor", vacationDays: 20, usedDays: 8, birthday: "1992-01-18", joinDate: "2021-06-01", confirmationDate: "2024-01-18" },
+  { id: "EMP004", name: "Kemi Adeleke", vacationDays: 25, usedDays: 3, birthday: "1989-01-30", joinDate: "2018-09-20", confirmationDate: "2024-01-30" },
 ]
+
+// Helper function to check if date is within next 7 days
+const isWithinNextWeek = (dateString: string) => {
+  const today = new Date()
+  const targetDate = new Date(dateString)
+  targetDate.setFullYear(today.getFullYear()) // Use current year for birthdays
+  const diffTime = targetDate.getTime() - today.getTime()
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+  return diffDays >= 0 && diffDays <= 7
+}
+
+// Get notifications
+const getNotifications = () => {
+  const today = new Date()
+  const notifications = []
+
+  employees.forEach(emp => {
+    // Birthday notifications
+    if (isWithinNextWeek(emp.birthday)) {
+      const birthdayDate = new Date(emp.birthday)
+      birthdayDate.setFullYear(today.getFullYear())
+      notifications.push({
+        type: 'birthday',
+        employee: emp.name,
+        date: birthdayDate.toLocaleDateString(),
+        message: `${emp.name}'s birthday`,
+        icon: Cake
+      })
+    }
+
+    // Work anniversary notifications
+    const joinDate = new Date(emp.joinDate)
+    const anniversaryDate = new Date(joinDate)
+    anniversaryDate.setFullYear(today.getFullYear())
+    if (isWithinNextWeek(anniversaryDate.toISOString().split('T')[0])) {
+      const yearsOfService = today.getFullYear() - joinDate.getFullYear()
+      notifications.push({
+        type: 'anniversary',
+        employee: emp.name,
+        date: anniversaryDate.toLocaleDateString(),
+        message: `${emp.name}'s ${yearsOfService} year work anniversary`,
+        icon: Award
+      })
+    }
+
+    // Employment confirmation notifications
+    if (isWithinNextWeek(emp.confirmationDate)) {
+      notifications.push({
+        type: 'confirmation',
+        employee: emp.name,
+        date: new Date(emp.confirmationDate).toLocaleDateString(),
+        message: `${emp.name}'s employment confirmation due`,
+        icon: Bell
+      })
+    }
+  })
+
+  return notifications
+}
 
 // Sample attendance records
 const attendanceRecords = [
@@ -91,6 +150,7 @@ export default function Attendance() {
   const [attendance, setAttendance] = useState(attendanceRecords)
   const [clockInEmployee, setClockInEmployee] = useState("")
   const [currentTime] = useState(new Date())
+  const [notifications] = useState(getNotifications())
   const { toast } = useToast()
 
   const calculateDays = () => {
@@ -249,6 +309,39 @@ export default function Attendance() {
           Manage employee leave requests and track attendance records
         </p>
       </div>
+
+      {/* Notifications Section */}
+      {notifications.length > 0 && (
+        <Card className="border-border/50 shadow-sm bg-primary/5">
+          <CardHeader>
+            <CardTitle className="text-primary flex items-center">
+              <Bell className="mr-2 h-5 w-5" />
+              Upcoming Events & Notifications
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {notifications.map((notification, index) => {
+                const IconComponent = notification.icon
+                return (
+                  <div key={index} className="flex items-center space-x-3 p-3 bg-background rounded-lg border">
+                    <IconComponent className="h-5 w-5 text-primary flex-shrink-0" />
+                    <div className="flex-1">
+                      <div className="font-medium text-sm">{notification.message}</div>
+                      <div className="text-xs text-muted-foreground">{notification.date}</div>
+                    </div>
+                    <Badge variant="outline" className="text-xs">
+                      {notification.type === 'birthday' && 'Birthday'}
+                      {notification.type === 'anniversary' && 'Anniversary'}
+                      {notification.type === 'confirmation' && 'Confirmation'}
+                    </Badge>
+                  </div>
+                )
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Attendance Tracking Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-6">

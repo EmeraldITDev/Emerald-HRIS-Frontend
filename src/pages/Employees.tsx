@@ -78,6 +78,10 @@ const employees = [{
 export default function Employees() {
   const [searchTerm, setSearchTerm] = useState("");
   const [employeeList, setEmployeeList] = useState<EmployeeData[]>(employees);
+  const [filterLocation, setFilterLocation] = useState("")
+  const [filterDepartment, setFilterDepartment] = useState("")
+  const [filterEmploymentType, setFilterEmploymentType] = useState("")
+  const [filterStartDate, setFilterStartDate] = useState("")
   const fileInputRef = useRef<HTMLInputElement>(null);
   const {
     toast
@@ -165,7 +169,23 @@ export default function Employees() {
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, []);
-  const filteredEmployees = employeeList.filter(employee => `${employee.firstName} ${employee.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) || employee.department.toLowerCase().includes(searchTerm.toLowerCase()) || employee.position.toLowerCase().includes(searchTerm.toLowerCase()));
+  const filteredEmployees = employeeList.filter(employee => {
+    const matchesSearch = `${employee.firstName} ${employee.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      employee.department.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      employee.position.toLowerCase().includes(searchTerm.toLowerCase())
+    
+    const matchesLocation = !filterLocation || (employee.workLocation && employee.workLocation === filterLocation)
+    const matchesDepartment = !filterDepartment || employee.department === filterDepartment
+    const matchesEmploymentType = !filterEmploymentType || employee.employmentType === filterEmploymentType
+    const matchesStartDate = !filterStartDate || (employee.joinDate && employee.joinDate >= filterStartDate)
+    
+    return matchesSearch && matchesLocation && matchesDepartment && matchesEmploymentType && matchesStartDate
+  })
+
+  // Get unique values for filter dropdowns
+  const uniqueLocations = [...new Set(employeeList.map(emp => emp.workLocation))].filter(Boolean)
+  const uniqueDepartments = [...new Set(employeeList.map(emp => emp.department))].filter(Boolean)
+  const uniqueEmploymentTypes = [...new Set(employeeList.map(emp => emp.employmentType))].filter(Boolean)
 
   // Validate required fields
   const validateRequiredFields = (tab: string) => {
@@ -182,6 +202,7 @@ export default function Employees() {
       if (!newEmployee.jobTitle.trim()) errors.jobTitle = true;
       if (!newEmployee.department.trim()) errors.department = true;
       if (!newEmployee.employmentType.trim()) errors.employmentType = true;
+      if (!newEmployee.workLocation.trim()) errors.workLocation = true;
       if (!newEmployee.hireDate) errors.hireDate = true;
     } else if (tab === "government") {
       if (!newEmployee.nationalId.trim()) errors.nationalId = true;
@@ -807,11 +828,11 @@ export default function Employees() {
                     })} />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="workLocation">Work Location</Label>
+                      <Label htmlFor="workLocation">Work Location *</Label>
                       <Input id="workLocation" value={newEmployee.workLocation} onChange={e => setNewEmployee({
                       ...newEmployee,
                       workLocation: e.target.value
-                    })} placeholder="e.g., Lagos Office" />
+                    })} placeholder="e.g., Lagos Office" className={formErrors.workLocation ? "border-destructive" : ""} />
                     </div>
                   </div>
 
@@ -1167,15 +1188,63 @@ export default function Employees() {
       <Card className="border-border/50 shadow-sm">
         <CardHeader>
           <CardTitle className="text-primary">Employee Database</CardTitle>
-          <div className="flex items-center space-x-4">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Search employees..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10" />
+          <div className="flex flex-col space-y-4">
+            <div className="flex items-center space-x-4">
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input placeholder="Search employees..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10" />
+              </div>
             </div>
-            <Button variant="outline" size="sm">
-              <Filter className="mr-2 h-4 w-4" />
-              Filter
-            </Button>
+            
+            {/* Filters */}
+            <div className="flex flex-wrap gap-4">
+              <Select value={filterLocation} onValueChange={setFilterLocation}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Filter by Location" />
+                </SelectTrigger>
+                <SelectContent className="bg-popover border shadow-lg">
+                  <SelectItem value="">All Locations</SelectItem>
+                  {uniqueLocations.map(location => (
+                    <SelectItem key={location} value={location}>{location}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              
+              <Select value={filterDepartment} onValueChange={setFilterDepartment}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Filter by Department" />
+                </SelectTrigger>
+                <SelectContent className="bg-popover border shadow-lg">
+                  <SelectItem value="">All Departments</SelectItem>
+                  {uniqueDepartments.map(department => (
+                    <SelectItem key={department} value={department}>{department}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              
+              <Select value={filterEmploymentType} onValueChange={setFilterEmploymentType}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Filter by Type" />
+                </SelectTrigger>
+                <SelectContent className="bg-popover border shadow-lg">
+                  <SelectItem value="">All Types</SelectItem>
+                  {uniqueEmploymentTypes.map(type => (
+                    <SelectItem key={type} value={type}>{type}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              
+              <div className="flex items-center space-x-2">
+                <Label htmlFor="startDate" className="text-sm whitespace-nowrap">Start Date From:</Label>
+                <Input
+                  id="startDate"
+                  type="date"
+                  value={filterStartDate}
+                  onChange={(e) => setFilterStartDate(e.target.value)}
+                  className="w-[150px]"
+                />
+              </div>
+            </div>
           </div>
         </CardHeader>
         <CardContent>

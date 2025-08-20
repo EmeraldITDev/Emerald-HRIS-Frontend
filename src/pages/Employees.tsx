@@ -191,6 +191,29 @@ export default function Employees() {
   const uniqueDepartments = [...new Set(employeeList.map(emp => emp.department))].filter(Boolean)
   const uniqueEmploymentTypes = [...new Set(employeeList.map(emp => emp.employmentType))].filter(Boolean)
 
+  // Calculate confirmation date based on hire date and probation period
+  const calculateConfirmationDate = (hireDate: Date | undefined, probationMonths: string) => {
+    if (!hireDate || !probationMonths) return undefined;
+    
+    const months = parseInt(probationMonths);
+    if (isNaN(months)) return undefined;
+    
+    const confirmationDate = new Date(hireDate);
+    confirmationDate.setMonth(confirmationDate.getMonth() + months);
+    return confirmationDate;
+  };
+
+  // Auto-calculate confirmation date when hire date or probation period changes
+  useEffect(() => {
+    const confirmationDate = calculateConfirmationDate(newEmployee.hireDate, newEmployee.probationPeriod);
+    if (confirmationDate && confirmationDate !== newEmployee.confirmationDate) {
+      setNewEmployee(prev => ({
+        ...prev,
+        confirmationDate
+      }));
+    }
+  }, [newEmployee.hireDate, newEmployee.probationPeriod]);
+
   // Validate required fields
   const validateRequiredFields = (tab: string) => {
     const errors: {
@@ -202,12 +225,26 @@ export default function Employees() {
       if (!newEmployee.phoneNumber.trim()) errors.phoneNumber = true;
       if (!newEmployee.email.trim()) errors.email = true;
       if (!newEmployee.nationality.trim()) errors.nationality = true;
+      if (!newEmployee.dateOfBirth) errors.dateOfBirth = true;
+      if (!newEmployee.gender.trim()) errors.gender = true;
+      if (!newEmployee.maritalStatus.trim()) errors.maritalStatus = true;
+      if (!newEmployee.homeAddress.trim()) errors.homeAddress = true;
+      if (!newEmployee.emergencyContact.trim()) errors.emergencyContact = true;
+      if (!newEmployee.emergencyContactNumber.trim()) errors.emergencyContactNumber = true;
+      if (!newEmployee.nextOfKinName.trim()) errors.nextOfKinName = true;
+      if (!newEmployee.nextOfKinRelationship.trim()) errors.nextOfKinRelationship = true;
+      if (!newEmployee.nextOfKinPhone.trim()) errors.nextOfKinPhone = true;
+      if (!newEmployee.nextOfKinAddress.trim()) errors.nextOfKinAddress = true;
+      if (!newEmployee.nextOfKinEmail.trim()) errors.nextOfKinEmail = true;
     } else if (tab === "job") {
       if (!newEmployee.jobTitle.trim()) errors.jobTitle = true;
       if (!newEmployee.department.trim()) errors.department = true;
       if (!newEmployee.employmentType.trim()) errors.employmentType = true;
+      if (!newEmployee.gradeLevel.trim()) errors.gradeLevel = true;
+      if (!newEmployee.supervisorName.trim()) errors.supervisorName = true;
       if (!newEmployee.workLocation.trim()) errors.workLocation = true;
       if (!newEmployee.hireDate) errors.hireDate = true;
+      if (!newEmployee.probationPeriod.trim()) errors.probationPeriod = true;
     } else if (tab === "government") {
       if (!newEmployee.nationalId.trim()) errors.nationalId = true;
       // Passport Number is now optional
@@ -618,10 +655,10 @@ export default function Employees() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>Date of Birth</Label>
+                      <Label>Date of Birth *</Label>
                       <Popover>
                         <PopoverTrigger asChild>
-                          <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !newEmployee.dateOfBirth && "text-muted-foreground")}>
+                          <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !newEmployee.dateOfBirth && "text-muted-foreground", formErrors.dateOfBirth ? "border-destructive" : "")}>
                             <CalendarIcon className="mr-2 h-4 w-4" />
                             {newEmployee.dateOfBirth ? format(newEmployee.dateOfBirth, "PPP") : "Pick a date"}
                           </Button>
@@ -635,12 +672,12 @@ export default function Employees() {
                       </Popover>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="gender">Gender</Label>
+                      <Label htmlFor="gender">Gender *</Label>
                       <Select value={newEmployee.gender} onValueChange={value => setNewEmployee({
                       ...newEmployee,
                       gender: value
                     })}>
-                        <SelectTrigger>
+                        <SelectTrigger className={formErrors.gender ? "border-destructive" : ""}>
                           <SelectValue placeholder="Select gender" />
                         </SelectTrigger>
                         <SelectContent className="bg-popover border shadow-lg">
@@ -654,12 +691,12 @@ export default function Employees() {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="maritalStatus">Marital Status</Label>
+                      <Label htmlFor="maritalStatus">Marital Status *</Label>
                       <Select value={newEmployee.maritalStatus} onValueChange={value => setNewEmployee({
                       ...newEmployee,
                       maritalStatus: value
                     })}>
-                        <SelectTrigger>
+                        <SelectTrigger className={formErrors.maritalStatus ? "border-destructive" : ""}>
                           <SelectValue placeholder="Select status" />
                         </SelectTrigger>
                         <SelectContent className="bg-popover border shadow-lg">
@@ -703,70 +740,70 @@ export default function Employees() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="homeAddress">Home Address</Label>
+                    <Label htmlFor="homeAddress">Home Address *</Label>
                     <Textarea id="homeAddress" value={newEmployee.homeAddress} onChange={e => setNewEmployee({
                     ...newEmployee,
                     homeAddress: e.target.value
-                  })} placeholder="Full residential address" />
+                  })} placeholder="Full residential address" className={formErrors.homeAddress ? "border-destructive" : ""} />
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="emergencyContact">Emergency Contact Name</Label>
+                      <Label htmlFor="emergencyContact">Emergency Contact Name *</Label>
                       <Input id="emergencyContact" value={newEmployee.emergencyContact} onChange={e => setNewEmployee({
                       ...newEmployee,
                       emergencyContact: e.target.value
-                    })} placeholder="Full name" />
+                    })} placeholder="Full name" className={formErrors.emergencyContact ? "border-destructive" : ""} />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="emergencyContactNumber">Emergency Contact Number</Label>
+                      <Label htmlFor="emergencyContactNumber">Emergency Contact Number *</Label>
                       <Input id="emergencyContactNumber" value={newEmployee.emergencyContactNumber} onChange={e => setNewEmployee({
                       ...newEmployee,
                       emergencyContactNumber: e.target.value
-                    })} placeholder="Phone number" />
+                    })} placeholder="Phone number" className={formErrors.emergencyContactNumber ? "border-destructive" : ""} />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="nextOfKinName">Next of Kin Name</Label>
+                      <Label htmlFor="nextOfKinName">Next of Kin Name *</Label>
                       <Input id="nextOfKinName" value={newEmployee.nextOfKinName} onChange={e => setNewEmployee({
                       ...newEmployee,
                       nextOfKinName: e.target.value
-                    })} placeholder="Full name" />
+                    })} placeholder="Full name" className={formErrors.nextOfKinName ? "border-destructive" : ""} />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="nextOfKinRelationship">Next of Kin Relationship</Label>
+                      <Label htmlFor="nextOfKinRelationship">Next of Kin Relationship *</Label>
                       <Input id="nextOfKinRelationship" value={newEmployee.nextOfKinRelationship} onChange={e => setNewEmployee({
                       ...newEmployee,
                       nextOfKinRelationship: e.target.value
-                    })} placeholder="e.g., Spouse, Parent, Sibling" />
+                    })} placeholder="e.g., Spouse, Parent, Sibling" className={formErrors.nextOfKinRelationship ? "border-destructive" : ""} />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="nextOfKinPhone">Next of Kin Phone Number</Label>
+                      <Label htmlFor="nextOfKinPhone">Next of Kin Phone Number *</Label>
                       <Input id="nextOfKinPhone" value={newEmployee.nextOfKinPhone} onChange={e => setNewEmployee({
                       ...newEmployee,
                       nextOfKinPhone: e.target.value
-                    })} placeholder="+234 XXX XXX XXXX" />
+                    })} placeholder="+234 XXX XXX XXXX" className={formErrors.nextOfKinPhone ? "border-destructive" : ""} />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="nextOfKinEmail">Next of Kin Email</Label>
+                      <Label htmlFor="nextOfKinEmail">Next of Kin Email *</Label>
                       <Input id="nextOfKinEmail" type="email" value={newEmployee.nextOfKinEmail} onChange={e => setNewEmployee({
                       ...newEmployee,
                       nextOfKinEmail: e.target.value
-                    })} placeholder="nextofkin@email.com" />
+                    })} placeholder="nextofkin@email.com" className={formErrors.nextOfKinEmail ? "border-destructive" : ""} />
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="nextOfKinAddress">Next of Kin Address</Label>
+                    <Label htmlFor="nextOfKinAddress">Next of Kin Address *</Label>
                     <Textarea id="nextOfKinAddress" value={newEmployee.nextOfKinAddress} onChange={e => setNewEmployee({
                     ...newEmployee,
                     nextOfKinAddress: e.target.value
-                  })} placeholder="Full address of next of kin" />
+                  })} placeholder="Full address of next of kin" className={formErrors.nextOfKinAddress ? "border-destructive" : ""} />
                   </div>
                 </TabsContent>
 
@@ -814,12 +851,12 @@ export default function Employees() {
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="gradeLevel">Grade Level</Label>
+                      <Label htmlFor="gradeLevel">Grade Level *</Label>
                       <Select value={newEmployee.gradeLevel} onValueChange={value => setNewEmployee({
                       ...newEmployee,
                       gradeLevel: value
                     })}>
-                        <SelectTrigger>
+                        <SelectTrigger className={formErrors.gradeLevel ? "border-destructive" : ""}>
                           <SelectValue placeholder="Select grade level" />
                         </SelectTrigger>
                         <SelectContent className="bg-popover border shadow-lg">
@@ -831,11 +868,11 @@ export default function Employees() {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="supervisorName">Supervisor Name</Label>
+                      <Label htmlFor="supervisorName">Supervisor Name *</Label>
                       <Input id="supervisorName" value={newEmployee.supervisorName} onChange={e => setNewEmployee({
                       ...newEmployee,
                       supervisorName: e.target.value
-                    })} />
+                    })} className={formErrors.supervisorName ? "border-destructive" : ""} />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="workLocation">Work Location *</Label>
@@ -865,28 +902,37 @@ export default function Employees() {
                       </Popover>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="probationPeriod">Probation Period</Label>
-                      <Input id="probationPeriod" value={newEmployee.probationPeriod} onChange={e => setNewEmployee({
-                      ...newEmployee,
-                      probationPeriod: e.target.value
-                    })} placeholder="e.g., 6 months" />
+                      <Label htmlFor="probationPeriod">Probation Period *</Label>
+                      <Select value={newEmployee.probationPeriod} onValueChange={value => setNewEmployee({
+                        ...newEmployee,
+                        probationPeriod: value
+                      })}>
+                        <SelectTrigger className={formErrors.probationPeriod ? "border-destructive" : ""}>
+                          <SelectValue placeholder="Select probation period" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-popover border shadow-lg">
+                          <SelectItem value="1">1 month</SelectItem>
+                          <SelectItem value="2">2 months</SelectItem>
+                          <SelectItem value="3">3 months</SelectItem>
+                          <SelectItem value="4">4 months</SelectItem>
+                          <SelectItem value="5">5 months</SelectItem>
+                          <SelectItem value="6">6 months</SelectItem>
+                          <SelectItem value="7">7 months</SelectItem>
+                          <SelectItem value="8">8 months</SelectItem>
+                          <SelectItem value="9">9 months</SelectItem>
+                          <SelectItem value="10">10 months</SelectItem>
+                          <SelectItem value="11">11 months</SelectItem>
+                          <SelectItem value="12">12 months (1 year)</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label>Confirmation Date</Label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !newEmployee.confirmationDate && "text-muted-foreground")}>
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {newEmployee.confirmationDate ? format(newEmployee.confirmationDate, "PPP") : "Pick a date"}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
-                          <Calendar mode="single" selected={newEmployee.confirmationDate} onSelect={date => setNewEmployee({
-                          ...newEmployee,
-                          confirmationDate: date
-                        })} initialFocus className="p-3 pointer-events-auto" />
-                        </PopoverContent>
-                      </Popover>
+                      <Label>Confirmation Date (Auto-calculated)</Label>
+                      <Input 
+                        value={newEmployee.confirmationDate ? format(newEmployee.confirmationDate, "PPP") : "Will be calculated based on hire date + probation period"} 
+                        readOnly 
+                        className="bg-muted text-muted-foreground cursor-not-allowed" 
+                      />
                     </div>
                   </div>
 

@@ -184,19 +184,94 @@ export default function Payroll() {
   }
 
   const handleExportPayroll = () => {
-    const exportData = payrollRecords.map(record => ({
-      'Employee ID': record.employeeId,
-      'Employee Name': record.employeeName,
-      'Basic Salary': record.basicSalary,
-      'Allowances': record.allowances,
-      'Gross Pay': record.grossPay,
-      'PAYE': record.paye,
-      'Pension': record.pension,
-      'NHF': record.nhf,
-      'Net Pay': record.netPay,
-      'Period': record.period,
-      'Status': record.status
-    }))
+    // Calculate comprehensive payroll data for all employees
+    const exportData = onboardEmployees.map(employee => {
+      // Use a standardized gross salary for calculation (could be their current basic salary)
+      const grossSalary = employee.basicSalary
+      const employmentType = employee.employmentType
+      
+      // Calculate all payroll components
+      let basic, housing, transport, other;
+      
+      if (employmentType === "Full-time") {
+        // Full-time breakdown: 40% Basic, 20% Housing, 9% Transport, 31% Other
+        basic = grossSalary * 0.40
+        housing = grossSalary * 0.20
+        transport = grossSalary * 0.09
+        other = grossSalary * 0.31
+      } else {
+        // Contract: Single gross amount
+        basic = grossSalary
+        housing = 0
+        transport = 0
+        other = 0
+      }
+      
+      const grossPay = basic + housing + transport + other
+      
+      // Nigerian statutory deductions
+      const pensionableIncome = basic + housing + transport
+      const pensionEmployee = employmentType === "Full-time" ? pensionableIncome * 0.08 : 0
+      const pensionEmployer = employmentType === "Full-time" ? pensionableIncome * 0.10 : 0
+      const nhf = employmentType === "Full-time" ? grossPay * 0.025 : 0
+      const nsitf = grossPay * 0.01 // Employer paid
+      const itf = grossPay * 0.01 // Employer paid
+      
+      // Tax calculation based on employment type
+      let tax = 0
+      let taxType = ""
+      
+      if (employmentType === "Full-time") {
+        // PAYE calculation for full-time employees
+        taxType = "PAYE"
+        const taxableIncome = grossPay - pensionEmployee
+        if (taxableIncome > 300000) {
+          if (taxableIncome <= 600000) {
+            tax = (taxableIncome - 300000) * 0.07
+          } else if (taxableIncome <= 1100000) {
+            tax = 21000 + (taxableIncome - 600000) * 0.11
+          } else if (taxableIncome <= 1600000) {
+            tax = 76000 + (taxableIncome - 1100000) * 0.15
+          } else if (taxableIncome <= 3200000) {
+            tax = 151000 + (taxableIncome - 1600000) * 0.19
+          } else {
+            tax = 455000 + (taxableIncome - 3200000) * 0.21
+          }
+        }
+      } else {
+        // Withholding Tax for contract employees (5% of gross)
+        taxType = "Withholding Tax"
+        tax = grossPay * 0.05
+      }
+      
+      const totalDeductions = pensionEmployee + nhf + tax
+      const netPay = grossPay - totalDeductions
+      const totalEmployerCost = grossPay + pensionEmployer + nsitf + itf
+      
+      return {
+        'Employee ID': employee.id,
+        'Employee Name': employee.name,
+        'Employment Type': employmentType,
+        'Gross Salary': grossSalary,
+        'Basic Salary': basic,
+        'Housing Allowance': housing,
+        'Transport Allowance': transport,
+        'Other Allowance': other,
+        'Gross Pay': grossPay,
+        'Tax Type': taxType,
+        'PAYE/Withholding Tax': tax,
+        'Employee Pension Contribution': pensionEmployee,
+        'NHF': nhf,
+        'Total Employee Deductions': totalDeductions,
+        'Net Pay': netPay,
+        'Employer Pension Contribution': pensionEmployer,
+        'NSITF': nsitf,
+        'ITF': itf,
+        'Total Employer Cost': totalEmployerCost,
+        'Pension ID': employee.pensionId,
+        'Tax ID': employee.taxId
+      }
+    })
 
     // Convert to CSV
     const headers = Object.keys(exportData[0] || {})
@@ -210,7 +285,7 @@ export default function Payroll() {
     const url = window.URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `payroll_export_${new Date().toISOString().split('T')[0]}.csv`
+    a.download = `comprehensive_payroll_export_${new Date().toISOString().split('T')[0]}.csv`
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
@@ -218,7 +293,7 @@ export default function Payroll() {
 
     toast({
       title: "Export Complete",
-      description: "Payroll data has been exported successfully."
+      description: `Comprehensive payroll data exported for ${exportData.length} employees with all salary components and deductions.`
     })
   }
 

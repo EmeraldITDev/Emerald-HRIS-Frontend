@@ -471,12 +471,12 @@ export default function Recruitment() {
               
               <div className="space-y-2">
                 <Label htmlFor="requisitionId">Link to Job Requisition</Label>
-                <Select onValueChange={(value) => setNewCandidate({...newCandidate, requisitionId: value})}>
+                <Select onValueChange={(value) => setNewCandidate({...newCandidate, requisitionId: value === "none" ? "" : value})}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select job requisition (optional)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value="none">None</SelectItem>
                     {jobRequisitions.map((req) => (
                       <SelectItem key={req.id} value={req.id}>
                         {req.id} - {req.jobTitle}
@@ -635,12 +635,12 @@ export default function Recruitment() {
                   
                   <div className="space-y-2">
                     <Label htmlFor="editRequisitionId">Link to Job Requisition</Label>
-                    <Select value={editingCandidate.requisitionId || ""} onValueChange={(value) => setEditingCandidate({...editingCandidate, requisitionId: value})}>
+                    <Select value={editingCandidate.requisitionId || "none"} onValueChange={(value) => setEditingCandidate({...editingCandidate, requisitionId: value === "none" ? "" : value})}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select job requisition (optional)" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">None</SelectItem>
+<SelectItem value="none">None</SelectItem>
                         {jobRequisitions.map((req) => (
                           <SelectItem key={req.id} value={req.id}>
                             {req.id} - {req.jobTitle}

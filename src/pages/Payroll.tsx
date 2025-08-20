@@ -257,8 +257,6 @@ export default function Payroll() {
         'Housing Allowance': housing,
         'Transport Allowance': transport,
         'Other Allowance': other,
-        'Gross Pay': grossPay,
-        'Tax Type': taxType,
         'PAYE/Withholding Tax': tax,
         'Employee Pension Contribution': pensionEmployee,
         'NHF': nhf,
@@ -267,9 +265,7 @@ export default function Payroll() {
         'Employer Pension Contribution': pensionEmployer,
         'NSITF': nsitf,
         'ITF': itf,
-        'Total Employer Cost': totalEmployerCost,
-        'Pension ID': employee.pensionId,
-        'Tax ID': employee.taxId
+        'Total Employer Cost': totalEmployerCost
       }
     })
 

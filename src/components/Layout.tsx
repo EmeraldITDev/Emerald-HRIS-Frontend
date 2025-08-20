@@ -4,6 +4,7 @@ import { ReactNode } from "react"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { Button } from "@/components/ui/button"
 import { Menu } from "lucide-react"
+import { ThemeToggle } from "@/components/ThemeToggle"
 
 interface LayoutProps {
   children: ReactNode
@@ -47,6 +48,7 @@ export default function Layout({ children }: LayoutProps) {
               <div className="hidden md:flex items-center space-x-2">
                 <span className="text-xs md:text-sm text-muted-foreground">HR Department</span>
               </div>
+              <ThemeToggle />
               {isMobile && (
                 <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                   <Menu className="h-4 w-4" />

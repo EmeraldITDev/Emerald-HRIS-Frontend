@@ -24,10 +24,10 @@ import { useToast } from "@/hooks/use-toast"
 
 // Sample employee data for dropdown
 const employees = [
-  { id: "EMP001", name: "Adebayo Johnson", vacationDays: 25, usedDays: 5, birthday: "1990-01-20", joinDate: "2020-01-15", confirmationDate: "2024-01-20" },
-  { id: "EMP002", name: "Fatima Abdul", vacationDays: 30, usedDays: 12, birthday: "1988-01-25", joinDate: "2019-03-10", confirmationDate: "2024-01-25" },
-  { id: "EMP003", name: "Chinedu Okafor", vacationDays: 20, usedDays: 8, birthday: "1992-01-18", joinDate: "2021-06-01", confirmationDate: "2024-01-18" },
-  { id: "EMP004", name: "Kemi Adeleke", vacationDays: 25, usedDays: 3, birthday: "1989-01-30", joinDate: "2018-09-20", confirmationDate: "2024-01-30" },
+  { id: "EMP001", name: "Adebayo Johnson", vacationDays: 25, usedDays: 5, birthday: "1990-08-23", joinDate: "2020-08-25", confirmationDate: "2024-08-23" },
+  { id: "EMP002", name: "Fatima Abdul", vacationDays: 30, usedDays: 12, birthday: "1988-08-22", joinDate: "2019-08-20", confirmationDate: "2024-08-22" },
+  { id: "EMP003", name: "Chinedu Okafor", vacationDays: 20, usedDays: 8, birthday: "1992-08-26", joinDate: "2021-08-24", confirmationDate: "2024-08-26" },
+  { id: "EMP004", name: "Kemi Adeleke", vacationDays: 25, usedDays: 3, birthday: "1989-08-21", joinDate: "2018-08-19", confirmationDate: "2024-08-21" },
 ]
 
 // Helper function to check if date is within next 7 days

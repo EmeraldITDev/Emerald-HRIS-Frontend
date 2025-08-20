@@ -118,6 +118,9 @@ export default function Recruitment() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isRequisitionDialogOpen, setIsRequisitionDialogOpen] = useState(false)
   const [editingCandidate, setEditingCandidate] = useState<Candidate | null>(null)
+  const [editingJobRequisition, setEditingJobRequisition] = useState<JobRequisition | null>(null)
+  const [isEditCandidateDialogOpen, setIsEditCandidateDialogOpen] = useState(false)
+  const [isEditJobRequisitionDialogOpen, setIsEditJobRequisitionDialogOpen] = useState(false)
   const [activeTab, setActiveTab] = useState('candidates')
   const { toast } = useToast()
 
@@ -216,6 +219,51 @@ export default function Recruitment() {
     toast({
       title: "Candidate deleted",
       description: `${candidate?.name} has been removed from the recruitment pipeline.`
+    })
+  }
+
+  const handleEditCandidate = (candidate: Candidate) => {
+    setEditingCandidate(candidate)
+    setIsEditCandidateDialogOpen(true)
+  }
+
+  const handleUpdateCandidate = () => {
+    if (!editingCandidate) return
+    
+    setCandidates(candidates.map(c => 
+      c.id === editingCandidate.id ? editingCandidate : c
+    ))
+    
+    setIsEditCandidateDialogOpen(false)
+    setEditingCandidate(null)
+    
+    toast({
+      title: "Candidate updated",
+      description: `${editingCandidate.name}'s information has been updated.`
+    })
+  }
+
+  const handleEditJobRequisition = (requisition: JobRequisition) => {
+    setEditingJobRequisition({
+      ...requisition,
+      targetHireDate: requisition.targetHireDate
+    })
+    setIsEditJobRequisitionDialogOpen(true)
+  }
+
+  const handleUpdateJobRequisition = () => {
+    if (!editingJobRequisition) return
+    
+    setJobRequisitions(jobRequisitions.map(r => 
+      r.id === editingJobRequisition.id ? editingJobRequisition : r
+    ))
+    
+    setIsEditJobRequisitionDialogOpen(false)
+    setEditingJobRequisition(null)
+    
+    toast({
+      title: "Job requisition updated",
+      description: `${editingJobRequisition.jobTitle} requisition has been updated.`
     })
   }
 
@@ -531,6 +579,90 @@ export default function Recruitment() {
           </DialogContent>
           </Dialog>
 
+          {/* Edit Candidate Dialog */}
+          <Dialog open={isEditCandidateDialogOpen} onOpenChange={setIsEditCandidateDialogOpen}>
+            <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto my-8">
+              <DialogHeader>
+                <DialogTitle>Edit Candidate</DialogTitle>
+                <DialogDescription>
+                  Update the candidate's information.
+                </DialogDescription>
+              </DialogHeader>
+              
+              {editingCandidate && (
+                <div className="grid gap-4 py-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="editName">Full Name *</Label>
+                      <Input
+                        id="editName"
+                        value={editingCandidate.name}
+                        onChange={(e) => setEditingCandidate({...editingCandidate, name: e.target.value})}
+                        placeholder="Enter full name"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="editPhone">Phone Number *</Label>
+                      <Input
+                        id="editPhone"
+                        value={editingCandidate.phone}
+                        onChange={(e) => setEditingCandidate({...editingCandidate, phone: e.target.value})}
+                        placeholder="+234 XXX XXX XXXX"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="editEmail">Email Address *</Label>
+                    <Input
+                      id="editEmail"
+                      type="email"
+                      value={editingCandidate.email}
+                      onChange={(e) => setEditingCandidate({...editingCandidate, email: e.target.value})}
+                      placeholder="candidate@email.com"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="editPosition">Position *</Label>
+                    <Input
+                      id="editPosition"
+                      value={editingCandidate.position}
+                      onChange={(e) => setEditingCandidate({...editingCandidate, position: e.target.value})}
+                      placeholder="Enter position"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="editRequisitionId">Link to Job Requisition</Label>
+                    <Select value={editingCandidate.requisitionId || ""} onValueChange={(value) => setEditingCandidate({...editingCandidate, requisitionId: value})}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select job requisition (optional)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">None</SelectItem>
+                        {jobRequisitions.map((req) => (
+                          <SelectItem key={req.id} value={req.id}>
+                            {req.id} - {req.jobTitle}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
+              
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsEditCandidateDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleUpdateCandidate} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                  Update Candidate
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
           {/* Statistics Cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
@@ -650,7 +782,7 @@ export default function Recruitment() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => setEditingCandidate(candidate)}>
+                          <DropdownMenuItem onClick={() => handleEditCandidate(candidate)}>
                             <Edit2 className="mr-2 h-4 w-4" />
                             Edit Details
                           </DropdownMenuItem>
@@ -857,6 +989,129 @@ export default function Recruitment() {
             </DialogContent>
           </Dialog>
           
+          {/* Edit Job Requisition Dialog */}
+          <Dialog open={isEditJobRequisitionDialogOpen} onOpenChange={setIsEditJobRequisitionDialogOpen}>
+            <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto my-8">
+              <DialogHeader>
+                <DialogTitle>Edit Job Requisition</DialogTitle>
+                <DialogDescription>
+                  Update the job requisition details.
+                </DialogDescription>
+              </DialogHeader>
+              
+              {editingJobRequisition && (
+                <div className="grid gap-4 py-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="editJobTitle">Job Title *</Label>
+                      <Input
+                        id="editJobTitle"
+                        value={editingJobRequisition.jobTitle}
+                        onChange={(e) => setEditingJobRequisition({...editingJobRequisition, jobTitle: e.target.value})}
+                        placeholder="Enter job title"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="editNumberOfPositions">Number of Positions *</Label>
+                      <Input
+                        id="editNumberOfPositions"
+                        type="number"
+                        min="1"
+                        value={editingJobRequisition.numberOfPositions}
+                        onChange={(e) => setEditingJobRequisition({...editingJobRequisition, numberOfPositions: parseInt(e.target.value) || 1})}
+                        placeholder="1"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="editReqDepartment">Department *</Label>
+                      <Select value={editingJobRequisition.department} onValueChange={(value) => setEditingJobRequisition({...editingJobRequisition, department: value})}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select department" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {departments.map((department) => (
+                            <SelectItem key={department} value={department}>{department}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="editHiringManager">Hiring Manager *</Label>
+                      <Select value={editingJobRequisition.hiringManager} onValueChange={(value) => setEditingJobRequisition({...editingJobRequisition, hiringManager: value})}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select hiring manager" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {hiringManagers.map((manager) => (
+                            <SelectItem key={manager} value={manager}>{manager}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="editReqStatus">Status</Label>
+                      <Select value={editingJobRequisition.status} onValueChange={(value) => setEditingJobRequisition({...editingJobRequisition, status: value as 'Open' | 'Approved' | 'Closed'})}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Open">Open</SelectItem>
+                          <SelectItem value="Approved">Approved</SelectItem>
+                          <SelectItem value="Closed">Closed</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="editTargetHireDate">Target Hire Date *</Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "w-full justify-start text-left font-normal",
+                              !editingJobRequisition.targetHireDate && "text-muted-foreground"
+                            )}
+                          >
+                            <Calendar className="mr-2 h-4 w-4" />
+                            {editingJobRequisition.targetHireDate ? (
+                              format(new Date(editingJobRequisition.targetHireDate), "PPP")
+                            ) : (
+                              <span>Pick a date</span>
+                            )}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                          <CalendarComponent
+                            mode="single"
+                            selected={editingJobRequisition.targetHireDate ? new Date(editingJobRequisition.targetHireDate) : undefined}
+                            onSelect={(date) => setEditingJobRequisition({...editingJobRequisition, targetHireDate: date ? date.toISOString().split('T')[0] : ''})}
+                            initialFocus
+                            className={cn("p-3 pointer-events-auto")}
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsEditJobRequisitionDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleUpdateJobRequisition} className="bg-blue-600 hover:bg-blue-700 text-white">
+                  Update Requisition
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+          
           {/* Requisition Statistics */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Card>
@@ -957,7 +1212,7 @@ export default function Recruitment() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleEditJobRequisition(requisition)}>
                                 <Edit2 className="mr-2 h-4 w-4" />
                                 Edit Details
                               </DropdownMenuItem>

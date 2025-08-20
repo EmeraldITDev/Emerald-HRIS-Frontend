@@ -135,7 +135,7 @@ export default function Employees() {
     // Banking Information
     bankName: "",
     accountNumber: "",
-    nurban: "",
+    nuban: "",
     sortCode: "",
     // Government IDs
     employeeId: "",
@@ -159,6 +159,10 @@ export default function Employees() {
   });
   const departments = ["Executive", "Business Development", "Technical Operations", "Operations", "Legal", "Supply Chain", "Finance", "Human Resource", "IT"];
   const gradeLevels = ["Junior", "Middle", "Senior", "Executive"];
+  
+  const nationalities = [
+    "Afghan", "Albanian", "Algerian", "American", "Andorran", "Angolan", "Argentinian", "Armenian", "Australian", "Austrian", "Azerbaijani", "Bahamian", "Bahraini", "Bangladeshi", "Barbadian", "Belarusian", "Belgian", "Belizean", "Beninese", "Bhutanese", "Bolivian", "Bosnian", "Brazilian", "British", "Bruneian", "Bulgarian", "Burkinabe", "Burmese", "Burundian", "Cambodian", "Cameroonian", "Canadian", "Cape Verdean", "Central African", "Chadian", "Chilean", "Chinese", "Colombian", "Comoran", "Congolese", "Costa Rican", "Croatian", "Cuban", "Cypriot", "Czech", "Danish", "Djiboutian", "Dominican", "Dutch", "East Timorese", "Ecuadorean", "Egyptian", "Emirian", "Equatorial Guinean", "Eritrean", "Estonian", "Ethiopian", "Fijian", "Filipino", "Finnish", "French", "Gabonese", "Gambian", "Georgian", "German", "Ghanaian", "Greek", "Grenadian", "Guatemalan", "Guinea-Bissauan", "Guinean", "Guyanese", "Haitian", "Herzegovinian", "Honduran", "Hungarian", "Icelander", "Indian", "Indonesian", "Iranian", "Iraqi", "Irish", "Israeli", "Italian", "Ivorian", "Jamaican", "Japanese", "Jordanian", "Kazakhstani", "Kenyan", "Kittian and Nevisian", "Kuwaiti", "Kyrgyz", "Laotian", "Latvian", "Lebanese", "Liberian", "Libyan", "Liechtensteiner", "Lithuanian", "Luxembourgish", "Macedonian", "Malagasy", "Malawian", "Malaysian", "Maldivan", "Malian", "Maltese", "Marshallese", "Mauritanian", "Mauritian", "Mexican", "Micronesian", "Moldovan", "Monacan", "Mongolian", "Moroccan", "Mosotho", "Motswana", "Mozambican", "Namibian", "Nauruan", "Nepalese", "New Zealander", "Ni-Vanuatu", "Nicaraguan", "Nigerian", "Nigerien", "North Korean", "Norwegian", "Omani", "Pakistani", "Palauan", "Palestinian", "Panamanian", "Papua New Guinean", "Paraguayan", "Peruvian", "Polish", "Portuguese", "Qatari", "Romanian", "Russian", "Rwandan", "Saint Lucian", "Salvadoran", "Samoan", "San Marinese", "Sao Tomean", "Saudi", "Scottish", "Senegalese", "Serbian", "Seychellois", "Sierra Leonean", "Singaporean", "Slovakian", "Slovenian", "Solomon Islander", "Somali", "South African", "South Korean", "Spanish", "Sri Lankan", "Sudanese", "Surinamer", "Swazi", "Swedish", "Swiss", "Syrian", "Taiwanese", "Tajik", "Tanzanian", "Thai", "Togolese", "Tongan", "Trinidadian or Tobagonian", "Tunisian", "Turkish", "Tuvaluan", "Ugandan", "Ukrainian", "Uruguayan", "Uzbekistani", "Venezuelan", "Vietnamese", "Welsh", "Yemenite", "Zambian", "Zimbabwean"
+  ];
 
   // Check if Add Employee dialog should open on page load
   useEffect(() => {
@@ -365,7 +369,7 @@ export default function Employees() {
       // Banking Information
       bankName: "",
       accountNumber: "",
-      nurban: "",
+      nuban: "",
       sortCode: "",
       employeeId: "",
       nationalId: "",
@@ -493,7 +497,7 @@ export default function Employees() {
       // Banking Information
       'Bank Name': emp.bankName || '',
       'Account Number': emp.accountNumber || '',
-      'Nurban': emp.nurban || '',
+      'NUBAN': emp.nuban || '',
       'Sort Code': emp.sortCode || '',
       
       // Government IDs
@@ -668,10 +672,16 @@ export default function Employees() {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="nationality">Nationality *</Label>
-                      <Input id="nationality" value={newEmployee.nationality} onChange={e => setNewEmployee({
-                      ...newEmployee,
-                      nationality: e.target.value
-                    })} placeholder="e.g., Nigerian" className={formErrors.nationality ? "border-destructive" : ""} />
+                      <Select onValueChange={(value) => setNewEmployee({ ...newEmployee, nationality: value })} value={newEmployee.nationality}>
+                        <SelectTrigger className={formErrors.nationality ? "border-destructive" : ""}>
+                          <SelectValue placeholder="Select nationality" />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-60">
+                          {nationalities.map((nationality) => (
+                            <SelectItem key={nationality} value={nationality}>{nationality}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
 
@@ -995,11 +1005,11 @@ export default function Employees() {
                     
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="nurban">Nurban</Label>
-                        <Input id="nurban" value={newEmployee.nurban} onChange={e => setNewEmployee({
-                        ...newEmployee,
-                        nurban: e.target.value
-                      })} placeholder="NURBAN code" />
+                        <Label htmlFor="nuban">NUBAN</Label>
+                        <Input id="nuban" value={newEmployee.nuban} onChange={e => setNewEmployee({
+                          ...newEmployee,
+                          nuban: e.target.value
+                        })} placeholder="NUBAN code" />
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="sortCode">Sort Code</Label>
@@ -1519,8 +1529,8 @@ export default function Employees() {
                   </div>
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium text-muted-foreground">Nurban</Label>
-                      <p className="text-base">{selectedEmployee.nurban || 'N/A'}</p>
+                      <Label className="text-sm font-medium text-muted-foreground">NUBAN</Label>
+                      <p className="text-base">{selectedEmployee.nuban || 'N/A'}</p>
                     </div>
                     <div className="space-y-2">
                       <Label className="text-sm font-medium text-muted-foreground">Sort Code</Label>
@@ -2012,11 +2022,11 @@ export default function Employees() {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="editNurban">Nurban</Label>
-                      <Input id="editNurban" value={editEmployee.nurban || ''} onChange={e => setEditEmployee({
+                      <Label htmlFor="editNuban">NUBAN</Label>
+                      <Input id="editNuban" value={editEmployee.nuban || ''} onChange={e => setEditEmployee({
                         ...editEmployee,
-                        nurban: e.target.value
-                      })} placeholder="Nurban code" />
+                        nuban: e.target.value
+                      })} placeholder="NUBAN code" />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="editSortCode">Sort Code</Label>

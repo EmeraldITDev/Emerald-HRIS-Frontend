@@ -664,10 +664,70 @@ export default function Employees() {
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0">
-                          <Calendar mode="single" selected={newEmployee.dateOfBirth} onSelect={date => setNewEmployee({
-                          ...newEmployee,
-                          dateOfBirth: date
-                        })} initialFocus className="p-3 pointer-events-auto" />
+                          <div className="flex items-center justify-between px-3 pt-3 pb-2 border-b">
+                            <div className="flex items-center gap-2">
+                              <Select 
+                                value={newEmployee.dateOfBirth ? newEmployee.dateOfBirth.getFullYear().toString() : ""} 
+                                onValueChange={(year) => {
+                                  const currentDate = newEmployee.dateOfBirth || new Date();
+                                  const newDate = new Date(parseInt(year), currentDate.getMonth(), currentDate.getDate());
+                                  setNewEmployee({
+                                    ...newEmployee,
+                                    dateOfBirth: newDate
+                                  });
+                                }}
+                              >
+                                <SelectTrigger className="w-20 h-8">
+                                  <SelectValue placeholder="Year" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-popover border shadow-lg max-h-48">
+                                  {Array.from({ length: 80 }, (_, i) => new Date().getFullYear() - i).map(year => (
+                                    <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <Select 
+                                value={newEmployee.dateOfBirth ? newEmployee.dateOfBirth.getMonth().toString() : ""} 
+                                onValueChange={(month) => {
+                                  const currentDate = newEmployee.dateOfBirth || new Date();
+                                  const newDate = new Date(currentDate.getFullYear(), parseInt(month), currentDate.getDate());
+                                  setNewEmployee({
+                                    ...newEmployee,
+                                    dateOfBirth: newDate
+                                  });
+                                }}
+                              >
+                                <SelectTrigger className="w-24 h-8">
+                                  <SelectValue placeholder="Month" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-popover border shadow-lg">
+                                  {[
+                                    "January", "February", "March", "April", "May", "June",
+                                    "July", "August", "September", "October", "November", "December"
+                                  ].map((month, index) => (
+                                    <SelectItem key={index} value={index.toString()}>{month}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+                          <Calendar 
+                            mode="single" 
+                            selected={newEmployee.dateOfBirth} 
+                            onSelect={date => setNewEmployee({
+                              ...newEmployee,
+                              dateOfBirth: date
+                            })} 
+                            initialFocus 
+                            className="p-3 pointer-events-auto" 
+                            month={newEmployee.dateOfBirth}
+                            onMonthChange={(month) => {
+                              setNewEmployee({
+                                ...newEmployee,
+                                dateOfBirth: month
+                              });
+                            }}
+                          />
                         </PopoverContent>
                       </Popover>
                     </div>

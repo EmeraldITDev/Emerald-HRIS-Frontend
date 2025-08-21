@@ -19,8 +19,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Calendar, Plus, Clock, CalendarDays, LogIn, LogOut, Bell, Cake, Award } from "lucide-react"
+import { Calendar, Plus, Clock, CalendarDays, LogIn, LogOut, Bell, Cake, Award, ChevronDown } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { Calendar as CalendarComponent } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { format } from "date-fns"
 
 // Sample employee data for dropdown
 const employees = [
@@ -29,6 +32,14 @@ const employees = [
   { id: "EMP003", name: "Chinedu Okafor", vacationDays: 20, usedDays: 8, birthday: "1992-08-26", joinDate: "2021-08-24", confirmationDate: "2024-08-26" },
   { id: "EMP004", name: "Kemi Adeleke", vacationDays: 25, usedDays: 3, birthday: "1989-08-21", joinDate: "2018-08-19", confirmationDate: "2024-08-21" },
 ]
+
+// Helper function to check if date is within current month
+const isInCurrentMonth = (dateString: string) => {
+  const today = new Date()
+  const targetDate = new Date(dateString)
+  targetDate.setFullYear(today.getFullYear()) // Use current year for birthdays
+  return targetDate.getMonth() === today.getMonth()
+}
 
 // Helper function to check if date is within next 7 days
 const isWithinNextWeek = (dateString: string) => {
@@ -40,7 +51,47 @@ const isWithinNextWeek = (dateString: string) => {
   return diffDays >= 0 && diffDays <= 7
 }
 
-// Get notifications
+// Get notifications for the current month
+const getCurrentMonthEvents = () => {
+  const today = new Date()
+  const events = { birthdays: [], anniversaries: [] }
+
+  employees.forEach(emp => {
+    // Birthday events in current month
+    if (isInCurrentMonth(emp.birthday)) {
+      const birthdayDate = new Date(emp.birthday)
+      birthdayDate.setFullYear(today.getFullYear())
+      events.birthdays.push({
+        type: 'birthday',
+        employee: emp.name,
+        date: birthdayDate.toLocaleDateString(),
+        day: birthdayDate.getDate(),
+        message: `${emp.name}'s birthday`,
+        icon: Cake
+      })
+    }
+
+    // Work anniversary events in current month
+    const joinDate = new Date(emp.joinDate)
+    const anniversaryDate = new Date(joinDate)
+    anniversaryDate.setFullYear(today.getFullYear())
+    if (isInCurrentMonth(anniversaryDate.toISOString().split('T')[0])) {
+      const yearsOfService = today.getFullYear() - joinDate.getFullYear()
+      events.anniversaries.push({
+        type: 'anniversary',
+        employee: emp.name,
+        date: anniversaryDate.toLocaleDateString(),
+        day: anniversaryDate.getDate(),
+        message: `${emp.name}'s ${yearsOfService} year work anniversary`,
+        icon: Award
+      })
+    }
+  })
+
+  return events
+}
+
+// Get notifications for upcoming events (within 7 days)
 const getNotifications = () => {
   const today = new Date()
   const notifications = []
@@ -151,6 +202,10 @@ export default function Attendance() {
   const [clockInEmployee, setClockInEmployee] = useState("")
   const [currentTime] = useState(new Date())
   const [notifications] = useState(getNotifications())
+  const [currentMonthEvents] = useState(getCurrentMonthEvents())
+  const [showMonthlyEvents, setShowMonthlyEvents] = useState(false)
+  const [startDateOpen, setStartDateOpen] = useState(false)
+  const [endDateOpen, setEndDateOpen] = useState(false)
   const { toast } = useToast()
 
   const calculateDays = () => {
@@ -343,6 +398,87 @@ export default function Attendance() {
         </Card>
       )}
 
+      {/* Monthly Events Dropdown */}
+      <Card className="border-border/50 shadow-sm">
+        <CardHeader 
+          className="cursor-pointer" 
+          onClick={() => setShowMonthlyEvents(!showMonthlyEvents)}
+        >
+          <CardTitle className="text-primary flex items-center justify-between">
+            <div className="flex items-center">
+              <Cake className="mr-2 h-5 w-5" />
+              This Month's Birthdays & Anniversaries
+            </div>
+            <ChevronDown className={`h-5 w-5 transition-transform ${showMonthlyEvents ? 'rotate-180' : ''}`} />
+          </CardTitle>
+        </CardHeader>
+        {showMonthlyEvents && (
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Birthdays Section */}
+              <div>
+                <h3 className="font-semibold text-primary mb-3 flex items-center">
+                  <Cake className="mr-2 h-4 w-4" />
+                  Birthdays ({currentMonthEvents.birthdays.length})
+                </h3>
+                <div className="space-y-2">
+                  {currentMonthEvents.birthdays.length > 0 ? (
+                    currentMonthEvents.birthdays
+                      .sort((a, b) => a.day - b.day)
+                      .map((birthday, index) => (
+                        <div key={index} className="flex items-center justify-between p-3 bg-background rounded-lg border">
+                          <div className="flex items-center space-x-3">
+                            <Cake className="h-4 w-4 text-primary" />
+                            <div>
+                              <div className="font-medium text-sm">{birthday.employee}</div>
+                              <div className="text-xs text-muted-foreground">{birthday.date}</div>
+                            </div>
+                          </div>
+                          <Badge variant="outline" className="text-xs bg-primary/5 text-primary border-primary/20">
+                            Day {birthday.day}
+                          </Badge>
+                        </div>
+                      ))
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No birthdays this month</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Work Anniversaries Section */}
+              <div>
+                <h3 className="font-semibold text-primary mb-3 flex items-center">
+                  <Award className="mr-2 h-4 w-4" />
+                  Work Anniversaries ({currentMonthEvents.anniversaries.length})
+                </h3>
+                <div className="space-y-2">
+                  {currentMonthEvents.anniversaries.length > 0 ? (
+                    currentMonthEvents.anniversaries
+                      .sort((a, b) => a.day - b.day)
+                      .map((anniversary, index) => (
+                        <div key={index} className="flex items-center justify-between p-3 bg-background rounded-lg border">
+                          <div className="flex items-center space-x-3">
+                            <Award className="h-4 w-4 text-primary" />
+                            <div>
+                              <div className="font-medium text-sm">{anniversary.employee}</div>
+                              <div className="text-xs text-muted-foreground">{anniversary.date}</div>
+                            </div>
+                          </div>
+                          <Badge variant="outline" className="text-xs bg-primary/5 text-primary border-primary/20">
+                            Day {anniversary.day}
+                          </Badge>
+                        </div>
+                      ))
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No work anniversaries this month</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        )}
+      </Card>
+
       {/* Attendance Tracking Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-6">
         <Card className="border-border/50 shadow-sm">
@@ -458,22 +594,60 @@ export default function Attendance() {
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
                   <Label htmlFor="startDate">Start Date *</Label>
-                  <Input
-                    id="startDate"
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                  />
+                  <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant={"outline"}
+                        className="w-full justify-start text-left font-normal"
+                      >
+                        <Calendar className="mr-2 h-4 w-4" />
+                        {startDate ? format(new Date(startDate), "PPP") : <span>Pick start date</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <CalendarComponent
+                        mode="single"
+                        selected={startDate ? new Date(startDate) : undefined}
+                        onSelect={(date) => {
+                          if (date) {
+                            setStartDate(format(date, "yyyy-MM-dd"))
+                            setStartDateOpen(false)
+                          }
+                        }}
+                        initialFocus
+                        className="pointer-events-auto"
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="endDate">End Date *</Label>
-                  <Input
-                    id="endDate"
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    min={startDate}
-                  />
+                  <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant={"outline"}
+                        className="w-full justify-start text-left font-normal"
+                      >
+                        <Calendar className="mr-2 h-4 w-4" />
+                        {endDate ? format(new Date(endDate), "PPP") : <span>Pick end date</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <CalendarComponent
+                        mode="single"
+                        selected={endDate ? new Date(endDate) : undefined}
+                        onSelect={(date) => {
+                          if (date) {
+                            setEndDate(format(date, "yyyy-MM-dd"))
+                            setEndDateOpen(false)
+                          }
+                        }}
+                        disabled={(date) => startDate ? date < new Date(startDate) : false}
+                        initialFocus
+                        className="pointer-events-auto"
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
               </div>
 

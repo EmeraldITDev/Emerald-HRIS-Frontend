@@ -1050,124 +1050,86 @@ export default function Employees() {
                   {newEmployee.employmentType === "Full-time" ? (
                     <>
                       <div className="space-y-2">
-                        <Label htmlFor="grossSalary">Gross Pay *</Label>
-                        <Input id="grossSalary" type="number" value={newEmployee.grossSalary} onChange={e => {
-                        const grossPay = parseFloat(e.target.value) || 0;
-                        const housing = Math.round(grossPay * 0.20);
-                        const basic = Math.round(grossPay * 0.40);
-                        const transport = Math.round(grossPay * 0.09);
-                        const other = Math.round(grossPay * 0.31);
-                        setNewEmployee({
-                          ...newEmployee,
-                          grossSalary: e.target.value,
-                          housingAllowance: housing.toString(),
-                          basicSalary: basic.toString(),
-                          transportAllowance: transport.toString(),
-                          otherAllowance: other.toString()
-                        });
-                      }} placeholder="2500000" />
-                        <p className="text-xs text-muted-foreground">Enter amount in Naira (₦). All allowances will be auto-calculated.</p>
+                        <Label htmlFor="grossSalary">Gross Salary *</Label>
+                        <Input 
+                          id="grossSalary" 
+                          type="number" 
+                          value={newEmployee.grossSalary} 
+                          onChange={e => setNewEmployee({
+                            ...newEmployee,
+                            grossSalary: e.target.value
+                          })} 
+                          placeholder="2500000" 
+                        />
+                        <p className="text-xs text-muted-foreground">Enter amount in Naira (₦).</p>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="housingAllowance">Housing Allowance (20%)</Label>
-                          <Input id="housingAllowance" value={newEmployee.housingAllowance ? `₦${parseInt(newEmployee.housingAllowance).toLocaleString()}` : "₦0"} readOnly className="bg-muted" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="basicSalary">Basic Salary (40%)</Label>
-                          <Input id="basicSalary" value={newEmployee.basicSalary ? `₦${parseInt(newEmployee.basicSalary).toLocaleString()}` : "₦0"} readOnly className="bg-muted" />
-                        </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="housingAllowance">Housing Allowance</Label>
+                        <Input 
+                          id="housingAllowance" 
+                          type="number" 
+                          value={newEmployee.housingAllowance} 
+                          onChange={e => setNewEmployee({
+                            ...newEmployee,
+                            housingAllowance: e.target.value
+                          })} 
+                          placeholder="500000" 
+                        />
+                        <p className="text-xs text-muted-foreground">Enter housing allowance amount in Naira (₦).</p>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="transportAllowance">Transport Allowance (9%)</Label>
-                          <Input id="transportAllowance" value={newEmployee.transportAllowance ? `₦${parseInt(newEmployee.transportAllowance).toLocaleString()}` : "₦0"} readOnly className="bg-muted" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="otherAllowance">Other Allowances (31%)</Label>
-                          <Input id="otherAllowance" value={newEmployee.otherAllowance ? `₦${parseInt(newEmployee.otherAllowance).toLocaleString()}` : "₦0"} readOnly className="bg-muted" />
-                        </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="transportAllowance">Transport Allowance</Label>
+                        <Input 
+                          id="transportAllowance" 
+                          type="number" 
+                          value={newEmployee.transportAllowance} 
+                          onChange={e => setNewEmployee({
+                            ...newEmployee,
+                            transportAllowance: e.target.value
+                          })} 
+                          placeholder="200000" 
+                        />
+                        <p className="text-xs text-muted-foreground">Enter transport allowance amount in Naira (₦).</p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="otherAllowance">Other Allowance</Label>
+                        <Input 
+                          id="otherAllowance" 
+                          type="number" 
+                          value={newEmployee.otherAllowance} 
+                          onChange={e => setNewEmployee({
+                            ...newEmployee,
+                            otherAllowance: e.target.value
+                          })} 
+                          placeholder="300000" 
+                        />
+                        <p className="text-xs text-muted-foreground">Enter other allowances amount in Naira (₦).</p>
+                      </div>
+                    </>
+                  ) : newEmployee.employmentType === "Contract" ? (
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="grossSalary">Gross Salary *</Label>
+                        <Input 
+                          id="grossSalary" 
+                          type="number" 
+                          value={newEmployee.grossSalary} 
+                          onChange={e => setNewEmployee({
+                            ...newEmployee,
+                            grossSalary: e.target.value
+                          })} 
+                          placeholder="1500000" 
+                        />
+                        <p className="text-xs text-muted-foreground">Enter gross salary amount in Naira (₦).</p>
                       </div>
                     </>
                   ) : (
-                    <>
-                      <div className="space-y-2">
-                        <Label htmlFor="contractAmount">Contract Amount *</Label>
-                        <Input 
-                          id="contractAmount" 
-                          type="number" 
-                          value={newEmployee.contractAmount || ""} 
-                          onChange={e => setNewEmployee({
-                            ...newEmployee,
-                            contractAmount: e.target.value
-                          })} 
-                          placeholder="5000000" 
-                        />
-                        <p className="text-xs text-muted-foreground">Enter total contract amount in Naira (₦).</p>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="paymentFrequency">Payment Frequency *</Label>
-                          <Select 
-                            value={newEmployee.paymentFrequency || ""} 
-                            onValueChange={value => setNewEmployee({
-                              ...newEmployee,
-                              paymentFrequency: value
-                            })}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select frequency" />
-                            </SelectTrigger>
-                            <SelectContent className="bg-popover border shadow-lg">
-                              <SelectItem value="Monthly">Monthly</SelectItem>
-                              <SelectItem value="Bi-weekly">Bi-weekly</SelectItem>
-                              <SelectItem value="Project-based">Project-based</SelectItem>
-                              <SelectItem value="Milestone">Milestone</SelectItem>
-                              <SelectItem value="One-time">One-time</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="contractDuration">Contract Duration</Label>
-                          <Select 
-                            value={newEmployee.contractDuration || ""} 
-                            onValueChange={value => setNewEmployee({
-                              ...newEmployee,
-                              contractDuration: value
-                            })}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select duration" />
-                            </SelectTrigger>
-                            <SelectContent className="bg-popover border shadow-lg">
-                              <SelectItem value="1-month">1 Month</SelectItem>
-                              <SelectItem value="3-months">3 Months</SelectItem>
-                              <SelectItem value="6-months">6 Months</SelectItem>
-                              <SelectItem value="1-year">1 Year</SelectItem>
-                              <SelectItem value="2-years">2 Years</SelectItem>
-                              <SelectItem value="Ongoing">Ongoing</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="contractTerms">Contract Terms</Label>
-                        <Textarea 
-                          id="contractTerms" 
-                          value={newEmployee.contractTerms || ""} 
-                          onChange={e => setNewEmployee({
-                            ...newEmployee,
-                            contractTerms: e.target.value
-                          })} 
-                          placeholder="Additional contract terms and conditions..."
-                          rows={3}
-                        />
-                      </div>
-                    </>
+                    <div className="text-center py-8 text-muted-foreground">
+                      <p>Please select an employment type to configure financial information.</p>
+                    </div>
                   )}
 
                   <div className="space-y-4">

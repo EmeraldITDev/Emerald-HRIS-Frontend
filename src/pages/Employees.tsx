@@ -219,6 +219,25 @@ export default function Employees() {
     }
   }, [newEmployee.hireDate, newEmployee.probationPeriod]);
 
+  // Auto-calculate salary components for Full-time employees
+  useEffect(() => {
+    if (newEmployee.employmentType === "Full-time" && newEmployee.grossSalary) {
+      const gross = parseFloat(newEmployee.grossSalary) || 0;
+      const basicSalary = (gross * 0.4).toString();
+      const housingAllowance = (gross * 0.2).toString();
+      const transportAllowance = (gross * 0.09).toString();
+      const otherAllowance = (gross * 0.31).toString();
+
+      setNewEmployee(prev => ({
+        ...prev,
+        basicSalary,
+        housingAllowance,
+        transportAllowance,
+        otherAllowance
+      }));
+    }
+  }, [newEmployee.grossSalary, newEmployee.employmentType]);
+
   // Validate required fields
   const validateRequiredFields = (tab: string) => {
     const errors: {
@@ -1065,48 +1084,55 @@ export default function Employees() {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="housingAllowance">Housing Allowance</Label>
+                        <Label htmlFor="basicSalary">Basic Salary (40% of Gross)</Label>
+                        <Input 
+                          id="basicSalary" 
+                          type="number" 
+                          value={newEmployee.basicSalary} 
+                          readOnly
+                          className="bg-muted cursor-not-allowed"
+                          placeholder="Auto-calculated" 
+                        />
+                        <p className="text-xs text-muted-foreground">Automatically calculated as 40% of gross salary.</p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="housingAllowance">Housing Allowance (20% of Gross)</Label>
                         <Input 
                           id="housingAllowance" 
                           type="number" 
                           value={newEmployee.housingAllowance} 
-                          onChange={e => setNewEmployee({
-                            ...newEmployee,
-                            housingAllowance: e.target.value
-                          })} 
-                          placeholder="500000" 
+                          readOnly
+                          className="bg-muted cursor-not-allowed"
+                          placeholder="Auto-calculated" 
                         />
-                        <p className="text-xs text-muted-foreground">Enter housing allowance amount in Naira (₦).</p>
+                        <p className="text-xs text-muted-foreground">Automatically calculated as 20% of gross salary.</p>
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="transportAllowance">Transport Allowance</Label>
+                        <Label htmlFor="transportAllowance">Transport Allowance (9% of Gross)</Label>
                         <Input 
                           id="transportAllowance" 
                           type="number" 
                           value={newEmployee.transportAllowance} 
-                          onChange={e => setNewEmployee({
-                            ...newEmployee,
-                            transportAllowance: e.target.value
-                          })} 
-                          placeholder="200000" 
+                          readOnly
+                          className="bg-muted cursor-not-allowed"
+                          placeholder="Auto-calculated" 
                         />
-                        <p className="text-xs text-muted-foreground">Enter transport allowance amount in Naira (₦).</p>
+                        <p className="text-xs text-muted-foreground">Automatically calculated as 9% of gross salary.</p>
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="otherAllowance">Other Allowance</Label>
+                        <Label htmlFor="otherAllowance">Other Allowance (31% of Gross)</Label>
                         <Input 
                           id="otherAllowance" 
                           type="number" 
                           value={newEmployee.otherAllowance} 
-                          onChange={e => setNewEmployee({
-                            ...newEmployee,
-                            otherAllowance: e.target.value
-                          })} 
-                          placeholder="300000" 
+                          readOnly
+                          className="bg-muted cursor-not-allowed"
+                          placeholder="Auto-calculated" 
                         />
-                        <p className="text-xs text-muted-foreground">Enter other allowances amount in Naira (₦).</p>
+                        <p className="text-xs text-muted-foreground">Automatically calculated as 31% of gross salary.</p>
                       </div>
                     </>
                   ) : newEmployee.employmentType === "Contract" ? (

@@ -131,6 +131,11 @@ export default function Employees() {
     housingAllowance: "",
     transportAllowance: "",
     otherAllowance: "",
+    // Contract Information
+    contractAmount: "",
+    paymentFrequency: "",
+    contractDuration: "",
+    contractTerms: "",
     bankAccount: "",
     // Banking Information
     bankName: "",
@@ -213,6 +218,25 @@ export default function Employees() {
       }));
     }
   }, [newEmployee.hireDate, newEmployee.probationPeriod]);
+
+  // Auto-calculate salary components for Full-time employees
+  useEffect(() => {
+    if (newEmployee.employmentType === "Full-time" && newEmployee.grossSalary) {
+      const gross = parseFloat(newEmployee.grossSalary) || 0;
+      const basicSalary = (gross * 0.4).toString();
+      const housingAllowance = (gross * 0.2).toString();
+      const transportAllowance = (gross * 0.09).toString();
+      const otherAllowance = (gross * 0.31).toString();
+
+      setNewEmployee(prev => ({
+        ...prev,
+        basicSalary,
+        housingAllowance,
+        transportAllowance,
+        otherAllowance
+      }));
+    }
+  }, [newEmployee.grossSalary, newEmployee.employmentType]);
 
   // Validate required fields
   const validateRequiredFields = (tab: string) => {
@@ -402,6 +426,11 @@ export default function Employees() {
       housingAllowance: "",
       transportAllowance: "",
       otherAllowance: "",
+      // Contract Information
+      contractAmount: "",
+      paymentFrequency: "",
+      contractDuration: "",
+      contractTerms: "",
       bankAccount: "",
       // Banking Information
       bankName: "",
@@ -664,10 +693,70 @@ export default function Employees() {
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0">
-                          <Calendar mode="single" selected={newEmployee.dateOfBirth} onSelect={date => setNewEmployee({
-                          ...newEmployee,
-                          dateOfBirth: date
-                        })} initialFocus className="p-3 pointer-events-auto" />
+                          <div className="flex items-center justify-between px-3 pt-3 pb-2 border-b">
+                            <div className="flex items-center gap-2">
+                              <Select 
+                                value={newEmployee.dateOfBirth ? newEmployee.dateOfBirth.getFullYear().toString() : ""} 
+                                onValueChange={(year) => {
+                                  const currentDate = newEmployee.dateOfBirth || new Date();
+                                  const newDate = new Date(parseInt(year), currentDate.getMonth(), currentDate.getDate());
+                                  setNewEmployee({
+                                    ...newEmployee,
+                                    dateOfBirth: newDate
+                                  });
+                                }}
+                              >
+                                <SelectTrigger className="w-20 h-8">
+                                  <SelectValue placeholder="Year" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-popover border shadow-lg max-h-48">
+                                  {Array.from({ length: 80 }, (_, i) => new Date().getFullYear() - i).map(year => (
+                                    <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <Select 
+                                value={newEmployee.dateOfBirth ? newEmployee.dateOfBirth.getMonth().toString() : ""} 
+                                onValueChange={(month) => {
+                                  const currentDate = newEmployee.dateOfBirth || new Date();
+                                  const newDate = new Date(currentDate.getFullYear(), parseInt(month), currentDate.getDate());
+                                  setNewEmployee({
+                                    ...newEmployee,
+                                    dateOfBirth: newDate
+                                  });
+                                }}
+                              >
+                                <SelectTrigger className="w-24 h-8">
+                                  <SelectValue placeholder="Month" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-popover border shadow-lg">
+                                  {[
+                                    "January", "February", "March", "April", "May", "June",
+                                    "July", "August", "September", "October", "November", "December"
+                                  ].map((month, index) => (
+                                    <SelectItem key={index} value={index.toString()}>{month}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+                          <Calendar 
+                            mode="single" 
+                            selected={newEmployee.dateOfBirth} 
+                            onSelect={date => setNewEmployee({
+                              ...newEmployee,
+                              dateOfBirth: date
+                            })} 
+                            initialFocus 
+                            className="p-3 pointer-events-auto" 
+                            month={newEmployee.dateOfBirth}
+                            onMonthChange={(month) => {
+                              setNewEmployee({
+                                ...newEmployee,
+                                dateOfBirth: month
+                              });
+                            }}
+                          />
                         </PopoverContent>
                       </Popover>
                     </div>
@@ -977,47 +1066,97 @@ export default function Employees() {
                 </TabsContent>
 
                 <TabsContent value="financial" className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="grossSalary">Gross Pay *</Label>
-                    <Input id="grossSalary" type="number" value={newEmployee.grossSalary} onChange={e => {
-                    const grossPay = parseFloat(e.target.value) || 0;
-                    const housing = Math.round(grossPay * 0.20);
-                    const basic = Math.round(grossPay * 0.40);
-                    const transport = Math.round(grossPay * 0.09);
-                    const other = Math.round(grossPay * 0.31);
-                    setNewEmployee({
-                      ...newEmployee,
-                      grossSalary: e.target.value,
-                      housingAllowance: housing.toString(),
-                      basicSalary: basic.toString(),
-                      transportAllowance: transport.toString(),
-                      otherAllowance: other.toString()
-                    });
-                  }} placeholder="2500000" />
-                    <p className="text-xs text-muted-foreground">Enter amount in Naira (₦). All allowances will be auto-calculated.</p>
-                  </div>
+                  {newEmployee.employmentType === "Full-time" ? (
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="grossSalary">Gross Salary *</Label>
+                        <Input 
+                          id="grossSalary" 
+                          type="number" 
+                          value={newEmployee.grossSalary} 
+                          onChange={e => setNewEmployee({
+                            ...newEmployee,
+                            grossSalary: e.target.value
+                          })} 
+                          placeholder="2500000" 
+                        />
+                        <p className="text-xs text-muted-foreground">Enter amount in Naira (₦).</p>
+                      </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="housingAllowance">Housing Allowance (20%)</Label>
-                      <Input id="housingAllowance" value={newEmployee.housingAllowance ? `₦${parseInt(newEmployee.housingAllowance).toLocaleString()}` : "₦0"} readOnly className="bg-muted" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="basicSalary">Basic Salary (40%)</Label>
-                      <Input id="basicSalary" value={newEmployee.basicSalary ? `₦${parseInt(newEmployee.basicSalary).toLocaleString()}` : "₦0"} readOnly className="bg-muted" />
-                    </div>
-                  </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="basicSalary">Basic Salary (40% of Gross)</Label>
+                        <Input 
+                          id="basicSalary" 
+                          type="number" 
+                          value={newEmployee.basicSalary} 
+                          readOnly
+                          className="bg-muted cursor-not-allowed"
+                          placeholder="Auto-calculated" 
+                        />
+                        <p className="text-xs text-muted-foreground">Automatically calculated as 40% of gross salary.</p>
+                      </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="transportAllowance">Transport Allowance (9%)</Label>
-                      <Input id="transportAllowance" value={newEmployee.transportAllowance ? `₦${parseInt(newEmployee.transportAllowance).toLocaleString()}` : "₦0"} readOnly className="bg-muted" />
+                      <div className="space-y-2">
+                        <Label htmlFor="housingAllowance">Housing Allowance (20% of Gross)</Label>
+                        <Input 
+                          id="housingAllowance" 
+                          type="number" 
+                          value={newEmployee.housingAllowance} 
+                          readOnly
+                          className="bg-muted cursor-not-allowed"
+                          placeholder="Auto-calculated" 
+                        />
+                        <p className="text-xs text-muted-foreground">Automatically calculated as 20% of gross salary.</p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="transportAllowance">Transport Allowance (9% of Gross)</Label>
+                        <Input 
+                          id="transportAllowance" 
+                          type="number" 
+                          value={newEmployee.transportAllowance} 
+                          readOnly
+                          className="bg-muted cursor-not-allowed"
+                          placeholder="Auto-calculated" 
+                        />
+                        <p className="text-xs text-muted-foreground">Automatically calculated as 9% of gross salary.</p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="otherAllowance">Other Allowance (31% of Gross)</Label>
+                        <Input 
+                          id="otherAllowance" 
+                          type="number" 
+                          value={newEmployee.otherAllowance} 
+                          readOnly
+                          className="bg-muted cursor-not-allowed"
+                          placeholder="Auto-calculated" 
+                        />
+                        <p className="text-xs text-muted-foreground">Automatically calculated as 31% of gross salary.</p>
+                      </div>
+                    </>
+                  ) : newEmployee.employmentType === "Contract" ? (
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="grossSalary">Gross Salary *</Label>
+                        <Input 
+                          id="grossSalary" 
+                          type="number" 
+                          value={newEmployee.grossSalary} 
+                          onChange={e => setNewEmployee({
+                            ...newEmployee,
+                            grossSalary: e.target.value
+                          })} 
+                          placeholder="1500000" 
+                        />
+                        <p className="text-xs text-muted-foreground">Enter gross salary amount in Naira (₦).</p>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <p>Please select an employment type to configure financial information.</p>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="otherAllowance">Other Allowances (31%)</Label>
-                      <Input id="otherAllowance" value={newEmployee.otherAllowance ? `₦${parseInt(newEmployee.otherAllowance).toLocaleString()}` : "₦0"} readOnly className="bg-muted" />
-                    </div>
-                  </div>
+                  )}
 
                   <div className="space-y-4">
                     <h3 className="text-base font-medium">Bank Account for Salary Payments</h3>

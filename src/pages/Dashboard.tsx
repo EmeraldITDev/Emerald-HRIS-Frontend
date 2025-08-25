@@ -345,16 +345,6 @@ export default function Dashboard() {
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
-          {/* Test Create Employee Button */}
-          <Button 
-            size="sm" 
-            variant="outline"
-            className="text-xs md:text-sm"
-            onClick={handleTestCreateEmployee}
-          >
-            Test Create Employee
-          </Button>
-
           {/* Import Data Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

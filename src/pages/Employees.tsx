@@ -20,75 +20,19 @@ import { parseCSVFile, formatDataForPHP, type EmployeeData } from "@/utils/csvIm
 import { downloadCSVTemplate } from "@/utils/csvTemplate";
 import jsPDF from 'jspdf';
 import * as XLSX from 'xlsx';
+import apiService, { Employee } from "@/lib/api";
+import { useLocation } from "react-router-dom";
 
-// Sample employee data with updated fields
-const employees = [{
-  id: "EMP001",
-  firstName: "Adebayo",
-  lastName: "Johnson",
-  email: "adebayo.johnson@company.com",
-  department: "Engineering",
-  position: "Senior Software Engineer",
-  salary: "₦2,500,000",
-  status: "Active",
-  joinDate: "2022-03-15",
-  phone: "+234 803 123 4567",
-  vacationDays: 25,
-  employmentType: "FTE"
-}, {
-  id: "EMP002",
-  firstName: "Fatima",
-  lastName: "Abdul",
-  email: "fatima.abdul@company.com",
-  department: "Accounting",
-  position: "HR Manager",
-  salary: "₦1,800,000",
-  status: "Active",
-  joinDate: "2021-08-20",
-  phone: "+234 807 654 3210",
-  vacationDays: 30,
-  employmentType: "FTE"
-}, {
-  id: "EMP003",
-  firstName: "Chinedu",
-  lastName: "Okafor",
-  email: "chinedu.okafor@company.com",
-  department: "Supply Chain",
-  position: "Financial Analyst",
-  salary: "₦1,200,000",
-  status: "On Leave",
-  joinDate: "2023-01-10",
-  phone: "+234 815 987 6543",
-  vacationDays: 20,
-  employmentType: "Consultant"
-}, {
-  id: "EMP004",
-  firstName: "Kemi",
-  lastName: "Adeleke",
-  email: "kemi.adeleke@company.com",
-  department: "Marketing",
-  position: "Marketing Specialist",
-  salary: "₦950,000",
-  status: "Active",
-  joinDate: "2023-06-05",
-  phone: "+234 809 246 8135",
-  vacationDays: 25,
-  employmentType: "FTE"
-}];
 export default function Employees() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [employeeList, setEmployeeList] = useState<EmployeeData[]>(employees);
+  const [employeeList, setEmployeeList] = useState<Employee[]>([]);
   const [filterLocation, setFilterLocation] = useState("")
   const [filterDepartment, setFilterDepartment] = useState("")
   const [filterEmploymentType, setFilterEmploymentType] = useState("")
   const [filterStartDate, setFilterStartDate] = useState("")
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const {
-    toast
-  } = useToast();
-  const [formErrors, setFormErrors] = useState<{
-    [key: string]: boolean;
-  }>({});
+  const { toast } = useToast();
+  const [formErrors, setFormErrors] = useState<{ [key: string]: boolean; }>({});
   const [currentTab, setCurrentTab] = useState("personal");
   const [showAddEmployee, setShowAddEmployee] = useState(false);
   const [showViewDetails, setShowViewDetails] = useState(false);
@@ -162,39 +106,75 @@ export default function Employees() {
     companyAssets: [] as File[],
     lastCompanyAsset: null as File | null
   });
+
   const departments = ["Executive", "Business Development", "Technical Operations", "Operations", "Legal", "Supply Chain", "Finance", "Human Resource", "IT"];
   const gradeLevels = ["Junior", "Middle", "Senior", "Executive"];
   
   const nationalities = [
     "Afghan", "Albanian", "Algerian", "American", "Andorran", "Angolan", "Argentinian", "Armenian", "Australian", "Austrian", "Azerbaijani", "Bahamian", "Bahraini", "Bangladeshi", "Barbadian", "Belarusian", "Belgian", "Belizean", "Beninese", "Bhutanese", "Bolivian", "Bosnian", "Brazilian", "British", "Bruneian", "Bulgarian", "Burkinabe", "Burmese", "Burundian", "Cambodian", "Cameroonian", "Canadian", "Cape Verdean", "Central African", "Chadian", "Chilean", "Chinese", "Colombian", "Comoran", "Congolese", "Costa Rican", "Croatian", "Cuban", "Cypriot", "Czech", "Danish", "Djiboutian", "Dominican", "Dutch", "East Timorese", "Ecuadorean", "Egyptian", "Emirian", "Equatorial Guinean", "Eritrean", "Estonian", "Ethiopian", "Fijian", "Filipino", "Finnish", "French", "Gabonese", "Gambian", "Georgian", "German", "Ghanaian", "Greek", "Grenadian", "Guatemalan", "Guinea-Bissauan", "Guinean", "Guyanese", "Haitian", "Herzegovinian", "Honduran", "Hungarian", "Icelander", "Indian", "Indonesian", "Iranian", "Iraqi", "Irish", "Israeli", "Italian", "Ivorian", "Jamaican", "Japanese", "Jordanian", "Kazakhstani", "Kenyan", "Kittian and Nevisian", "Kuwaiti", "Kyrgyz", "Laotian", "Latvian", "Lebanese", "Liberian", "Libyan", "Liechtensteiner", "Lithuanian", "Luxembourgish", "Macedonian", "Malagasy", "Malawian", "Malaysian", "Maldivan", "Malian", "Maltese", "Marshallese", "Mauritanian", "Mauritian", "Mexican", "Micronesian", "Moldovan", "Monacan", "Mongolian", "Moroccan", "Mosotho", "Motswana", "Mozambican", "Namibian", "Nauruan", "Nepalese", "New Zealander", "Ni-Vanuatu", "Nicaraguan", "Nigerian", "Nigerien", "North Korean", "Norwegian", "Omani", "Pakistani", "Palauan", "Palestinian", "Panamanian", "Papua New Guinean", "Paraguayan", "Peruvian", "Polish", "Portuguese", "Qatari", "Romanian", "Russian", "Rwandan", "Saint Lucian", "Salvadoran", "Samoan", "San Marinese", "Sao Tomean", "Saudi", "Scottish", "Senegalese", "Serbian", "Seychellois", "Sierra Leonean", "Singaporean", "Slovakian", "Slovenian", "Solomon Islander", "Somali", "South African", "South Korean", "Spanish", "Sri Lankan", "Sudanese", "Surinamer", "Swazi", "Swedish", "Swiss", "Syrian", "Taiwanese", "Tajik", "Tanzanian", "Thai", "Togolese", "Tongan", "Trinidadian or Tobagonian", "Tunisian", "Turkish", "Tuvaluan", "Ugandan", "Ukrainian", "Uruguayan", "Uzbekistani", "Venezuelan", "Vietnamese", "Welsh", "Yemenite", "Zambian", "Zimbabwean"
   ];
+  const [isLoading, setIsLoading] = useState(true);
+  const location = useLocation();
 
   // Check if Add Employee dialog should open on page load
   useEffect(() => {
+    // Check URL parameters
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('add') === 'true') {
       setShowAddEmployee(true);
       // Clean up URL
       window.history.replaceState({}, document.title, window.location.pathname);
     }
+    
+    // Check navigation state from Dashboard
+    if (location.state?.openAddDialog) {
+      setShowAddEmployee(true);
+      // Clear the state to prevent reopening on refresh
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, [location.state]);
+
+  // Add this function to fetch employees
+  const fetchEmployees = async () => {
+    try {
+      const data = await apiService.getEmployees();
+      setEmployeeList(data);
+    } catch (error) {
+      console.error('Failed to fetch employees:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load employees",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Add this useEffect to load employees on mount
+  useEffect(() => {
+    fetchEmployees();
   }, []);
+
   const filteredEmployees = employeeList.filter(employee => {
-    const matchesSearch = `${employee.firstName} ${employee.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      employee.department.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      employee.position.toLowerCase().includes(searchTerm.toLowerCase())
-    
-    const matchesLocation = !filterLocation || filterLocation === "all" || (employee.workLocation && employee.workLocation === filterLocation)
-    const matchesDepartment = !filterDepartment || filterDepartment === "all" || employee.department === filterDepartment
-    const matchesEmploymentType = !filterEmploymentType || filterEmploymentType === "all" || employee.employmentType === filterEmploymentType
-    const matchesStartDate = !filterStartDate || (employee.joinDate && employee.joinDate >= filterStartDate)
-    
-    return matchesSearch && matchesLocation && matchesDepartment && matchesEmploymentType && matchesStartDate
-  })
+    const matchesSearch = 
+      employee.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      employee.last_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      employee.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      employee.employee_code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      employee.department?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      employee.job_title?.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesLocation = !filterLocation || filterLocation === "all" || (employee.work_location && employee.work_location === filterLocation);
+    const matchesDepartment = !filterDepartment || filterDepartment === "all" || (employee.department && employee.department === filterDepartment);
+    const matchesEmploymentType = !filterEmploymentType || filterEmploymentType === "all" || (employee.employment_type && employee.employment_type === filterEmploymentType);
+    const matchesStartDate = !filterStartDate || (employee.hire_date && employee.hire_date === filterStartDate);
+
+    return matchesSearch && matchesLocation && matchesDepartment && matchesEmploymentType && matchesStartDate;
+  });
 
   // Get unique values for filter dropdowns
-  const uniqueLocations = [...new Set(employeeList.map(emp => emp.workLocation))].filter(Boolean)
+  const uniqueLocations = [...new Set(employeeList.map(emp => emp.work_location))].filter(Boolean)
   const uniqueDepartments = [...new Set(employeeList.map(emp => emp.department))].filter(Boolean)
-  const uniqueEmploymentTypes = [...new Set(employeeList.map(emp => emp.employmentType))].filter(Boolean)
+  const uniqueEmploymentTypes = [...new Set(employeeList.map(emp => emp.employment_type))].filter(Boolean)
 
   // Calculate confirmation date based on hire date and probation period
   const calculateConfirmationDate = (hireDate: Date | undefined, probationMonths: string) => {
@@ -318,7 +298,7 @@ export default function Employees() {
       if (result.success && result.data.length > 0) {
         // Add imported employees to the list
         setEmployeeList(prev => [...prev, ...result.data]);
-
+        
         // For future PHP integration, log the formatted data
         const phpData = formatDataForPHP(result.data);
         console.log('Data formatted for PHP backend:', phpData);
@@ -353,7 +333,7 @@ export default function Employees() {
       fileInputRef.current.value = '';
     }
   };
-  const handleAddEmployee = () => {
+  const handleAddEmployee = async () => {
     // Validate all required fields before adding
     const allTabs = ["personal", "job", "government"];
     let hasErrors = false;
@@ -371,31 +351,70 @@ export default function Employees() {
       });
       return;
     }
-    const empId = newEmployee.employeeId || `EMP${String(employeeList.length + 1).padStart(3, '0')}`;
-    const employee = {
-      id: empId,
-      firstName: newEmployee.firstName,
-      lastName: newEmployee.lastName,
-      email: newEmployee.email,
-      department: newEmployee.department,
-      position: newEmployee.jobTitle,
-      salary: newEmployee.grossSalary ? `₦${newEmployee.grossSalary}` : "₦0",
-      status: newEmployee.employmentStatus,
-      joinDate: newEmployee.hireDate ? format(newEmployee.hireDate, 'yyyy-MM-dd') : new Date().toISOString().split('T')[0],
-      phone: newEmployee.phoneNumber,
-      vacationDays: parseInt(newEmployee.vacationDays) || 20,
-      employmentType: newEmployee.employmentType
-    };
 
-    // Add the additional fields to the employee object
-    const fullEmployee = {
-      ...employee,
-      ...newEmployee
-    };
-    setEmployeeList(prev => [...prev, fullEmployee as any]);
+    try {
+      // Format the employee data for the API (convert frontend field names to database field names)
+      const employeeData = {
+        first_name: newEmployee.firstName,
+        last_name: newEmployee.lastName,
+        middle_name: newEmployee.middleName,
+      email: newEmployee.email,
+        dob: newEmployee.dateOfBirth ? format(newEmployee.dateOfBirth, 'yyyy-MM-dd') : null,
+        job_title: newEmployee.jobTitle,
+        gross_salary: newEmployee.grossSalary ? parseInt(newEmployee.grossSalary) : 0,
+      department: newEmployee.department,
+        employment_type: newEmployee.employmentType,
+        employment_status: newEmployee.employmentStatus || 'Active',
+        hire_date: newEmployee.hireDate ? format(newEmployee.hireDate, 'yyyy-MM-dd') : new Date().toISOString().split('T')[0],
+      phone: newEmployee.phoneNumber,
+        address: newEmployee.homeAddress,
+        gender: newEmployee.gender,
+        marital_status: newEmployee.maritalStatus,
+        nationality: newEmployee.nationality,
+        grade_level: newEmployee.gradeLevel,
+        supervisor_name: newEmployee.supervisorName,
+        work_location: newEmployee.workLocation,
+        probation_period: newEmployee.probationPeriod,
+        confirmation_date: newEmployee.confirmationDate ? format(newEmployee.confirmationDate, 'yyyy-MM-dd') : null,
+        vacation_days: newEmployee.vacationDays ? parseInt(newEmployee.vacationDays) : 20,
+        
+        // Financial Information
+        meal_allowance: newEmployee.mealAllowance ? parseInt(newEmployee.mealAllowance) : 0,
+        housing_allowance: newEmployee.housingAllowance ? parseInt(newEmployee.housingAllowance) : 0,
+        transport_allowance: newEmployee.transportAllowance ? parseInt(newEmployee.transportAllowance) : 0,
+        basic_salary: newEmployee.basicSalary ? parseInt(newEmployee.basicSalary) : 0,
+        other_allowance: newEmployee.otherAllowance ? parseInt(newEmployee.otherAllowance) : 0,
+        
+        // Banking Information
+        bank_account: newEmployee.bankAccount,
+        bank_name: newEmployee.bankName,
+        account_number: newEmployee.accountNumber,
+        nuban: newEmployee.nuban,
+        sort_code: newEmployee.sortCode,
+        
+        // Government ID Information
+        employee_code: newEmployee.employeeId || `EMP${String(employeeList.length + 1).padStart(3, '0')}`,
+        national_id: newEmployee.nationalId,
+        passport_number: newEmployee.passportNumber,
+        bvn: newEmployee.bvn,
+        tin: newEmployee.tin,
+        pension_pin: newEmployee.pensionPin,
+        nhf_number: newEmployee.nhfNumber,
+        tax_id: newEmployee.taxId
+      };
+
+      console.log('Sending employee data to API:', employeeData); // Debug log
+
+      // Call the API to create the employee
+      await apiService.createEmployee(employeeData);
+      
+      // Refresh the employee list from the database
+      await fetchEmployees();
+      
+      // Reset the form
     setNewEmployee({
       firstName: "",
-      middleName: "",
+        middleName: "",
       lastName: "",
       dateOfBirth: undefined,
       gender: "",
@@ -405,12 +424,12 @@ export default function Employees() {
       email: "",
       homeAddress: "",
       emergencyContact: "",
-      emergencyContactNumber: "",
-      nextOfKinName: "",
-      nextOfKinRelationship: "",
-      nextOfKinPhone: "",
-      nextOfKinAddress: "",
-      nextOfKinEmail: "",
+        emergencyContactNumber: "",
+        nextOfKinName: "",
+        nextOfKinRelationship: "",
+        nextOfKinPhone: "",
+        nextOfKinAddress: "",
+        nextOfKinEmail: "",
       jobTitle: "",
       department: "",
       employmentType: "",
@@ -422,71 +441,239 @@ export default function Employees() {
       confirmationDate: undefined,
       employmentStatus: "Active",
       grossSalary: "",
-      basicSalary: "",
+        basicSalary: "",
       housingAllowance: "",
       transportAllowance: "",
-      otherAllowance: "",
-      // Contract Information
-      contractAmount: "",
-      paymentFrequency: "",
-      contractDuration: "",
-      contractTerms: "",
+        otherAllowance: "",
+        contractAmount: "",
+        paymentFrequency: "",
+        contractDuration: "",
+        contractTerms: "",
       bankAccount: "",
-      // Banking Information
-      bankName: "",
-      accountNumber: "",
-      nuban: "",
-      sortCode: "",
+        bankName: "",
+        accountNumber: "",
+        nuban: "",
+        sortCode: "",
       employeeId: "",
       nationalId: "",
-      passportNumber: "",
+        passportNumber: "",
       tin: "",
       pensionPin: "",
       nhfNumber: "",
       taxId: "",
       vacationDays: "",
-      ninDocument: null,
-      passportPhoto: null,
-      certifications: [],
-      cv: null,
-      educationCertificate: null,
-      otherDocuments: [],
-      companyAssets: [],
-      lastCompanyAsset: null
-    });
-    setFormErrors({});
-    setCurrentTab("personal");
-    setShowAddEmployee(false);
-    toast({
-      title: "Employee Added",
-      description: `${newEmployee.firstName} ${newEmployee.lastName} has been successfully added to the system.`
-    });
+        ninDocument: null,
+        passportPhoto: null,
+        certifications: [],
+        cv: null,
+        educationCertificate: null,
+        otherDocuments: [],
+        companyAssets: [],
+      });
+      
+      // Close the dialog
+      setShowAddEmployee(false);
+      
+      toast({
+        title: "Employee Added Successfully",
+        description: "The employee has been added to the database.",
+      });
+
+    } catch (error) {
+      console.error('Error adding employee:', error);
+      toast({
+        title: "Add Employee Failed",
+        description: "Failed to add employee. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
   const handleViewDetails = (employee: any) => {
     setSelectedEmployee(employee);
     setShowViewDetails(true);
   };
-  const handleEditEmployee = (employee: any) => {
+  const handleEditEmployee = (employee: Employee) => {
     setEditEmployee({
-      ...employee
+      // Employee ID - Format it properly
+      id: employee.id,
+      employeeId: employee.employee_code || `EMP${employee.id?.toString().padStart(3, '0')}` || '',
+      
+      // Personal Information - Map database fields to form fields
+      firstName: employee.first_name || '',
+      lastName: employee.last_name || '',
+      middleName: employee.middle_name || '',
+      dateOfBirth: employee.dob ? new Date(employee.dob) : undefined,
+      gender: employee.gender || '',
+      maritalStatus: employee.marital_status || '',
+      nationality: employee.nationality || '',
+      phoneNumber: employee.phone || '', // Make sure this is correct
+      email: employee.email || '',
+      homeAddress: employee.address || '',
+      
+      // Emergency Contact Information
+      emergencyContact: employee.emergency_contact || '',
+      emergencyContactNumber: employee.emergency_contact_number || '',
+      nextOfKinName: employee.next_of_kin_name || '',
+      nextOfKinRelationship: employee.next_of_kin_relationship || '',
+      nextOfKinPhone: employee.next_of_kin_phone || '',
+      nextOfKinAddress: employee.next_of_kin_address || '',
+      nextOfKinEmail: employee.next_of_kin_email || '',
+      
+      // Job Information  
+      jobTitle: employee.job_title || '',
+      department: employee.department || '',
+      employmentType: employee.employment_type || '',
+      gradeLevel: employee.grade_level || '',
+      supervisorName: employee.supervisor_name || '',
+      workLocation: employee.work_location || '',
+      hireDate: employee.hire_date ? new Date(employee.hire_date) : undefined,
+      probationPeriod: employee.probation_period || '',
+      confirmationDate: employee.confirmation_date ? new Date(employee.confirmation_date) : undefined,
+      employmentStatus: employee.employment_status || 'Active',
+      
+      // Financial Information
+      grossSalary: employee.gross_salary?.toString() || '',
+      basicSalary: employee.basic_salary?.toString() || '',
+      housingAllowance: employee.housing_allowance?.toString() || '',
+      transportAllowance: employee.transport_allowance?.toString() || '',
+      otherAllowance: employee.other_allowance?.toString() || '',
+      mealAllowance: employee.meal_allowance?.toString() || '',
+      
+      // Banking Information
+      bankAccount: employee.bank_account || '',
+      bankName: employee.bank_name || '',
+      accountNumber: employee.account_number || '',
+      nuban: employee.nuban || '',
+      sortCode: employee.sort_code || '',
+      
+      // Government IDs
+      nationalId: employee.national_id || '',
+      passportNumber: employee.passport_number || '',
+      tin: employee.tin || '',
+      pensionPin: employee.pension_pin || '',
+      nhfNumber: employee.nhf_number || '',
+      taxId: employee.tax_id || '',
+      bvn: employee.bvn || '',
+      
+      // Additional
+      vacationDays: employee.vacation_days?.toString() || '',
+      
+      // Contract Information (if available in database)
+      contractAmount: employee.contract_amount?.toString() || '',
+      paymentFrequency: employee.payment_frequency || '',
+      contractDuration: employee.contract_duration || '',
+      contractTerms: employee.contract_terms || '',
+      
+      // Document fields (set to null for now)
+      ninDocument: null,
+      passportPhoto: null,
+      certifications: [],
+      cv: null
     });
     setShowEditEmployee(true);
   };
-  const handleUpdateEmployee = () => {
-    setEmployeeList(prev => prev.map(emp => emp.id === editEmployee.id ? editEmployee : emp));
-    setShowEditEmployee(false);
-    setEditEmployee(null);
-    toast({
-      title: "Employee Updated",
-      description: `${editEmployee.firstName} ${editEmployee.lastName}'s information has been updated.`
-    });
+  const handleUpdateEmployee = async () => {
+    try {
+      if (!editEmployee.id) {
+        toast({
+          title: "Error",
+          description: "Employee ID is required for update",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Format the employee data for the API (convert frontend field names to database field names)
+      const employeeData = {
+        first_name: editEmployee.first_name || editEmployee.firstName,
+        last_name: editEmployee.last_name || editEmployee.lastName,
+        middle_name: editEmployee.middle_name || editEmployee.middleName,
+        email: editEmployee.email,
+        dob: editEmployee.dob || (editEmployee.dateOfBirth ? format(editEmployee.dateOfBirth, 'yyyy-MM-dd') : null),
+        job_title: editEmployee.job_title || editEmployee.jobTitle,
+        gross_salary: editEmployee.gross_salary || (editEmployee.grossSalary ? parseInt(editEmployee.grossSalary) : 0),
+        department: editEmployee.department,
+        employment_type: editEmployee.employment_type || editEmployee.employmentType,
+        employment_status: editEmployee.employment_status || editEmployee.employmentStatus,
+        hire_date: editEmployee.hire_date || (editEmployee.hireDate ? format(editEmployee.hireDate, 'yyyy-MM-dd') : new Date().toISOString().split('T')[0]),
+        phone: editEmployee.phoneNumber, // This is the key fix - map phoneNumber to phone
+        address: editEmployee.address || editEmployee.homeAddress,
+        gender: editEmployee.gender,
+        marital_status: editEmployee.marital_status || editEmployee.maritalStatus,
+        nationality: editEmployee.nationality,
+        grade_level: editEmployee.grade_level || editEmployee.gradeLevel,
+        supervisor_name: editEmployee.supervisor_name || editEmployee.supervisorName,
+        work_location: editEmployee.work_location || editEmployee.workLocation,
+        probation_period: editEmployee.probation_period || editEmployee.probationPeriod,
+        confirmation_date: editEmployee.confirmation_date || (editEmployee.confirmationDate ? format(editEmployee.confirmationDate, 'yyyy-MM-dd') : null),
+        vacation_days: editEmployee.vacation_days || (editEmployee.vacationDays ? parseInt(editEmployee.vacationDays) : 20),
+        meal_allowance: editEmployee.meal_allowance || (editEmployee.mealAllowance ? parseInt(editEmployee.mealAllowance) : 0),
+        housing_allowance: editEmployee.housing_allowance || (editEmployee.housingAllowance ? parseInt(editEmployee.housingAllowance) : 0),
+        transport_allowance: editEmployee.transport_allowance || (editEmployee.transportAllowance ? parseInt(editEmployee.transportAllowance) : 0),
+        bank_account: editEmployee.bank_account || editEmployee.bankAccount,
+        employee_code: editEmployee.employee_code || editEmployee.employeeId,
+        national_id: editEmployee.national_id || editEmployee.nationalId,
+        bvn: editEmployee.bvn,
+        tin: editEmployee.tin,
+        pension_pin: editEmployee.pension_pin || editEmployee.pensionPin,
+        nhf_number: editEmployee.nhf_number || editEmployee.nhfNumber,
+        tax_id: editEmployee.tax_id || editEmployee.taxId
+      };
+
+      console.log('Sending data to API:', employeeData); // Debug log
+
+      // Call the API to update the employee
+      await apiService.updateEmployee(editEmployee.id, employeeData);
+      
+      // Refresh the employee list from the database
+      await fetchEmployees();
+      
+      // Close the dialog
+      setShowEditEmployee(false);
+      setEditEmployee(null);
+      
+      toast({
+        title: "Employee Updated Successfully",
+        description: "The employee information has been updated in the database.",
+      });
+
+    } catch (error) {
+      console.error('Error updating employee:', error);
+      toast({
+        title: "Update Failed",
+        description: "Failed to update employee. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
-  const handleDeleteEmployee = (employee: any) => {
-    setEmployeeList(prev => prev.filter(emp => emp.id !== employee.id));
-    toast({
-      title: "Employee Deleted",
-      description: `${employee.firstName} ${employee.lastName} has been removed from the system.`
-    });
+  const handleResignEmployee = async (employee: Employee) => {
+    if (window.confirm(`Are you sure you want to resign ${employee.first_name} ${employee.last_name}? This will move them to the former employees archive.`)) {
+      try {
+        const resignationData = {
+          resignation_date: new Date().toISOString().split('T')[0],
+          resignation_reason: 'Resigned via HRIS system',
+          retention_period_months: 12
+        };
+
+        // Call the API to resign the employee
+        await apiService.resignEmployee(employee.id!, resignationData);
+        
+        // Remove from local state
+        setEmployeeList(prev => prev.filter(emp => emp.id !== employee.id));
+        
+        toast({
+          title: "Employee Resigned",
+          description: `${employee.first_name} ${employee.last_name} has been resigned and moved to former employees archive.`,
+        });
+      } catch (error) {
+        console.error('Error resigning employee:', error);
+        toast({
+          title: "Resignation Failed",
+          description: "Failed to resign employee. Please try again.",
+          variant: "destructive"
+        });
+      }
+    }
   };
   const handleDownloadProfile = (employee: any) => {
     const pdf = new jsPDF();
@@ -609,7 +796,46 @@ export default function Employees() {
         return <Badge variant="secondary" className="text-xs">{status}</Badge>;
     }
   };
-  return <div className="space-y-4 md:space-y-6">
+
+  // Add this simple test function to test phone number update:
+
+  const testPhoneUpdate = async (employeeId: number, phoneNumber: string) => {
+    try {
+      const response = await fetch(`http://localhost:8000/api/employees-full/${employeeId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({
+          first_name: 'Test', // Required field
+          last_name: 'Test',  // Required field
+          email: 'test@test.com', // Required field
+          phone: phoneNumber, // This is what we want to test
+          job_title: 'Test', // Required field
+          department: 'Test', // Required field
+          employment_type: 'Full-time', // Required field
+          employment_status: 'Active', // Required field
+          hire_date: '2024-01-01' // Required field
+        })
+      });
+
+      if (response.ok) {
+        console.log('Phone number updated successfully!');
+        toast({
+          title: "Success",
+          description: "Phone number updated in database",
+        });
+      } else {
+        console.error('Failed to update phone number');
+      }
+    } catch (error) {
+      console.error('Error updating phone number:', error);
+    }
+  };
+
+  return (
+    <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col space-y-3 md:space-y-0 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-foreground">Employee Records</h1>
@@ -740,15 +966,15 @@ export default function Employees() {
                               </Select>
                             </div>
                           </div>
-                          <Calendar 
-                            mode="single" 
-                            selected={newEmployee.dateOfBirth} 
+                          <Calendar
+                            mode="single"
+                            selected={newEmployee.dateOfBirth}
                             onSelect={date => setNewEmployee({
                               ...newEmployee,
                               dateOfBirth: date
                             })} 
-                            initialFocus 
-                            className="p-3 pointer-events-auto" 
+                            initialFocus
+                            className="p-3 pointer-events-auto"
                             month={newEmployee.dateOfBirth}
                             onMonthChange={(month) => {
                               setNewEmployee({
@@ -837,7 +1063,7 @@ export default function Employees() {
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
+                  <div className="space-y-2">
                       <Label htmlFor="emergencyContact">Emergency Contact Name *</Label>
                       <Input id="emergencyContact" value={newEmployee.emergencyContact} onChange={e => setNewEmployee({
                       ...newEmployee,
@@ -1068,12 +1294,12 @@ export default function Employees() {
                 <TabsContent value="financial" className="space-y-4">
                   {newEmployee.employmentType === "Full-time" ? (
                     <>
-                      <div className="space-y-2">
+                    <div className="space-y-2">
                         <Label htmlFor="grossSalary">Gross Salary *</Label>
-                        <Input 
-                          id="grossSalary" 
+                      <Input
+                        id="grossSalary"
                           type="number" 
-                          value={newEmployee.grossSalary} 
+                        value={newEmployee.grossSalary}
                           onChange={e => setNewEmployee({
                             ...newEmployee,
                             grossSalary: e.target.value
@@ -1081,11 +1307,11 @@ export default function Employees() {
                           placeholder="2500000" 
                         />
                         <p className="text-xs text-muted-foreground">Enter amount in Naira (₦).</p>
-                      </div>
+                    </div>
 
-                      <div className="space-y-2">
+                    <div className="space-y-2">
                         <Label htmlFor="basicSalary">Basic Salary (40% of Gross)</Label>
-                        <Input 
+                      <Input
                           id="basicSalary" 
                           type="number" 
                           value={newEmployee.basicSalary} 
@@ -1094,37 +1320,37 @@ export default function Employees() {
                           placeholder="Auto-calculated" 
                         />
                         <p className="text-xs text-muted-foreground">Automatically calculated as 40% of gross salary.</p>
-                      </div>
+                  </div>
 
-                      <div className="space-y-2">
+                    <div className="space-y-2">
                         <Label htmlFor="housingAllowance">Housing Allowance (20% of Gross)</Label>
-                        <Input 
-                          id="housingAllowance" 
+                      <Input
+                        id="housingAllowance"
                           type="number" 
-                          value={newEmployee.housingAllowance} 
+                        value={newEmployee.housingAllowance}
                           readOnly
                           className="bg-muted cursor-not-allowed"
                           placeholder="Auto-calculated" 
-                        />
+                      />
                         <p className="text-xs text-muted-foreground">Automatically calculated as 20% of gross salary.</p>
-                      </div>
+                    </div>
 
-                      <div className="space-y-2">
+                    <div className="space-y-2">
                         <Label htmlFor="transportAllowance">Transport Allowance (9% of Gross)</Label>
-                        <Input 
-                          id="transportAllowance" 
+                      <Input
+                        id="transportAllowance"
                           type="number" 
-                          value={newEmployee.transportAllowance} 
+                        value={newEmployee.transportAllowance}
                           readOnly
                           className="bg-muted cursor-not-allowed"
                           placeholder="Auto-calculated" 
-                        />
+                      />
                         <p className="text-xs text-muted-foreground">Automatically calculated as 9% of gross salary.</p>
-                      </div>
+                  </div>
 
-                      <div className="space-y-2">
+                  <div className="space-y-2">
                         <Label htmlFor="otherAllowance">Other Allowance (31% of Gross)</Label>
-                        <Input 
+                    <Input
                           id="otherAllowance" 
                           type="number" 
                           value={newEmployee.otherAllowance} 
@@ -1273,10 +1499,10 @@ export default function Employees() {
 
                 <TabsContent value="additional" className="space-y-4">
                   <div className="space-y-4">
-                    <div className="space-y-2">
+                  <div className="space-y-2">
                       <Label htmlFor="companyAssets">Company Asset Documents</Label>
                       <Input id="companyAssets" type="file" multiple accept=".pdf,.doc,.docx,.jpg,.png" onChange={e => {
-                      const files = Array.from(e.target.files || []);
+                          const files = Array.from(e.target.files || []);
                       setNewEmployee({
                         ...newEmployee,
                         companyAssets: files
@@ -1298,9 +1524,9 @@ export default function Employees() {
                           ninDocument: file
                         });
                       }} />
-                      </div>
+                  </div>
 
-                      <div className="space-y-2">
+                  <div className="space-y-2">
                         <Label htmlFor="passportPhoto">Passport Photo</Label>
                         <Input id="passportPhoto" type="file" accept=".jpg,.jpeg,.png" onChange={e => {
                         const file = e.target.files?.[0] || null;
@@ -1309,9 +1535,9 @@ export default function Employees() {
                           passportPhoto: file
                         });
                       }} />
-                      </div>
+                  </div>
 
-                      <div className="space-y-2">
+                  <div className="space-y-2">
                         <Label htmlFor="cv">CV/Resume</Label>
                         <Input id="cv" type="file" accept=".pdf,.doc,.docx" onChange={e => {
                         const file = e.target.files?.[0] || null;
@@ -1384,9 +1610,9 @@ export default function Employees() {
         <CardHeader>
           <CardTitle className="text-primary">Employee Database</CardTitle>
           <div className="flex flex-col space-y-4">
-            <div className="flex items-center space-x-4">
-              <div className="relative flex-1 max-w-md">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <div className="flex items-center space-x-4">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input placeholder="Search employees..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10" />
               </div>
             </div>
@@ -1431,14 +1657,14 @@ export default function Employees() {
               
               <div className="flex items-center space-x-2">
                 <Label htmlFor="startDate" className="text-sm whitespace-nowrap">Start Date From:</Label>
-                <Input
+              <Input
                   id="startDate"
                   type="date"
                   value={filterStartDate}
                   onChange={(e) => setFilterStartDate(e.target.value)}
                   className="w-[150px]"
-                />
-              </div>
+              />
+            </div>
             </div>
           </div>
         </CardHeader>
@@ -1450,62 +1676,69 @@ export default function Employees() {
                 <TableRow>
                   <TableHead className="text-xs md:text-sm">Employee ID</TableHead>
                   <TableHead className="text-xs md:text-sm">Name</TableHead>
-                  <TableHead className="hidden sm:table-cell text-xs md:text-sm">Department</TableHead>
-                  <TableHead className="hidden md:table-cell text-xs md:text-sm">Position</TableHead>
-                  <TableHead className="hidden lg:table-cell text-xs md:text-sm">Vacation Days</TableHead>
+                  <TableHead className="hidden sm:table-cell text-xs md:text-sm">Email</TableHead>
+                  <TableHead className="hidden md:table-cell text-xs md:text-sm">Department</TableHead>
+                  <TableHead className="hidden lg:table-cell text-xs md:text-sm">Position</TableHead>
+                  <TableHead className="hidden lg:table-cell text-xs md:text-sm">Status</TableHead>
                   <TableHead className="hidden lg:table-cell text-xs md:text-sm">Employment Type</TableHead>
-                  <TableHead className="text-xs md:text-sm">Status</TableHead>
+                  <TableHead className="hidden lg:table-cell text-xs md:text-sm">Vacation Days</TableHead>
                   <TableHead className="text-right text-xs md:text-sm">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredEmployees.map(employee => <TableRow key={employee.id} className="hover:bg-accent/30">
-                    <TableCell className="font-medium text-xs md:text-sm">{employee.id}</TableCell>
-                    <TableCell className="min-w-0">
-                      <div>
-                        <div className="font-medium text-xs md:text-sm truncate">{employee.firstName} {employee.lastName}</div>
-                        <div className="text-xs text-muted-foreground truncate">{employee.email}</div>
-                        {/* Show department on mobile when hidden */}
-                        <div className="text-xs text-muted-foreground sm:hidden">{employee.department}</div>
-                      </div>
+                {filteredEmployees.map((employee) => (
+                  <TableRow key={employee.id}>
+                    <TableCell className="font-medium">
+                      {employee.employee_code || `EMP${employee.id?.toString().padStart(3, '0')}`}
                     </TableCell>
-                    <TableCell className="hidden sm:table-cell text-xs md:text-sm">{employee.department}</TableCell>
-                    <TableCell className="hidden md:table-cell text-xs md:text-sm">{employee.position}</TableCell>
-                    <TableCell className="hidden lg:table-cell text-xs md:text-sm">{employee.vacationDays} days</TableCell>
-                    <TableCell className="hidden lg:table-cell text-xs md:text-sm">
-                      <Badge variant={employee.employmentType === 'FTE' ? 'default' : 'secondary'} className="text-xs">
-                        {employee.employmentType}
+                    <TableCell>
+                      {employee.first_name} {employee.last_name}
+                    </TableCell>
+                    <TableCell>{employee.email}</TableCell>
+                    <TableCell>{employee.department}</TableCell>
+                    <TableCell>{employee.job_title}</TableCell>
+                    <TableCell>
+                      <Badge variant={employee.employment_status === 'Active' ? 'default' : 'secondary'}>
+                        {employee.employment_status}
                       </Badge>
                     </TableCell>
-                    <TableCell>{getStatusBadge(employee.status)}</TableCell>
-                    <TableCell className="text-right">
+                    <TableCell>{employee.employment_type}</TableCell>
+                    <TableCell>{employee.vacation_days || 0}</TableCell>
+                    <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-6 w-6 md:h-8 md:w-8 p-0">
-                            <MoreHorizontal className="h-3 w-3 md:h-4 md:w-4" />
+                          <Button variant="ghost" className="h-8 w-8 p-0">
+                            <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="bg-popover border shadow-lg">
-                          <DropdownMenuItem className="text-xs md:text-sm" onClick={() => handleViewDetails(employee)}>
-                            <Eye className="mr-2 h-3 w-3 md:h-4 md:w-4" />
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => {
+                            setSelectedEmployee(employee);
+                            setShowViewDetails(true);
+                          }}>
+                            <Eye className="mr-2 h-4 w-4" />
                             View Details
                           </DropdownMenuItem>
-                          <DropdownMenuItem className="text-xs md:text-sm" onClick={() => handleEditEmployee(employee)}>
-                            <Edit className="mr-2 h-3 w-3 md:h-4 md:w-4" />
+                          <DropdownMenuItem onClick={() => handleEditEmployee(employee)}>
+                            <Edit className="mr-2 h-4 w-4" />
                             Edit Employee
                           </DropdownMenuItem>
-                          <DropdownMenuItem className="text-xs md:text-sm" onClick={() => handleDownloadProfile(employee)}>
-                            <Download className="mr-2 h-3 w-3 md:h-4 md:w-4" />
+                          <DropdownMenuItem onClick={() => handleDownloadProfile(employee)}>
+                            <Download className="mr-2 h-4 w-4" />
                             Download Profile
                           </DropdownMenuItem>
-                          <DropdownMenuItem className="text-xs md:text-sm text-destructive focus:text-destructive" onClick={() => handleDeleteEmployee(employee)}>
-                            <Trash2 className="mr-2 h-3 w-3 md:h-4 md:w-4" />
-                            Delete Employee
+                          <DropdownMenuItem 
+                            onClick={() => handleResignEmployee(employee)}
+                            className="text-destructive focus:text-destructive"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Resign Employee
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
-                </TableRow>)}
+                </TableRow>
+              ))}
               </TableBody>
             </Table>
           </div>
@@ -1535,21 +1768,21 @@ export default function Employees() {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   <div className="space-y-2">
                     <Label className="text-sm font-medium text-muted-foreground">First Name</Label>
-                    <p className="text-base font-medium">{selectedEmployee.firstName || 'N/A'}</p>
+                    <p className="text-base font-medium">{selectedEmployee.first_name || 'N/A'}</p>
                   </div>
                   <div className="space-y-2">
                     <Label className="text-sm font-medium text-muted-foreground">Middle Name</Label>
-                    <p className="text-base">{selectedEmployee.middleName || 'N/A'}</p>
+                    <p className="text-base">{selectedEmployee.middle_name || 'N/A'}</p>
                   </div>
                   <div className="space-y-2">
                     <Label className="text-sm font-medium text-muted-foreground">Last Name</Label>
-                    <p className="text-base font-medium">{selectedEmployee.lastName || 'N/A'}</p>
+                    <p className="text-base font-medium">{selectedEmployee.last_name || 'N/A'}</p>
                   </div>
                 </div>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label className="text-sm font-medium text-muted-foreground">Date of Birth</Label>
-                    <p className="text-base">{selectedEmployee.dateOfBirth ? format(selectedEmployee.dateOfBirth, "PPP") : 'N/A'}</p>
+                    <p className="text-base">{selectedEmployee.dob ? format(new Date(selectedEmployee.dob), "PPP") : 'N/A'}</p>
                   </div>
                   <div className="space-y-2">
                     <Label className="text-sm font-medium text-muted-foreground">Gender</Label>
@@ -1559,7 +1792,7 @@ export default function Employees() {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label className="text-sm font-medium text-muted-foreground">Marital Status</Label>
-                    <p className="text-base">{selectedEmployee.maritalStatus || 'N/A'}</p>
+                    <p className="text-base">{selectedEmployee.marital_status || 'N/A'}</p>
                   </div>
                   <div className="space-y-2">
                     <Label className="text-sm font-medium text-muted-foreground">Nationality</Label>
@@ -1569,7 +1802,7 @@ export default function Employees() {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label className="text-sm font-medium text-muted-foreground">Phone Number</Label>
-                    <p className="text-base">{selectedEmployee.phone || selectedEmployee.phoneNumber || 'N/A'}</p>
+                    <p className="text-base">{selectedEmployee.phone_number || 'N/A'}</p>
                   </div>
                   <div className="space-y-2">
                     <Label className="text-sm font-medium text-muted-foreground">Email Address</Label>
@@ -1578,99 +1811,73 @@ export default function Employees() {
                 </div>
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-muted-foreground">Home Address</Label>
-                  <p className="text-base">{selectedEmployee.homeAddress || 'N/A'}</p>
-                </div>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-muted-foreground">Emergency Contact Name</Label>
-                    <p className="text-base">{selectedEmployee.emergencyContact || 'N/A'}</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-muted-foreground">Emergency Contact Number</Label>
-                    <p className="text-base">{selectedEmployee.emergencyContactNumber || 'N/A'}</p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-muted-foreground">Next of Kin Name</Label>
-                    <p className="text-base">{selectedEmployee.nextOfKinName || 'N/A'}</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-muted-foreground">Next of Kin Relationship</Label>
-                    <p className="text-base">{selectedEmployee.nextOfKinRelationship || 'N/A'}</p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-muted-foreground">Next of Kin Phone</Label>
-                    <p className="text-base">{selectedEmployee.nextOfKinPhone || 'N/A'}</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-muted-foreground">Next of Kin Email</Label>
-                    <p className="text-base break-words">{selectedEmployee.nextOfKinEmail || 'N/A'}</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-muted-foreground">Next of Kin Address</Label>
-                    <p className="text-base">{selectedEmployee.nextOfKinAddress || 'N/A'}</p>
-                  </div>
+                  <p className="text-base">{selectedEmployee.address || 'N/A'}</p>
                 </div>
               </TabsContent>
 
               <TabsContent value="job" className="space-y-6">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium text-muted-foreground">Job Title</Label>
-                    <p className="text-base font-medium">{selectedEmployee.position || selectedEmployee.jobTitle || 'N/A'}</p>
+                    <Label className="text-sm font-medium text-muted-foreground">Employee ID</Label>
+                    <p className="text-base font-medium">{selectedEmployee.employee_code || `EMP${selectedEmployee.id?.toString().padStart(3, '0')}`}</p>
                   </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-muted-foreground">Job Title</Label>
+                    <p className="text-base">{selectedEmployee.job_title || 'N/A'}</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label className="text-sm font-medium text-muted-foreground">Department</Label>
                     <p className="text-base">{selectedEmployee.department || 'N/A'}</p>
                   </div>
-                </div>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label className="text-sm font-medium text-muted-foreground">Employment Type</Label>
-                    <p className="text-base">{selectedEmployee.employmentType || 'N/A'}</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-muted-foreground">Grade Level</Label>
-                    <p className="text-base">{selectedEmployee.gradeLevel || 'N/A'}</p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-muted-foreground">Supervisor Name</Label>
-                    <p className="text-base">{selectedEmployee.supervisorName || 'N/A'}</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-muted-foreground">Work Location</Label>
-                    <p className="text-base">{selectedEmployee.workLocation || 'N/A'}</p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-muted-foreground">Hire Date</Label>
-                    <p className="text-base">{selectedEmployee.joinDate || selectedEmployee.hireDate ? format(new Date(selectedEmployee.joinDate || selectedEmployee.hireDate), "PPP") : 'N/A'}</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-muted-foreground">Probation Period</Label>
-                    <p className="text-base">{selectedEmployee.probationPeriod || 'N/A'}</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-muted-foreground">Confirmation Date</Label>
-                    <p className="text-base">{selectedEmployee.confirmationDate ? format(selectedEmployee.confirmationDate, "PPP") : 'N/A'}</p>
+                    <p className="text-base">{selectedEmployee.employment_type || 'N/A'}</p>
                   </div>
                 </div>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label className="text-sm font-medium text-muted-foreground">Employment Status</Label>
-                    <div className="flex items-start">
-                      {getStatusBadge(selectedEmployee.status || selectedEmployee.employmentStatus)}
-                    </div>
+                    <p className="text-base">
+                      <Badge variant={selectedEmployee.employment_status === 'Active' ? 'default' : 'secondary'}>
+                        {selectedEmployee.employment_status || 'N/A'}
+                      </Badge>
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-muted-foreground">Grade Level</Label>
+                    <p className="text-base">{selectedEmployee.grade_level || 'N/A'}</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-muted-foreground">Supervisor Name</Label>
+                    <p className="text-base">{selectedEmployee.supervisor_name || 'N/A'}</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-muted-foreground">Work Location</Label>
+                    <p className="text-base">{selectedEmployee.work_location || 'N/A'}</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-muted-foreground">Hire Date</Label>
+                    <p className="text-base">{selectedEmployee.hire_date ? format(new Date(selectedEmployee.hire_date), "PPP") : 'N/A'}</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-muted-foreground">Probation Period</Label>
+                    <p className="text-base">{selectedEmployee.probation_period || 'N/A'}</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-muted-foreground">Confirmation Date</Label>
+                    <p className="text-base">{selectedEmployee.confirmation_date ? format(new Date(selectedEmployee.confirmation_date), "PPP") : 'N/A'}</p>
                   </div>
                   <div className="space-y-2">
                     <Label className="text-sm font-medium text-muted-foreground">Vacation Days</Label>
-                    <p className="text-base">{selectedEmployee.vacationDays || 'N/A'} days</p>
+                    <p className="text-base">{selectedEmployee.vacation_days || 0}</p>
                   </div>
                 </div>
               </TabsContent>
@@ -1678,105 +1885,110 @@ export default function Employees() {
               <TabsContent value="financial" className="space-y-6">
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-muted-foreground">Gross Salary</Label>
-                  <p className="text-base font-semibold text-primary">{selectedEmployee.salary || selectedEmployee.grossSalary || 'N/A'}</p>
+                  <p className="text-base font-semibold text-primary">₦{selectedEmployee.financial_details?.gross_salary?.toLocaleString() || 'N/A'}</p>
                 </div>
+                
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label className="text-sm font-medium text-muted-foreground">Basic Salary</Label>
-                    <p className="text-base">{selectedEmployee.basicSalary || 'N/A'}</p>
+                    <p className="text-base">₦{selectedEmployee.financial_details?.basic_salary?.toLocaleString() || 'N/A'}</p>
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium text-muted-foreground">Housing Allowance</Label>
-                    <p className="text-base">{selectedEmployee.housingAllowance || 'N/A'}</p>
+                    <Label className="text-sm font-medium text-muted-foreground">Meal Allowance</Label>
+                    <p className="text-base">₦{selectedEmployee.financial_details?.meal_allowance?.toLocaleString() || 'N/A'}</p>
                   </div>
                 </div>
+                
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium text-muted-foreground">Transport Allowance</Label>
-                    <p className="text-base">{selectedEmployee.transportAllowance || 'N/A'}</p>
+                    <Label className="text-sm font-medium text-muted-foreground">Housing Allowance</Label>
+                    <p className="text-base">₦{selectedEmployee.financial_details?.housing_allowance?.toLocaleString() || 'N/A'}</p>
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium text-muted-foreground">Other Allowances</Label>
-                    <p className="text-base">{selectedEmployee.otherAllowance || 'N/A'}</p>
+                    <Label className="text-sm font-medium text-muted-foreground">Transport Allowance</Label>
+                    <p className="text-base">₦{selectedEmployee.financial_details?.transport_allowance?.toLocaleString() || 'N/A'}</p>
                   </div>
                 </div>
-                <div className="space-y-4">
-                  <h3 className="text-base font-medium">Banking Information</h3>
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium text-muted-foreground">Bank Name</Label>
-                      <p className="text-base">{selectedEmployee.bankName || 'N/A'}</p>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium text-muted-foreground">Account Number</Label>
-                      <p className="text-base">{selectedEmployee.accountNumber || selectedEmployee.bankAccount || 'N/A'}</p>
-                    </div>
+                
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-muted-foreground">Other Allowance</Label>
+                    <p className="text-base">₦{selectedEmployee.financial_details?.other_allowance?.toLocaleString() || 'N/A'}</p>
                   </div>
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium text-muted-foreground">NUBAN</Label>
-                      <p className="text-base">{selectedEmployee.nuban || 'N/A'}</p>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium text-muted-foreground">Sort Code</Label>
-                      <p className="text-base">{selectedEmployee.sortCode || 'N/A'}</p>
-                    </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-muted-foreground">Bank Name</Label>
+                    <p className="text-base">{selectedEmployee.financial_details?.bank_name || 'N/A'}</p>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-muted-foreground">Account Number</Label>
+                    <p className="text-base">{selectedEmployee.financial_details?.account_number || 'N/A'}</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-muted-foreground">NUBAN</Label>
+                    <p className="text-base">{selectedEmployee.financial_details?.nuban || 'N/A'}</p>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-muted-foreground">Sort Code</Label>
+                    <p className="text-base">{selectedEmployee.financial_details?.sort_code || 'N/A'}</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-muted-foreground">Bank Account</Label>
+                    <p className="text-base">{selectedEmployee.financial_details?.bank_account || 'N/A'}</p>
                   </div>
                 </div>
               </TabsContent>
 
               <TabsContent value="government" className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-sm font-medium text-muted-foreground">Employee ID</Label>
-                    <p className="text-sm">{selectedEmployee.id || selectedEmployee.employeeId || 'N/A'}</p>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-muted-foreground">National ID</Label>
+                    <p className="text-base">{selectedEmployee.national_id || 'N/A'}</p>
                   </div>
-                  <div>
-                    <Label className="text-sm font-medium text-muted-foreground">National ID (NIN)</Label>
-                    <p className="text-sm">{selectedEmployee.nationalId || 'N/A'}</p>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-muted-foreground">BVN</Label>
+                    <p className="text-base">{selectedEmployee.bvn || 'N/A'}</p>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-sm font-medium text-muted-foreground">Passport Number</Label>
-                    <p className="text-sm">{selectedEmployee.passportNumber || 'N/A'}</p>
-                  </div>
-                  <div>
+                  <div className="space-y-2">
                     <Label className="text-sm font-medium text-muted-foreground">TIN</Label>
-                    <p className="text-sm">{selectedEmployee.tin || 'N/A'}</p>
+                    <p className="text-base">{selectedEmployee.tin || 'N/A'}</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-muted-foreground">Pension PIN</Label>
+                    <p className="text-base">{selectedEmployee.pension_pin || 'N/A'}</p>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-sm font-medium text-muted-foreground">Pension PIN</Label>
-                    <p className="text-sm">{selectedEmployee.pensionPin || 'N/A'}</p>
-                  </div>
-                  <div>
+                  <div className="space-y-2">
                     <Label className="text-sm font-medium text-muted-foreground">NHF Number</Label>
-                    <p className="text-sm">{selectedEmployee.nhfNumber || 'N/A'}</p>
+                    <p className="text-base">{selectedEmployee.nhf_number || 'N/A'}</p>
                   </div>
-                </div>
-                <div>
+                  <div className="space-y-2">
                   <Label className="text-sm font-medium text-muted-foreground">Tax ID</Label>
-                  <p className="text-sm">{selectedEmployee.taxId || 'N/A'}</p>
+                    <p className="text-base">{selectedEmployee.tax_id || 'N/A'}</p>
+                  </div>
                 </div>
               </TabsContent>
 
               <TabsContent value="additional" className="space-y-4">
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">Supporting Documents</Label>
-                  <div className="flex items-center space-x-2 mt-2">
-                    <FileText className="h-4 w-4" />
-                    <p className="text-sm">{selectedEmployee.supportingDocuments?.length > 0 ? `${selectedEmployee.supportingDocuments.length} files uploaded` : 'No documents uploaded'}</p>
-                  </div>
-                </div>
-                <div>
+                <div className="space-y-2">
                   <Label className="text-sm font-medium text-muted-foreground">Performance History</Label>
-                  <p className="text-sm">{selectedEmployee.performanceHistory || 'No performance history recorded'}</p>
+                  <p className="text-base">{selectedEmployee.performance_history || 'N/A'}</p>
                 </div>
-                <div>
+                <div className="space-y-2">
                   <Label className="text-sm font-medium text-muted-foreground">Asset Allocation History</Label>
-                  <p className="text-sm">{selectedEmployee.assetAllocation || 'No asset allocation recorded'}</p>
+                  <p className="text-base">{selectedEmployee.asset_allocation_history || 'N/A'}</p>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-muted-foreground">Supporting Documents</Label>
+                  <p className="text-base">{selectedEmployee.supporting_documents || 'N/A'}</p>
                 </div>
               </TabsContent>
             </Tabs>}
@@ -1802,10 +2014,15 @@ export default function Employees() {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="editFirstName">First Name *</Label>
-                    <Input id="editFirstName" value={editEmployee.firstName || ''} onChange={e => setEditEmployee({
+                    <Input
+                      id="editFirstName"
+                      value={editEmployee.firstName || ''}
+                      onChange={e => setEditEmployee({
                       ...editEmployee,
                       firstName: e.target.value
-                    })} />
+                      })} 
+                      placeholder="First Name" 
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="editMiddleName">Middle Name</Label>
@@ -1816,10 +2033,15 @@ export default function Employees() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="editLastName">Last Name *</Label>
-                    <Input id="editLastName" value={editEmployee.lastName || ''} onChange={e => setEditEmployee({
+                    <Input
+                      id="editLastName"
+                      value={editEmployee.lastName || ''}
+                      onChange={e => setEditEmployee({
                       ...editEmployee,
                       lastName: e.target.value
-                    })} />
+                      })} 
+                      placeholder="Last Name" 
+                    />
                   </div>
                 </div>
 
@@ -1839,7 +2061,7 @@ export default function Employees() {
                           selected={editEmployee.dateOfBirth ? new Date(editEmployee.dateOfBirth) : undefined} 
                           onSelect={(date) => setEditEmployee({
                             ...editEmployee,
-                            dateOfBirth: date
+                            dateOfBirth: date ? date.toISOString().split('T')[0] : undefined
                           })} 
                           initialFocus 
                           className="p-3 pointer-events-auto" 
@@ -1848,7 +2070,7 @@ export default function Employees() {
                     </Popover>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="editGender">Gender</Label>
+                    <Label htmlFor="editGender">Gender *</Label>
                     <Select value={editEmployee.gender || ''} onValueChange={value => setEditEmployee({
                       ...editEmployee,
                       gender: value
@@ -1865,17 +2087,14 @@ export default function Employees() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label htmlFor="editMaritalStatus">Marital Status</Label>
-                    <Select value={editEmployee.maritalStatus || ''} onValueChange={value => setEditEmployee({
-                      ...editEmployee,
-                      maritalStatus: value
-                    })}>
+                    <Label htmlFor="editMaritalStatus">Marital Status *</Label>
+                    <Select value={editEmployee.maritalStatus || ''} onValueChange={(value) => setEditEmployee({...editEmployee, maritalStatus: value})}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select status" />
+                        <SelectValue placeholder="Select marital status" />
                       </SelectTrigger>
-                      <SelectContent className="bg-popover border shadow-lg">
+                      <SelectContent>
                         <SelectItem value="Single">Single</SelectItem>
                         <SelectItem value="Married">Married</SelectItem>
                         <SelectItem value="Divorced">Divorced</SelectItem>
@@ -1885,96 +2104,64 @@ export default function Employees() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="editNationality">Nationality *</Label>
-                    <Input id="editNationality" value={editEmployee.nationality || ''} onChange={e => setEditEmployee({
-                      ...editEmployee,
-                      nationality: e.target.value
-                    })} placeholder="e.g., Nigerian" />
+                    <Select 
+                      value={editEmployee.nationality || ''} 
+                      onValueChange={value => setEditEmployee({
+                        ...editEmployee,
+                        nationality: value
+                      })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select nationality" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-60">
+                        {nationalities.map((nationality) => (
+                          <SelectItem key={nationality} value={nationality}>{nationality}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label htmlFor="editPhoneNumber">Phone Number *</Label>
-                    <Input id="editPhoneNumber" value={editEmployee.phone || editEmployee.phoneNumber || ''} onChange={e => setEditEmployee({
-                      ...editEmployee,
-                      phone: e.target.value,
-                      phoneNumber: e.target.value
-                    })} placeholder="+234 XXX XXX XXXX" />
+                    <Input
+                      id="editPhoneNumber"
+                      value={editEmployee.phoneNumber || ''} 
+                      onChange={e => setEditEmployee({
+                        ...editEmployee,
+                        phoneNumber: e.target.value
+                      })} 
+                      placeholder="+234 XXX XXX XXXX"
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="editEmail">Email Address *</Label>
-                    <Input id="editEmail" type="email" value={editEmployee.email || ''} onChange={e => setEditEmployee({
-                      ...editEmployee,
-                      email: e.target.value
-                    })} placeholder="employee@company.com" />
+                    <Input
+                      id="editEmail"
+                      type="email"
+                      value={editEmployee.email || ''}
+                      onChange={e => setEditEmployee({
+                        ...editEmployee,
+                        email: e.target.value
+                      })} 
+                      placeholder="employee@company.com"
+                    />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="editHomeAddress">Home Address</Label>
-                  <Textarea id="editHomeAddress" value={editEmployee.homeAddress || ''} onChange={e => setEditEmployee({
-                    ...editEmployee,
-                    homeAddress: e.target.value
-                  })} placeholder="Full residential address" />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="editEmergencyContact">Emergency Contact Name</Label>
-                    <Input id="editEmergencyContact" value={editEmployee.emergencyContact || ''} onChange={e => setEditEmployee({
+                  <Label htmlFor="editAddress">Home Address</Label>
+                  <Textarea 
+                    id="editAddress" 
+                    value={editEmployee.homeAddress || ''} 
+                    onChange={e => setEditEmployee({
                       ...editEmployee,
-                      emergencyContact: e.target.value
-                    })} placeholder="Full name" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="editEmergencyContactNumber">Emergency Contact Number</Label>
-                    <Input id="editEmergencyContactNumber" value={editEmployee.emergencyContactNumber || ''} onChange={e => setEditEmployee({
-                      ...editEmployee,
-                      emergencyContactNumber: e.target.value
-                    })} placeholder="Phone number" />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="editNextOfKinName">Next of Kin Name</Label>
-                    <Input id="editNextOfKinName" value={editEmployee.nextOfKinName || ''} onChange={e => setEditEmployee({
-                      ...editEmployee,
-                      nextOfKinName: e.target.value
-                    })} placeholder="Full name" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="editNextOfKinRelationship">Next of Kin Relationship</Label>
-                    <Input id="editNextOfKinRelationship" value={editEmployee.nextOfKinRelationship || ''} onChange={e => setEditEmployee({
-                      ...editEmployee,
-                      nextOfKinRelationship: e.target.value
-                    })} placeholder="e.g., Spouse, Parent, Sibling" />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="editNextOfKinPhone">Next of Kin Phone Number</Label>
-                    <Input id="editNextOfKinPhone" value={editEmployee.nextOfKinPhone || ''} onChange={e => setEditEmployee({
-                      ...editEmployee,
-                      nextOfKinPhone: e.target.value
-                    })} placeholder="+234 XXX XXX XXXX" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="editNextOfKinEmail">Next of Kin Email</Label>
-                    <Input id="editNextOfKinEmail" type="email" value={editEmployee.nextOfKinEmail || ''} onChange={e => setEditEmployee({
-                      ...editEmployee,
-                      nextOfKinEmail: e.target.value
-                    })} placeholder="nextofkin@email.com" />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="editNextOfKinAddress">Next of Kin Address</Label>
-                  <Textarea id="editNextOfKinAddress" value={editEmployee.nextOfKinAddress || ''} onChange={e => setEditEmployee({
-                    ...editEmployee,
-                    nextOfKinAddress: e.target.value
-                  })} placeholder="Full address of next of kin" />
+                      homeAddress: e.target.value
+                    })} 
+                    placeholder="Home Address" 
+                  />
                 </div>
               </TabsContent>
 
@@ -1982,23 +2169,37 @@ export default function Employees() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="editJobTitle">Job Title *</Label>
-                    <Input id="editJobTitle" value={editEmployee.position || editEmployee.jobTitle || ''} onChange={e => setEditEmployee({
-                      ...editEmployee,
-                      position: e.target.value,
-                      jobTitle: e.target.value
-                    })} />
+                    <Input
+                      id="editJobTitle"
+                      value={editEmployee.jobTitle || ''} 
+                      onChange={e => setEditEmployee({
+                        ...editEmployee,
+                        jobTitle: e.target.value
+                      })} 
+                      placeholder="Job Title" 
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="editDepartment">Department *</Label>
-                    <Select value={editEmployee.department || ''} onValueChange={value => setEditEmployee({
-                      ...editEmployee,
-                      department: value
-                    })}>
+                    <Select 
+                      value={editEmployee.department || ''} 
+                      onValueChange={value => setEditEmployee({
+                        ...editEmployee,
+                        department: value
+                      })}
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Select department" />
                       </SelectTrigger>
-                      <SelectContent className="bg-popover border shadow-lg">
-                        {departments.map(dept => <SelectItem key={dept} value={dept}>{dept}</SelectItem>)}
+                      <SelectContent>
+                        <SelectItem value="Engineering">Engineering</SelectItem>
+                        <SelectItem value="Marketing">Marketing</SelectItem>
+                        <SelectItem value="Sales">Sales</SelectItem>
+                        <SelectItem value="HR">HR</SelectItem>
+                        <SelectItem value="Finance">Finance</SelectItem>
+                        <SelectItem value="Operations">Operations</SelectItem>
+                        <SelectItem value="Legal">Legal</SelectItem>
+                        <SelectItem value="Customer Support">Customer Support</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -2007,68 +2208,80 @@ export default function Employees() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="editEmploymentType">Employment Type *</Label>
-                    <Select value={editEmployee.employmentType || ''} onValueChange={value => setEditEmployee({
-                      ...editEmployee,
-                      employmentType: value
-                    })}>
+                    <Select 
+                      value={editEmployee.employment_type || ''} 
+                      onValueChange={value => setEditEmployee({
+                        ...editEmployee,
+                        employment_type: value
+                      })}
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Select type" />
                       </SelectTrigger>
-                      <SelectContent className="bg-popover border shadow-lg">
+                      <SelectContent>
                         <SelectItem value="Full-time">Full-time</SelectItem>
-                        <SelectItem value="Contract">Contract</SelectItem>
                         <SelectItem value="Part-time">Part-time</SelectItem>
+                        <SelectItem value="Contract">Contract</SelectItem>
+                        <SelectItem value="Intern">Intern</SelectItem>
                         <SelectItem value="Consultant">Consultant</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="editGradeLevel">Grade Level</Label>
-                    <Select value={editEmployee.gradeLevel || ''} onValueChange={value => setEditEmployee({
-                      ...editEmployee,
-                      gradeLevel: value
-                    })}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select grade level" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-popover border shadow-lg">
-                        {gradeLevels.map(level => <SelectItem key={level} value={level}>{level}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
+                    <Input
+                      id="editGradeLevel" 
+                      value={editEmployee.grade_level || ''} 
+                      onChange={e => setEditEmployee({
+                        ...editEmployee,
+                        grade_level: e.target.value
+                      })} 
+                      placeholder="e.g., Level 5" 
+                    />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label htmlFor="editSupervisorName">Supervisor Name</Label>
-                    <Input id="editSupervisorName" value={editEmployee.supervisorName || ''} onChange={e => setEditEmployee({
-                      ...editEmployee,
-                      supervisorName: e.target.value
-                    })} />
+                    <Input 
+                      id="editSupervisorName" 
+                      value={editEmployee.supervisor_name || ''} 
+                      onChange={e => setEditEmployee({
+                        ...editEmployee,
+                        supervisor_name: e.target.value
+                      })} 
+                      placeholder="Supervisor's full name" 
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="editWorkLocation">Work Location</Label>
-                    <Input id="editWorkLocation" value={editEmployee.workLocation || ''} onChange={e => setEditEmployee({
-                      ...editEmployee,
-                      workLocation: e.target.value
-                    })} placeholder="e.g., Lagos Office" />
+                    <Input 
+                      id="editWorkLocation" 
+                      value={editEmployee.work_location || ''} 
+                      onChange={e => setEditEmployee({
+                        ...editEmployee,
+                        work_location: e.target.value
+                      })} 
+                      placeholder="e.g., Lagos Office" 
+                    />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label>Hire Date *</Label>
+                    <Label htmlFor="editHireDate">Hire Date *</Label>
                     <Popover>
                       <PopoverTrigger asChild>
-                        <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !editEmployee.hireDate && !editEmployee.joinDate && "text-muted-foreground")}>
+                        <Button variant="outline" className="w-full justify-start text-left font-normal">
                           <CalendarIcon className="mr-2 h-4 w-4" />
-                          {editEmployee.hireDate || editEmployee.joinDate ? format(new Date(editEmployee.hireDate || editEmployee.joinDate), "PPP") : "Pick a date"}
+                          {editEmployee.hire_date ? format(new Date(editEmployee.hire_date), "PPP") : "Pick a date"}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0">
                         <Calendar 
                           mode="single" 
-                          selected={editEmployee.hireDate ? new Date(editEmployee.hireDate) : editEmployee.joinDate ? new Date(editEmployee.joinDate) : undefined} 
+                          selected={editEmployee.hire_date ? new Date(editEmployee.hire_date) : editEmployee.joinDate ? new Date(editEmployee.joinDate) : undefined} 
                           onSelect={date => setEditEmployee({
                             ...editEmployee,
                             hireDate: date,
@@ -2082,11 +2295,19 @@ export default function Employees() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="editProbationPeriod">Probation Period</Label>
-                    <Input id="editProbationPeriod" value={editEmployee.probationPeriod || ''} onChange={e => setEditEmployee({
-                      ...editEmployee,
-                      probationPeriod: e.target.value
-                    })} placeholder="e.g., 3 months" />
+                    <Input 
+                      id="editProbationPeriod" 
+                      value={editEmployee.probationPeriod || ''} 
+                      onChange={e => setEditEmployee({
+                        ...editEmployee,
+                        probationPeriod: e.target.value
+                      })} 
+                      placeholder="e.g., 3 months" 
+                    />
                   </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label>Confirmation Date</Label>
                     <Popover>
@@ -2110,77 +2331,130 @@ export default function Employees() {
                       </PopoverContent>
                     </Popover>
                   </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="editStatus">Employment Status</Label>
-                    <Select value={editEmployee.status || editEmployee.employmentStatus || ''} onValueChange={value => setEditEmployee({
-                      ...editEmployee,
-                      status: value,
-                      employmentStatus: value
-                    })}>
+                    <Label htmlFor="editEmploymentStatus">Employment Status *</Label>
+                    <Select 
+                      value={editEmployee.employment_status || ''} 
+                      onValueChange={value => setEditEmployee({
+                        ...editEmployee,
+                        employment_status: value
+                      })}
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Select status" />
                       </SelectTrigger>
-                      <SelectContent className="bg-popover border shadow-lg">
+                      <SelectContent>
                         <SelectItem value="Active">Active</SelectItem>
-                        <SelectItem value="On-Leave">On-Leave</SelectItem>
-                        <SelectItem value="Time-Off">Time-Off</SelectItem>
+                        <SelectItem value="Inactive">Inactive</SelectItem>
+                        <SelectItem value="On Leave">On Leave</SelectItem>
+                        <SelectItem value="Terminated">Terminated</SelectItem>
+                        <SelectItem value="Resigned">Resigned</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="editVacationDays">Vacation Days</Label>
-                    <Input id="editVacationDays" type="number" value={editEmployee.vacationDays || ''} onChange={e => setEditEmployee({
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="editVacationDays">Vacation Days</Label>
+                  <Input
+                    id="editVacationDays"
+                    type="number"
+                    value={editEmployee.vacationDays || ''}
+                    onChange={e => setEditEmployee({
                       ...editEmployee,
                       vacationDays: parseInt(e.target.value) || 0
-                    })} placeholder="25" />
-                  </div>
+                    })} 
+                    placeholder="25"
+                  />
                 </div>
               </TabsContent>
 
               <TabsContent value="financial" className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="editGrossSalary">Gross Salary</Label>
-                  <Input id="editGrossSalary" value={editEmployee.salary || editEmployee.grossSalary || ''} onChange={e => setEditEmployee({
-                    ...editEmployee,
-                    salary: e.target.value,
-                    grossSalary: e.target.value
-                  })} placeholder="₦2,500,000" />
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">₦</span>
+                  <Input
+                      id="editGrossSalary" 
+                      value={editEmployee.salary || editEmployee.grossSalary || ''} 
+                      onChange={e => setEditEmployee({
+                        ...editEmployee,
+                        salary: e.target.value,
+                        grossSalary: e.target.value
+                      })} 
+                      placeholder="2500000" 
+                      className="pl-8"
+                    />
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="editBasicSalary">Basic Salary</Label>
-                    <Input id="editBasicSalary" value={editEmployee.basicSalary || ''} onChange={e => setEditEmployee({
-                      ...editEmployee,
-                      basicSalary: e.target.value
-                    })} placeholder="₦1,000,000" />
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">₦</span>
+                      <Input 
+                        id="editBasicSalary" 
+                        value={editEmployee.basicSalary || ''} 
+                        onChange={e => setEditEmployee({
+                          ...editEmployee,
+                          basicSalary: e.target.value
+                        })} 
+                        placeholder="1000000" 
+                        className="pl-8"
+                      />
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="editHousingAllowance">Housing Allowance</Label>
-                    <Input id="editHousingAllowance" value={editEmployee.housingAllowance || ''} onChange={e => setEditEmployee({
-                      ...editEmployee,
-                      housingAllowance: e.target.value
-                    })} placeholder="₦500,000" />
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">₦</span>
+                      <Input 
+                        id="editHousingAllowance" 
+                        value={editEmployee.housingAllowance || ''} 
+                        onChange={e => setEditEmployee({
+                          ...editEmployee,
+                          housingAllowance: e.target.value
+                        })} 
+                        placeholder="500000" 
+                        className="pl-8"
+                      />
+                    </div>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="editTransportAllowance">Transport Allowance</Label>
-                    <Input id="editTransportAllowance" value={editEmployee.transportAllowance || ''} onChange={e => setEditEmployee({
-                      ...editEmployee,
-                      transportAllowance: e.target.value
-                    })} placeholder="₦225,000" />
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">₦</span>
+                      <Input 
+                        id="editTransportAllowance" 
+                        value={editEmployee.transportAllowance || ''} 
+                        onChange={e => setEditEmployee({
+                          ...editEmployee,
+                          transportAllowance: e.target.value
+                        })} 
+                        placeholder="225000" 
+                        className="pl-8"
+                      />
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="editOtherAllowance">Other Allowances</Label>
-                    <Input id="editOtherAllowance" value={editEmployee.otherAllowance || ''} onChange={e => setEditEmployee({
-                      ...editEmployee,
-                      otherAllowance: e.target.value
-                    })} placeholder="₦775,000" />
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">₦</span>
+                      <Input 
+                        id="editOtherAllowance" 
+                        value={editEmployee.otherAllowance || ''} 
+                        onChange={e => setEditEmployee({
+                          ...editEmployee,
+                          otherAllowance: e.target.value
+                        })} 
+                        placeholder="775000" 
+                        className="pl-8"
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -2226,8 +2500,8 @@ export default function Employees() {
 
               <TabsContent value="government" className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="editEmployeeId">Employee ID</Label>
+                <div className="space-y-2">
+                  <Label htmlFor="editEmployeeId">Employee ID</Label>
                     <Input id="editEmployeeId" value={editEmployee.id || editEmployee.employeeId || ''} onChange={e => setEditEmployee({
                       ...editEmployee,
                       id: e.target.value,
@@ -2304,5 +2578,6 @@ export default function Employees() {
             </Tabs>}
         </DialogContent>
       </Dialog>
-    </div>;
+    </div>
+  );
 }

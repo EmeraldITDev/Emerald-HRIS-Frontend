@@ -22,6 +22,51 @@ export interface CSVImportResult {
   errors: string[];
 }
 
+// Generate CSV template for download
+export const generateCSVTemplate = () => {
+  const headers = [
+    'First Name',
+    'Last Name', 
+    'Email',
+    'Department',
+    'Position',
+    'Salary',
+    'Status',
+    'Join Date',
+    'Phone',
+    'Vacation Days',
+    'Employment Type'
+  ];
+  
+  const sampleData = [
+    'John',
+    'Doe',
+    'john.doe@company.com',
+    'Engineering',
+    'Software Developer',
+    '₦500,000',
+    'Active',
+    '2024-01-15',
+    '+234 801 234 5678',
+    '25',
+    'Full-time'
+  ];
+  
+  const csvContent = [headers, sampleData]
+    .map(row => row.map(field => `"${field}"`).join(','))
+    .join('\n');
+  
+  const blob = new Blob([csvContent], { type: 'text/csv' });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'employee_template.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  window.URL.revokeObjectURL(url);
+};
+
 // Generate unique employee ID
 const generateEmployeeId = (existingIds: string[]): string => {
   let counter = 1;
@@ -126,6 +171,57 @@ const mapCSVFields = (csvData: any): EmployeeData | null => {
 
 // Parse CSV file and return employee data
 export const parseCSVFile = async (
+  file: File, 
+  existingEmployees: EmployeeData[]
+): Promise<CSVImportResult> => {
+  return new Promise((resolve) => {
+    const existingIds = existingEmployees.map(emp => emp.id);
+    const importedData: EmployeeData[] = [];
+    const errors: string[] = [];
+
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: (results) => {
+        if (results.errors.length > 0) {
+          errors.push(...results.errors.map(err => err.message));
+        }
+
+        results.data.forEach((row: any, index: number) => {
+          const mappedEmployee = mapCSVFields(row);
+          
+          if (mappedEmployee) {
+            const validationErrors = validateEmployeeData(mappedEmployee);
+            
+            if (validationErrors.length > 0) {
+              errors.push(`Row ${index + 1}: ${validationErrors.join(', ')}`);
+            } else {
+              // Generate unique ID
+              mappedEmployee.id = generateEmployeeId([...existingIds, ...importedData.map(emp => emp.id)]);
+              importedData.push(mappedEmployee);
+            }
+          }
+        });
+
+        resolve({
+          success: errors.length === 0,
+          data: importedData,
+          errors
+        });
+      },
+      error: (error) => {
+        resolve({
+          success: false,
+          data: [],
+          errors: [error.message]
+        });
+      }
+    });
+  });
+};
+
+// Parse CSV file for API integration
+export const parseCSVFileForAPI = async (
   file: File, 
   existingEmployees: EmployeeData[]
 ): Promise<CSVImportResult> => {

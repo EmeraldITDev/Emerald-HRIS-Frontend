@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -24,6 +24,7 @@ import { useToast } from "@/hooks/use-toast"
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { format } from "date-fns"
+import apiService, { Employee } from "@/lib/api"
 
 // Sample employee data for dropdown
 const employees = [
@@ -207,6 +208,59 @@ export default function Attendance() {
   const [startDateOpen, setStartDateOpen] = useState(false)
   const [endDateOpen, setEndDateOpen] = useState(false)
   const { toast } = useToast()
+  const [employees, setEmployees] = useState<Employee[]>([])
+  const [isLoadingEmployees, setIsLoadingEmployees] = useState(false)
+  // Add this state variable for leave requests
+  const [leaveRequests, setLeaveRequests] = useState<any[]>([])
+  const [isLoadingLeaveRequests, setIsLoadingLeaveRequests] = useState(false)
+
+  useEffect(() => {
+    fetchEmployees()
+  }, [])
+
+  useEffect(() => {
+    fetchLeaveRequests()
+  }, [])
+
+  const fetchEmployees = async () => {
+    try {
+      setIsLoadingEmployees(true)
+      const employeeData = await apiService.getEmployees()
+      setEmployees(employeeData)
+    } catch (error) {
+      console.error('Error fetching employees:', error)
+      toast({
+        title: "Error",
+        description: "Failed to load employees from database",
+        variant: "destructive"
+      })
+    } finally {
+      setIsLoadingEmployees(false)
+    }
+  }
+
+  // Function to fetch leave requests from database
+  const fetchLeaveRequests = async () => {
+    try {
+      setIsLoadingLeaveRequests(true)
+      const leaveData = await apiService.getLeaveRequests()
+      setLeaveRequests(leaveData)
+    } catch (error) {
+      console.error('Error fetching leave requests:', error)
+      // If API fails, try to get from localStorage as fallback
+      const savedRequests = localStorage.getItem('leaveRequests')
+      if (savedRequests) {
+        setLeaveRequests(JSON.parse(savedRequests))
+      }
+    } finally {
+      setIsLoadingLeaveRequests(false)
+    }
+  }
+
+  // Function to save leave requests to localStorage as backup
+  const saveLeaveRequestsToStorage = (requests: any[]) => {
+    localStorage.setItem('leaveRequests', JSON.stringify(requests))
+  }
 
   const calculateDays = () => {
     if (startDate && endDate) {
@@ -223,7 +277,8 @@ export default function Attendance() {
   const selectedEmp = employees.find(emp => emp.id === selectedEmployee)
   const remainingDays = selectedEmp ? selectedEmp.vacationDays - selectedEmp.usedDays : 0
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Updated handleSubmit function with database persistence
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
     if (!selectedEmployee || !leaveType || !startDate || !endDate) {
@@ -235,47 +290,88 @@ export default function Attendance() {
       return
     }
 
-    if (days > remainingDays) {
+    try {
+      const selectedEmp = employees.find(emp => emp.id?.toString() === selectedEmployee)
+      
+      // Calculate leave days
+      const start = new Date(startDate)
+      const end = new Date(endDate)
+      const daysDiff = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1
+      
+      // Check leave balance
+      const availableDays = selectedEmp?.vacation_days || 25
+      const usedDays = 0
+      
+      if (daysDiff > availableDays - usedDays) {
+        toast({
+          title: "Insufficient Leave Balance",
+          description: `Available: ${availableDays - usedDays} days, Requested: ${daysDiff} days`,
+          variant: "destructive",
+        })
+        return
+      }
+      
+      const leaveRequestData = {
+        employee_id: parseInt(selectedEmployee),
+        leave_type: leaveType,
+        start_date: startDate,
+        end_date: endDate,
+        reason: "Leave request submitted via HRIS",
+        status: "Pending",
+        days_requested: daysDiff
+      }
+
+      // Try to submit to database
+      try {
+        await apiService.createLeaveRequest(leaveRequestData)
+        
+        // Refresh leave requests from database
+        await fetchLeaveRequests()
+        
+        toast({
+          title: "Success",
+          description: `Leave request submitted for ${selectedEmp ? `${selectedEmp.first_name} ${selectedEmp.last_name}` : "Employee"}`,
+        })
+      } catch (dbError) {
+        console.error('Database submission failed:', dbError)
+        
+        // Fallback to local state and localStorage
+        const newRequest = {
+          id: Date.now(),
+          employee_id: parseInt(selectedEmployee),
+          employee_name: selectedEmp ? `${selectedEmp.first_name} ${selectedEmp.last_name}` : "Unknown",
+          leave_type: leaveType,
+          start_date: startDate,
+          end_date: endDate,
+          status: "Pending",
+          reason: "Leave request submitted via HRIS",
+          days_requested: daysDiff
+        }
+        
+        const updatedRequests = [newRequest, ...leaveRequests]
+        setLeaveRequests(updatedRequests)
+        saveLeaveRequestsToStorage(updatedRequests)
+        
+        toast({
+          title: "Success (Local)",
+          description: `Leave request submitted for ${selectedEmp ? `${selectedEmp.first_name} ${selectedEmp.last_name}` : "Employee"}`,
+        })
+      }
+      
+      // Reset form
+      setSelectedEmployee("")
+      setLeaveType("")
+      setStartDate("")
+      setEndDate("")
+      
+    } catch (error) {
+      console.error('Error submitting leave request:', error)
       toast({
-        title: "Error", 
-        description: `Insufficient leave balance. Only ${remainingDays} days remaining.`,
-        variant: "destructive",
+        title: "Error",
+        description: "Failed to submit leave request",
+        variant: "destructive"
       })
-      return
     }
-
-    const newRecord = {
-      id: records.length + 1,
-      employeeId: selectedEmployee,
-      employeeName: selectedEmp?.name || "",
-      leaveType,
-      startDate,
-      endDate,
-      days,
-      status: "Pending",
-      supervisorApproval: "Pending",
-      hrApproval: "Pending",
-      appliedDate: new Date().toISOString().split('T')[0]
-    }
-
-    setRecords([newRecord, ...records])
-    
-    // Update employee's used days
-    const empIndex = employees.findIndex(emp => emp.id === selectedEmployee)
-    if (empIndex !== -1) {
-      employees[empIndex].usedDays += days
-    }
-
-    // Reset form
-    setSelectedEmployee("")
-    setLeaveType("")
-    setStartDate("")
-    setEndDate("")
-
-    toast({
-      title: "Success",
-      description: "Leave request submitted successfully",
-    })
   }
 
   const handleClockIn = () => {
@@ -288,7 +384,7 @@ export default function Attendance() {
       return
     }
 
-    const selectedEmp = employees.find(emp => emp.id === clockInEmployee)
+    const selectedEmp = employees.find(emp => emp.id?.toString() === clockInEmployee)
     const today = new Date().toISOString().split('T')[0]
     
     // Check if already clocked in today
@@ -308,7 +404,7 @@ export default function Attendance() {
     const newAttendance = {
       id: attendance.length + 1,
       employeeId: clockInEmployee,
-      employeeName: selectedEmp?.name || "",
+      employeeName: selectedEmp ? `${selectedEmp.first_name} ${selectedEmp.last_name}` : "Unknown Employee",
       date: today,
       clockIn: currentTime.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
       clockOut: "",
@@ -320,7 +416,7 @@ export default function Attendance() {
     
     toast({
       title: "Success",
-      description: `${selectedEmp?.name} clocked in successfully`,
+      description: `${selectedEmp ? `${selectedEmp.first_name} ${selectedEmp.last_name}` : "Employee"} clocked in successfully`,
     })
   }
 
@@ -353,6 +449,48 @@ export default function Attendance() {
         return <Badge className="bg-destructive/10 text-destructive border-destructive/20 text-xs">Rejected</Badge>
       default:
         return <Badge variant="secondary" className="text-xs">{status}</Badge>
+    }
+  }
+
+  // Function to handle approve/reject leave requests
+  const handleUpdateLeaveStatus = async (requestId: number, newStatus: string) => {
+    try {
+      // Try to update in database
+      try {
+        await apiService.updateLeaveRequest(requestId, { status: newStatus })
+        
+        // Refresh leave requests from database
+        await fetchLeaveRequests()
+        
+        toast({
+          title: "Success",
+          description: `Leave request ${newStatus.toLowerCase()} successfully`,
+        })
+      } catch (dbError) {
+        console.error('Database update failed:', dbError)
+        
+        // Fallback to local state and localStorage
+        const updatedRequests = leaveRequests.map(request => 
+          request.id === requestId 
+            ? { ...request, status: newStatus }
+            : request
+        )
+        
+        setLeaveRequests(updatedRequests)
+        saveLeaveRequestsToStorage(updatedRequests)
+        
+        toast({
+          title: "Success (Local)",
+          description: `Leave request ${newStatus.toLowerCase()} successfully`,
+        })
+      }
+    } catch (error) {
+      console.error('Error updating leave status:', error)
+      toast({
+        title: "Error",
+        description: "Failed to update leave status",
+        variant: "destructive"
+      })
     }
   }
 
@@ -493,18 +631,28 @@ export default function Attendance() {
               <Label>Select Employee</Label>
               <Select value={clockInEmployee} onValueChange={setClockInEmployee}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select employee to clock in" />
+                  <SelectValue placeholder={isLoadingEmployees ? "Loading employees..." : "Select employee to clock in"} />
                 </SelectTrigger>
-                <SelectContent className="bg-popover border shadow-lg">
-                  {employees.map((emp) => (
-                    <SelectItem key={emp.id} value={emp.id}>
-                      {emp.name}
+                <SelectContent className="bg-popover border shadow-lg max-h-60">
+                  {employees.length > 0 ? (
+                    employees.map((emp) => (
+                      <SelectItem key={emp.id} value={emp.id?.toString() || '0'}>
+                        {emp.employee_code} - {emp.first_name} {emp.last_name}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="no-employees" disabled>
+                      {isLoadingEmployees ? "Loading..." : "No employees available"}
                     </SelectItem>
-                  ))}
+                  )}
                 </SelectContent>
               </Select>
             </div>
-            <Button onClick={handleClockIn} className="w-full">
+            <Button 
+              onClick={handleClockIn} 
+              className="w-full"
+              disabled={!clockInEmployee || isLoadingEmployees}
+            >
               <LogIn className="mr-2 h-4 w-4" />
               Clock In
             </Button>
@@ -562,14 +710,20 @@ export default function Attendance() {
                 <Label htmlFor="employee">Employee *</Label>
                 <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select employee" />
+                    <SelectValue placeholder={isLoadingEmployees ? "Loading employees..." : "Select employee"} />
                   </SelectTrigger>
-                  <SelectContent className="bg-popover border shadow-lg">
-                    {employees.map((emp) => (
-                      <SelectItem key={emp.id} value={emp.id}>
-                        {emp.name} ({emp.vacationDays - emp.usedDays} days left)
+                  <SelectContent className="bg-popover border shadow-lg max-h-60">
+                    {employees.length > 0 ? (
+                      employees.map((emp) => (
+                        <SelectItem key={emp.id} value={emp.id?.toString() || '0'}>
+                          {emp.employee_code} - {emp.first_name} {emp.last_name}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="no-employees" disabled>
+                        {isLoadingEmployees ? "Loading..." : "No employees available"}
                       </SelectItem>
-                    ))}
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -677,42 +831,79 @@ export default function Attendance() {
         <Card className="lg:col-span-2 border-border/50 shadow-sm">
           <CardHeader>
             <CardTitle className="text-primary flex items-center">
-              <Clock className="mr-2 h-5 w-5" />
+              <CalendarDays className="mr-2 h-5 w-5" />
               Leave Records
+              {isLoadingLeaveRequests && <span className="ml-2 text-sm text-muted-foreground">(Loading...)</span>}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="text-xs md:text-sm">Employee</TableHead>
-                    <TableHead className="text-xs md:text-sm">Leave Type</TableHead>
-                    <TableHead className="hidden md:table-cell text-xs md:text-sm">Start Date</TableHead>
-                    <TableHead className="hidden md:table-cell text-xs md:text-sm">End Date</TableHead>
-                    <TableHead className="text-xs md:text-sm">Days</TableHead>
-                    <TableHead className="text-xs md:text-sm">Supervisor</TableHead>
-                    <TableHead className="text-xs md:text-sm">HR</TableHead>
-                    <TableHead className="text-xs md:text-sm">Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {records.map((record) => (
-                    <TableRow key={record.id}>
-                      <TableCell className="font-medium text-xs md:text-sm">
-                        {record.employeeName}
-                      </TableCell>
-                      <TableCell className="text-xs md:text-sm">{record.leaveType}</TableCell>
-                      <TableCell className="hidden md:table-cell text-xs md:text-sm">{record.startDate}</TableCell>
-                      <TableCell className="hidden md:table-cell text-xs md:text-sm">{record.endDate}</TableCell>
-                      <TableCell className="text-xs md:text-sm">{record.days}</TableCell>
-                      <TableCell>{getStatusBadge(record.supervisorApproval)}</TableCell>
-                      <TableCell>{getStatusBadge(record.hrApproval)}</TableCell>
-                      <TableCell>{getStatusBadge(record.status)}</TableCell>
+            <div className="space-y-4">
+              {leaveRequests.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Employee</TableHead>
+                      <TableHead>Leave Type</TableHead>
+                      <TableHead>Start Date</TableHead>
+                      <TableHead>End Date</TableHead>
+                      <TableHead>Days</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {leaveRequests.map((request) => {
+                      // Calculate days for display
+                      const start = new Date(request.start_date)
+                      const end = new Date(request.end_date)
+                      const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1
+                      
+                      return (
+                        <TableRow key={request.id}>
+                          <TableCell className="font-medium">
+                            {request.employee_name || `Employee ${request.employee_id}`}
+                          </TableCell>
+                          <TableCell>{request.leave_type}</TableCell>
+                          <TableCell>{format(new Date(request.start_date), "MMM dd, yyyy")}</TableCell>
+                          <TableCell>{format(new Date(request.end_date), "MMM dd, yyyy")}</TableCell>
+                          <TableCell>{days} day{days > 1 ? 's' : ''}</TableCell>
+                          <TableCell>
+                            {getStatusBadge(request.status)}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex space-x-2">
+                              {request.status === "Pending" && (
+                                <>
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline"
+                                    onClick={() => handleUpdateLeaveStatus(request.id, "Approved")}
+                                  >
+                                    Approve
+                                  </Button>
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline"
+                                    onClick={() => handleUpdateLeaveStatus(request.id, "Rejected")}
+                                  >
+                                    Reject
+                                  </Button>
+                                </>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground">
+                    {isLoadingLeaveRequests ? "Loading leave requests..." : "No leave requests found"}
+                  </p>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

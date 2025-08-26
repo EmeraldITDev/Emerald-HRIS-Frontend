@@ -399,7 +399,7 @@ export default function Dashboard() {
             onClick={handleAddEmployee}
           >
             <Plus className="mr-2 h-3 w-3 md:h-4 md:w-4" />
-            Add Employee
+            Add Employees
           </Button>
         </div>
       </div>

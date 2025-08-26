@@ -274,8 +274,8 @@ export default function Attendance() {
   }
 
   const days = calculateDays()
-  const selectedEmp = employees.find(emp => emp.id === selectedEmployee)
-  const remainingDays = selectedEmp ? selectedEmp.vacationDays - selectedEmp.usedDays : 0
+  const selectedEmp = employees.find(emp => emp.id?.toString() === selectedEmployee.toString())
+  const remainingDays = selectedEmp ? (selectedEmp.vacation_days || selectedEmp.vacationDays || 0) - (selectedEmp.usedDays || 0) : 0
 
   // Updated handleSubmit function with database persistence
   const handleSubmit = async (e: React.FormEvent) => {
@@ -323,7 +323,11 @@ export default function Attendance() {
 
       // Try to submit to database
       try {
-        await apiService.createLeaveRequest(leaveRequestData)
+        const leaveRequestWithTypeId = {
+          ...leaveRequestData,
+          leave_type_id: 1 // Default leave type ID, should be dynamic based on selected leave type
+        }
+        await apiService.createLeaveRequest(leaveRequestWithTypeId)
         
         // Refresh leave requests from database
         await fetchLeaveRequests()

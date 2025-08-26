@@ -75,6 +75,7 @@ export default function Employees() {
     housingAllowance: "",
     transportAllowance: "",
     otherAllowance: "",
+    mealAllowance: "", // Add this missing property
     // Contract Information
     contractAmount: "",
     paymentFrequency: "",
@@ -94,6 +95,7 @@ export default function Employees() {
     pensionPin: "",
     nhfNumber: "",
     taxId: "",
+    bvn: "", // Add this missing property
     // Additional Fields
     vacationDays: "",
     // Document uploads
@@ -294,12 +296,41 @@ export default function Employees() {
       return;
     }
     try {
-      const result = await parseCSVFile(file, employeeList);
-      if (result.success && result.data.length > 0) {
-        // Add imported employees to the list
-        setEmployeeList(prev => [...prev, ...result.data]);
+  // Convert employees to EmployeeData format for CSV parsing compatibility
+  const employeeDataList: EmployeeData[] = employeeList.map(emp => ({
+    id: emp.id?.toString() || '',
+    firstName: emp.first_name,
+    lastName: emp.last_name,
+    email: emp.email,
+    department: emp.department || '',
+    position: emp.job_title,
+    salary: emp.gross_salary?.toString() || '₦0',
+    status: emp.employment_status || 'Active',
+    joinDate: emp.hire_date || new Date().toISOString().split('T')[0],
+    phone: emp.phone_number || '',
+    vacationDays: emp.vacation_days || 25,
+    employmentType: emp.employment_type || 'Full-time'
+  }))
+  
+  const result = await parseCSVFile(file, employeeDataList);
+  if (result.success && result.data.length > 0) {
+    // Convert EmployeeData back to Employee format and add to list
+    const newEmployees: Employee[] = result.data.map(data => ({
+      first_name: data.firstName,
+      last_name: data.lastName,
+      email: data.email,
+      job_title: data.position,
+      department: data.department,
+      employment_type: data.employmentType,
+      employment_status: data.status,
+      hire_date: data.joinDate,
+      phone_number: data.phone,
+      vacation_days: data.vacationDays,
+      gross_salary: parseFloat(data.salary.replace(/[₦,]/g, '')) || 0
+    }))
+    setEmployeeList(prev => [...prev, ...newEmployees]);
         
-        // For future PHP integration, log the formatted data
+        // Convert EmployeeData back to Employee format for formatting
         const phpData = formatDataForPHP(result.data);
         console.log('Data formatted for PHP backend:', phpData);
         toast({
@@ -412,56 +443,57 @@ export default function Employees() {
       await fetchEmployees();
       
       // Reset the form
-    setNewEmployee({
-      firstName: "",
+      setNewEmployee({
+        firstName: "",
         middleName: "",
-      lastName: "",
-      dateOfBirth: undefined,
-      gender: "",
-      maritalStatus: "",
-      nationality: "",
-      phoneNumber: "",
-      email: "",
-      homeAddress: "",
-      emergencyContact: "",
+        lastName: "",
+        dateOfBirth: undefined,
+        gender: "",
+        maritalStatus: "",
+        nationality: "",
+        phoneNumber: "",
+        email: "",
+        homeAddress: "",
+        emergencyContact: "",
         emergencyContactNumber: "",
         nextOfKinName: "",
         nextOfKinRelationship: "",
         nextOfKinPhone: "",
         nextOfKinAddress: "",
         nextOfKinEmail: "",
-      jobTitle: "",
-      department: "",
-      employmentType: "",
-      gradeLevel: "",
-      supervisorName: "",
-      workLocation: "",
-      hireDate: undefined,
-      probationPeriod: "",
-      confirmationDate: undefined,
-      employmentStatus: "Active",
-      grossSalary: "",
+        jobTitle: "",
+        department: "",
+        employmentType: "",
+        gradeLevel: "",
+        supervisorName: "",
+        workLocation: "",
+        hireDate: undefined,
+        probationPeriod: "",
+        confirmationDate: undefined,
+        employmentStatus: "Active",
+        grossSalary: "",
         basicSalary: "",
-      housingAllowance: "",
-      transportAllowance: "",
+        housingAllowance: "",
+        transportAllowance: "",
         otherAllowance: "",
-        contractAmount: "",
+        mealAllowance: "",
         paymentFrequency: "",
         contractDuration: "",
         contractTerms: "",
-      bankAccount: "",
+        bankAccount: "",
         bankName: "",
         accountNumber: "",
         nuban: "",
         sortCode: "",
-      employeeId: "",
-      nationalId: "",
+        employeeId: "",
+        nationalId: "",
         passportNumber: "",
-      tin: "",
-      pensionPin: "",
-      nhfNumber: "",
-      taxId: "",
-      vacationDays: "",
+        tin: "",
+        pensionPin: "",
+        nhfNumber: "",
+        taxId: "",
+        bvn: "",
+        vacationDays: "",
         ninDocument: null,
         passportPhoto: null,
         certifications: [],
@@ -469,15 +501,108 @@ export default function Employees() {
         educationCertificate: null,
         otherDocuments: [],
         companyAssets: [],
+        lastCompanyAsset: null
       });
       
-      // Close the dialog
       setShowAddEmployee(false);
-      
       toast({
-        title: "Employee Added Successfully",
-        description: "The employee has been added to the database.",
+        title: "Success",
+        description: "Employee added successfully!",
       });
+      
+    } catch (error) {
+      console.error('Failed to create employee:', error);
+      toast({
+        title: "Error",  
+        description: "Failed to add employee. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Function to handle editing an employee
+  const handleEditEmployee = (employee: any) => {
+    // Map employee data from database to form structure
+    setEditEmployee({
+      id: employee.id,
+      
+      // Personal Information - Map database fields to form fields
+      firstName: employee.first_name || '',
+      lastName: employee.last_name || '',
+      middleName: employee.middle_name || '',
+      dateOfBirth: employee.dob ? new Date(employee.dob) : undefined,
+      gender: employee.gender || '',
+      maritalStatus: employee.marital_status || '',
+      nationality: employee.nationality || '',
+      phoneNumber: employee.phone_number || employee.phone || '',
+      email: employee.email || '',
+      homeAddress: employee.address || '',
+      
+      // Emergency Contact Information
+      emergencyContact: employee.emergency_contact || '',
+      emergencyContactNumber: employee.emergency_contact_number || '',
+      nextOfKinName: employee.next_of_kin_name || '',
+      nextOfKinRelationship: employee.next_of_kin_relationship || '',
+      nextOfKinPhone: employee.next_of_kin_phone || '',
+      nextOfKinAddress: employee.next_of_kin_address || '',
+      nextOfKinEmail: employee.next_of_kin_email || '',
+      
+      // Job Information  
+      jobTitle: employee.job_title || '',
+      department: employee.department || '',
+      employmentType: employee.employment_type || '',
+      gradeLevel: employee.grade_level || '',
+      supervisorName: employee.supervisor_name || '',
+      workLocation: employee.work_location || '',
+      hireDate: employee.hire_date ? new Date(employee.hire_date) : undefined,
+      probationPeriod: employee.probation_period || '',
+      confirmationDate: employee.confirmation_date ? new Date(employee.confirmation_date) : undefined,
+      employmentStatus: employee.employment_status || 'Active',
+      
+      // Financial Information
+      grossSalary: employee.gross_salary?.toString() || '',
+      basicSalary: employee.basic_salary?.toString() || '',
+      housingAllowance: employee.housing_allowance?.toString() || '',
+      transportAllowance: employee.transport_allowance?.toString() || '',
+      otherAllowance: employee.other_allowance?.toString() || '',
+      mealAllowance: employee.meal_allowance?.toString() || '',
+      
+      // Banking Information
+      bankAccount: employee.bank_account || '',
+      bankName: employee.bank_name || '',
+      accountNumber: employee.account_number || '',
+      nuban: employee.nuban || '',
+      sortCode: employee.sort_code || '',
+      
+      // Government IDs
+      nationalId: employee.national_id || '',
+      passportNumber: employee.passport_number || '',
+      tin: employee.tin || '',
+      pensionPin: employee.pension_pin || '',
+      nhfNumber: employee.nhf_number || '',
+      taxId: employee.tax_id || '',
+      bvn: employee.bvn || '',
+      
+      // Additional
+      vacationDays: employee.vacation_days?.toString() || '',
+      
+      // Contract Information (if available in database)
+      contractAmount: employee.contract_amount?.toString() || '',
+      paymentFrequency: employee.payment_frequency || '',
+      contractDuration: employee.contract_duration || '',
+      contractTerms: employee.contract_terms || '',
+      
+      // Document fields (set to null for now)
+      ninDocument: null,
+      passportPhoto: null,
+      certifications: [],
+      cv: null,
+      educationCertificate: null,
+      otherDocuments: [],
+      companyAssets: [],
+      lastCompanyAsset: null
+    });
+    setShowEditEmployee(true);
 
     } catch (error) {
       console.error('Error adding employee:', error);

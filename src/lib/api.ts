@@ -5,6 +5,7 @@ const API_BASE_URL = (typeof window !== 'undefined' && window.location.port)
 export interface Employee {
   id?: number;
   first_name: string;
+  middle_name?: string;
   last_name: string;
   email: string;
   dob?: string;
@@ -12,6 +13,7 @@ export interface Employee {
   marital_status?: string;
   nationality?: string;
   phone_number?: string;
+  phone?: string; // Alternative field name for compatibility
   address?: string;
   job_title: string;
   department?: string;
@@ -24,11 +26,20 @@ export interface Employee {
   confirmation_date?: string;
   employment_status?: string;
   vacation_days?: number;
+  vacationDays?: number; // Alternative field name for compatibility
+  usedDays?: number; // Track used vacation days
   gross_salary?: number;
+  basic_salary?: number;
   meal_allowance?: number;
+  mealAllowance?: number; // Alternative field name for compatibility
   housing_allowance?: number;
   transport_allowance?: number;
+  other_allowance?: number;
   bank_account?: string;
+  bank_name?: string;
+  account_number?: string;
+  nuban?: string;
+  sort_code?: string;
   employee_code?: string;
   national_id?: string;
   bvn?: string;
@@ -36,9 +47,22 @@ export interface Employee {
   pension_pin?: string;
   nhf_number?: string;
   tax_id?: string;
+  passport_number?: string;
+  emergency_contact?: string;
+  emergency_contact_number?: string;
+  next_of_kin_name?: string;
+  next_of_kin_relationship?: string;
+  next_of_kin_phone?: string;
+  next_of_kin_address?: string;
+  next_of_kin_email?: string;
+  contract_amount?: number;
+  payment_frequency?: string;
+  contract_duration?: string;
+  contract_terms?: string;
   supporting_documents?: string;
   performance_history?: string;
   asset_allocation_history?: string;
+  name?: string; // Computed field for full name
   created_at?: string;
   updated_at?: string;
 }

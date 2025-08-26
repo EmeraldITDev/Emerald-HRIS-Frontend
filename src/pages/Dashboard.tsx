@@ -133,7 +133,21 @@ export default function Dashboard() {
         
         for (const employeeData of result.data) {
           try {
-            await apiService.createEmployee(employeeData)
+            // Convert EmployeeData to Employee format
+            const employeeForAPI: Employee = {
+              first_name: employeeData.firstName,
+              last_name: employeeData.lastName,
+              email: employeeData.email,
+              job_title: employeeData.position,
+              department: employeeData.department,
+              employment_type: employeeData.employmentType,
+              employment_status: employeeData.status,
+              hire_date: employeeData.joinDate,
+              phone_number: employeeData.phone,
+              vacation_days: employeeData.vacationDays,
+              gross_salary: parseFloat(employeeData.salary.replace(/[₦,]/g, '')) || 0
+            }
+            await apiService.createEmployee(employeeForAPI)
             successCount++
           } catch (error) {
             console.error('Failed to create employee:', error)

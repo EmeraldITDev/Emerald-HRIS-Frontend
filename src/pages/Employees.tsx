@@ -493,6 +493,7 @@ export default function Employees() {
         nhfNumber: "",
         taxId: "",
         bvn: "",
+        contractAmount: "",
         vacationDays: "",
         ninDocument: null,
         passportPhoto: null,
@@ -518,104 +519,6 @@ export default function Employees() {
         variant: "destructive"
       });
     }
-  };
-
-  // Function to handle editing an employee
-  const handleEditEmployee = (employee: any) => {
-    // Map employee data from database to form structure
-    setEditEmployee({
-      id: employee.id,
-      
-      // Personal Information - Map database fields to form fields
-      firstName: employee.first_name || '',
-      lastName: employee.last_name || '',
-      middleName: employee.middle_name || '',
-      dateOfBirth: employee.dob ? new Date(employee.dob) : undefined,
-      gender: employee.gender || '',
-      maritalStatus: employee.marital_status || '',
-      nationality: employee.nationality || '',
-      phoneNumber: employee.phone_number || employee.phone || '',
-      email: employee.email || '',
-      homeAddress: employee.address || '',
-      
-      // Emergency Contact Information
-      emergencyContact: employee.emergency_contact || '',
-      emergencyContactNumber: employee.emergency_contact_number || '',
-      nextOfKinName: employee.next_of_kin_name || '',
-      nextOfKinRelationship: employee.next_of_kin_relationship || '',
-      nextOfKinPhone: employee.next_of_kin_phone || '',
-      nextOfKinAddress: employee.next_of_kin_address || '',
-      nextOfKinEmail: employee.next_of_kin_email || '',
-      
-      // Job Information  
-      jobTitle: employee.job_title || '',
-      department: employee.department || '',
-      employmentType: employee.employment_type || '',
-      gradeLevel: employee.grade_level || '',
-      supervisorName: employee.supervisor_name || '',
-      workLocation: employee.work_location || '',
-      hireDate: employee.hire_date ? new Date(employee.hire_date) : undefined,
-      probationPeriod: employee.probation_period || '',
-      confirmationDate: employee.confirmation_date ? new Date(employee.confirmation_date) : undefined,
-      employmentStatus: employee.employment_status || 'Active',
-      
-      // Financial Information
-      grossSalary: employee.gross_salary?.toString() || '',
-      basicSalary: employee.basic_salary?.toString() || '',
-      housingAllowance: employee.housing_allowance?.toString() || '',
-      transportAllowance: employee.transport_allowance?.toString() || '',
-      otherAllowance: employee.other_allowance?.toString() || '',
-      mealAllowance: employee.meal_allowance?.toString() || '',
-      
-      // Banking Information
-      bankAccount: employee.bank_account || '',
-      bankName: employee.bank_name || '',
-      accountNumber: employee.account_number || '',
-      nuban: employee.nuban || '',
-      sortCode: employee.sort_code || '',
-      
-      // Government IDs
-      nationalId: employee.national_id || '',
-      passportNumber: employee.passport_number || '',
-      tin: employee.tin || '',
-      pensionPin: employee.pension_pin || '',
-      nhfNumber: employee.nhf_number || '',
-      taxId: employee.tax_id || '',
-      bvn: employee.bvn || '',
-      
-      // Additional
-      vacationDays: employee.vacation_days?.toString() || '',
-      
-      // Contract Information (if available in database)
-      contractAmount: employee.contract_amount?.toString() || '',
-      paymentFrequency: employee.payment_frequency || '',
-      contractDuration: employee.contract_duration || '',
-      contractTerms: employee.contract_terms || '',
-      
-      // Document fields (set to null for now)
-      ninDocument: null,
-      passportPhoto: null,
-      certifications: [],
-      cv: null,
-      educationCertificate: null,
-      otherDocuments: [],
-      companyAssets: [],
-      lastCompanyAsset: null
-    });
-    setShowEditEmployee(true);
-
-    } catch (error) {
-      console.error('Error adding employee:', error);
-      toast({
-        title: "Add Employee Failed",
-        description: "Failed to add employee. Please try again.",
-        variant: "destructive"
-      });
-    }
-  };
-  const handleViewDetails = (employee: any) => {
-    setSelectedEmployee(employee);
-    setShowViewDetails(true);
   };
   const handleEditEmployee = (employee: Employee) => {
     setEditEmployee({

@@ -12,8 +12,11 @@ import {
   Home,
   Clock,
   FileText,
-  Settings
+  Settings,
+  BookOpen
 } from "lucide-react"
+import { useAuth } from "@/contexts/AuthContext"
+import RoleBasedComponent from "./RoleBasedComponent"
 
 // Custom Naira symbol component
 const NairaIcon = ({ className }: { className?: string }) => (
@@ -40,23 +43,102 @@ import {
 import { useIsMobile } from "@/hooks/use-mobile"
 
 const navigationItems = [
-  { title: "Dashboard", url: "/", icon: Home },
-  { title: "Employee Records", url: "/employees", icon: Users },
-  { title: "Attendance & Leave", url: "/attendance", icon: Calendar },
-  { title: "Recruitment", url: "/recruitment", icon: UserPlus },
-  { title: "Payroll", url: "/payroll", icon: NairaIcon },
-  { title: "Performance", url: "/performance", icon: TrendingUp },
-  { title: "Training", url: "/training", icon: Award },
-  { title: "Benefits", url: "/benefits", icon: Heart },
-  { title: "Analytics", url: "/analytics", icon: BarChart3 },
+  { 
+    title: "Dashboard", 
+    url: "/", 
+    icon: Home,
+    permission: "*"
+  },
+  { 
+    title: "Employee Records", 
+    url: "/employees", 
+    icon: Users,
+    permission: "employees.read"
+  },
+  { 
+    title: "Attendance & Leave", 
+    url: "/attendance", 
+    icon: Calendar,
+    permission: "*"
+  },
+  { 
+    title: "Payroll", 
+    url: "/payroll", 
+    icon: NairaIcon,
+    permission: "payroll.view_own"
+  },
+  { 
+    title: "Performance", 
+    url: "/performance", 
+    icon: TrendingUp,
+    permission: "*"
+  },
+  { 
+    title: "Training", 
+    url: "/training", 
+    icon: Award,
+    permission: "training.view"
+  },
+  { 
+    title: "Benefits", 
+    url: "/benefits", 
+    icon: Heart,
+    permission: "benefits.view"
+  }
+]
+
+const managementItems = [
+  { 
+    title: "Recruitment", 
+    url: "/recruitment", 
+    icon: UserPlus,
+    permission: "employees.create"
+  },
+  { 
+    title: "Analytics", 
+    url: "/analytics", 
+    icon: BarChart3,
+    permission: "reports.view"
+  }
 ]
 
 const systemItems = [
-  { title: "Time Tracking", url: "/time", icon: Clock },
-  { title: "Reports", url: "/reports", icon: FileText },
-  { title: "Announcements", url: "/announcements", icon: MessageSquare },
-  { title: "Security", url: "/security", icon: Shield },
-  { title: "Settings", url: "/settings", icon: Settings },
+  { 
+    title: "Time Tracking", 
+    url: "/time", 
+    icon: Clock,
+    permission: "*"
+  },
+  { 
+    title: "Reports", 
+    url: "/reports", 
+    icon: FileText,
+    permission: "reports.view"
+  },
+  { 
+    title: "Announcements", 
+    url: "/announcements", 
+    icon: MessageSquare,
+    permission: "*"
+  },
+  { 
+    title: "Policies", 
+    url: "/policies", 
+    icon: BookOpen,
+    permission: "*"
+  },
+  { 
+    title: "Security", 
+    url: "/security", 
+    icon: Shield,
+    permission: "admin.troubleshoot"
+  },
+  { 
+    title: "Settings", 
+    url: "/settings", 
+    icon: Settings,
+    permission: "system.controls"
+  }
 ]
 
 export function AppSidebar() {
@@ -65,6 +147,9 @@ export function AppSidebar() {
   const currentPath = location.pathname
   const isCollapsed = state === "collapsed"
   const isMobile = useIsMobile()
+  const { user, hasPermission } = useAuth()
+
+  if (!user) return null
 
   const isActive = (path: string) => currentPath === path
 
@@ -74,56 +159,52 @@ export function AppSidebar() {
       : "hover:bg-accent/50 text-foreground"
   }
 
+  const renderNavGroup = (items: typeof navigationItems, groupLabel: string, showGroup: boolean = true) => {
+    const visibleItems = items.filter(item => 
+      item.permission === "*" || hasPermission(item.permission)
+    );
+    
+    if (visibleItems.length === 0 || !showGroup) return null;
+
+    return (
+      <SidebarGroup>
+        <SidebarGroupLabel className="text-primary font-semibold text-xs">
+          {!isCollapsed ? groupLabel : groupLabel.split(' ')[0]}
+        </SidebarGroupLabel>
+        <SidebarGroupContent>
+          <SidebarMenu>
+            {visibleItems.map((item) => (
+              <SidebarMenuItem key={item.title}>
+                <SidebarMenuButton asChild>
+                  <NavLink 
+                    to={item.url} 
+                    end 
+                    className={`${getNavClasses(item.url)} flex items-center space-x-3 px-3 py-2 rounded-md transition-colors`}
+                  >
+                    <item.icon className="h-4 w-4 md:h-5 md:w-5 flex-shrink-0" />
+                    {!isCollapsed && <span className="text-sm">{item.title}</span>}
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </SidebarGroupContent>
+      </SidebarGroup>
+    );
+  }
+
+  const showManagementGroup = ['executive', 'hr_manager', 'corporate_hr', 'line_manager'].includes(user.role);
+
   return (
     <Sidebar className={isCollapsed ? "w-14" : "w-64"} collapsible="icon">
       <SidebarContent className="bg-card border-r">
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-primary font-semibold text-xs">
-            {!isCollapsed ? "Main Navigation" : "Main"}
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {navigationItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink 
-                      to={item.url} 
-                      end 
-                      className={`${getNavClasses(item.url)} flex items-center space-x-3 px-3 py-2 rounded-md transition-colors`}
-                    >
-                      <item.icon className="h-4 w-4 md:h-5 md:w-5 flex-shrink-0" />
-                      {!isCollapsed && <span className="text-sm">{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-primary font-semibold text-xs">
-            {!isCollapsed ? "System Tools" : "Tools"}
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {systemItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink 
-                      to={item.url} 
-                      end 
-                      className={`${getNavClasses(item.url)} flex items-center space-x-3 px-3 py-2 rounded-md transition-colors`}
-                    >
-                      <item.icon className="h-4 w-4 md:h-5 md:w-5 flex-shrink-0" />
-                      {!isCollapsed && <span className="text-sm">{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {renderNavGroup(navigationItems, "Main Navigation")}
+        
+        <RoleBasedComponent allowedRoles={['executive', 'hr_manager', 'corporate_hr', 'line_manager']}>
+          {renderNavGroup(managementItems, "Management", showManagementGroup)}
+        </RoleBasedComponent>
+        
+        {renderNavGroup(systemItems, "System Tools")}
       </SidebarContent>
     </Sidebar>
   )

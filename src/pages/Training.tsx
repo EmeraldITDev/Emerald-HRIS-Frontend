@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
@@ -8,8 +8,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Textarea } from "@/components/ui/textarea"
-import { GraduationCap, Calendar, DollarSign, Users, Plus, BookOpen } from "lucide-react"
+import { GraduationCap, Calendar, DollarSign, Users, Plus, BookOpen, Upload, Download, Award } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { useAuth } from "@/contexts/AuthContext"
+import RoleBasedComponent from "@/components/RoleBasedComponent"
 
 interface TrainingRecord {
   id: string
@@ -20,6 +22,8 @@ interface TrainingRecord {
   completionDate: string
   cost: number
   status: 'Scheduled' | 'In Progress' | 'Completed' | 'Cancelled'
+  certificate?: File | null
+  certificateName?: string
 }
 
 const employees = [
@@ -41,6 +45,7 @@ const trainingTypes = [
 ]
 
 export default function Training() {
+  const { user, hasPermission } = useAuth()
   const [trainings, setTrainings] = useState<TrainingRecord[]>([
     {
       id: '1',
@@ -60,7 +65,8 @@ export default function Training() {
       notes: 'Management fundamentals training',
       completionDate: '2024-02-28',
       cost: 200000,
-      status: 'Completed'
+      status: 'Completed',
+      certificateName: 'leadership_certificate.pdf'
     }
   ])
 
@@ -70,10 +76,12 @@ export default function Training() {
     trainingType: '',
     notes: '',
     completionDate: '',
-    cost: ''
+    cost: '',
+    certificate: null as File | null
   })
 
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const certificateInputRef = useRef<HTMLInputElement>(null)
   const { toast } = useToast()
 
   const handleAddTraining = () => {
@@ -94,7 +102,9 @@ export default function Training() {
       notes: newTraining.notes,
       completionDate: newTraining.completionDate,
       cost: parseFloat(newTraining.cost) || 0,
-      status: 'Scheduled'
+      status: 'Scheduled',
+      certificate: newTraining.certificate,
+      certificateName: newTraining.certificate?.name
     }
 
     setTrainings([training, ...trainings])
@@ -104,13 +114,54 @@ export default function Training() {
       trainingType: '',
       notes: '',
       completionDate: '',
-      cost: ''
+      cost: '',
+      certificate: null
     })
     setIsDialogOpen(false)
-    
+
     toast({
-      title: "Training scheduled",
-      description: `Training has been scheduled for ${training.employeeName}.`
+      title: "Training Added",
+      description: "Training record has been added successfully",
+    })
+  }
+
+  const handleCertificateUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        toast({
+          title: "File too large",
+          description: "Certificate file must be smaller than 5MB",
+          variant: "destructive"
+        })
+        return
+      }
+      
+      if (!file.type.includes('pdf') && !file.type.includes('image')) {
+        toast({
+          title: "Invalid file type",
+          description: "Please upload a PDF or image file",
+          variant: "destructive"
+        })
+        return
+      }
+      
+      setNewTraining(prev => ({ ...prev, certificate: file }))
+    setTrainings([training, ...trainings])
+    setNewTraining({
+      employeeId: '',
+      employeeName: '',
+      trainingType: '',
+      notes: '',
+      completionDate: '',
+      cost: '',
+      certificate: null
+    })
+    setIsDialogOpen(false)
+
+    toast({
+      title: "Training Added",
+      description: "Training record has been added successfully",
     })
   }
 

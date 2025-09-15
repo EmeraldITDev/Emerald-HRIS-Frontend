@@ -18,7 +18,9 @@ import {
   TrendingUp,
   User,
   UserCheck,
-  UserPlus
+  UserPlus,
+  Shield,
+  Settings
 } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 import { useToast } from "@/hooks/use-toast"
@@ -43,15 +45,79 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import ApiTest from "@/components/ApiTest"
+import { useAuth } from "@/contexts/AuthContext"
+import RoleBasedComponent from "@/components/RoleBasedComponent"
 
 export default function Dashboard() {
   const navigate = useNavigate()
   const { toast } = useToast()
+  const { user, hasPermission } = useAuth()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [allEmployees, setAllEmployees] = useState<Employee[]>([])
   const [recentEmployees, setRecentEmployees] = useState<Employee[]>([])
   const [departmentStats, setDepartmentStats] = useState<{ [key: string]: number }>({})
   const [isLoading, setIsLoading] = useState(true)
+
+  const getRoleSpecificTitle = () => {
+    switch (user?.role) {
+      case 'executive':
+        return 'Executive Dashboard'
+      case 'hr_manager':
+        return 'HR Manager Dashboard'
+      case 'corporate_hr':
+        return 'Corporate HR Dashboard'
+      case 'line_manager':
+        return 'Line Manager Dashboard'
+      case 'it_power_user':
+        return 'IT Admin Dashboard'
+      case 'general_employee':
+        return 'Employee Self-Service'
+      default:
+        return 'HRIS Dashboard'
+    }
+  }
+
+  const getRoleSpecificActions = () => {
+    const actions = []
+    
+    if (hasPermission('employees.create')) {
+      actions.push({
+        label: 'Add Employee',
+        icon: UserPlus,
+        onClick: handleAddEmployee,
+        variant: 'default' as const
+      })
+    }
+    
+    if (hasPermission('csv.import')) {
+      actions.push({
+        label: 'Import CSV',
+        icon: Upload,
+        onClick: () => fileInputRef.current?.click(),
+        variant: 'outline' as const
+      })
+    }
+    
+    if (hasPermission('reports.view')) {
+      actions.push({
+        label: 'View Reports',
+        icon: BarChart3,
+        onClick: () => navigate('/reports'),
+        variant: 'outline' as const
+      })
+    }
+    
+    if (user?.role === 'it_power_user') {
+      actions.push({
+        label: 'System Settings',
+        icon: Settings,
+        onClick: () => navigate('/settings'),
+        variant: 'outline' as const
+      })
+    }
+    
+    return actions
+  }
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -353,68 +419,84 @@ export default function Dashboard() {
     <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col space-y-3 md:space-y-0 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-foreground">Dashboard</h1>
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground">{getRoleSpecificTitle()}</h1>
           <p className="text-sm md:text-base text-muted-foreground">
-            Welcome to Emerald HRIS - Your complete HR management solution
+            {user?.role === 'general_employee' 
+              ? `Welcome ${user.firstName}! Access your payroll, benefits, and leave requests here.`
+              : user?.role === 'line_manager'
+              ? 'Manage your team, view reports, and handle approvals'
+              : 'Welcome to Emerald HRIS - Your complete HR management solution'
+            }
           </p>
         </div>
+        
         <div className="flex flex-col sm:flex-row gap-2">
-          {/* Import Data Dropdown */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="text-xs md:text-sm">
-                <Upload className="mr-2 h-3 w-3 md:h-4 md:w-4" />
-                Import Data
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuItem onClick={handleDownloadTemplate}>
-                <FileText className="mr-2 h-4 w-4" />
-                Download Template
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
-                <Upload className="mr-2 h-4 w-4" />
-                Import CSV
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {getRoleSpecificActions().map((action, index) => (
+            <Button 
+              key={index}
+              variant={action.variant}
+              size="sm" 
+              className="text-xs md:text-sm"
+              onClick={action.onClick}
+            >
+              <action.icon className="mr-2 h-3 w-3 md:h-4 md:w-4" />
+              {action.label}
+            </Button>
+          ))}
+          
+          <RoleBasedComponent allowedRoles={['executive', 'hr_manager', 'corporate_hr']}>
+            {/* Import Data Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="text-xs md:text-sm">
+                  <Upload className="mr-2 h-3 w-3 md:h-4 md:w-4" />
+                  Import Data
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onClick={handleDownloadTemplate}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  Download Template
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
+                  <Upload className="mr-2 h-4 w-4" />
+                  Import CSV
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </RoleBasedComponent>
 
-          {/* Export Reports Dropdown */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="text-xs md:text-sm">
-                <Download className="mr-2 h-3 w-3 md:h-4 md:w-4" />
-                Export Reports
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuItem onClick={handleExportDirectory}>
-                <Users className="mr-2 h-4 w-4" />
-                Employee Directory
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleExportPayroll}>
-                <DollarSign className="mr-2 h-4 w-4" />
-                Payroll Data
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleExportCompliance}>
-                <FileText className="mr-2 h-4 w-4" />
-                Compliance Report
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleExportAnalytics}>
-                <BarChart3 className="mr-2 h-4 w-4" />
-                Department Analytics
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          <Button 
-            size="sm" 
-            className="text-xs md:text-sm"
-            onClick={handleAddEmployee}
-          >
-            <Plus className="mr-2 h-3 w-3 md:h-4 md:w-4" />
-            Add Employee
-          </Button>
+          <RoleBasedComponent allowedRoles={['executive', 'hr_manager', 'corporate_hr', 'line_manager']}>
+            {/* Export Reports Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="text-xs md:text-sm">
+                  <Download className="mr-2 h-3 w-3 md:h-4 md:w-4" />
+                  Export Reports
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onClick={handleExportDirectory}>
+                  <Users className="mr-2 h-4 w-4" />
+                  Employee Directory
+                </DropdownMenuItem>
+                <RoleBasedComponent allowedRoles={['executive', 'hr_manager']}>
+                  <DropdownMenuItem onClick={handleExportPayroll}>
+                    <DollarSign className="mr-2 h-4 w-4" />
+                    Payroll Data
+                  </DropdownMenuItem>
+                </RoleBasedComponent>
+                <DropdownMenuItem onClick={handleExportCompliance}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  Compliance Report
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportAnalytics}>
+                  <BarChart3 className="mr-2 h-4 w-4" />
+                  Department Analytics
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </RoleBasedComponent>
         </div>
       </div>
 

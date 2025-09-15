@@ -3,8 +3,17 @@ import { AppSidebar } from "@/components/AppSidebar"
 import { ReactNode } from "react"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { Button } from "@/components/ui/button"
-import { Menu } from "lucide-react"
+import { Menu, LogOut, User } from "lucide-react"
 import { ThemeToggle } from "@/components/ThemeToggle"
+import { useAuth } from "@/contexts/AuthContext"
+import { Badge } from "@/components/ui/badge"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 interface LayoutProps {
   children: ReactNode
@@ -12,6 +21,31 @@ interface LayoutProps {
 
 export default function Layout({ children }: LayoutProps) {
   const isMobile = useIsMobile()
+  const { user, logout } = useAuth()
+
+  const getRoleDisplayName = (role: string) => {
+    const roleNames: Record<string, string> = {
+      executive: 'Executive',
+      hr_manager: 'HR Manager',
+      corporate_hr: 'Corporate HR',
+      line_manager: 'Line Manager',
+      it_admin: 'IT Admin',
+      it_power_user: 'IT Power User',
+      consulting_hr: 'Consulting HR',
+      contract_hr: 'Contract HR',
+      corporate_user: 'Corporate User',
+      contract_staff: 'Contract Staff',
+      general_employee: 'Employee'
+    };
+    return roleNames[role] || role;
+  };
+
+  const getRoleBadgeVariant = (role: string) => {
+    if (['executive', 'hr_manager'].includes(role)) return 'default';
+    if (['corporate_hr', 'line_manager'].includes(role)) return 'secondary';
+    if (role.includes('it_')) return 'outline';
+    return 'secondary';
+  };
 
   return (
     <SidebarProvider>
@@ -46,9 +80,38 @@ export default function Layout({ children }: LayoutProps) {
             {/* Header Actions */}
             <div className="flex items-center space-x-2 md:space-x-4 flex-shrink-0">
               <div className="hidden md:flex items-center space-x-2">
-                <span className="text-xs md:text-sm text-muted-foreground">HR Department</span>
+                <span className="text-sm text-muted-foreground">Welcome,</span>
+                <span className="text-sm font-medium">{user?.firstName}</span>
+                <Badge variant={getRoleBadgeVariant(user?.role || '')}>
+                  {getRoleDisplayName(user?.role || '')}
+                </Badge>
               </div>
+              
               <ThemeToggle />
+              
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="flex items-center space-x-2">
+                    <User className="h-4 w-4" />
+                    {!isMobile && <span className="text-sm">{user?.firstName}</span>}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <div className="px-2 py-1.5">
+                    <div className="text-sm font-medium">{user?.firstName} {user?.lastName}</div>
+                    <div className="text-xs text-muted-foreground">{user?.email}</div>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      Role: {getRoleDisplayName(user?.role || '')}
+                    </div>
+                  </div>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={logout}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Logout
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              
               {isMobile && (
                 <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                   <Menu className="h-4 w-4" />

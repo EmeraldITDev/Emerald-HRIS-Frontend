@@ -80,70 +80,31 @@ export default function Dashboard() {
   const getRoleSpecificActions = () => {
     const actions = []
     
-    // General staff and line manager actions
-    if (user?.role === 'general_employee' || user?.role === 'line_manager') {
+    if (hasPermission('employees.create')) {
       actions.push({
-        label: 'Submit Leave Request',
-        icon: Calendar,
-        onClick: () => navigate('/leave-request'),
+        label: 'Add Employee',
+        icon: UserPlus,
+        onClick: handleAddEmployee,
         variant: 'default' as const
       })
-      actions.push({
-        label: 'Clock In',
-        icon: Calendar,
-        onClick: () => toast({ title: "Clocked In", description: "You have successfully clocked in." }),
-        variant: 'outline' as const
-      })
-      actions.push({
-        label: 'View Payroll',
-        icon: DollarSign,
-        onClick: () => navigate('/payroll'),
-        variant: 'outline' as const
-      })
-      return actions
     }
     
-    // HR Manager actions (removed Import Data, Add Employee, Import CSV)
-    if (user?.role === 'hr_manager') {
-      if (hasPermission('reports.view')) {
-        actions.push({
-          label: 'View Reports',
-          icon: BarChart3,
-          onClick: () => navigate('/reports'),
-          variant: 'outline' as const
-        })
-      }
-      return actions
+    if (hasPermission('csv.import')) {
+      actions.push({
+        label: 'Import CSV',
+        icon: Upload,
+        onClick: () => fileInputRef.current?.click(),
+        variant: 'outline' as const
+      })
     }
     
-    // Executive and Corporate HR actions
-    if (user?.role === 'executive' || user?.role === 'corporate_hr') {
-      if (hasPermission('employees.create')) {
-        actions.push({
-          label: 'Add Employee',
-          icon: UserPlus,
-          onClick: handleAddEmployee,
-          variant: 'default' as const
-        })
-      }
-      
-      if (hasPermission('csv.import')) {
-        actions.push({
-          label: 'Import CSV',
-          icon: Upload,
-          onClick: () => fileInputRef.current?.click(),
-          variant: 'outline' as const
-        })
-      }
-      
-      if (hasPermission('reports.view')) {
-        actions.push({
-          label: 'View Reports',
-          icon: BarChart3,
-          onClick: () => navigate('/reports'),
-          variant: 'outline' as const
-        })
-      }
+    if (hasPermission('reports.view')) {
+      actions.push({
+        label: 'View Reports',
+        icon: BarChart3,
+        onClick: () => navigate('/reports'),
+        variant: 'outline' as const
+      })
     }
     
     if (user?.role === 'it_power_user') {
@@ -483,7 +444,8 @@ export default function Dashboard() {
             </Button>
           ))}
           
-          <RoleBasedComponent allowedRoles={['executive', 'corporate_hr']}>
+          <RoleBasedComponent allowedRoles={['executive', 'hr_manager', 'corporate_hr']}>
+            {/* Import Data Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" className="text-xs md:text-sm">
@@ -503,6 +465,38 @@ export default function Dashboard() {
               </DropdownMenuContent>
             </DropdownMenu>
           </RoleBasedComponent>
+
+          <RoleBasedComponent allowedRoles={['executive', 'hr_manager', 'corporate_hr', 'line_manager']}>
+            {/* Export Reports Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="text-xs md:text-sm">
+                  <Download className="mr-2 h-3 w-3 md:h-4 md:w-4" />
+                  Export Reports
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onClick={handleExportDirectory}>
+                  <Users className="mr-2 h-4 w-4" />
+                  Employee Directory
+                </DropdownMenuItem>
+                <RoleBasedComponent allowedRoles={['executive', 'hr_manager']}>
+                  <DropdownMenuItem onClick={handleExportPayroll}>
+                    <DollarSign className="mr-2 h-4 w-4" />
+                    Payroll Data
+                  </DropdownMenuItem>
+                </RoleBasedComponent>
+                <DropdownMenuItem onClick={handleExportCompliance}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  Compliance Report
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportAnalytics}>
+                  <BarChart3 className="mr-2 h-4 w-4" />
+                  Department Analytics
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </RoleBasedComponent>
         </div>
       </div>
 
@@ -515,550 +509,331 @@ export default function Dashboard() {
         className="hidden"
       />
 
-      {/* Role-based Stats Cards */}
-      <RoleBasedComponent allowedRoles={['executive', 'hr_manager', 'corporate_hr']}>
-        <div className="grid gap-4 md:gap-6 grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
-          <Card className="border-border/50 shadow-sm">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Employees</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <div className="h-8 bg-muted rounded animate-pulse"></div>
-              ) : (
-                <>
-                  <div className="text-2xl font-bold">{allEmployees.length}</div>
-                  <p className="text-xs text-muted-foreground">
-                    +{allEmployees.filter(emp => {
-                      if (!emp.hire_date) return false
-                      const hireDate = new Date(emp.hire_date)
-                      const now = new Date()
-                      return hireDate.getMonth() === now.getMonth() && hireDate.getFullYear() === now.getFullYear()
-                    }).length} this month
-                  </p>
-                </>
-              )}
-            </CardContent>
-          </Card>
+      {/* Main Stats Cards - Now using allEmployees for accurate stats */}
+      <div className="grid gap-4 md:gap-6 grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
+        <Card className="border-border/50 shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Employees</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="h-8 bg-muted rounded animate-pulse"></div>
+            ) : (
+              <>
+                <div className="text-2xl font-bold">{allEmployees.length}</div>
+                <p className="text-xs text-muted-foreground">
+                  +{allEmployees.filter(emp => {
+                    if (!emp.hire_date) return false
+                    const hireDate = new Date(emp.hire_date)
+                    const now = new Date()
+                    return hireDate.getMonth() === now.getMonth() && hireDate.getFullYear() === now.getFullYear()
+                  }).length} this month
+                </p>
+              </>
+            )}
+          </CardContent>
+        </Card>
 
-          <Card className="border-border/50 shadow-sm">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Contract Employees</CardTitle>
-              <UserCheck className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <div className="h-8 bg-muted rounded animate-pulse"></div>
-              ) : (
-                <>
-                  <div className="text-2xl font-bold">
-                    {allEmployees.filter(emp => emp.employment_type === 'Contract').length}
+        <Card className="border-border/50 shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Contract Employees</CardTitle>
+            <UserCheck className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="h-8 bg-muted rounded animate-pulse"></div>
+            ) : (
+              <>
+                <div className="text-2xl font-bold">
+                  {allEmployees.filter(emp => emp.employment_type === 'Contract').length}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {allEmployees.length > 0 ? Math.round((allEmployees.filter(emp => emp.employment_type === 'Contract').length / allEmployees.length) * 100) : 0}% of workforce
+                </p>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/50 shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">FTE</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="h-8 bg-muted rounded animate-pulse"></div>
+            ) : (
+              <>
+                <div className="text-2xl font-bold">
+                  {allEmployees.filter(emp => emp.employment_type === 'Full-time').length}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {allEmployees.length > 0 ? Math.round((allEmployees.filter(emp => emp.employment_type === 'Full-time').length / allEmployees.length) * 100) : 0}% of workforce
+                </p>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/50 shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Monthly Payroll</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="h-8 bg-muted rounded animate-pulse"></div>
+            ) : (
+              <>
+                <div className="text-2xl font-bold">₦{(allEmployees.reduce((sum, emp) => sum + (emp.gross_salary || 0), 0) / 1000000).toFixed(1)}M</div>
+                <p className="text-xs text-muted-foreground">
+                  {allEmployees.length} employees
+                </p>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/50 shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Onboard Employees</CardTitle>
+            <UserPlus className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="h-8 bg-muted rounded animate-pulse"></div>
+            ) : (
+              <>
+                <div className="text-2xl font-bold">
+                  {allEmployees.filter(emp => {
+                    if (!emp.hire_date) return false
+                    const hireDate = new Date(emp.hire_date)
+                    const now = new Date()
+                    return hireDate.getMonth() === now.getMonth() && hireDate.getFullYear() === now.getFullYear()
+                  }).length}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  This month
+                </p>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/50 shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active</CardTitle>
+            <UserCheck className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="h-8 bg-muted rounded animate-pulse"></div>
+            ) : (
+              <>
+                <div className="text-2xl font-bold">{allEmployees.filter(emp => emp.employment_status === 'Active').length}</div>
+                <p className="text-xs text-muted-foreground">
+                  {allEmployees.length > 0 ? Math.round((allEmployees.filter(emp => emp.employment_status === 'Active').length / allEmployees.length) * 100) : 0}% of total
+                </p>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Grid sections */}
+      <div className="grid gap-4 md:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+        <Card className="border-border/50 shadow-sm">
+          <CardHeader>
+            <CardTitle className="flex items-center text-primary">
+              <FileText className="mr-2 h-5 w-5" />
+              Recent Activities
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {isLoading ? (
+              <div className="space-y-3">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="flex items-center justify-between text-sm">
+                    <div className="h-4 bg-muted rounded w-32 animate-pulse"></div>
+                    <div className="h-4 bg-muted rounded w-16 animate-pulse"></div>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    {allEmployees.length > 0 ? Math.round((allEmployees.filter(emp => emp.employment_type === 'Contract').length / allEmployees.length) * 100) : 0}% of workforce
-                  </p>
-                </>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="border-border/50 shadow-sm">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">FTE</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <div className="h-8 bg-muted rounded animate-pulse"></div>
-              ) : (
-                <>
-                  <div className="text-2xl font-bold">
-                    {allEmployees.filter(emp => emp.employment_type === 'Full-time').length}
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {recentEmployees.length > 0 && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span>New employee onboarded</span>
+                    <span className="text-muted-foreground">
+                      {recentEmployees[0]?.hire_date ? 
+                        format(new Date(recentEmployees[0].hire_date), 'MMM dd') : 
+                        'Recently'
+                      }
+                    </span>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    {allEmployees.length > 0 ? Math.round((allEmployees.filter(emp => emp.employment_type === 'Full-time').length / allEmployees.length) * 100) : 0}% of workforce
-                  </p>
-                </>
-              )}
-            </CardContent>
-          </Card>
+                )}
+                <div className="flex items-center justify-between text-sm">
+                  <span>Total employees: {allEmployees.length}</span>
+                  <span className="text-muted-foreground">Current</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span>Active employees: {allEmployees.filter(emp => emp.employment_status === 'Active').length}</span>
+                  <span className="text-muted-foreground">Today</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span>Departments: {Object.keys(departmentStats).length}</span>
+                  <span className="text-muted-foreground">Active</span>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-          <Card className="border-border/50 shadow-sm">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Monthly Payroll</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <div className="h-8 bg-muted rounded animate-pulse"></div>
-              ) : (
-                <>
-                  <div className="text-2xl font-bold">₦{(allEmployees.reduce((sum, emp) => sum + (emp.gross_salary || 0), 0) / 1000000).toFixed(1)}M</div>
-                  <p className="text-xs text-muted-foreground">
-                    {allEmployees.length} employees
-                  </p>
-                </>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="border-border/50 shadow-sm">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Onboard Employees</CardTitle>
-              <UserPlus className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <div className="h-8 bg-muted rounded animate-pulse"></div>
-              ) : (
-                <>
-                  <div className="text-2xl font-bold">
+        <Card className="border-border/50 shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-primary">Pending Actions</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {isLoading ? (
+              <div className="space-y-3">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="flex items-center justify-between">
+                    <div className="h-4 bg-muted rounded w-24 animate-pulse"></div>
+                    <div className="h-4 bg-muted rounded w-16 animate-pulse"></div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">Employees on leave</span>
+                  <span className="bg-warning/10 text-warning px-2 py-1 rounded text-xs font-medium">
+                    {allEmployees.filter(emp => emp.employment_status === 'On Leave').length} active
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">New hires this month</span>
+                  <span className="bg-success/10 text-success px-2 py-1 rounded text-xs font-medium">
                     {allEmployees.filter(emp => {
                       if (!emp.hire_date) return false
                       const hireDate = new Date(emp.hire_date)
                       const now = new Date()
                       return hireDate.getMonth() === now.getMonth() && hireDate.getFullYear() === now.getFullYear()
-                    }).length}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    This month
-                  </p>
-                </>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="border-border/50 shadow-sm">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active</CardTitle>
-              <UserCheck className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <div className="h-8 bg-muted rounded animate-pulse"></div>
-              ) : (
-                <>
-                  <div className="text-2xl font-bold">{allEmployees.filter(emp => emp.employment_status === 'Active').length}</div>
-                  <p className="text-xs text-muted-foreground">
-                    {allEmployees.length > 0 ? Math.round((allEmployees.filter(emp => emp.employment_status === 'Active').length / allEmployees.length) * 100) : 0}% of total
-                  </p>
-                </>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      </RoleBasedComponent>
-
-      {/* User-specific payroll for General Staff and Line Managers */}
-      <RoleBasedComponent allowedRoles={['general_employee', 'line_manager']}>
-        <div className="grid gap-4 md:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-          <Card className="border-border/50 shadow-sm">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">My Monthly Salary</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">₦450,000</div>
-              <p className="text-xs text-muted-foreground">
-                Next payment: March 31st
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-border/50 shadow-sm">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Leave Balance</CardTitle>
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">18 days</div>
-              <p className="text-xs text-muted-foreground">
-                Remaining this year
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-border/50 shadow-sm">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Attendance</CardTitle>
-              <UserCheck className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">96%</div>
-              <p className="text-xs text-muted-foreground">
-                This month
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      </RoleBasedComponent>
-
-      {/* Role-based Grid sections */}
-      <RoleBasedComponent allowedRoles={['executive', 'hr_manager', 'corporate_hr']}>
-        <div className="grid gap-4 md:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-          <Card className="border-border/50 shadow-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center text-primary">
-                <FileText className="mr-2 h-5 w-5" />
-                Recent Activities
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {isLoading ? (
-                <div className="space-y-3">
-                  {[1, 2, 3, 4].map((i) => (
-                    <div key={i} className="flex items-center justify-between text-sm">
-                      <div className="h-4 bg-muted rounded w-32 animate-pulse"></div>
-                      <div className="h-4 bg-muted rounded w-16 animate-pulse"></div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {recentEmployees.length > 0 && (
-                    <div className="flex items-center justify-between text-sm">
-                      <span>New employee onboarded</span>
-                      <span className="text-muted-foreground">
-                        {recentEmployees[0]?.hire_date ? 
-                          format(new Date(recentEmployees[0].hire_date), 'MMM dd') : 
-                          'Recently'
-                        }
-                      </span>
-                    </div>
-                  )}
-                  <div className="flex items-center justify-between text-sm">
-                    <span>Total employees: {allEmployees.length}</span>
-                    <span className="text-muted-foreground">Current</span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span>Active employees: {allEmployees.filter(emp => emp.employment_status === 'Active').length}</span>
-                    <span className="text-muted-foreground">Today</span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span>Departments: {Object.keys(departmentStats).length}</span>
-                    <span className="text-muted-foreground">Active</span>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="border-border/50 shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-primary">Pending Actions</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {isLoading ? (
-                <div className="space-y-3">
-                  {[1, 2, 3, 4].map((i) => (
-                    <div key={i} className="flex items-center justify-between">
-                      <div className="h-4 bg-muted rounded w-24 animate-pulse"></div>
-                      <div className="h-4 bg-muted rounded w-16 animate-pulse"></div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Employees on leave</span>
-                    <span className="bg-warning/10 text-warning px-2 py-1 rounded text-xs font-medium">
-                      {allEmployees.filter(emp => emp.employment_status === 'On Leave').length} active
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">New hires this month</span>
-                    <span className="bg-success/10 text-success px-2 py-1 rounded text-xs font-medium">
-                      {allEmployees.filter(emp => {
-                        if (!emp.hire_date) return false
-                        const hireDate = new Date(emp.hire_date)
-                        const now = new Date()
-                        return hireDate.getMonth() === now.getMonth() && hireDate.getFullYear() === now.getFullYear()
-                      }).length} new
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Departments with staff</span>
-                    <span className="bg-success/10 text-success px-2 py-1 rounded text-xs font-medium">
-                      {Object.keys(departmentStats).length} active
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Total salary budget</span>
-                    <span className="bg-info/10 text-info px-2 py-1 rounded text-xs font-medium">
-                      ₦{(allEmployees.reduce((sum, emp) => sum + (emp.gross_salary || 0), 0) / 1000000).toFixed(1)}M
-                    </span>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="border-border/50 shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-primary">Nigerian Compliance</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {isLoading ? (
-                <div className="space-y-3">
-                  {[1, 2, 3, 4].map((i) => (
-                    <div key={i} className="flex items-center justify-between">
-                      <div className="h-4 bg-muted rounded w-24 animate-pulse"></div>
-                      <div className="h-4 bg-muted rounded w-16 animate-pulse"></div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Employees with NIN</span>
-                    <span className="bg-success/10 text-success px-2 py-1 rounded text-xs font-medium">
-                      {allEmployees.filter(emp => emp.national_id).length} of {allEmployees.length}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Employees with BVN</span>
-                    <span className="bg-success/10 text-success px-2 py-1 rounded text-xs font-medium">
-                      {allEmployees.filter(emp => emp.bvn).length} of {allEmployees.length}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Pension PIN registered</span>
-                    <span className="bg-warning/10 text-warning px-2 py-1 rounded text-xs font-medium">
-                      {allEmployees.filter(emp => emp.pension_pin).length} of {allEmployees.length}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">NHF registered</span>
-                    <span className="bg-success/10 text-success px-2 py-1 rounded text-xs font-medium">
-                      {allEmployees.filter(emp => emp.nhf_number).length} of {allEmployees.length}
-                    </span>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="border-border/50 shadow-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center text-primary">
-                <Users className="mr-2 h-5 w-5" />
-                Recent Employees
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {isLoading ? (
-                <div className="space-y-3">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="flex items-center justify-between text-sm">
-                      <div className="h-4 bg-muted rounded w-24 animate-pulse"></div>
-                      <div className="h-4 bg-muted rounded w-16 animate-pulse"></div>
-                    </div>
-                  ))}
-                </div>
-              ) : allEmployees.length > 0 ? (
-                <div className="space-y-3">
-                  {allEmployees.slice(0, 5).map((employee) => (
-                    <div key={employee.id} className="flex items-center justify-between text-sm">
-                      <div>
-                        <div className="font-medium">{employee.first_name} {employee.last_name}</div>
-                        <div className="text-muted-foreground text-xs">{employee.job_title}</div>
-                      </div>
-                      <div className="text-right">
-                        {getStatusBadge(employee.employment_status || 'Active')}
-                        <div className="text-muted-foreground text-xs">
-                          {employee.hire_date ? format(new Date(employee.hire_date), 'MMM dd') : 'N/A'}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center text-muted-foreground text-sm py-4">
-                  No recent employees found
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="border-border/50 shadow-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center text-primary">
-                <Building2 className="mr-2 h-5 w-5" />
-                Department Breakdown
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {isLoading ? (
-                <div className="space-y-3">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="flex items-center justify-between">
-                      <div className="h-4 bg-muted rounded w-20 animate-pulse"></div>
-                      <div className="h-4 bg-muted rounded w-8 animate-pulse"></div>
-                    </div>
-                  ))}
-                </div>
-              ) : Object.keys(departmentStats).length > 0 ? (
-                <div className="space-y-3">
-                  {Object.entries(departmentStats)
-                    .sort(([,a], [,b]) => b - a)
-                    .map(([dept, count]) => (
-                      <div key={dept} className="flex items-center justify-between">
-                        <span className="text-sm">{dept}</span>
-                        <Badge variant="secondary" className="text-xs">{count} employees</Badge>
-                      </div>
-                    ))}
-                </div>
-              ) : (
-                <div className="text-center text-muted-foreground text-sm py-4">
-                  No department data available
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="border-border/50 shadow-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center text-primary">
-                <Calendar className="mr-2 h-5 w-5" />
-                Quick Actions
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-3">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="w-full justify-start text-sm"
-                  onClick={() => navigate('/employees')}
-                >
-                  <Users className="mr-2 h-4 w-4" />
-                  View All Employees
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="w-full justify-start text-sm"
-                  onClick={handleAddEmployee}
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add New Employee
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="w-full justify-start text-sm"
-                  onClick={() => navigate('/reports')}
-                >
-                  <BarChart3 className="mr-2 h-4 w-4" />
-                  View Reports
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </RoleBasedComponent>
-
-      {/* User-specific sections for General Staff and Line Managers */}
-      <RoleBasedComponent allowedRoles={['general_employee', 'line_manager']}>
-        <div className="grid gap-4 md:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-          <Card className="border-border/50 shadow-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center text-primary">
-                <Calendar className="mr-2 h-5 w-5" />
-                My Recent Activities
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-3">
-                <div className="flex items-center justify-between text-sm">
-                  <span>Leave request submitted</span>
-                  <span className="text-muted-foreground">March 10</span>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span>Payroll downloaded</span>
-                  <span className="text-muted-foreground">March 1</span>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span>Profile updated</span>
-                  <span className="text-muted-foreground">Feb 28</span>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span>Training completed</span>
-                  <span className="text-muted-foreground">Feb 25</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-border/50 shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-primary">Upcoming Events</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Team meeting</span>
-                  <span className="bg-info/10 text-info px-2 py-1 rounded text-xs font-medium">
-                    Tomorrow
+                    }).length} new
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm">Performance review</span>
-                  <span className="bg-warning/10 text-warning px-2 py-1 rounded text-xs font-medium">
-                    Next week
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Training session</span>
+                  <span className="text-sm">Departments with staff</span>
                   <span className="bg-success/10 text-success px-2 py-1 rounded text-xs font-medium">
-                    March 20
+                    {Object.keys(departmentStats).length} active
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">Total salary budget</span>
+                  <span className="bg-info/10 text-info px-2 py-1 rounded text-xs font-medium">
+                    ₦{(allEmployees.reduce((sum, emp) => sum + (emp.gross_salary || 0), 0) / 1000000).toFixed(1)}M
                   </span>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            )}
+          </CardContent>
+        </Card>
 
-          <Card className="border-border/50 shadow-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center text-primary">
-                <User className="mr-2 h-5 w-5" />
-                Quick Actions
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
+        <Card className="border-border/50 shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-primary">Nigerian Compliance</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {isLoading ? (
               <div className="space-y-3">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="w-full justify-start text-sm"
-                  onClick={() => navigate('/leave-request')}
-                >
-                  <Calendar className="mr-2 h-4 w-4" />
-                  Submit Leave Request
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="w-full justify-start text-sm"
-                  onClick={() => toast({ title: "Clocked In", description: "You have successfully clocked in." })}
-                >
-                  <Calendar className="mr-2 h-4 w-4" />
-                  Clock In
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="w-full justify-start text-sm"
-                  onClick={() => navigate('/payroll')}
-                >
-                  <DollarSign className="mr-2 h-4 w-4" />
-                  View Payroll
-                </Button>
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="flex items-center justify-between">
+                    <div className="h-4 bg-muted rounded w-24 animate-pulse"></div>
+                    <div className="h-4 bg-muted rounded w-16 animate-pulse"></div>
+                  </div>
+                ))}
               </div>
-            </CardContent>
-          </Card>
-        </div>
-      </RoleBasedComponent>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">Employees with NIN</span>
+                  <span className="bg-success/10 text-success px-2 py-1 rounded text-xs font-medium">
+                    {allEmployees.filter(emp => emp.national_id).length} of {allEmployees.length}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">Employees with BVN</span>
+                  <span className="bg-success/10 text-success px-2 py-1 rounded text-xs font-medium">
+                    {allEmployees.filter(emp => emp.bvn).length} of {allEmployees.length}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">Pension PIN registered</span>
+                  <span className="bg-warning/10 text-warning px-2 py-1 rounded text-xs font-medium">
+                    {allEmployees.filter(emp => emp.pension_pin).length} of {allEmployees.length}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">NHF registered</span>
+                  <span className="bg-success/10 text-success px-2 py-1 rounded text-xs font-medium">
+                    {allEmployees.filter(emp => emp.nhf_number).length} of {allEmployees.length}
+                  </span>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/50 shadow-sm">
+          <CardHeader>
+            <CardTitle className="flex items-center text-primary">
+              <Users className="mr-2 h-5 w-5" />
+              Recent Employees
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {isLoading ? (
+              <div className="space-y-3">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="flex items-center justify-between text-sm">
+                    <div className="h-4 bg-muted rounded w-24 animate-pulse"></div>
+                    <div className="h-4 bg-muted rounded w-16 animate-pulse"></div>
+                  </div>
+                ))}
+              </div>
+            ) : allEmployees.length > 0 ? (
+              <div className="space-y-3">
+                {allEmployees.map((employee) => (
+                  <div key={employee.id} className="flex items-center justify-between text-sm">
+                    <div>
+                      <div className="font-medium">{employee.first_name} {employee.last_name}</div>
+                      <div className="text-muted-foreground text-xs">{employee.job_title}</div>
+                    </div>
+                    <div className="text-right">
+                      {getStatusBadge(employee.employment_status || 'Active')}
+                      <div className="text-muted-foreground text-xs">
+                        {employee.hire_date ? format(new Date(employee.hire_date), 'MMM dd') : 'N/A'}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center text-muted-foreground text-sm py-4">
+                No recent employees found
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/50 shadow-sm">
+          <CardHeader>
+            <CardTitle className="flex items-center text-primary">
+              <Building2 className="mr-2 h-5 w-5" />
+              Department Breakdown
+            </CardTitle>
+          </CardHeader>
           <CardContent className="space-y-4">
             {isLoading ? (
               <div className="space-y-3">
@@ -1119,27 +894,20 @@ export default function Dashboard() {
                 variant="outline" 
                 size="sm" 
                 className="w-full justify-start text-sm"
-                onClick={handleExportDirectory}
-              >
-                <Download className="mr-2 h-4 w-4" />
-                Export Employee Data
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="w-full justify-start text-sm"
-                onClick={handleExportAnalytics}
+                onClick={() => navigate('/reports')}
               >
                 <BarChart3 className="mr-2 h-4 w-4" />
-                Generate Reports
+                View Reports
               </Button>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Commented out for production - uncomment for API testing */}
-      {/* <ApiTest /> */}
+      {/* Test/Debug Component for IT Power Users */}
+      <RoleBasedComponent allowedRoles={['it_power_user']}>
+        <ApiTest />
+      </RoleBasedComponent>
     </div>
   )
 }

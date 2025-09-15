@@ -21,6 +21,8 @@ import {
 } from "@/components/ui/select"
 import { Calculator, Download, FileText, Lock, Settings } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { useAuth } from "@/contexts/AuthContext"
+import { RoleBasedComponent } from "@/components/RoleBasedComponent"
 
 // Sample payroll data
 const payrollRecords = [
@@ -76,6 +78,23 @@ export default function Payroll() {
     deduction: "",
   })
   const { toast } = useToast()
+  const { user } = useAuth()
+
+  // Filter payroll records based on user role
+  const getVisiblePayrollRecords = () => {
+    if (!user) return []
+    
+    if (user.role === 'hr_manager') {
+      // HR Manager can see all payroll records
+      return payrollRecords
+    } else {
+      // Other users can only see their own payroll
+      return payrollRecords.filter(record => 
+        record.employeeId === user.email || 
+        record.employeeName.toLowerCase().includes(user.email.split('@')[0].toLowerCase())
+      )
+    }
+  }
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-NG', {
@@ -372,100 +391,106 @@ export default function Payroll() {
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
-          <Button variant="outline" size="sm" onClick={handleTaxSettings}>
-            <Settings className="mr-2 h-4 w-4" />
-            Tax Settings
-          </Button>
-          <Button variant="outline" size="sm" onClick={handleExportPayroll}>
-            <Download className="mr-2 h-4 w-4" />
-            Export Payroll
-          </Button>
-          <Button size="sm" onClick={handleLockPeriod}>
-            <Lock className="mr-2 h-4 w-4" />
-            Lock Period
-          </Button>
+          <RoleBasedComponent allowedRoles={['hr_manager', 'executive']}>
+            <Button variant="outline" size="sm" onClick={handleTaxSettings}>
+              <Settings className="mr-2 h-4 w-4" />
+              Tax Settings
+            </Button>
+          </RoleBasedComponent>
+          <RoleBasedComponent allowedRoles={['hr_manager', 'executive']}>
+            <Button variant="outline" size="sm" onClick={handleExportPayroll}>
+              <Download className="mr-2 h-4 w-4" />
+              Export Payroll
+            </Button>
+          </RoleBasedComponent>
+          <RoleBasedComponent allowedRoles={['hr_manager']}>
+            <Button size="sm" onClick={handleLockPeriod}>
+              <Lock className="mr-2 h-4 w-4" />
+              Lock Period
+            </Button>
+          </RoleBasedComponent>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
-        {/* Payroll Calculator */}
-        <Card className="lg:col-span-1 border-border/50 shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-primary flex items-center">
-              <Calculator className="mr-2 h-5 w-5" />
-              Payroll Calculator
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label>Employee</Label>
-              <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select employee" />
-                </SelectTrigger>
-                <SelectContent className="bg-popover border shadow-lg">
-                  {onboardEmployees.map((emp) => (
-                    <SelectItem key={emp.id} value={emp.id}>
-                      {emp.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Pay Period</Label>
-              <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select period" />
-                </SelectTrigger>
-                <SelectContent className="bg-popover border shadow-lg">
-                  <SelectItem value="2024-01">January 2024</SelectItem>
-                  <SelectItem value="2024-02">February 2024</SelectItem>
-                  <SelectItem value="2024-03">March 2024</SelectItem>
-                  <SelectItem value="2024-04">April 2024</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-3">
-              <div>
-                <Label htmlFor="grossSalary">Gross Salary (₦)</Label>
-                <Input
-                  id="grossSalary"
-                  type="number"
-                  placeholder="2,500,000"
-                  value={payrollData.grossSalary}
-                  onChange={(e) => setPayrollData({...payrollData, grossSalary: e.target.value})}
-                />
+        {/* Payroll Calculator - Only for HR Manager */}
+        <RoleBasedComponent allowedRoles={['hr_manager']}>
+          <Card className="lg:col-span-1 border-border/50 shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-primary flex items-center">
+                <Calculator className="mr-2 h-5 w-5" />
+                Payroll Calculator
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>Employee</Label>
+                <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select employee" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover border shadow-lg">
+                    {onboardEmployees.map((emp) => (
+                      <SelectItem key={emp.id} value={emp.id}>
+                        {emp.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
-
-              <div>
-                <Label htmlFor="earnings">Additional Earnings (₦)</Label>
-                <Input
-                  id="earnings"
-                  type="number"
-                  placeholder="50,000"
-                  value={payrollData.earnings}
-                  onChange={(e) => setPayrollData({...payrollData, earnings: e.target.value})}
-                />
+              <div className="space-y-2">
+                <Label>Pay Period</Label>
+                <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select period" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover border shadow-lg">
+                    <SelectItem value="2024-01">January 2024</SelectItem>
+                    <SelectItem value="2024-02">February 2024</SelectItem>
+                    <SelectItem value="2024-03">March 2024</SelectItem>
+                    <SelectItem value="2024-04">April 2024</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
-              <div>
-                <Label htmlFor="deduction">Personal Deduction (₦)</Label>
-                <Input
-                  id="deduction"
-                  type="number"
-                  placeholder="25,000"
-                  value={payrollData.deduction}
-                  onChange={(e) => setPayrollData({...payrollData, deduction: e.target.value})}
-                />
-              </div>
+              <div className="space-y-3">
+                <div>
+                  <Label htmlFor="grossSalary">Gross Salary (₦)</Label>
+                  <Input
+                    id="grossSalary"
+                    type="number"
+                    placeholder="2,500,000"
+                    value={payrollData.grossSalary}
+                    onChange={(e) => setPayrollData({...payrollData, grossSalary: e.target.value})}
+                  />
+                </div>
 
-            </div>
-          </CardContent>
-        </Card>
+                <div>
+                  <Label htmlFor="earnings">Additional Earnings (₦)</Label>
+                  <Input
+                    id="earnings"
+                    type="number"
+                    placeholder="50,000"
+                    value={payrollData.earnings}
+                    onChange={(e) => setPayrollData({...payrollData, earnings: e.target.value})}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="deduction">Personal Deduction (₦)</Label>
+                  <Input
+                    id="deduction"
+                    type="number"
+                    placeholder="25,000"
+                    value={payrollData.deduction}
+                    onChange={(e) => setPayrollData({...payrollData, deduction: e.target.value})}
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </RoleBasedComponent>
 
         {/* Payroll Breakdown */}
         <Card className="lg:col-span-2 border-border/50 shadow-sm">

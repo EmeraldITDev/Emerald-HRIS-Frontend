@@ -19,11 +19,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Calendar, Plus, Clock, CalendarDays, LogIn, LogOut, Bell, Cake, Award, ChevronDown } from "lucide-react"
+import { Calendar, Plus, Clock, CalendarDays, LogIn, LogOut, Bell, Cake, Award, ChevronDown, Download, FileText, User, Phone, Building, Users, Upload } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { format } from "date-fns"
+import { Textarea } from "@/components/ui/textarea"
+import { useAuth } from "@/contexts/AuthContext"
+import { RoleBasedComponent } from "@/components/RoleBasedComponent"
 import apiService, { Employee } from "@/lib/api"
 
 // Sample employee data for dropdown
@@ -198,9 +201,16 @@ export default function Attendance() {
   const [leaveType, setLeaveType] = useState("")
   const [startDate, setStartDate] = useState("")
   const [endDate, setEndDate] = useState("")
+  const [reason, setReason] = useState("")
+  const [contactDuringLeave, setContactDuringLeave] = useState("")
+  const [medicalCertificate, setMedicalCertificate] = useState<File | null>(null)
+  const [birthCertificate, setBirthCertificate] = useState<File | null>(null)
+  const [deathCertificate, setDeathCertificate] = useState<File | null>(null)
+  const [admissionLetter, setAdmissionLetter] = useState<File | null>(null)
+  const [otherDocument, setOtherDocument] = useState<File | null>(null)
+  const [otherDocumentType, setOtherDocumentType] = useState("")
   const [records, setRecords] = useState(leaveRecords)
   const [attendance, setAttendance] = useState(attendanceRecords)
-  const [clockInEmployee, setClockInEmployee] = useState("")
   const [currentTime] = useState(new Date())
   const [notifications] = useState(getNotifications())
   const [currentMonthEvents] = useState(getCurrentMonthEvents())
@@ -208,9 +218,9 @@ export default function Attendance() {
   const [startDateOpen, setStartDateOpen] = useState(false)
   const [endDateOpen, setEndDateOpen] = useState(false)
   const { toast } = useToast()
+  const { user } = useAuth()
   const [employees, setEmployees] = useState<Employee[]>([])
   const [isLoadingEmployees, setIsLoadingEmployees] = useState(false)
-  // Add this state variable for leave requests
   const [leaveRequests, setLeaveRequests] = useState<any[]>([])
   const [isLoadingLeaveRequests, setIsLoadingLeaveRequests] = useState(false)
 
@@ -277,22 +287,65 @@ export default function Attendance() {
   const selectedEmp = employees.find(emp => emp.id?.toString() === selectedEmployee.toString())
   const remainingDays = selectedEmp ? (selectedEmp.vacation_days || selectedEmp.vacationDays || 0) - (selectedEmp.usedDays || 0) : 0
 
-  // Updated handleSubmit function with database persistence
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>, fileType: string) => {
+    const file = event.target.files?.[0]
+    if (file) {
+      switch (fileType) {
+        case 'medical':
+          setMedicalCertificate(file)
+          break
+        case 'birth':
+          setBirthCertificate(file)
+          break
+        case 'death':
+          setDeathCertificate(file)
+          break
+        case 'admission':
+          setAdmissionLetter(file)
+          break
+        case 'other':
+          setOtherDocument(file)
+          break
+      }
+      toast({
+        title: "File uploaded",
+        description: `${file.name} has been uploaded successfully`,
+      })
+    }
+  }
+
+  const handleGenerateReport = (reportType: string) => {
+    toast({
+      title: "Generating Report",
+      description: `${reportType} attendance report is being generated...`,
+    })
+  }
+
+  // Updated handleSubmit function with enhanced leave request data
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
     if (!selectedEmployee || !leaveType || !startDate || !endDate) {
       toast({
-        title: "Error",
+        title: "Error", 
         description: "Please fill in all required fields",
         variant: "destructive",
       })
       return
     }
 
+    // Check if user is contract staff
+    const selectedEmp = employees.find(emp => emp.id?.toString() === selectedEmployee)
+    if (selectedEmp?.employment_type === 'Contract') {
+      toast({
+        title: "Access Denied",
+        description: "Contract staff cannot submit leave requests",
+        variant: "destructive",
+      })
+      return
+    }
+
     try {
-      const selectedEmp = employees.find(emp => emp.id?.toString() === selectedEmployee)
-      
       // Calculate leave days
       const start = new Date(startDate)
       const end = new Date(endDate)
@@ -316,7 +369,8 @@ export default function Attendance() {
         leave_type: leaveType,
         start_date: startDate,
         end_date: endDate,
-        reason: "Leave request submitted via HRIS",
+        reason: reason,
+        contact_during_leave: contactDuringLeave,
         status: "Pending",
         days_requested: daysDiff
       }
@@ -348,7 +402,8 @@ export default function Attendance() {
           start_date: startDate,
           end_date: endDate,
           status: "Pending",
-          reason: "Leave request submitted via HRIS",
+          reason: reason,
+          contact_during_leave: contactDuringLeave,
           days_requested: daysDiff
         }
         
@@ -367,6 +422,14 @@ export default function Attendance() {
       setLeaveType("")
       setStartDate("")
       setEndDate("")
+      setReason("")
+      setContactDuringLeave("")
+      setMedicalCertificate(null)
+      setBirthCertificate(null)
+      setDeathCertificate(null)
+      setAdmissionLetter(null)
+      setOtherDocument(null)
+      setOtherDocumentType("")
       
     } catch (error) {
       console.error('Error submitting leave request:', error)
@@ -379,27 +442,26 @@ export default function Attendance() {
   }
 
   const handleClockIn = () => {
-    if (!clockInEmployee) {
+    if (!user) {
       toast({
         title: "Error",
-        description: "Please select an employee to clock in",
+        description: "Please log in to clock in",
         variant: "destructive",
       })
       return
     }
 
-    const selectedEmp = employees.find(emp => emp.id?.toString() === clockInEmployee)
     const today = new Date().toISOString().split('T')[0]
     
     // Check if already clocked in today
     const existingRecord = attendance.find(record => 
-      record.employeeId === clockInEmployee && record.date === today
+      record.employeeId === user.email && record.date === today
     )
     
     if (existingRecord && !existingRecord.clockOut) {
       toast({
         title: "Error",
-        description: "Employee is already clocked in today",
+        description: "You are already clocked in today",
         variant: "destructive",
       })
       return
@@ -407,8 +469,8 @@ export default function Attendance() {
 
     const newAttendance = {
       id: attendance.length + 1,
-      employeeId: clockInEmployee,
-      employeeName: selectedEmp ? `${selectedEmp.first_name} ${selectedEmp.last_name}` : "Unknown Employee",
+      employeeId: user.email,
+      employeeName: user.email.split('@')[0], // Use email username as name
       date: today,
       clockIn: currentTime.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
       clockOut: "",
@@ -416,11 +478,10 @@ export default function Attendance() {
     }
 
     setAttendance([newAttendance, ...attendance])
-    setClockInEmployee("")
     
     toast({
       title: "Success",
-      description: `${selectedEmp ? `${selectedEmp.first_name} ${selectedEmp.last_name}` : "Employee"} clocked in successfully`,
+      description: `${user.email} clocked in successfully`,
     })
   }
 
@@ -500,11 +561,33 @@ export default function Attendance() {
 
   return (
     <div className="space-y-4 md:space-y-6">
-      <div>
-        <h1 className="text-2xl md:text-3xl font-bold text-foreground">Attendance & Leave</h1>
-        <p className="text-sm md:text-base text-muted-foreground">
-          Manage employee leave requests and track attendance records
-        </p>
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground">Attendance & Leave</h1>
+          <p className="text-sm md:text-base text-muted-foreground">
+            Manage employee leave requests and track attendance records
+          </p>
+        </div>
+        <RoleBasedComponent allowedRoles={['executive', 'hr_manager']}>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" onClick={() => handleGenerateReport('Daily')}>
+              <Download className="mr-2 h-4 w-4" />
+              Daily Report
+            </Button>
+            <Button variant="outline" onClick={() => handleGenerateReport('Weekly')}>
+              <FileText className="mr-2 h-4 w-4" />
+              Weekly Report
+            </Button>
+            <Button variant="outline" onClick={() => handleGenerateReport('Monthly')}>
+              <Calendar className="mr-2 h-4 w-4" />
+              Monthly Report
+            </Button>
+            <Button variant="outline" onClick={() => handleGenerateReport('Yearly')}>
+              <Users className="mr-2 h-4 w-4" />
+              Yearly Report
+            </Button>
+          </div>
+        </RoleBasedComponent>
       </div>
 
       {/* Notifications Section */}
@@ -631,31 +714,19 @@ export default function Attendance() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label>Select Employee</Label>
-              <Select value={clockInEmployee} onValueChange={setClockInEmployee}>
-                <SelectTrigger>
-                  <SelectValue placeholder={isLoadingEmployees ? "Loading employees..." : "Select employee to clock in"} />
-                </SelectTrigger>
-                <SelectContent className="bg-popover border shadow-lg max-h-60">
-                  {employees.length > 0 ? (
-                    employees.map((emp) => (
-                      <SelectItem key={emp.id} value={emp.id?.toString() || '0'}>
-                        {emp.employee_code} - {emp.first_name} {emp.last_name}
-                      </SelectItem>
-                    ))
-                  ) : (
-                    <SelectItem value="no-employees" disabled>
-                      {isLoadingEmployees ? "Loading..." : "No employees available"}
-                    </SelectItem>
-                  )}
-                </SelectContent>
-              </Select>
+            <div className="flex items-center justify-between p-3 bg-accent/20 rounded-lg">
+              <div className="flex items-center space-x-3">
+                <User className="h-5 w-5 text-primary" />
+                <div>
+                  <div className="font-medium text-sm">Current User: {user?.email}</div>
+                  <div className="text-xs text-muted-foreground">Ready to clock in</div>
+                </div>
+              </div>
             </div>
             <Button 
               onClick={handleClockIn} 
               className="w-full"
-              disabled={!clockInEmployee || isLoadingEmployees}
+              disabled={!user}
             >
               <LogIn className="mr-2 h-4 w-4" />
               Clock In
@@ -663,173 +734,334 @@ export default function Attendance() {
           </CardContent>
         </Card>
 
-        <Card className="border-border/50 shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-primary flex items-center">
-              <Clock className="mr-2 h-5 w-5" />
-              Today's Attendance
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {attendance
-                .filter(record => record.date === new Date().toISOString().split('T')[0])
-                .map((record) => (
-                  <div key={record.id} className="flex justify-between items-center p-2 bg-accent/50 rounded-lg">
-                    <div>
-                      <div className="font-medium text-sm">{record.employeeName}</div>
-                      <div className="text-xs text-muted-foreground">
-                        In: {record.clockIn} {record.clockOut && `• Out: ${record.clockOut}`}
+        <RoleBasedComponent allowedRoles={['hr_manager', 'corporate_hr', 'executive']}>
+          <Card className="border-border/50 shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-primary flex items-center">
+                <Clock className="mr-2 h-5 w-5" />
+                Today's Attendance
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {attendance
+                  .filter(record => record.date === new Date().toISOString().split('T')[0])
+                  .map((record) => (
+                    <div key={record.id} className="flex justify-between items-center p-2 bg-accent/50 rounded-lg">
+                      <div>
+                        <div className="font-medium text-sm">{record.employeeName}</div>
+                        <div className="text-xs text-muted-foreground">
+                          In: {record.clockIn} {record.clockOut && `• Out: ${record.clockOut}`}
+                        </div>
                       </div>
+                      {!record.clockOut && (
+                        <Button size="sm" onClick={() => handleClockOut(record.id)} variant="outline">
+                          <LogOut className="mr-1 h-3 w-3" />
+                          Clock Out
+                        </Button>
+                      )}
                     </div>
-                    {!record.clockOut && (
-                      <Button size="sm" onClick={() => handleClockOut(record.id)} variant="outline">
-                        <LogOut className="mr-1 h-3 w-3" />
-                        Clock Out
-                      </Button>
-                    )}
-                  </div>
-                ))
-              }
-              {attendance.filter(record => record.date === new Date().toISOString().split('T')[0]).length === 0 && (
-                <p className="text-sm text-muted-foreground">No attendance records for today</p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+                  ))
+                }
+                {attendance.filter(record => record.date === new Date().toISOString().split('T')[0]).length === 0 && (
+                  <p className="text-sm text-muted-foreground">No attendance records for today</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </RoleBasedComponent>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
-        {/* Leave Request Form */}
-        <Card className="lg:col-span-1 border-border/50 shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-primary flex items-center">
-              <CalendarDays className="mr-2 h-5 w-5" />
-              Submit Leave Request
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="employee">Employee *</Label>
-                <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={isLoadingEmployees ? "Loading employees..." : "Select employee"} />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover border shadow-lg max-h-60">
-                    {employees.length > 0 ? (
-                      employees.map((emp) => (
-                        <SelectItem key={emp.id} value={emp.id?.toString() || '0'}>
-                          {emp.employee_code} - {emp.first_name} {emp.last_name}
-                        </SelectItem>
-                      ))
-                    ) : (
-                      <SelectItem value="no-employees" disabled>
-                        {isLoadingEmployees ? "Loading..." : "No employees available"}
-                      </SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="leaveType">Leave Type *</Label>
-                <Select value={leaveType} onValueChange={setLeaveType}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select leave type" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover border shadow-lg">
-                    <SelectItem value="Annual Leave">Annual Leave</SelectItem>
-                    <SelectItem value="Sick Leave">Sick Leave</SelectItem>
-                    <SelectItem value="Maternity Leave">Maternity Leave</SelectItem>
-                    <SelectItem value="Paternity Leave">Paternity Leave</SelectItem>
-                    <SelectItem value="Emergency Leave">Emergency Leave</SelectItem>
-                    <SelectItem value="Study Leave">Study Leave</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label htmlFor="startDate">Start Date *</Label>
-                  <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant={"outline"}
-                        className="w-full justify-start text-left font-normal"
-                      >
-                        <Calendar className="mr-2 h-4 w-4" />
-                        {startDate ? format(new Date(startDate), "PPP") : <span>Pick start date</span>}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <CalendarComponent
-                        mode="single"
-                        selected={startDate ? new Date(startDate) : undefined}
-                        onSelect={(date) => {
-                          if (date) {
-                            setStartDate(format(date, "yyyy-MM-dd"))
-                            setStartDateOpen(false)
-                          }
-                        }}
-                        initialFocus
-                        className="pointer-events-auto"
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="endDate">End Date *</Label>
-                  <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant={"outline"}
-                        className="w-full justify-start text-left font-normal"
-                      >
-                        <Calendar className="mr-2 h-4 w-4" />
-                        {endDate ? format(new Date(endDate), "PPP") : <span>Pick end date</span>}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <CalendarComponent
-                        mode="single"
-                        selected={endDate ? new Date(endDate) : undefined}
-                        onSelect={(date) => {
-                          if (date) {
-                            setEndDate(format(date, "yyyy-MM-dd"))
-                            setEndDateOpen(false)
-                          }
-                        }}
-                        disabled={(date) => startDate ? date < new Date(startDate) : false}
-                        initialFocus
-                        className="pointer-events-auto"
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-              </div>
-
-              {days > 0 && (
-                <div className="p-3 bg-accent/50 rounded-lg">
-                  <div className="text-sm font-medium">Leave Summary:</div>
-                  <div className="text-sm text-muted-foreground">
-                    Duration: {days} day{days > 1 ? 's' : ''}
+        {/* Enhanced Leave Request Form */}
+        {user?.role !== 'contract_staff' && (
+          <Card className="lg:col-span-1 border-border/50 shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-primary flex items-center">
+                <CalendarDays className="mr-2 h-5 w-5" />
+                Submit Leave Request
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Section A: Employee Information */}
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold text-primary border-b pb-2">Section A: Employee Information</h3>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="employee">Employee *</Label>
+                    <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
+                      <SelectTrigger>
+                        <SelectValue placeholder={isLoadingEmployees ? "Loading employees..." : "Select employee"} />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover border shadow-lg max-h-60">
+                        {employees.length > 0 ? (
+                          employees.filter(emp => emp.employment_type !== 'Contract').map((emp) => (
+                            <SelectItem key={emp.id} value={emp.id?.toString() || '0'}>
+                              {emp.employee_code} - {emp.first_name} {emp.last_name}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="no-employees" disabled>
+                            {isLoadingEmployees ? "Loading..." : "No employees available"}
+                          </SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
                   </div>
+
                   {selectedEmp && (
-                    <div className="text-sm text-muted-foreground">
-                      Remaining: {remainingDays - days} days after approval
+                    <div className="p-3 bg-accent/20 rounded-lg space-y-2 text-xs">
+                      <div className="flex justify-between">
+                        <span className="font-medium">Employee ID:</span>
+                        <span>{selectedEmp.employee_code}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="font-medium">Job Title:</span>
+                        <span>{selectedEmp.job_title || 'N/A'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="font-medium">Department:</span>
+                        <span>{selectedEmp.department || 'N/A'}</span>
+                      </div>
                     </div>
                   )}
-                </div>
-              )}
 
-              <Button type="submit" className="w-full">
-                <Plus className="mr-2 h-4 w-4" />
-                Submit Request
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+                  <div className="space-y-2">
+                    <Label htmlFor="contactDuringLeave">Contact During Leave</Label>
+                    <Input
+                      id="contactDuringLeave"
+                      value={contactDuringLeave}
+                      onChange={(e) => setContactDuringLeave(e.target.value)}
+                      placeholder="Phone number or email for emergencies"
+                    />
+                  </div>
+
+                  <RoleBasedComponent allowedRoles={['hr_manager', 'corporate_hr', 'executive']}>
+                    {selectedEmp && (
+                      <div className="p-3 bg-primary/5 rounded-lg">
+                        <h4 className="text-xs font-medium mb-2">Leave Balance Available</h4>
+                        <div className="text-sm">
+                          <div className="flex justify-between">
+                            <span>Annual Leave:</span>
+                            <span>{selectedEmp.vacation_days || 25} days</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Remaining:</span>
+                            <span>{remainingDays} days</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </RoleBasedComponent>
+                </div>
+
+                {/* Section B: Leave Details */}
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold text-primary border-b pb-2">Section B: Leave Details</h3>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="leaveType">Type of Leave Requested *</Label>
+                    <Select value={leaveType} onValueChange={setLeaveType}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select leave type" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover border shadow-lg">
+                        <SelectItem value="Annual">Annual Leave</SelectItem>
+                        <SelectItem value="Sick">Sick Leave</SelectItem>
+                        <SelectItem value="Maternity">Maternity Leave</SelectItem>
+                        <SelectItem value="Paternity">Paternity Leave</SelectItem>
+                        <SelectItem value="Compassionate">Compassionate Leave</SelectItem>
+                        <SelectItem value="Study">Study Leave</SelectItem>
+                        <SelectItem value="Unpaid">Unpaid Leave</SelectItem>
+                        <SelectItem value="Other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="startDate">Start Date *</Label>
+                      <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant={"outline"}
+                            className="w-full justify-start text-left font-normal"
+                          >
+                            <Calendar className="mr-2 h-4 w-4" />
+                            {startDate ? format(new Date(startDate), "PPP") : <span>Pick start date</span>}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <CalendarComponent
+                            mode="single"
+                            selected={startDate ? new Date(startDate) : undefined}
+                            onSelect={(date) => {
+                              if (date) {
+                                setStartDate(format(date, "yyyy-MM-dd"))
+                                setStartDateOpen(false)
+                              }
+                            }}
+                            initialFocus
+                            className="pointer-events-auto"
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="endDate">End Date *</Label>
+                      <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant={"outline"}
+                            className="w-full justify-start text-left font-normal"
+                          >
+                            <Calendar className="mr-2 h-4 w-4" />
+                            {endDate ? format(new Date(endDate), "PPP") : <span>Pick end date</span>}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <CalendarComponent
+                            mode="single"
+                            selected={endDate ? new Date(endDate) : undefined}
+                            onSelect={(date) => {
+                              if (date) {
+                                setEndDate(format(date, "yyyy-MM-dd"))
+                                setEndDateOpen(false)
+                              }
+                            }}
+                            disabled={(date) => startDate ? date < new Date(startDate) : false}
+                            initialFocus
+                            className="pointer-events-auto"
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </div>
+
+                  {days > 0 && (
+                    <div className="p-3 bg-accent/50 rounded-lg">
+                      <div className="text-sm font-medium">Total Number of Days: {days}</div>
+                      {selectedEmp && (
+                        <div className="text-sm text-muted-foreground">
+                          Remaining after approval: {remainingDays - days} days
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    <Label htmlFor="reason">Reason for Leave {leaveType === 'Annual' ? '(Optional)' : ''}</Label>
+                    <Textarea
+                      id="reason"
+                      value={reason}
+                      onChange={(e) => setReason(e.target.value)}
+                      placeholder={leaveType === 'Annual' ? 'Optional: Brief reason for annual leave' : 'Please provide reason for leave request'}
+                      rows={3}
+                    />
+                  </div>
+                </div>
+
+                {/* Section C: Attachments */}
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold text-primary border-b pb-2">Section C: Attachments</h3>
+                  
+                  <div className="space-y-3">
+                    {(leaveType === 'Sick') && (
+                      <div className="space-y-2">
+                        <Label htmlFor="medicalCert">Medical Certificate</Label>
+                        <Input
+                          id="medicalCert"
+                          type="file"
+                          accept=".pdf,.jpg,.jpeg,.png"
+                          onChange={(e) => handleFileUpload(e, 'medical')}
+                          className="cursor-pointer"
+                        />
+                      </div>
+                    )}
+                    
+                    {(leaveType === 'Maternity' || leaveType === 'Paternity') && (
+                      <div className="space-y-2">
+                        <Label htmlFor="birthCert">Birth/Adoption Certificate</Label>
+                        <Input
+                          id="birthCert"
+                          type="file"
+                          accept=".pdf,.jpg,.jpeg,.png"
+                          onChange={(e) => handleFileUpload(e, 'birth')}
+                          className="cursor-pointer"
+                        />
+                      </div>
+                    )}
+                    
+                    {leaveType === 'Compassionate' && (
+                      <div className="space-y-2">
+                        <Label htmlFor="deathCert">Death Certificate/Obituary</Label>
+                        <Input
+                          id="deathCert"
+                          type="file"
+                          accept=".pdf,.jpg,.jpeg,.png"
+                          onChange={(e) => handleFileUpload(e, 'death')}
+                          className="cursor-pointer"
+                        />
+                      </div>
+                    )}
+                    
+                    {leaveType === 'Study' && (
+                      <div className="space-y-2">
+                        <Label htmlFor="admissionLetter">Academic Admission Letter</Label>
+                        <Input
+                          id="admissionLetter"
+                          type="file"
+                          accept=".pdf,.jpg,.jpeg,.png"
+                          onChange={(e) => handleFileUpload(e, 'admission')}
+                          className="cursor-pointer"
+                        />
+                      </div>
+                    )}
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="otherDoc">Other Document</Label>
+                      <Input
+                        id="otherDocType"
+                        value={otherDocumentType}
+                        onChange={(e) => setOtherDocumentType(e.target.value)}
+                        placeholder="Specify document type"
+                        className="mb-2"
+                      />
+                      <Input
+                        id="otherDoc"
+                        type="file"
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        onChange={(e) => handleFileUpload(e, 'other')}
+                        className="cursor-pointer"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section D: Approvals Info */}
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold text-primary border-b pb-2">Section D: Approvals</h3>
+                  <div className="p-3 bg-muted/30 rounded-lg text-xs space-y-2">
+                    <div className="font-medium">Approval Workflow:</div>
+                    <div className="space-y-1">
+                      <div>1. Supervisor/Line Manager</div>
+                      <div>2. HR Department</div>
+                      <div className="text-muted-foreground">
+                        Status updates will be communicated via email and system notifications.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <Button type="submit" className="w-full">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Submit Leave Request
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Leave Records Table */}
         <Card className="lg:col-span-2 border-border/50 shadow-sm">

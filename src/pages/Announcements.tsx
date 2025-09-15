@@ -16,11 +16,7 @@ import {
   ImageIcon,
   LinkIcon,
   Type,
-  Palette,
-  FileText,
-  Upload,
-  Download,
-  Trash2
+  Palette
 } from "lucide-react"
 import ReactQuill from 'react-quill'
 import 'react-quill/dist/quill.snow.css'
@@ -35,15 +31,6 @@ interface Announcement {
   recipients?: string[]
 }
 
-interface Policy {
-  id: string
-  name: string
-  file: File
-  uploadedAt: string
-  uploadedBy: string
-  size: string
-  type: string
-}
 
 export default function Announcements() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([
@@ -67,8 +54,6 @@ export default function Announcements() {
   })
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const policyFileInputRef = useRef<HTMLInputElement>(null)
-  const [policies, setPolicies] = useState<Policy[]>([])
   const { toast } = useToast()
 
   const modules = {
@@ -191,84 +176,6 @@ export default function Announcements() {
     })
   }
 
-  const handlePolicyUpload = () => {
-    policyFileInputRef.current?.click()
-  }
-
-  const handlePolicyFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (file) {
-      // Check file size (limit to 10MB)
-      if (file.size > 10 * 1024 * 1024) {
-        toast({
-          title: "File too large",
-          description: "Please select a file smaller than 10MB",
-          variant: "destructive"
-        })
-        return
-      }
-
-      const policy: Policy = {
-        id: Date.now().toString(),
-        name: file.name,
-        file: file,
-        uploadedAt: new Date().toISOString().split('T')[0],
-        uploadedBy: 'HR Department',
-        size: formatFileSize(file.size),
-        type: file.type || 'Unknown'
-      }
-
-      setPolicies(prev => [policy, ...prev])
-      
-      toast({
-        title: "Policy Uploaded",
-        description: `${file.name} has been uploaded successfully`
-      })
-    }
-  }
-
-  const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return '0 Bytes'
-    const k = 1024
-    const sizes = ['Bytes', 'KB', 'MB', 'GB']
-    const i = Math.floor(Math.log(bytes) / Math.log(k))
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
-  }
-
-  const downloadPolicy = (policy: Policy) => {
-    const url = URL.createObjectURL(policy.file)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = policy.name
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
-    
-    toast({
-      title: "Download Started",
-      description: `Downloading ${policy.name}`
-    })
-  }
-
-  const previewPolicy = (policy: Policy) => {
-    const url = URL.createObjectURL(policy.file)
-    window.open(url, '_blank')
-    
-    toast({
-      title: "Opening Preview",
-      description: `Opening ${policy.name} in new tab`
-    })
-  }
-
-  const deletePolicy = (policyId: string) => {
-    setPolicies(prev => prev.filter(p => p.id !== policyId))
-    
-    toast({
-      title: "Policy Deleted",
-      description: "Policy has been removed"
-    })
-  }
 
   if (isCreating) {
     return (
@@ -374,8 +281,8 @@ export default function Announcements() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Announcements & Policies</h1>
-          <p className="text-muted-foreground">Company communications, updates, and policy documents</p>
+          <h1 className="text-3xl font-bold text-foreground">Announcements</h1>
+          <p className="text-muted-foreground">Company communications and updates</p>
         </div>
         <Button onClick={() => setIsCreating(true)}>
           <Plus className="mr-2 h-4 w-4" />
@@ -383,94 +290,6 @@ export default function Announcements() {
         </Button>
       </div>
 
-      {/* Company Policies Section */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <FileText className="mr-2 h-5 w-5" />
-              <CardTitle>Company Policies</CardTitle>
-            </div>
-            <Button onClick={handlePolicyUpload} size="sm">
-              <Upload className="mr-2 h-4 w-4" />
-              Upload Policy
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <input
-            type="file"
-            ref={policyFileInputRef}
-            onChange={handlePolicyFileChange}
-            accept=".pdf,.doc,.docx,.txt"
-            className="hidden"
-          />
-          
-          {policies.length > 0 ? (
-            <div className="space-y-3">
-              {policies.map((policy) => (
-                <div key={policy.id} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <FileText className="h-5 w-5 text-primary" />
-                    </div>
-                    <div className="space-y-1">
-                      <h4 className="font-medium">{policy.name}</h4>
-                      <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                        <span>{policy.size}</span>
-                        <span>•</span>
-                        <span>Uploaded on {policy.uploadedAt}</span>
-                        <span>•</span>
-                        <span>By {policy.uploadedBy}</span>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => previewPolicy(policy)}
-                    >
-                      <Eye className="mr-2 h-4 w-4" />
-                      Preview
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => downloadPolicy(policy)}
-                    >
-                      <Download className="mr-2 h-4 w-4" />
-                      Download
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => deletePolicy(policy.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <div className="mx-auto h-16 w-16 rounded-full bg-muted flex items-center justify-center mb-4">
-                <FileText className="h-8 w-8 text-muted-foreground" />
-              </div>
-              <h3 className="text-lg font-medium mb-2">No policies uploaded yet</h3>
-              <p className="text-muted-foreground mb-4">
-                Upload company policy documents for employees to access
-              </p>
-              <Button onClick={handlePolicyUpload} variant="outline">
-                <Upload className="mr-2 h-4 w-4" />
-                Upload Your First Policy
-              </Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
 
       <div className="grid gap-6">
         {announcements.map((announcement) => (

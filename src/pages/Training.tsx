@@ -147,22 +147,7 @@ export default function Training() {
       }
       
       setNewTraining(prev => ({ ...prev, certificate: file }))
-    setTrainings([training, ...trainings])
-    setNewTraining({
-      employeeId: '',
-      employeeName: '',
-      trainingType: '',
-      notes: '',
-      completionDate: '',
-      cost: '',
-      certificate: null
-    })
-    setIsDialogOpen(false)
-
-    toast({
-      title: "Training Added",
-      description: "Training record has been added successfully",
-    })
+    }
   }
 
   const handleEmployeeChange = (employeeId: string) => {

@@ -431,41 +431,6 @@ export default function Dashboard() {
         </div>
         
         <div className="flex flex-col sm:flex-row gap-2">
-          {getRoleSpecificActions().map((action, index) => (
-            <Button 
-              key={index}
-              variant={action.variant}
-              size="sm" 
-              className="text-xs md:text-sm"
-              onClick={action.onClick}
-            >
-              <action.icon className="mr-2 h-3 w-3 md:h-4 md:w-4" />
-              {action.label}
-            </Button>
-          ))}
-          
-          <RoleBasedComponent allowedRoles={['executive', 'hr_manager', 'corporate_hr']}>
-            {/* Import Data Dropdown */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="text-xs md:text-sm">
-                  <Upload className="mr-2 h-3 w-3 md:h-4 md:w-4" />
-                  Import Data
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem onClick={handleDownloadTemplate}>
-                  <FileText className="mr-2 h-4 w-4" />
-                  Download Template
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
-                  <Upload className="mr-2 h-4 w-4" />
-                  Import CSV
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </RoleBasedComponent>
-
           <RoleBasedComponent allowedRoles={['executive', 'hr_manager', 'corporate_hr', 'line_manager']}>
             {/* Export Reports Dropdown */}
             <DropdownMenu>

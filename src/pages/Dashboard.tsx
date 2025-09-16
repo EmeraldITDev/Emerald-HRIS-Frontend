@@ -551,10 +551,27 @@ export default function Dashboard() {
               <div className="h-8 bg-muted rounded animate-pulse"></div>
             ) : (
               <>
-                <div className="text-2xl font-bold">₦{(allEmployees.reduce((sum, emp) => sum + (emp.gross_salary || 0), 0) / 1000000).toFixed(1)}M</div>
-                <p className="text-xs text-muted-foreground">
-                  {allEmployees.length} employees
-                </p>
+                {/* Show personal payroll for executive, general_employee, corporate_hr, line_manager */}
+                {['executive', 'general_employee', 'corporate_hr', 'line_manager'].includes(user?.role || '') ? (
+                  <>
+                    <div className="text-2xl font-bold">
+                      ₦{(((() => {
+                        const currentUserEmployee = allEmployees.find(emp => emp.email === user?.email);
+                        return currentUserEmployee?.gross_salary || 0;
+                      })()) / 1000).toFixed(0)}K
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Your monthly salary
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-2xl font-bold">₦{(allEmployees.reduce((sum, emp) => sum + (emp.gross_salary || 0), 0) / 1000000).toFixed(1)}M</div>
+                    <p className="text-xs text-muted-foreground">
+                      {allEmployees.length} employees
+                    </p>
+                  </>
+                )}
               </>
             )}
           </CardContent>

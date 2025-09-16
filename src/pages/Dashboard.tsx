@@ -707,50 +707,89 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card className="border-border/50 shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-primary">Nigerian Compliance</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {isLoading ? (
-              <div className="space-y-3">
-                {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="flex items-center justify-between">
-                    <div className="h-4 bg-muted rounded w-24 animate-pulse"></div>
-                    <div className="h-4 bg-muted rounded w-16 animate-pulse"></div>
+        <RoleBasedComponent allowedRoles={['executive', 'hr_manager', 'it_power_user']}>
+          <Card className="border-border/50 shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-primary">Nigerian Compliance</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {isLoading ? (
+                <div className="space-y-3">
+                  {[1, 2, 3, 4].map((i) => (
+                    <div key={i} className="flex items-center justify-between">
+                      <div className="h-4 bg-muted rounded w-24 animate-pulse"></div>
+                      <div className="h-4 bg-muted rounded w-16 animate-pulse"></div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">Employees with NIN</span>
+                    <span className="bg-success/10 text-success px-2 py-1 rounded text-xs font-medium">
+                      {allEmployees.filter(emp => emp.national_id).length} of {allEmployees.length}
+                    </span>
                   </div>
-                ))}
-              </div>
-            ) : (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">Employees with BVN</span>
+                    <span className="bg-success/10 text-success px-2 py-1 rounded text-xs font-medium">
+                      {allEmployees.filter(emp => emp.bvn).length} of {allEmployees.length}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">Pension PIN registered</span>
+                    <span className="bg-warning/10 text-warning px-2 py-1 rounded text-xs font-medium">
+                      {allEmployees.filter(emp => emp.pension_pin).length} of {allEmployees.length}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">NHF registered</span>
+                    <span className="bg-success/10 text-success px-2 py-1 rounded text-xs font-medium">
+                      {allEmployees.filter(emp => emp.nhf_number).length} of {allEmployees.length}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </RoleBasedComponent>
+
+        {/* Personal Benefits & Payroll for specific roles */}
+        {['general_employee', 'corporate_hr', 'line_manager'].includes(user?.role || '') && (
+          <Card className="border-border/50 shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-primary">My Benefits & Payroll</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm">Employees with NIN</span>
+                  <span className="text-sm">Monthly Salary</span>
                   <span className="bg-success/10 text-success px-2 py-1 rounded text-xs font-medium">
-                    {allEmployees.filter(emp => emp.national_id).length} of {allEmployees.length}
+                    ₦450,000
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm">Employees with BVN</span>
-                  <span className="bg-success/10 text-success px-2 py-1 rounded text-xs font-medium">
-                    {allEmployees.filter(emp => emp.bvn).length} of {allEmployees.length}
+                  <span className="text-sm">Health Insurance</span>
+                  <span className="bg-info/10 text-info px-2 py-1 rounded text-xs font-medium">
+                    Active
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm">Pension PIN registered</span>
+                  <span className="text-sm">Pension Plan</span>
+                  <span className="bg-info/10 text-info px-2 py-1 rounded text-xs font-medium">
+                    7.5% contribution
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">Annual Leave</span>
                   <span className="bg-warning/10 text-warning px-2 py-1 rounded text-xs font-medium">
-                    {allEmployees.filter(emp => emp.pension_pin).length} of {allEmployees.length}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">NHF registered</span>
-                  <span className="bg-success/10 text-success px-2 py-1 rounded text-xs font-medium">
-                    {allEmployees.filter(emp => emp.nhf_number).length} of {allEmployees.length}
+                    18 days remaining
                   </span>
                 </div>
               </div>
-            )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
 
         <Card className="border-border/50 shadow-sm">
           <CardHeader>
@@ -838,35 +877,67 @@ export default function Dashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-3">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="w-full justify-start text-sm"
-                onClick={() => navigate('/employees')}
-              >
-                <Users className="mr-2 h-4 w-4" />
-                View All Employees
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="w-full justify-start text-sm"
-                onClick={handleAddEmployee}
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Add New Employee
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="w-full justify-start text-sm"
-                onClick={() => navigate('/reports')}
-              >
-                <BarChart3 className="mr-2 h-4 w-4" />
-                View Reports
-              </Button>
-            </div>
+            {['general_employee', 'corporate_hr', 'line_manager'].includes(user?.role || '') ? (
+              <div className="space-y-3">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full justify-start text-sm"
+                  onClick={() => navigate('/payroll')}
+                >
+                  <DollarSign className="mr-2 h-4 w-4" />
+                  View My Payroll
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full justify-start text-sm"
+                  onClick={() => navigate('/benefits')}
+                >
+                  <Shield className="mr-2 h-4 w-4" />
+                  View My Benefits
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full justify-start text-sm"
+                  onClick={() => navigate('/attendance')}
+                >
+                  <Calendar className="mr-2 h-4 w-4" />
+                  Submit Leave Request
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full justify-start text-sm"
+                  onClick={() => navigate('/employees')}
+                >
+                  <Users className="mr-2 h-4 w-4" />
+                  View All Employees
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full justify-start text-sm"
+                  onClick={handleAddEmployee}
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add New Employee
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full justify-start text-sm"
+                  onClick={() => navigate('/reports')}
+                >
+                  <BarChart3 className="mr-2 h-4 w-4" />
+                  View Reports
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

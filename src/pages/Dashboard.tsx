@@ -809,9 +809,9 @@ export default function Dashboard() {
                 ))}
               </div>
             ) : allEmployees.length > 0 ? (
-              <div className="space-y-3">
+              <div className="max-h-80 overflow-y-auto space-y-3 pr-2">
                 {allEmployees.map((employee) => (
-                  <div key={employee.id} className="flex items-center justify-between text-sm">
+                  <div key={employee.id} className="flex items-center justify-between text-sm p-2 rounded-lg hover:bg-muted/50 transition-colors">
                     <div>
                       <div className="font-medium">{employee.first_name} {employee.last_name}</div>
                       <div className="text-muted-foreground text-xs">{employee.job_title}</div>

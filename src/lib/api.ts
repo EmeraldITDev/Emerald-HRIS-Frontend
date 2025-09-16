@@ -1,11 +1,10 @@
-const API_BASE_URL = (typeof window !== 'undefined' && window.location.port)
+const API_BASE_URL = (typeof window !== 'undefined' && window.location.hostname === 'localhost') 
   ? 'http://localhost:8000/api'
-  : 'http://localhost/hris-backend/public/api';
+  : 'https://hris-backend-to3i.onrender.com/api';
 
 export interface Employee {
   id?: number;
   first_name: string;
-  middle_name?: string;
   last_name: string;
   email: string;
   dob?: string;
@@ -13,7 +12,6 @@ export interface Employee {
   marital_status?: string;
   nationality?: string;
   phone_number?: string;
-  phone?: string; // Alternative field name for compatibility
   address?: string;
   job_title: string;
   department?: string;
@@ -26,20 +24,11 @@ export interface Employee {
   confirmation_date?: string;
   employment_status?: string;
   vacation_days?: number;
-  vacationDays?: number; // Alternative field name for compatibility
-  usedDays?: number; // Track used vacation days
   gross_salary?: number;
-  basic_salary?: number;
   meal_allowance?: number;
-  mealAllowance?: number; // Alternative field name for compatibility
   housing_allowance?: number;
   transport_allowance?: number;
-  other_allowance?: number;
   bank_account?: string;
-  bank_name?: string;
-  account_number?: string;
-  nuban?: string;
-  sort_code?: string;
   employee_code?: string;
   national_id?: string;
   bvn?: string;
@@ -47,22 +36,9 @@ export interface Employee {
   pension_pin?: string;
   nhf_number?: string;
   tax_id?: string;
-  passport_number?: string;
-  emergency_contact?: string;
-  emergency_contact_number?: string;
-  next_of_kin_name?: string;
-  next_of_kin_relationship?: string;
-  next_of_kin_phone?: string;
-  next_of_kin_address?: string;
-  next_of_kin_email?: string;
-  contract_amount?: number;
-  payment_frequency?: string;
-  contract_duration?: string;
-  contract_terms?: string;
   supporting_documents?: string;
   performance_history?: string;
   asset_allocation_history?: string;
-  name?: string; // Computed field for full name
   created_at?: string;
   updated_at?: string;
 }
@@ -126,6 +102,10 @@ class ApiService {
   ): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
     
+    console.log('🌍 API Request URL:', url);
+    console.log('🌍 Environment:', process.env.NODE_ENV);
+    console.log('📤 Endpoint being called:', endpoint);
+    
     const config: RequestInit = {
       headers: {
         'Content-Type': 'application/json',
@@ -138,13 +118,19 @@ class ApiService {
     try {
       const response = await fetch(url, config);
       
+      console.log('🌍 Response Status:', response.status);
+      
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ API Error Response:', errorText);
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       
-      return await response.json();
+      const data = await response.json();
+      console.log('✅ API Response Data:', data);
+      return data;
     } catch (error) {
-      console.error('API request failed:', error);
+      console.error('❌ API request failed:', error);
       throw error;
     }
   }
@@ -222,25 +208,25 @@ class ApiService {
   }
 
   // Leave methods
+  async getLeaveRequests(): Promise<LeaveRequest[]> {
+    return this.request<LeaveRequest[]>('/leave/');
+  }
+
   async getLeaveTypes(): Promise<LeaveType[]> {
     return this.request<LeaveType[]>('/leave/types');
   }
 
-  async getLeaveRequests(): Promise<LeaveRequest[]> {
-    return this.request<LeaveRequest[]>('/leave');
-  }
-
-  async createLeaveRequest(leaveData: LeaveRequest): Promise<{ message: string }> {
-    return this.request<{ message: string }>('/leave', {
+  async createLeaveRequest(leaveData: any): Promise<{ message: string }> {
+    return this.request<{ message: string }>('/leave/', {
       method: 'POST',
       body: JSON.stringify(leaveData),
     });
   }
 
-  async updateLeaveRequest(id: number, leaveData: Partial<LeaveRequest>): Promise<{ message: string }> {
-    return this.request<{ message: string }>(`/leave/${id}/status`, {
+  async updateLeaveRequest(requestId: number, status: string): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/leave/${requestId}/status`, {
       method: 'PUT',
-      body: JSON.stringify(leaveData),
+      body: JSON.stringify({ status }),
     });
   }
 }

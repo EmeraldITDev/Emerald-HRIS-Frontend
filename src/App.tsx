@@ -39,11 +39,11 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 };
 
 const App = () => {
-  const [users, setUsers] = useState<any[]>([]);
-
-  useEffect(() => {
-    getUsers().then(setUsers);
-  }, []);
+  // Remove these lines:
+  // const [users, setUsers] = useState<any[]>([]);
+  // useEffect(() => {
+  //   getUsers().then(setUsers);
+  // }, []);
 
   return (
     <QueryClientProvider client={queryClient}>

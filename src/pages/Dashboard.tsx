@@ -474,154 +474,139 @@ export default function Dashboard() {
         className="hidden"
       />
 
-      {/* Main Stats Cards - Now using allEmployees for accurate stats */}
-      <div className="grid gap-4 md:gap-6 grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
-        <Card className="border-border/50 shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Employees</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="h-8 bg-muted rounded animate-pulse"></div>
-            ) : (
-              <>
-                <div className="text-2xl font-bold">{allEmployees.length}</div>
-                <p className="text-xs text-muted-foreground">
-                  +{allEmployees.filter(emp => {
-                    if (!emp.hire_date) return false
-                    const hireDate = new Date(emp.hire_date)
-                    const now = new Date()
-                    return hireDate.getMonth() === now.getMonth() && hireDate.getFullYear() === now.getFullYear()
-                  }).length} this month
-                </p>
-              </>
-            )}
-          </CardContent>
-        </Card>
+      {/* Hide aggregate stats for executive, general_employee, corporate_hr, line_manager */}
+      {!['executive', 'general_employee', 'corporate_hr', 'line_manager'].includes(user?.role || '') && (
+        <div className="grid gap-4 md:gap-6 grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
+          <Card className="border-border/50 shadow-sm">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Employees</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="h-8 bg-muted rounded animate-pulse"></div>
+              ) : (
+                <>
+                  <div className="text-2xl font-bold">{allEmployees.length}</div>
+                  <p className="text-xs text-muted-foreground">
+                    +{allEmployees.filter(emp => {
+                      if (!emp.hire_date) return false
+                      const hireDate = new Date(emp.hire_date)
+                      const now = new Date()
+                      return hireDate.getMonth() === now.getMonth() && hireDate.getFullYear() === now.getFullYear()
+                    }).length} this month
+                  </p>
+                </>
+              )}
+            </CardContent>
+          </Card>
 
-        <Card className="border-border/50 shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Contract Employees</CardTitle>
-            <UserCheck className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="h-8 bg-muted rounded animate-pulse"></div>
-            ) : (
-              <>
-                <div className="text-2xl font-bold">
-                  {allEmployees.filter(emp => emp.employment_type === 'Contract').length}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {allEmployees.length > 0 ? Math.round((allEmployees.filter(emp => emp.employment_type === 'Contract').length / allEmployees.length) * 100) : 0}% of workforce
-                </p>
-              </>
-            )}
-          </CardContent>
-        </Card>
+          <Card className="border-border/50 shadow-sm">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Contract Employees</CardTitle>
+              <UserCheck className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="h-8 bg-muted rounded animate-pulse"></div>
+              ) : (
+                <>
+                  <div className="text-2xl font-bold">
+                    {allEmployees.filter(emp => emp.employment_type === 'Contract').length}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {allEmployees.length > 0 ? Math.round((allEmployees.filter(emp => emp.employment_type === 'Contract').length / allEmployees.length) * 100) : 0}% of workforce
+                  </p>
+                </>
+              )}
+            </CardContent>
+          </Card>
 
-        <Card className="border-border/50 shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">FTE</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="h-8 bg-muted rounded animate-pulse"></div>
-            ) : (
-              <>
-                <div className="text-2xl font-bold">
-                  {allEmployees.filter(emp => emp.employment_type === 'Full-time').length}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {allEmployees.length > 0 ? Math.round((allEmployees.filter(emp => emp.employment_type === 'Full-time').length / allEmployees.length) * 100) : 0}% of workforce
-                </p>
-              </>
-            )}
-          </CardContent>
-        </Card>
+          <Card className="border-border/50 shadow-sm">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">FTE</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="h-8 bg-muted rounded animate-pulse"></div>
+              ) : (
+                <>
+                  <div className="text-2xl font-bold">
+                    {allEmployees.filter(emp => emp.employment_type === 'Full-time').length}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {allEmployees.length > 0 ? Math.round((allEmployees.filter(emp => emp.employment_type === 'Full-time').length / allEmployees.length) * 100) : 0}% of workforce
+                  </p>
+                </>
+              )}
+            </CardContent>
+          </Card>
 
-        <Card className="border-border/50 shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Monthly Payroll</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="h-8 bg-muted rounded animate-pulse"></div>
-            ) : (
-              <>
-                {/* Show personal payroll for executive, general_employee, corporate_hr, line_manager */}
-                {['executive', 'general_employee', 'corporate_hr', 'line_manager'].includes(user?.role || '') ? (
-                  <>
-                    <div className="text-2xl font-bold">
-                      ₦{(((() => {
-                        const currentUserEmployee = allEmployees.find(emp => emp.email === user?.email);
-                        return currentUserEmployee?.gross_salary || 0;
-                      })()) / 1000).toFixed(0)}K
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Your monthly salary
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <div className="text-2xl font-bold">₦{(allEmployees.reduce((sum, emp) => sum + (emp.gross_salary || 0), 0) / 1000000).toFixed(1)}M</div>
-                    <p className="text-xs text-muted-foreground">
-                      {allEmployees.length} employees
-                    </p>
-                  </>
-                )}
-              </>
-            )}
-          </CardContent>
-        </Card>
+          <Card className="border-border/50 shadow-sm">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Monthly Payroll</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="h-8 bg-muted rounded animate-pulse"></div>
+              ) : (
+                <>
+                  <div className="text-2xl font-bold">₦{(allEmployees.reduce((sum, emp) => sum + (emp.gross_salary || 0), 0) / 1000000).toFixed(1)}M</div>
+                  <p className="text-xs text-muted-foreground">
+                    {allEmployees.length} employees
+                  </p>
+                </>
+              )}
+            </CardContent>
+          </Card>
 
-        <Card className="border-border/50 shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Onboard Employees</CardTitle>
-            <UserPlus className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="h-8 bg-muted rounded animate-pulse"></div>
-            ) : (
-              <>
-                <div className="text-2xl font-bold">
-                  {allEmployees.filter(emp => {
-                    if (!emp.hire_date) return false
-                    const hireDate = new Date(emp.hire_date)
-                    const now = new Date()
-                    return hireDate.getMonth() === now.getMonth() && hireDate.getFullYear() === now.getFullYear()
-                  }).length}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  This month
-                </p>
-              </>
-            )}
-          </CardContent>
-        </Card>
+          <Card className="border-border/50 shadow-sm">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Onboard Employees</CardTitle>
+              <UserPlus className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="h-8 bg-muted rounded animate-pulse"></div>
+              ) : (
+                <>
+                  <div className="text-2xl font-bold">
+                    {allEmployees.filter(emp => {
+                      if (!emp.hire_date) return false
+                      const hireDate = new Date(emp.hire_date)
+                      const now = new Date()
+                      return hireDate.getMonth() === now.getMonth() && hireDate.getFullYear() === now.getFullYear()
+                    }).length}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    This month
+                  </p>
+                </>
+              )}
+            </CardContent>
+          </Card>
 
-        <Card className="border-border/50 shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active</CardTitle>
-            <UserCheck className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="h-8 bg-muted rounded animate-pulse"></div>
-            ) : (
-              <>
-                <div className="text-2xl font-bold">{allEmployees.filter(emp => emp.employment_status === 'Active').length}</div>
-                <p className="text-xs text-muted-foreground">
-                  {allEmployees.length > 0 ? Math.round((allEmployees.filter(emp => emp.employment_status === 'Active').length / allEmployees.length) * 100) : 0}% of total
-                </p>
-              </>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+          <Card className="border-border/50 shadow-sm">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Active</CardTitle>
+              <UserCheck className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="h-8 bg-muted rounded animate-pulse"></div>
+              ) : (
+                <>
+                  <div className="text-2xl font-bold">{allEmployees.filter(emp => emp.employment_status === 'Active').length}</div>
+                  <p className="text-xs text-muted-foreground">
+                    {allEmployees.length > 0 ? Math.round((allEmployees.filter(emp => emp.employment_status === 'Active').length / allEmployees.length) * 100) : 0}% of total
+                  </p>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Grid sections */}
       <div className="grid gap-4 md:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">

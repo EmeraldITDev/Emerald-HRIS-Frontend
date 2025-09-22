@@ -72,6 +72,8 @@ export default function Dashboard() {
       case 'line_manager':
         return 'Line Manager Dashboard'
       case 'it_power_user':
+        return 'IT Power User Dashboard'
+      case 'it_admin':
         return 'Employee Self-Service'
       case 'general_employee':
         return 'Employee Self-Service'
@@ -477,8 +479,8 @@ export default function Dashboard() {
         className="hidden"
       />
 
-      {/* Hide aggregate stats for executive, general_employee, corporate_hr, line_manager, it_power_user */}
-      {!['executive', 'general_employee', 'corporate_hr', 'line_manager', 'it_power_user'].includes(user?.role || '') && (
+      {/* Hide aggregate stats for executive, general_employee, corporate_hr, line_manager, it_admin */}
+      {!['executive', 'general_employee', 'corporate_hr', 'line_manager', 'it_admin'].includes(user?.role || '') && (
         <div className="grid gap-4 md:gap-6 grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
           <Card className="border-border/50 shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -548,16 +550,23 @@ export default function Dashboard() {
 
           <Card className="border-border/50 shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Monthly Payroll</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                {user?.role === 'it_power_user' ? 'Personal Payroll' : 'Monthly Payroll'}
+              </CardTitle>
             </CardHeader>
             <CardContent>
               {isLoading ? (
                 <div className="h-8 bg-muted rounded animate-pulse"></div>
               ) : (
                 <>
-                  <div className="text-2xl font-bold">₦{(allEmployees.reduce((sum, emp) => sum + (emp.gross_salary || 0), 0) / 1000000).toFixed(1)}M</div>
+                  <div className="text-2xl font-bold">
+                    {user?.role === 'it_power_user' 
+                      ? '₦450,000' 
+                      : `₦${(allEmployees.reduce((sum, emp) => sum + (emp.gross_salary || 0), 0) / 1000000).toFixed(1)}M`
+                    }
+                  </div>
                   <p className="text-xs text-muted-foreground">
-                    {allEmployees.length} employees
+                    {user?.role === 'it_power_user' ? 'Monthly salary' : `${allEmployees.length} employees`}
                   </p>
                 </>
               )}
@@ -674,7 +683,7 @@ export default function Dashboard() {
                   </div>
                 ))}
               </div>
-            ) : ['general_employee', 'corporate_hr', 'line_manager', 'it_power_user'].includes(user?.role || '') ? (
+            ) : ['general_employee', 'corporate_hr', 'line_manager', 'it_admin'].includes(user?.role || '') ? (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-sm">Performance Review Form</span>
@@ -737,7 +746,7 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        {!['general_employee', 'corporate_hr', 'line_manager', 'it_power_user'].includes(user?.role || '') && (
+        {!['general_employee', 'corporate_hr', 'line_manager', 'it_admin'].includes(user?.role || '') && (
           <RoleBasedComponent allowedRoles={['executive', 'hr_manager']}>
             <Card className="border-border/50 shadow-sm">
               <CardHeader>
@@ -787,7 +796,7 @@ export default function Dashboard() {
         )}
 
         {/* Personal Benefits & Payroll for specific roles */}
-        {['general_employee', 'corporate_hr', 'line_manager', 'it_power_user'].includes(user?.role || '') && (
+        {['general_employee', 'corporate_hr', 'line_manager', 'it_admin'].includes(user?.role || '') && (
           <Card className="border-border/50 shadow-sm">
             <CardHeader>
               <CardTitle className="text-primary">My Benefits & Payroll</CardTitle>
@@ -824,7 +833,7 @@ export default function Dashboard() {
         )}
 
         {/* Clock In/Out Widget for General Employees and IT Admin */}
-        {['general_employee', 'it_power_user'].includes(user?.role || '') && (
+        {['general_employee', 'it_admin'].includes(user?.role || '') && (
           <Card className="border-border/50 shadow-sm">
             <CardHeader>
             <CardTitle className="flex items-center text-primary">

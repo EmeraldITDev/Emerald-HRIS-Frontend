@@ -479,8 +479,8 @@ export default function Dashboard() {
         className="hidden"
       />
 
-      {/* Hide aggregate stats for executive, general_employee, corporate_hr, line_manager, it_admin */}
-      {!['executive', 'general_employee', 'corporate_hr', 'line_manager', 'it_admin'].includes(user?.role || '') && (
+      {/* Hide aggregate stats for general_employee, corporate_hr, line_manager, it_admin */}
+      {!['general_employee', 'corporate_hr', 'line_manager', 'it_admin'].includes(user?.role || '') && (
         <div className="grid gap-4 md:gap-6 grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
           <Card className="border-border/50 shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -551,7 +551,7 @@ export default function Dashboard() {
           <Card className="border-border/50 shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
-                {user?.role === 'it_power_user' ? 'Personal Payroll' : 'Monthly Payroll'}
+                {['it_power_user', 'executive'].includes(user?.role || '') ? 'Personal Payroll' : 'Monthly Payroll'}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -560,13 +560,13 @@ export default function Dashboard() {
               ) : (
                 <>
                   <div className="text-2xl font-bold">
-                    {user?.role === 'it_power_user' 
+                    {['it_power_user', 'executive'].includes(user?.role || '') 
                       ? '₦450,000' 
                       : `₦${(allEmployees.reduce((sum, emp) => sum + (emp.gross_salary || 0), 0) / 1000000).toFixed(1)}M`
                     }
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    {user?.role === 'it_power_user' ? 'Monthly salary' : `${allEmployees.length} employees`}
+                    {['it_power_user', 'executive'].includes(user?.role || '') ? 'Monthly salary' : `${allEmployees.length} employees`}
                   </p>
                 </>
               )}

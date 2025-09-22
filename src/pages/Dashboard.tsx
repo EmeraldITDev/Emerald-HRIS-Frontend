@@ -674,7 +674,7 @@ export default function Dashboard() {
                   </div>
                 ))}
               </div>
-            ) : ['general_employee', 'corporate_hr', 'line_manager'].includes(user?.role || '') ? (
+            ) : ['general_employee', 'corporate_hr', 'line_manager', 'it_power_user'].includes(user?.role || '') ? (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-sm">Performance Review Form</span>

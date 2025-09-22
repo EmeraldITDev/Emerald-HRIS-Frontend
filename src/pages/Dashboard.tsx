@@ -795,7 +795,7 @@ export default function Dashboard() {
             <CardContent className="space-y-4">
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm">Monthly Salary</span>
+                  <span className="text-sm">Personal Payroll</span>
                   <span className="bg-success/10 text-success px-2 py-1 rounded text-xs font-medium">
                     ₦450,000
                   </span>

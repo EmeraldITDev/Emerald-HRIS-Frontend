@@ -477,8 +477,8 @@ export default function Dashboard() {
         className="hidden"
       />
 
-      {/* Hide aggregate stats for executive, general_employee, corporate_hr, line_manager */}
-      {!['executive', 'general_employee', 'corporate_hr', 'line_manager'].includes(user?.role || '') && (
+      {/* Hide aggregate stats for executive, general_employee, corporate_hr, line_manager, it_power_user */}
+      {!['executive', 'general_employee', 'corporate_hr', 'line_manager', 'it_power_user'].includes(user?.role || '') && (
         <div className="grid gap-4 md:gap-6 grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
           <Card className="border-border/50 shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -787,7 +787,7 @@ export default function Dashboard() {
         )}
 
         {/* Personal Benefits & Payroll for specific roles */}
-        {['general_employee', 'corporate_hr', 'line_manager'].includes(user?.role || '') && (
+        {['general_employee', 'corporate_hr', 'line_manager', 'it_power_user'].includes(user?.role || '') && (
           <Card className="border-border/50 shadow-sm">
             <CardHeader>
               <CardTitle className="text-primary">My Benefits & Payroll</CardTitle>
@@ -823,8 +823,8 @@ export default function Dashboard() {
           </Card>
         )}
 
-        {/* Clock In/Out Widget for General Employees */}
-        {user?.role === 'general_employee' && (
+        {/* Clock In/Out Widget for General Employees and IT Admin */}
+        {['general_employee', 'it_power_user'].includes(user?.role || '') && (
           <Card className="border-border/50 shadow-sm">
             <CardHeader>
             <CardTitle className="flex items-center text-primary">
@@ -918,7 +918,7 @@ export default function Dashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {['general_employee', 'corporate_hr', 'line_manager'].includes(user?.role || '') ? (
+            {['general_employee', 'corporate_hr', 'line_manager', 'it_power_user'].includes(user?.role || '') ? (
               <div className="space-y-3">
                 <Button 
                   variant="outline" 

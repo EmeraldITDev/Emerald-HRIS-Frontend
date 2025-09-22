@@ -20,7 +20,10 @@ import {
   UserCheck,
   UserPlus,
   Shield,
-  Settings
+  Settings,
+  Clock,
+  LogIn,
+  LogOut
 } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 import { useToast } from "@/hooks/use-toast"
@@ -671,6 +674,33 @@ export default function Dashboard() {
                   </div>
                 ))}
               </div>
+            ) : ['general_employee', 'corporate_hr', 'line_manager'].includes(user?.role || '') ? (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">Performance Review Form</span>
+                  <span className="bg-warning/10 text-warning px-2 py-1 rounded text-xs font-medium">
+                    Due Soon
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">Complete Training Module</span>
+                  <span className="bg-info/10 text-info px-2 py-1 rounded text-xs font-medium">
+                    Assigned
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">Update Emergency Contact</span>
+                  <span className="bg-success/10 text-success px-2 py-1 rounded text-xs font-medium">
+                    Optional
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">Submit Timesheet</span>
+                  <span className="bg-warning/10 text-warning px-2 py-1 rounded text-xs font-medium">
+                    Weekly
+                  </span>
+                </div>
+              </div>
             ) : (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
@@ -707,52 +737,54 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <RoleBasedComponent allowedRoles={['executive', 'hr_manager', 'it_power_user']}>
-          <Card className="border-border/50 shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-primary">Nigerian Compliance</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {isLoading ? (
-                <div className="space-y-3">
-                  {[1, 2, 3, 4].map((i) => (
-                    <div key={i} className="flex items-center justify-between">
-                      <div className="h-4 bg-muted rounded w-24 animate-pulse"></div>
-                      <div className="h-4 bg-muted rounded w-16 animate-pulse"></div>
+        {!['general_employee', 'corporate_hr', 'line_manager'].includes(user?.role || '') && (
+          <RoleBasedComponent allowedRoles={['executive', 'hr_manager', 'it_power_user']}>
+            <Card className="border-border/50 shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-primary">Nigerian Compliance</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {isLoading ? (
+                  <div className="space-y-3">
+                    {[1, 2, 3, 4].map((i) => (
+                      <div key={i} className="flex items-center justify-between">
+                        <div className="h-4 bg-muted rounded w-24 animate-pulse"></div>
+                        <div className="h-4 bg-muted rounded w-16 animate-pulse"></div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">Employees with NIN</span>
+                      <span className="bg-success/10 text-success px-2 py-1 rounded text-xs font-medium">
+                        {allEmployees.filter(emp => emp.national_id).length} of {allEmployees.length}
+                      </span>
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Employees with NIN</span>
-                    <span className="bg-success/10 text-success px-2 py-1 rounded text-xs font-medium">
-                      {allEmployees.filter(emp => emp.national_id).length} of {allEmployees.length}
-                    </span>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">Employees with BVN</span>
+                      <span className="bg-success/10 text-success px-2 py-1 rounded text-xs font-medium">
+                        {allEmployees.filter(emp => emp.bvn).length} of {allEmployees.length}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">Pension PIN registered</span>
+                      <span className="bg-warning/10 text-warning px-2 py-1 rounded text-xs font-medium">
+                        {allEmployees.filter(emp => emp.pension_pin).length} of {allEmployees.length}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">NHF registered</span>
+                      <span className="bg-success/10 text-success px-2 py-1 rounded text-xs font-medium">
+                        {allEmployees.filter(emp => emp.nhf_number).length} of {allEmployees.length}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Employees with BVN</span>
-                    <span className="bg-success/10 text-success px-2 py-1 rounded text-xs font-medium">
-                      {allEmployees.filter(emp => emp.bvn).length} of {allEmployees.length}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Pension PIN registered</span>
-                    <span className="bg-warning/10 text-warning px-2 py-1 rounded text-xs font-medium">
-                      {allEmployees.filter(emp => emp.pension_pin).length} of {allEmployees.length}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">NHF registered</span>
-                    <span className="bg-success/10 text-success px-2 py-1 rounded text-xs font-medium">
-                      {allEmployees.filter(emp => emp.nhf_number).length} of {allEmployees.length}
-                    </span>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </RoleBasedComponent>
+                )}
+              </CardContent>
+            </Card>
+          </RoleBasedComponent>
+        )}
 
         {/* Personal Benefits & Payroll for specific roles */}
         {['general_employee', 'corporate_hr', 'line_manager'].includes(user?.role || '') && (
@@ -791,47 +823,56 @@ export default function Dashboard() {
           </Card>
         )}
 
-        <Card className="border-border/50 shadow-sm">
-          <CardHeader>
-            <CardTitle className="flex items-center text-primary">
-              <Users className="mr-2 h-5 w-5" />
-              Recent Employees
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {isLoading ? (
-              <div className="space-y-3">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="flex items-center justify-between text-sm">
-                    <div className="h-4 bg-muted rounded w-24 animate-pulse"></div>
-                    <div className="h-4 bg-muted rounded w-16 animate-pulse"></div>
-                  </div>
-                ))}
+        {/* Clock In/Out Widget for General Employees */}
+        {user?.role === 'general_employee' && (
+          <Card className="border-border/50 shadow-sm">
+            <CardHeader>
+              <CardTitle className="flex items-center text-primary">
+                <Clock className="mr-2 h-5 w-5" />
+                Time Clock
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-foreground">
+                  {format(new Date(), 'HH:mm:ss')}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {format(new Date(), 'EEEE, MMMM do, yyyy')}
+                </div>
               </div>
-            ) : allEmployees.length > 0 ? (
-              <div className="space-y-3">
-                {allEmployees.map((employee) => (
-                  <div key={employee.id} className="flex items-center justify-between text-sm">
-                    <div>
-                      <div className="font-medium">{employee.first_name} {employee.last_name}</div>
-                      <div className="text-muted-foreground text-xs">{employee.job_title}</div>
-                    </div>
-                    <div className="text-right">
-                      {getStatusBadge(employee.employment_status || 'Active')}
-                      <div className="text-muted-foreground text-xs">
-                        {employee.hire_date ? format(new Date(employee.hire_date), 'MMM dd') : 'N/A'}
-                      </div>
-                    </div>
-                  </div>
-                ))}
+              <div className="flex gap-2">
+                <Button 
+                  size="sm" 
+                  className="flex-1"
+                  onClick={() => {
+                    toast({
+                      title: "Clocked In",
+                      description: `Successfully clocked in at ${format(new Date(), 'HH:mm')}`,
+                    })
+                  }}
+                >
+                  <LogIn className="mr-2 h-4 w-4" />
+                  Clock In
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  className="flex-1"
+                  onClick={() => {
+                    toast({
+                      title: "Clocked Out",
+                      description: `Successfully clocked out at ${format(new Date(), 'HH:mm')}`,
+                    })
+                  }}
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Clock Out
+                </Button>
               </div>
-            ) : (
-              <div className="text-center text-muted-foreground text-sm py-4">
-                No recent employees found
-              </div>
-            )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
 
         <Card className="border-border/50 shadow-sm">
           <CardHeader>

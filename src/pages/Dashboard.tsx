@@ -72,7 +72,7 @@ export default function Dashboard() {
       case 'line_manager':
         return 'Line Manager Dashboard'
       case 'it_power_user':
-        return 'IT Admin Dashboard'
+        return 'Employee Self-Service'
       case 'general_employee':
         return 'Employee Self-Service'
       default:
@@ -737,8 +737,8 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        {!['general_employee', 'corporate_hr', 'line_manager'].includes(user?.role || '') && (
-          <RoleBasedComponent allowedRoles={['executive', 'hr_manager', 'it_power_user']}>
+        {!['general_employee', 'corporate_hr', 'line_manager', 'it_power_user'].includes(user?.role || '') && (
+          <RoleBasedComponent allowedRoles={['executive', 'hr_manager']}>
             <Card className="border-border/50 shadow-sm">
               <CardHeader>
                 <CardTitle className="text-primary">Nigerian Compliance</CardTitle>

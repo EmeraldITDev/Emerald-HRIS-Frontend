@@ -21,9 +21,9 @@ import {
   UserPlus,
   Shield,
   Settings,
-  Clock,
-  LogIn,
-  LogOut
+  Timer,
+  ArrowRight,
+  ArrowLeft
 } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 import { useToast } from "@/hooks/use-toast"
@@ -827,10 +827,10 @@ export default function Dashboard() {
         {user?.role === 'general_employee' && (
           <Card className="border-border/50 shadow-sm">
             <CardHeader>
-              <CardTitle className="flex items-center text-primary">
-                <Clock className="mr-2 h-5 w-5" />
-                Time Clock
-              </CardTitle>
+            <CardTitle className="flex items-center text-primary">
+              <Timer className="mr-2 h-5 w-5" />
+              Time Clock
+            </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="text-center">
@@ -852,7 +852,7 @@ export default function Dashboard() {
                     })
                   }}
                 >
-                  <LogIn className="mr-2 h-4 w-4" />
+                  <ArrowRight className="mr-2 h-4 w-4" />
                   Clock In
                 </Button>
                 <Button 
@@ -866,7 +866,7 @@ export default function Dashboard() {
                     })
                   }}
                 >
-                  <LogOut className="mr-2 h-4 w-4" />
+                  <ArrowLeft className="mr-2 h-4 w-4" />
                   Clock Out
                 </Button>
               </div>

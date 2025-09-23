@@ -223,6 +223,28 @@ export default function Attendance() {
   const [isLoadingEmployees, setIsLoadingEmployees] = useState(false)
   const [leaveRequests, setLeaveRequests] = useState<any[]>([])
   const [isLoadingLeaveRequests, setIsLoadingLeaveRequests] = useState(false)
+  const [todayStatus, setTodayStatus] = useState<any>(null);
+  const [isPunching, setIsPunching] = useState(false);
+
+  const loadTodayStatus = async () => {
+    if (!user?.employee_id) return;
+    try {
+      const res = await fetch('http://localhost:8000/api/attendance/today-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ employee_id: user.employee_id }),
+      });
+      const data = await res.json();
+      if (data.success) setTodayStatus(data.data);
+    } catch (e) {
+      console.error('today-status failed', e);
+    }
+  };
+
+  useEffect(() => {
+    loadTodayStatus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.employee_id]);
 
   useEffect(() => {
     fetchEmployees()
@@ -441,68 +463,74 @@ export default function Attendance() {
     }
   }
 
-  const handleClockIn = () => {
-    if (!user) {
-      toast({
-        title: "Error",
-        description: "Please log in to clock in",
-        variant: "destructive",
-      })
-      return
+  const handleClockIn = async () => {
+    if (!user?.employee_id) {
+      toast({ title: "Error", description: "No linked employee on this account.", variant: "destructive" });
+      return;
     }
-
-    const today = new Date().toISOString().split('T')[0]
-    
-    // Check if already clocked in today
-    const existingRecord = attendance.find(record => 
-      record.employeeId === user.email && record.date === today
-    )
-    
-    if (existingRecord && !existingRecord.clockOut) {
-      toast({
-        title: "Error",
-        description: "You are already clocked in today",
-        variant: "destructive",
-      })
-      return
-    }
-
-    const newAttendance = {
-      id: attendance.length + 1,
-      employeeId: user.email,
-      employeeName: user.email.split('@')[0], // Use email username as name
-      date: today,
-      clockIn: currentTime.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
-      clockOut: "",
-      status: "Present"
-    }
-
-    setAttendance([newAttendance, ...attendance])
-    
-    toast({
-      title: "Success",
-      description: `${user.email} clocked in successfully`,
-    })
-  }
-
-  const handleClockOut = (attendanceId: number) => {
-    const updatedAttendance = attendance.map(record => {
-      if (record.id === attendanceId) {
-        return {
-          ...record,
-          clockOut: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
-        }
+    try {
+      setIsPunching(true);
+      const res = await fetch('http://localhost:8000/api/attendance/clock-in', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ employee_id: user.employee_id, location: 'office' }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast({ title: "Success", description: data.message });
+        await loadTodayStatus();
+      } else {
+        toast({ title: "Error", description: data.message, variant: "destructive" });
       }
-      return record
-    })
-    
-    setAttendance(updatedAttendance)
-    
-    toast({
-      title: "Success",
-      description: "Clocked out successfully",
-    })
-  }
+    } catch {
+      toast({ title: "Error", description: "Failed to clock in.", variant: "destructive" });
+    } finally {
+      setIsPunching(false);
+    }
+  };
+
+  const handleClockOut = async () => {
+    if (!user?.employee_id) {
+      toast({ title: "Error", description: "No linked employee on this account.", variant: "destructive" });
+      return;
+    }
+    try {
+      setIsPunching(true);
+      const res = await fetch('http://localhost:8000/api/attendance/clock-out', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ employee_id: user.employee_id }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast({ title: "Success", description: data.message });
+        await loadTodayStatus();
+      } else {
+        toast({ title: "Error", description: data.message, variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Error", description: "Failed to clock out.", variant: "destructive" });
+    } finally {
+      setIsPunching(false);
+    }
+  };
+
+  // Example helpers (replace your current variants if desired)
+  const getButtonText = () => {
+    if (!todayStatus?.is_clocked_in) return "Clock In";
+    if (todayStatus?.is_clocked_in && !todayStatus?.break_start) return "Start Break";
+    if (todayStatus?.break_start && !todayStatus?.break_end) return "End Break";
+    if (todayStatus?.break_end && !todayStatus?.clock_out_time) return "End Shift";
+    return "Completed";
+  };
+
+  const getAttendanceStatusBadge = () => {
+    if (!todayStatus?.is_clocked_in) return <Badge variant="secondary">Not Started</Badge>;
+    if (todayStatus?.is_clocked_in && !todayStatus?.break_start) return <Badge variant="default">Working</Badge>;
+    if (todayStatus?.break_start && !todayStatus?.break_end) return <Badge variant="destructive">On Break</Badge>;
+    if (todayStatus?.clock_out_time) return <Badge variant="outline">Completed</Badge>;
+    return <Badge variant="secondary">Unknown</Badge>;
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -726,7 +754,7 @@ export default function Attendance() {
             <Button 
               onClick={handleClockIn} 
               className="w-full"
-              disabled={!user}
+              disabled={!user || isPunching}
             >
               <LogIn className="mr-2 h-4 w-4" />
               Clock In

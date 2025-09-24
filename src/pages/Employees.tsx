@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
@@ -28,6 +28,15 @@ import { ROLES } from "@/constants/roles";
 import { PERMISSIONS } from "@/constants/roles";
 import { ROLE_OPTIONS, ROLE_PREFIX } from "@/constants/roles";
 
+// Put near top of file
+const VALID_SYSTEM_ROLES = new Set([
+  'executive',
+  'hr_manager',
+  'corporate_hr',
+  'line_manager',
+  'it_power_user',
+  'general_employee',
+]);
 
 export default function Employees() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -646,7 +655,7 @@ export default function Employees() {
       }
 
       // Format the employee data for the API
-      const employeeData = {
+      const payload: any = {
         first_name: editEmployee.firstName,
         last_name: editEmployee.lastName,
         middle_name: editEmployee.middleName,
@@ -691,13 +700,15 @@ export default function Employees() {
         pension_pin: editEmployee.pension_pin,
         nhf_number: editEmployee.nhf_number,
         tax_id: editEmployee.tax_id,
-        
-        // System Role for user account update
-        system_role: editSystemRole || null,
       };
 
+      // Only attach system_role if valid
+      if (editSystemRole && VALID_SYSTEM_ROLES.has(editSystemRole)) {
+        payload.system_role = editSystemRole;
+      }
+
       // Call the API to update the employee
-      await apiService.updateEmployee(editEmployee.id, employeeData);
+      await apiService.updateEmployee(editEmployee.id, payload);
       
       // Refresh the employee list from the database
       await fetchEmployees();
@@ -909,6 +920,30 @@ export default function Employees() {
     }
   };
 
+  const login = async (email: string, password: string): Promise<boolean> => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setUser(data.user);
+        localStorage.setItem('hris_user', JSON.stringify(data.user));
+        localStorage.setItem('auth_token', data.token);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Login error:', error);
+      return false;
+    }
+  };
+
   return (
     <ProtectedRoute roles={PERMISSIONS.FULL}>
       <div className="space-y-4 md:space-y-6">
@@ -945,6 +980,7 @@ export default function Employees() {
               <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
                 <DialogHeader>
                   <DialogTitle>Add New Employee</DialogTitle>
+                  <DialogDescription className="sr-only">Employee dialog</DialogDescription>
                 </DialogHeader>
                 <RoleBasedComponent allowedRoles={PERMISSIONS.FULL}>
                   <div className="mt-2 mb-4 space-y-2">
@@ -1857,6 +1893,7 @@ export default function Employees() {
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
             <DialogHeader>
               <DialogTitle>Employee Details</DialogTitle>
+              <DialogDescription className="sr-only">Employee dialog</DialogDescription>
             </DialogHeader>
             {selectedEmployee && <Tabs defaultValue="personal" className="w-full">
                 <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-1">
@@ -2148,6 +2185,7 @@ export default function Employees() {
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
             <DialogHeader>
               <DialogTitle>Edit Employee</DialogTitle>
+              <DialogDescription className="sr-only">Employee dialog</DialogDescription>
             </DialogHeader>
             
             {/* Add System Role Dropdown at the top */}

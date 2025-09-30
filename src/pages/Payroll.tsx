@@ -789,7 +789,7 @@ export default function Payroll() {
       </div>
 
       {/* Payroll History */}
-      <RoleBasedComponent allowedRoles={['executive', 'general_employee']}>
+      <RoleBasedComponent allowedRoles={['executive', 'hr_manager']}>
         <Card className="border-border/50 shadow-sm">
           <CardHeader>
             <CardTitle className="text-primary">Payroll History</CardTitle>

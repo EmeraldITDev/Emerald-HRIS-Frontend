@@ -789,41 +789,43 @@ export default function Payroll() {
       </div>
 
       {/* Payroll History */}
-      <Card className="border-border/50 shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-primary">Payroll History</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="text-xs md:text-sm">Employee</TableHead>
-                  <TableHead className="text-xs md:text-sm">Period</TableHead>
-                  <TableHead className="hidden md:table-cell text-xs md:text-sm">Basic Salary</TableHead>
-                  <TableHead className="hidden lg:table-cell text-xs md:text-sm">Gross Pay</TableHead>
-                  <TableHead className="text-xs md:text-sm">PAYE</TableHead>
-                  <TableHead className="text-xs md:text-sm">Net Pay</TableHead>
-                  <TableHead className="text-xs md:text-sm">Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {payrollRecords.map((record) => (
-                  <TableRow key={record.id}>
-                    <TableCell className="font-medium text-xs md:text-sm">{record.employeeName}</TableCell>
-                    <TableCell className="text-xs md:text-sm">{record.period}</TableCell>
-                    <TableCell className="hidden md:table-cell text-xs md:text-sm">{formatCurrency(record.basicSalary)}</TableCell>
-                    <TableCell className="hidden lg:table-cell text-xs md:text-sm">{formatCurrency(record.grossPay)}</TableCell>
-                    <TableCell className="text-xs md:text-sm">{formatCurrency(record.paye)}</TableCell>
-                    <TableCell className="font-medium text-xs md:text-sm">{formatCurrency(record.netPay)}</TableCell>
-                    <TableCell>{getStatusBadge(record.status)}</TableCell>
+      <RoleBasedComponent allowedRoles={['executive', 'general_employee']}>
+        <Card className="border-border/50 shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-primary">Payroll History</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-xs md:text-sm">Employee</TableHead>
+                    <TableHead className="text-xs md:text-sm">Period</TableHead>
+                    <TableHead className="hidden md:table-cell text-xs md:text-sm">Basic Salary</TableHead>
+                    <TableHead className="hidden lg:table-cell text-xs md:text-sm">Gross Pay</TableHead>
+                    <TableHead className="text-xs md:text-sm">PAYE</TableHead>
+                    <TableHead className="text-xs md:text-sm">Net Pay</TableHead>
+                    <TableHead className="text-xs md:text-sm">Status</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+                </TableHeader>
+                <TableBody>
+                  {payrollRecords.map((record) => (
+                    <TableRow key={record.id}>
+                      <TableCell className="font-medium text-xs md:text-sm">{record.employeeName}</TableCell>
+                      <TableCell className="text-xs md:text-sm">{record.period}</TableCell>
+                      <TableCell className="hidden md:table-cell text-xs md:text-sm">{formatCurrency(record.basicSalary)}</TableCell>
+                      <TableCell className="hidden lg:table-cell text-xs md:text-sm">{formatCurrency(record.grossPay)}</TableCell>
+                      <TableCell className="text-xs md:text-sm">{formatCurrency(record.paye)}</TableCell>
+                      <TableCell className="font-medium text-xs md:text-sm">{formatCurrency(record.netPay)}</TableCell>
+                      <TableCell>{getStatusBadge(record.status)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      </RoleBasedComponent>
     </div>
   )
 }

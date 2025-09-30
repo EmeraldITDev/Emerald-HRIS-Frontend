@@ -215,15 +215,15 @@ const employees = [
 const onboardEmployees = employees.filter(emp => emp.status === "On-board")
 
 export default function Payroll() {
-  const [selectedEmployee, setSelectedEmployee] = useState("")
-  const [selectedPeriod, setSelectedPeriod] = useState("")
+  const [selectedEmployee, setSelectedEmployee] = useState("EMP007")
+  const [selectedPeriod, setSelectedPeriod] = useState("2024-01")
   const [payrollData, setPayrollData] = useState({
-    grossSalary: "",
+    grossSalary: "4000000",
     housingAllowance: "",
     transportAllowance: "",
     otherAllowance: "",
-    earnings: "",
-    deduction: "",
+    earnings: "50000",
+    deduction: "25000",
   })
   const { toast } = useToast()
   const { user } = useAuth()

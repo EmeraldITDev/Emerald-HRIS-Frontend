@@ -772,15 +772,17 @@ export default function Payroll() {
               </div>
 
               {/* Save Payroll Button */}
-              <div className="flex justify-end border-t pt-4">
-                <Button 
-                  onClick={() => savePayroll()}
-                  disabled={!selectedEmployee || !selectedPeriod || !payrollData.grossSalary}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white"
-                >
-                  Save Payroll & Update Employee Record
-                </Button>
-              </div>
+              <RoleBasedComponent allowedRoles={['hr_manager', 'executive']}>
+                <div className="flex justify-end border-t pt-4">
+                  <Button 
+                    onClick={() => savePayroll()}
+                    disabled={!selectedEmployee || !selectedPeriod || !payrollData.grossSalary}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                  >
+                    Save Payroll & Update Employee Record
+                  </Button>
+                </div>
+              </RoleBasedComponent>
             </div>
           </CardContent>
         </Card>

@@ -568,23 +568,23 @@ export default function Employees() {
       // Personal Information - Map database fields to form fields
       firstName: employee.first_name || '',
       lastName: employee.last_name || '',
-      middleName: employee.middle_name || '',
+      middleName: '',
       dateOfBirth: employee.dob ? new Date(employee.dob) : undefined,
       gender: employee.gender || '',
       maritalStatus: employee.marital_status || '',
       nationality: employee.nationality || '',
-      phoneNumber: employee.phone || '',
+      phoneNumber: employee.phone_number || '',
       email: employee.email || '',
       homeAddress: employee.address || '',
       
       // Emergency Contact Information
-      emergencyContact: employee.emergency_contact || '',
-      emergencyContactNumber: employee.emergency_contact_number || '',
-      nextOfKinName: employee.next_of_kin_name || '',
-      nextOfKinRelationship: employee.next_of_kin_relationship || '',
-      nextOfKinPhone: employee.next_of_kin_phone || '',
-      nextOfKinAddress: employee.next_of_kin_address || '',
-      nextOfKinEmail: employee.next_of_kin_email || '',
+      emergencyContact: '',
+      emergencyContactNumber: '',
+      nextOfKinName: '',
+      nextOfKinRelationship: '',
+      nextOfKinPhone: '',
+      nextOfKinAddress: '',
+      nextOfKinEmail: '',
       
       // Job Information  
       jobTitle: employee.job_title || '',
@@ -599,37 +599,37 @@ export default function Employees() {
       employment_status: employee.employment_status || 'Active', // Fix field name
       
       // Financial Information
-      gross_salary: employee.financial_details?.gross_salary?.toString() || '',
-      basic_salary: employee.financial_details?.basic_salary?.toString() || '',
-      housing_allowance: employee.financial_details?.housing_allowance?.toString() || '',
-      transport_allowance: employee.financial_details?.transport_allowance?.toString() || '',
-      other_allowance: employee.financial_details?.other_allowance?.toString() || '',
-      meal_allowance: employee.financial_details?.meal_allowance?.toString() || '',
+      gross_salary: employee.gross_salary?.toString() || '',
+      basic_salary: '',
+      housing_allowance: employee.housing_allowance?.toString() || '',
+      transport_allowance: employee.transport_allowance?.toString() || '',
+      other_allowance: '',
+      meal_allowance: employee.meal_allowance?.toString() || '',
       
       // Banking Information
-      bank_account: employee.financial_details?.bank_account || '',
-      bank_name: employee.financial_details?.bank_name || '',
-      account_number: employee.financial_details?.account_number || '',
-      nuban: employee.financial_details?.nuban || '',
-      sort_code: employee.financial_details?.sort_code || '',
+      bank_account: employee.bank_account || '',
+      bank_name: '',
+      account_number: '',
+      nuban: '',
+      sort_code: '',
       
       // Government IDs
-      national_id: employee.national_id || '', // Fix field name
-      passport_number: employee.passport_number || '', // Fix field name
+      national_id: employee.national_id || '',
+      passport_number: '',
       tin: employee.tin || '',
-      pension_pin: employee.pension_pin || '', // Fix field name
-      nhf_number: employee.nhf_number || '', // Fix field name
-      tax_id: employee.tax_id || '', // Fix field name
+      pension_pin: employee.pension_pin || '',
+      nhf_number: employee.nhf_number || '',
+      tax_id: employee.tax_id || '',
       bvn: employee.bvn || '',
       
       // Additional
-      vacation_days: employee.vacation_days?.toString() || '', // Fix field name
+      vacation_days: employee.vacation_days?.toString() || '',
       
       // Contract Information (if available in database)
-      contract_amount: employee.contract_amount?.toString() || '', // Fix field name
-      payment_frequency: employee.payment_frequency || '', // Fix field name
-      contract_duration: employee.contract_duration || '', // Fix field name
-      contract_terms: employee.contract_terms || '', // Fix field name
+      contract_amount: '',
+      payment_frequency: '',
+      contract_duration: '',
+      contract_terms: '',
       
       // Document fields (set to null for now)
       ninDocument: null,
@@ -639,7 +639,7 @@ export default function Employees() {
     });
     
     // Set the edit system role based on existing user role
-    setEditSystemRole(employee.user_role || '');
+    setEditSystemRole('');
     
     setShowEditEmployee(true);
   };
@@ -920,32 +920,9 @@ export default function Employees() {
     }
   };
 
-  const login = async (email: string, password: string): Promise<boolean> => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/auth/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setUser(data.user);
-        localStorage.setItem('hris_user', JSON.stringify(data.user));
-        localStorage.setItem('auth_token', data.token);
-        return true;
-      }
-      return false;
-    } catch (error) {
-      console.error('Login error:', error);
-      return false;
-    }
-  };
 
   return (
-    <ProtectedRoute roles={PERMISSIONS.FULL}>
+    <ProtectedRoute roles={[...PERMISSIONS.FULL]}>
       <div className="space-y-4 md:space-y-6">
         <div className="flex flex-col space-y-3 md:space-y-0 md:flex-row md:items-center md:justify-between">
           <div>
@@ -982,7 +959,7 @@ export default function Employees() {
                   <DialogTitle>Add New Employee</DialogTitle>
                   <DialogDescription className="sr-only">Employee dialog</DialogDescription>
                 </DialogHeader>
-                <RoleBasedComponent allowedRoles={PERMISSIONS.FULL}>
+                <RoleBasedComponent allowedRoles={[...PERMISSIONS.FULL]}>
                   <div className="mt-2 mb-4 space-y-2">
                     <Label>System Role</Label>
                     <Select

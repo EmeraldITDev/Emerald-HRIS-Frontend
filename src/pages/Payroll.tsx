@@ -24,43 +24,191 @@ import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/contexts/AuthContext"
 import { RoleBasedComponent } from "@/components/RoleBasedComponent"
 
-// Sample payroll data
+// Sample payroll data with realistic values for different roles
 const payrollRecords = [
+  // Executive Role - James Thompson (CEO)
   {
     id: "PAY001",
     employeeId: "EMP001",
-    employeeName: "Adebayo Johnson",
-    basicSalary: 2500000,
-    allowances: 500000,
-    grossPay: 3000000,
-    paye: 450000,
-    pension: 240000,
-    nhf: 75000,
-    netPay: 2235000,
+    employeeName: "James Thompson",
+    department: "Executive",
+    role: "executive",
+    basicSalary: 8000000,
+    allowances: 12000000,
+    grossPay: 20000000,
+    paye: 3855000,
+    pension: 1440000,
+    nhf: 500000,
+    netPay: 14205000,
     period: "2024-01",
     status: "Paid"
   },
+  // HR Manager - Sarah Williams
   {
     id: "PAY002",
     employeeId: "EMP002",
+    employeeName: "Sarah Williams",
+    department: "Human Resource",
+    role: "hr_manager",
+    basicSalary: 4000000,
+    allowances: 6000000,
+    grossPay: 10000000,
+    paye: 1855000,
+    pension: 720000,
+    nhf: 250000,
+    netPay: 7175000,
+    period: "2024-01",
+    status: "Paid"
+  },
+  // Corporate HR - Emily Johnson
+  {
+    id: "PAY003",
+    employeeId: "EMP003",
+    employeeName: "Emily Johnson",
+    department: "Human Resource",
+    role: "corporate_hr",
+    basicSalary: 2000000,
+    allowances: 3000000,
+    grossPay: 5000000,
+    paye: 705000,
+    pension: 360000,
+    nhf: 125000,
+    netPay: 3810000,
+    period: "2024-01",
+    status: "Paid"
+  },
+  // Line Manager - Michael Brown
+  {
+    id: "PAY004",
+    employeeId: "EMP004",
+    employeeName: "Michael Brown",
+    department: "Operations",
+    role: "line_manager",
+    basicSalary: 2400000,
+    allowances: 3600000,
+    grossPay: 6000000,
+    paye: 930000,
+    pension: 432000,
+    nhf: 150000,
+    netPay: 4488000,
+    period: "2024-01",
+    status: "Paid"
+  },
+  // IT Power User - David Martinez
+  {
+    id: "PAY005",
+    employeeId: "EMP005",
+    employeeName: "David Martinez",
+    department: "IT",
+    role: "it_power_user",
+    basicSalary: 3200000,
+    allowances: 4800000,
+    grossPay: 8000000,
+    paye: 1380000,
+    pension: 576000,
+    nhf: 200000,
+    netPay: 5844000,
+    period: "2024-01",
+    status: "Paid"
+  },
+  // IT Admin - Alex Chen
+  {
+    id: "PAY006",
+    employeeId: "EMP006",
+    employeeName: "Alex Chen",
+    department: "IT",
+    role: "it_admin",
+    basicSalary: 2000000,
+    allowances: 3000000,
+    grossPay: 5000000,
+    paye: 705000,
+    pension: 360000,
+    nhf: 125000,
+    netPay: 3810000,
+    period: "2024-01",
+    status: "Paid"
+  },
+  // General Employee - Adebayo Johnson
+  {
+    id: "PAY007",
+    employeeId: "EMP007",
+    employeeName: "Adebayo Johnson",
+    department: "Business Development",
+    role: "general_employee",
+    basicSalary: 1600000,
+    allowances: 2400000,
+    grossPay: 4000000,
+    paye: 480000,
+    pension: 288000,
+    nhf: 100000,
+    netPay: 3132000,
+    period: "2024-01",
+    status: "Paid"
+  },
+  // General Employee - Fatima Abdul
+  {
+    id: "PAY008",
+    employeeId: "EMP008",
     employeeName: "Fatima Abdul",
+    department: "Finance",
+    role: "general_employee",
     basicSalary: 1800000,
-    allowances: 360000,
-    grossPay: 2160000,
-    paye: 216000,
-    pension: 172800,
-    nhf: 54000,
-    netPay: 1717200,
+    allowances: 2700000,
+    grossPay: 4500000,
+    paye: 580500,
+    pension: 324000,
+    nhf: 112500,
+    netPay: 3483000,
+    period: "2024-01",
+    status: "Paid"
+  },
+  // Contract Employee - Chinedu Okafor
+  {
+    id: "PAY009",
+    employeeId: "EMP009",
+    employeeName: "Chinedu Okafor",
+    department: "Technical Operations",
+    role: "general_employee",
+    basicSalary: 1200000,
+    allowances: 0,
+    grossPay: 1200000,
+    paye: 60000, // 5% Withholding Tax for contract
+    pension: 0,
+    nhf: 0,
+    netPay: 1140000,
     period: "2024-01",
     status: "Processed"
+  },
+  // General Employee - Kemi Adeleke
+  {
+    id: "PAY010",
+    employeeId: "EMP010",
+    employeeName: "Kemi Adeleke",
+    department: "Legal",
+    role: "general_employee",
+    basicSalary: 1400000,
+    allowances: 2100000,
+    grossPay: 3500000,
+    paye: 380000,
+    pension: 252000,
+    nhf: 87500,
+    netPay: 2780500,
+    period: "2024-01",
+    status: "Paid"
   }
 ]
 
 const employees = [
-  { id: "EMP001", name: "Adebayo Johnson", basicSalary: 2500000, pensionId: "PEN123456", taxId: "TIN789012", employmentType: "Full-time", status: "On-board" },
-  { id: "EMP002", name: "Fatima Abdul", basicSalary: 1800000, pensionId: "PEN654321", taxId: "TIN345678", employmentType: "Full-time", status: "On-board" },
-  { id: "EMP003", name: "Chinedu Okafor", basicSalary: 1200000, pensionId: "PEN111222", taxId: "TIN999888", employmentType: "Contract", status: "On-board" },
-  { id: "EMP004", name: "Kemi Adeleke", basicSalary: 950000, pensionId: "PEN333444", taxId: "TIN777666", employmentType: "Full-time", status: "Resigned" },
+  { id: "EMP001", name: "James Thompson", basicSalary: 8000000, pensionId: "PEN001", taxId: "TIN001", employmentType: "Full-time", status: "On-board", role: "executive" },
+  { id: "EMP002", name: "Sarah Williams", basicSalary: 4000000, pensionId: "PEN002", taxId: "TIN002", employmentType: "Full-time", status: "On-board", role: "hr_manager" },
+  { id: "EMP003", name: "Emily Johnson", basicSalary: 2000000, pensionId: "PEN003", taxId: "TIN003", employmentType: "Full-time", status: "On-board", role: "corporate_hr" },
+  { id: "EMP004", name: "Michael Brown", basicSalary: 2400000, pensionId: "PEN004", taxId: "TIN004", employmentType: "Full-time", status: "On-board", role: "line_manager" },
+  { id: "EMP005", name: "David Martinez", basicSalary: 3200000, pensionId: "PEN005", taxId: "TIN005", employmentType: "Full-time", status: "On-board", role: "it_power_user" },
+  { id: "EMP006", name: "Alex Chen", basicSalary: 2000000, pensionId: "PEN006", taxId: "TIN006", employmentType: "Full-time", status: "On-board", role: "it_admin" },
+  { id: "EMP007", name: "Adebayo Johnson", basicSalary: 1600000, pensionId: "PEN007", taxId: "TIN007", employmentType: "Full-time", status: "On-board", role: "general_employee" },
+  { id: "EMP008", name: "Fatima Abdul", basicSalary: 1800000, pensionId: "PEN008", taxId: "TIN008", employmentType: "Full-time", status: "On-board", role: "general_employee" },
+  { id: "EMP009", name: "Chinedu Okafor", basicSalary: 1200000, pensionId: "PEN009", taxId: "TIN009", employmentType: "Contract", status: "On-board", role: "general_employee" },
+  { id: "EMP010", name: "Kemi Adeleke", basicSalary: 1400000, pensionId: "PEN010", taxId: "TIN010", employmentType: "Full-time", status: "On-board", role: "general_employee" },
 ]
 
 // Filter to show only On-board employees in dropdown
@@ -337,6 +485,8 @@ export default function Payroll() {
       id: `PAY${String(payrollRecords.length + 1).padStart(3, '0')}`,
       employeeId: selectedEmployee,
       employeeName: selectedEmp.name,
+      department: "Unknown",
+      role: selectedEmp.role || "general_employee",
       basicSalary: parseFloat(payrollData.grossSalary) || 0,
       allowances: calculations.housing + calculations.transport + calculations.other,
       grossPay: calculations.grossPay,

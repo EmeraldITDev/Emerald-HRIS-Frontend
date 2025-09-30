@@ -227,12 +227,12 @@ export default function Attendance() {
   const [isPunching, setIsPunching] = useState(false);
 
   const loadTodayStatus = async () => {
-    if (!user?.employee_id) return;
+    if (!user) return;
     try {
       const res = await fetch('http://localhost:8000/api/attendance/today-status', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify({ employee_id: user.employee_id }),
+        body: JSON.stringify({ employee_id: user.id }),
       });
       const data = await res.json();
       if (data.success) setTodayStatus(data.data);
@@ -244,7 +244,7 @@ export default function Attendance() {
   useEffect(() => {
     loadTodayStatus();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.employee_id]);
+  }, [user]);
 
   useEffect(() => {
     fetchEmployees()
@@ -305,9 +305,9 @@ export default function Attendance() {
     return 0
   }
 
-  const days = calculateDays()
+    const days = calculateDays()
   const selectedEmp = employees.find(emp => emp.id?.toString() === selectedEmployee.toString())
-  const remainingDays = selectedEmp ? (selectedEmp.vacation_days || selectedEmp.vacationDays || 0) - (selectedEmp.usedDays || 0) : 0
+  const remainingDays = selectedEmp ? (selectedEmp.vacation_days || 0) : 0
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>, fileType: string) => {
     const file = event.target.files?.[0]
@@ -464,7 +464,7 @@ export default function Attendance() {
   }
 
   const handleClockIn = async () => {
-    if (!user?.employee_id) {
+    if (!user) {
       toast({ title: "Error", description: "No linked employee on this account.", variant: "destructive" });
       return;
     }
@@ -473,7 +473,7 @@ export default function Attendance() {
       const res = await fetch('http://localhost:8000/api/attendance/clock-in', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify({ employee_id: user.employee_id, location: 'office' }),
+        body: JSON.stringify({ employee_id: user.id, location: 'office' }),
       });
       const data = await res.json();
       if (data.success) {
@@ -490,7 +490,7 @@ export default function Attendance() {
   };
 
   const handleClockOut = async () => {
-    if (!user?.employee_id) {
+    if (!user) {
       toast({ title: "Error", description: "No linked employee on this account.", variant: "destructive" });
       return;
     }
@@ -499,7 +499,7 @@ export default function Attendance() {
       const res = await fetch('http://localhost:8000/api/attendance/clock-out', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify({ employee_id: user.employee_id }),
+        body: JSON.stringify({ employee_id: user.id }),
       });
       const data = await res.json();
       if (data.success) {
@@ -550,7 +550,7 @@ export default function Attendance() {
     try {
       // Try to update in database
       try {
-        await apiService.updateLeaveRequest(requestId, { status: newStatus })
+        await apiService.updateLeaveRequest(requestId, newStatus)
         
         // Refresh leave requests from database
         await fetchLeaveRequests()
@@ -783,7 +783,7 @@ export default function Attendance() {
                         </div>
                       </div>
                       {!record.clockOut && (
-                        <Button size="sm" onClick={() => handleClockOut(record.id)} variant="outline">
+                        <Button size="sm" onClick={() => handleClockOut()} variant="outline">
                           <LogOut className="mr-1 h-3 w-3" />
                           Clock Out
                         </Button>
@@ -1182,20 +1182,20 @@ export default function Attendance() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {employees.map((emp) => (
               <div key={emp.id} className="p-4 border rounded-lg bg-card">
-                <div className="font-medium text-sm">{emp.name}</div>
-                <div className="text-xs text-muted-foreground">{emp.id}</div>
+                <div className="font-medium text-sm">{emp.first_name} {emp.last_name}</div>
+                <div className="text-xs text-muted-foreground">{emp.employee_code || emp.id}</div>
                 <div className="mt-2 space-y-1">
                   <div className="flex justify-between text-xs">
                     <span>Total:</span>
-                    <span>{emp.vacationDays} days</span>
+                    <span>{emp.vacation_days || 0} days</span>
                   </div>
                   <div className="flex justify-between text-xs">
                     <span>Used:</span>
-                    <span>{emp.usedDays} days</span>
+                    <span>0 days</span>
                   </div>
                   <div className="flex justify-between text-xs font-medium">
                     <span>Remaining:</span>
-                    <span className="text-primary">{emp.vacationDays - emp.usedDays} days</span>
+                    <span className="text-primary">{emp.vacation_days || 0} days</span>
                   </div>
                 </div>
               </div>

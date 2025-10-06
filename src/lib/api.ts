@@ -1,7 +1,11 @@
-const API_BASE_URL = (typeof window !== 'undefined' && window.location.hostname === 'localhost') 
-  ? 'http://localhost:8000/api'
-  : 'https://hris-backend-to3i.onrender.com/api';
+// Use environment variable for flexibility between local and deployed environments
+const API = import.meta.env.VITE_API_URL;
 
+const API_BASE_URL =
+  (typeof window !== 'undefined' && window.location.hostname === 'localhost')
+    ? 'http://localhost:8000/api' // Local backend
+    : API || 'https://hris-backend-to3i.onrender.com/api'; // Fallback to Render if no env var found
+    
 export interface Employee {
   id?: number;
   first_name: string;
@@ -102,6 +106,9 @@ class ApiService {
   ): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
     
+    // Get auth token from localStorage
+    const token = localStorage.getItem('auth_token');
+    
     console.log('🌍 API Request URL:', url);
     console.log('🌍 Environment:', process.env.NODE_ENV);
     console.log('📤 Endpoint being called:', endpoint);
@@ -110,6 +117,7 @@ class ApiService {
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
+        ...(token && { 'Authorization': `Bearer ${token}` }),
         ...options.headers,
       },
       ...options,
@@ -138,6 +146,24 @@ class ApiService {
   // Test API connection
   async testConnection(): Promise<{ message: string }> {
     return this.request<{ message: string }>('/test');
+  }
+
+  // Authentication methods
+  async login(email: string, password: string): Promise<{ user: any; token: string }> {
+    return this.request<{ user: any; token: string }>('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    });
+  }
+
+  async logout(): Promise<{ message: string }> {
+    return this.request<{ message: string }>('/auth/logout', {
+      method: 'POST',
+    });
+  }
+
+  async getCurrentUser(): Promise<{ user: any }> {
+    return this.request<{ user: any }>('/auth/me');
   }
 
   // Get all employees

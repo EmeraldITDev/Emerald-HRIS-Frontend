@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
+import { apiService } from '../lib/api';
 
 export type UserRole = 
   | 'executive' 
@@ -179,6 +180,30 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   });
 
   const login = async (email: string, password: string): Promise<boolean> => {
+    try {
+      // Try backend authentication first
+      const response = await apiService.login(email, password);
+      
+      if (response.user && response.token) {
+        // Transform backend user to frontend format
+        const user: User = {
+          id: response.user.id.toString(),
+          firstName: response.user.name.split(' ')[0],
+          lastName: response.user.name.split(' ').slice(1).join(' '),
+          email: response.user.email,
+          role: response.user.role as UserRole,
+        };
+        
+        setUser(user);
+        localStorage.setItem('hris_user', JSON.stringify(user));
+        localStorage.setItem('auth_token', response.token);
+        return true;
+      }
+    } catch (error) {
+      console.log('Backend login failed, trying dummy users:', error);
+    }
+    
+    // Fallback to dummy users if backend fails
     const userRecord = dummyUsers[email.toLowerCase()];
     
     if (userRecord && userRecord.password === password) {
@@ -190,9 +215,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return false;
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      // Try backend logout if we have a token
+      const token = localStorage.getItem('auth_token');
+      if (token) {
+        await apiService.logout();
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+    
     setUser(null);
     localStorage.removeItem('hris_user');
+    localStorage.removeItem('auth_token');
   };
 
   const hasPermission = (permission: string): boolean => {

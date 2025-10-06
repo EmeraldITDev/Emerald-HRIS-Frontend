@@ -568,37 +568,37 @@ export default function Employees() {
       // Personal Information - Map database fields to form fields
       firstName: employee.first_name || '',
       lastName: employee.last_name || '',
-      middleName: employee.middle_name || '',
+      middleName: '', // This field doesn't exist in database
       dateOfBirth: employee.dob ? new Date(employee.dob) : undefined,
       gender: employee.gender || '',
       maritalStatus: employee.marital_status || '',
       nationality: employee.nationality || '',
-      phoneNumber: employee.phone || '',
+      phoneNumber: employee.phone_number || '', // Fixed: use phone_number
       email: employee.email || '',
       homeAddress: employee.address || '',
       
-      // Emergency Contact Information
-      emergencyContact: employee.emergency_contact || '',
-      emergencyContactNumber: employee.emergency_contact_number || '',
-      nextOfKinName: employee.next_of_kin_name || '',
-      nextOfKinRelationship: employee.next_of_kin_relationship || '',
-      nextOfKinPhone: employee.next_of_kin_phone || '',
-      nextOfKinAddress: employee.next_of_kin_address || '',
-      nextOfKinEmail: employee.next_of_kin_email || '',
+      // Emergency Contact Information - These fields don't exist in database
+      emergencyContact: '',
+      emergencyContactNumber: '',
+      nextOfKinName: '',
+      nextOfKinRelationship: '',
+      nextOfKinPhone: '',
+      nextOfKinAddress: '',
+      nextOfKinEmail: '',
       
       // Job Information  
       jobTitle: employee.job_title || '',
       department: employee.department || '',
-      employment_type: employee.employment_type || '', // Fix field name
-      grade_level: employee.grade_level || '', // Fix field name
-      supervisor_name: employee.supervisor_name || '', // Fix field name
-      work_location: employee.work_location || '', // Fix field name
+      employment_type: employee.employment_type || '',
+      grade_level: employee.grade_level || '',
+      supervisor_name: employee.supervisor_name || '',
+      work_location: employee.work_location || '',
       hireDate: employee.hire_date ? new Date(employee.hire_date) : undefined,
-      probation_period: employee.probation_period || '', // Fix field name
-      confirmation_date: employee.confirmation_date ? new Date(employee.confirmation_date) : undefined, // Fix field name
-      employment_status: employee.employment_status || 'Active', // Fix field name
+      probation_period: employee.probation_period || '',
+      confirmation_date: employee.confirmation_date ? new Date(employee.confirmation_date) : undefined,
+      employment_status: employee.employment_status || 'Active',
       
-      // Financial Information
+      // Financial Information (pull from nested financial_details)
       gross_salary: employee.financial_details?.gross_salary?.toString() || '',
       basic_salary: employee.financial_details?.basic_salary?.toString() || '',
       housing_allowance: employee.financial_details?.housing_allowance?.toString() || '',
@@ -606,41 +606,23 @@ export default function Employees() {
       other_allowance: employee.financial_details?.other_allowance?.toString() || '',
       meal_allowance: employee.financial_details?.meal_allowance?.toString() || '',
       
-      // Banking Information
+      // Banking Information (also from financial_details)
       bank_account: employee.financial_details?.bank_account || '',
       bank_name: employee.financial_details?.bank_name || '',
       account_number: employee.financial_details?.account_number || '',
       nuban: employee.financial_details?.nuban || '',
       sort_code: employee.financial_details?.sort_code || '',
       
-      // Government IDs
-      national_id: employee.national_id || '', // Fix field name
-      passport_number: employee.passport_number || '', // Fix field name
-      tin: employee.tin || '',
-      pension_pin: employee.pension_pin || '', // Fix field name
-      nhf_number: employee.nhf_number || '', // Fix field name
-      tax_id: employee.tax_id || '', // Fix field name
-      bvn: employee.bvn || '',
-      
-      // Additional
-      vacation_days: employee.vacation_days?.toString() || '', // Fix field name
-      
-      // Contract Information (if available in database)
-      contract_amount: employee.contract_amount?.toString() || '', // Fix field name
-      payment_frequency: employee.payment_frequency || '', // Fix field name
-      contract_duration: employee.contract_duration || '', // Fix field name
-      contract_terms: employee.contract_terms || '', // Fix field name
-      
-      // Document fields (set to null for now)
-      ninDocument: null,
-      passportPhoto: null,
-      certifications: [],
-      cv: null
+      // Government IDs (from governmentIds relation)
+      national_id: employee.government_ids?.nin || '', // Fixed: use nin from governmentIds
+      passport_number: '', // This field doesn't exist
+      tin: employee.government_ids?.tin || '',
+      pension_pin: employee.government_ids?.pension_pin || '',
+      nhf_number: employee.government_ids?.nhf_number || '',
+      tax_id: employee.government_ids?.tax_id || '',
+      bvn: employee.government_ids?.bvn || '',
     });
-    
-    // Set the edit system role based on existing user role
     setEditSystemRole(employee.user_role || '');
-    
     setShowEditEmployee(true);
   };
   const handleUpdateEmployee = async () => {
@@ -648,19 +630,19 @@ export default function Employees() {
       if (!editEmployee.id) {
         toast({
           title: "Error",
-          description: "Employee ID is required for update",
+          description: "Employee ID is required",
           variant: "destructive"
         });
         return;
       }
 
       // Format the employee data for the API
-      const payload: any = {
+      const employeeData = {
         first_name: editEmployee.firstName,
         last_name: editEmployee.lastName,
-        middle_name: editEmployee.middleName,
+        // Remove middle_name - doesn't exist in database
         email: editEmployee.email,
-        phone: editEmployee.phoneNumber,
+        phone_number: editEmployee.phoneNumber, // Fixed: use phone_number
         job_title: editEmployee.jobTitle,
         department: editEmployee.department,
         employment_type: editEmployee.employment_type,
@@ -700,34 +682,29 @@ export default function Employees() {
         pension_pin: editEmployee.pension_pin,
         nhf_number: editEmployee.nhf_number,
         tax_id: editEmployee.tax_id,
+        
+        // System Role for user account update
+        system_role: editSystemRole || null,
       };
 
-      // Only attach system_role if valid
-      if (editSystemRole && VALID_SYSTEM_ROLES.has(editSystemRole)) {
-        payload.system_role = editSystemRole;
-      }
-
       // Call the API to update the employee
-      await apiService.updateEmployee(editEmployee.id, payload);
+      await apiService.updateEmployee(editEmployee.id, employeeData);
       
       // Refresh the employee list from the database
       await fetchEmployees();
       
-      // Close the dialog
-      setShowEditEmployee(false);
-      setEditEmployee(null);
-      setEditSystemRole(''); // Reset edit system role
-
       toast({
         title: "Success",
-        description: "Employee updated successfully!",
+        description: "Employee updated successfully",
       });
-
+      
+      setShowEditEmployee(false);
+      setEditSystemRole(''); // Reset edit system role
     } catch (error) {
       console.error('Error updating employee:', error);
       toast({
         title: "Error",
-        description: "Failed to update employee. Please try again.",
+        description: "Failed to update employee",
         variant: "destructive"
       });
     }

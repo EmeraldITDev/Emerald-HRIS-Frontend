@@ -65,7 +65,7 @@ const navigationItems = [
     title: "Payroll", 
     url: "/payroll", 
     icon: NairaIcon,
-    permission: "payroll.view_all"
+    permission: "payroll.view_own"
   },
   { 
     title: "Performance", 

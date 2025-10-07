@@ -612,8 +612,8 @@ export default function Payroll() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
-        {/* Payroll Calculator - For HR Manager, Executive, and Finance */}
-        <RoleBasedComponent allowedRoles={['executive', 'hr_manager', 'finance']}>
+        {/* Payroll Calculator - Only for HR Manager */}
+        <RoleBasedComponent allowedRoles={['hr_manager']}>
           <Card className="lg:col-span-1 border-border/50 shadow-sm">
             <CardHeader>
               <CardTitle className="text-primary flex items-center">
@@ -712,7 +712,6 @@ export default function Payroll() {
         </RoleBasedComponent>
 
         {/* Payroll Breakdown */}
-        <RoleBasedComponent allowedRoles={['executive', 'hr_manager', 'finance']}>
         <Card className="lg:col-span-2 border-border/50 shadow-sm">
           <CardHeader>
             <CardTitle className="text-primary flex items-center">
@@ -752,7 +751,6 @@ export default function Payroll() {
               </div>
 
               {/* Earnings */}
-              <RoleBasedComponent allowedRoles={['executive', 'hr_manager', 'corporate_hr', 'line_manager', 'finance', 'it_power_user', 'contract_employee', 'general_employee']}>
               <div className="border rounded-lg p-4 bg-card">
                 <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
                   <span className="w-2 h-2 bg-success rounded-full"></span>
@@ -777,7 +775,6 @@ export default function Payroll() {
                   </div>
                 </div>
               </div>
-              </RoleBasedComponent>
 
               {/* Deductions */}
               <div className="border rounded-lg p-4 bg-card">
@@ -872,7 +869,6 @@ export default function Payroll() {
             </div>
           </CardContent>
         </Card>
-        </RoleBasedComponent>
       </div>
 
       {/* Payroll History */}

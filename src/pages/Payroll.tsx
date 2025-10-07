@@ -751,8 +751,8 @@ export default function Payroll() {
                 </span>
               </div>
 
-              {/* Earnings - Hidden from finance */}
-              <RoleBasedComponent allowedRoles={['executive', 'hr_manager', 'corporate_hr', 'line_manager', 'it_power_user', 'contract_employee', 'general_employee']}>
+              {/* Earnings */}
+              <RoleBasedComponent allowedRoles={['executive', 'hr_manager', 'corporate_hr', 'line_manager', 'finance', 'it_power_user', 'contract_employee', 'general_employee']}>
               <div className="border rounded-lg p-4 bg-card">
                 <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
                   <span className="w-2 h-2 bg-success rounded-full"></span>

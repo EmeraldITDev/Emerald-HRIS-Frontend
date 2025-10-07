@@ -223,7 +223,9 @@ export default function Payroll() {
     transportAllowance: "",
     otherAllowance: "",
     earnings: "50000",
+    earningsRemarks: "",
     deduction: "25000",
+    deductionRemarks: "",
   })
   const { toast } = useToast()
   const { user } = useAuth()
@@ -260,7 +262,7 @@ export default function Payroll() {
     const earnings = parseFloat(payrollData.earnings) || 0
     const deduction = parseFloat(payrollData.deduction) || 0
     
-    let basic, housing, transport, other;
+    let basic, housing, transport, other, pensionEmployee, pensionEmployer, nhf;
     
     if (employmentType === "Full-time") {
       // Full-time breakdown: 40% Basic, 20% Housing, 9% Transport, 31% Other
@@ -269,7 +271,7 @@ export default function Payroll() {
       transport = gross * 0.09
       other = gross * 0.31
     } else {
-      // Contract: Single gross amount
+      // Contract: Only gross salary, no allowance breakdown
       basic = gross
       housing = 0
       transport = 0
@@ -279,11 +281,19 @@ export default function Payroll() {
     // Add earnings to gross pay
     const grossPay = basic + housing + transport + other + earnings
     
-    // Nigerian statutory deductions
-    const pensionableIncome = basic + housing + transport // Pensionable income excludes other allowances
-    const pensionEmployee = pensionableIncome * 0.08 // Employee 8%
-    const pensionEmployer = pensionableIncome * 0.10 // Employer 10%
-    const nhf = grossPay * 0.025 // 2.5%
+    // Nigerian statutory deductions - different for contract vs full-time
+    if (employmentType === "Full-time") {
+      const pensionableIncome = basic + housing + transport // Pensionable income excludes other allowances
+      pensionEmployee = pensionableIncome * 0.08 // Employee 8%
+      pensionEmployer = pensionableIncome * 0.10 // Employer 10%
+      nhf = grossPay * 0.025 // 2.5%
+    } else {
+      // Contract employees don't have pension or NHF deductions
+      pensionEmployee = 0
+      pensionEmployer = 0
+      nhf = 0
+    }
+    
     const nsitf = grossPay * 0.01 // 1% (employer paid)
     const itf = grossPay * 0.01 // 1% (employer paid)
     
@@ -512,7 +522,9 @@ export default function Payroll() {
       transportAllowance: "",
       otherAllowance: "",
       earnings: "",
+      earningsRemarks: "",
       deduction: "",
+      deductionRemarks: "",
     })
     setSelectedEmployee("")
     setSelectedPeriod("")
@@ -571,10 +583,13 @@ export default function Payroll() {
                 <Calculator className="mr-2 h-5 w-5" />
                 Payroll Calculator
               </CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                Calculate employee payroll with Nigerian tax compliance
+              </p>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label>Employee</Label>
+                <Label>Employee *</Label>
                 <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select employee" />
@@ -582,15 +597,20 @@ export default function Payroll() {
                   <SelectContent className="bg-popover border shadow-lg">
                     {onboardEmployees.map((emp) => (
                       <SelectItem key={emp.id} value={emp.id}>
-                        {emp.name}
+                        {emp.name} - {emp.employmentType}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                {selectedEmployee && (
+                  <p className="text-xs text-muted-foreground">
+                    Type: {onboardEmployees.find(e => e.id === selectedEmployee)?.employmentType}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
-                <Label>Pay Period</Label>
+                <Label>Pay Period *</Label>
                 <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select period" />
@@ -604,9 +624,11 @@ export default function Payroll() {
                 </Select>
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-3 border-t pt-3">
                 <div>
-                  <Label htmlFor="grossSalary">Gross Salary (₦)</Label>
+                  <Label htmlFor="grossSalary" className="font-semibold">
+                    {calculations.employmentType === "Contract" ? "Contract Amount (₦) *" : "Gross Salary (₦) *"}
+                  </Label>
                   <Input
                     id="grossSalary"
                     type="number"
@@ -614,28 +636,59 @@ export default function Payroll() {
                     value={payrollData.grossSalary}
                     onChange={(e) => setPayrollData({...payrollData, grossSalary: e.target.value})}
                   />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {calculations.employmentType === "Contract" 
+                      ? "Total contract payment amount" 
+                      : "Will be split: 40% Basic, 20% Housing, 9% Transport, 31% Other"}
+                  </p>
                 </div>
 
-                <div>
-                  <Label htmlFor="earnings">Additional Earnings (₦)</Label>
-                  <Input
-                    id="earnings"
-                    type="number"
-                    placeholder="50,000"
-                    value={payrollData.earnings}
-                    onChange={(e) => setPayrollData({...payrollData, earnings: e.target.value})}
-                  />
+                <div className="border rounded-lg p-3 bg-muted/30 space-y-3">
+                  <h4 className="text-sm font-semibold">Additional Earnings</h4>
+                  <div>
+                    <Label htmlFor="earnings">Amount (₦)</Label>
+                    <Input
+                      id="earnings"
+                      type="number"
+                      placeholder="50,000"
+                      value={payrollData.earnings}
+                      onChange={(e) => setPayrollData({...payrollData, earnings: e.target.value})}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="earningsRemarks">Remarks</Label>
+                    <Input
+                      id="earningsRemarks"
+                      type="text"
+                      placeholder="e.g., Overtime, Bonus"
+                      value={payrollData.earningsRemarks}
+                      onChange={(e) => setPayrollData({...payrollData, earningsRemarks: e.target.value})}
+                    />
+                  </div>
                 </div>
 
-                <div>
-                  <Label htmlFor="deduction">Personal Deduction (₦)</Label>
-                  <Input
-                    id="deduction"
-                    type="number"
-                    placeholder="25,000"
-                    value={payrollData.deduction}
-                    onChange={(e) => setPayrollData({...payrollData, deduction: e.target.value})}
-                  />
+                <div className="border rounded-lg p-3 bg-muted/30 space-y-3">
+                  <h4 className="text-sm font-semibold">Personal Deductions</h4>
+                  <div>
+                    <Label htmlFor="deduction">Amount (₦)</Label>
+                    <Input
+                      id="deduction"
+                      type="number"
+                      placeholder="25,000"
+                      value={payrollData.deduction}
+                      onChange={(e) => setPayrollData({...payrollData, deduction: e.target.value})}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="deductionRemarks">Remarks</Label>
+                    <Input
+                      id="deductionRemarks"
+                      type="text"
+                      placeholder="e.g., Loan Repayment, Advance"
+                      value={payrollData.deductionRemarks}
+                      onChange={(e) => setPayrollData({...payrollData, deductionRemarks: e.target.value})}
+                    />
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -647,126 +700,184 @@ export default function Payroll() {
           <CardHeader>
             <CardTitle className="text-primary flex items-center">
               <FileText className="mr-2 h-5 w-5" />
-              Payroll Breakdown
+              Payroll Breakdown & Summary
             </CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">
+              Detailed breakdown of earnings, deductions, and employer costs
+            </p>
           </CardHeader>
           <CardContent>
             <div className="space-y-6">
+              {/* Summary Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-muted/30 rounded-lg border">
+                <div className="text-center">
+                  <p className="text-xs text-muted-foreground mb-1">Total Gross Pay</p>
+                  <p className="text-xl font-bold text-primary">{formatCurrency(calculations.grossPay)}</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-xs text-muted-foreground mb-1">Total Deductions</p>
+                  <p className="text-xl font-bold text-destructive">{formatCurrency(calculations.totalDeductions)}</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-xs text-muted-foreground mb-1">Net Take Home</p>
+                  <p className="text-xl font-bold text-success">{formatCurrency(calculations.netPay)}</p>
+                </div>
+              </div>
+
+              {/* Employment Type Badge */}
+              <div className="flex items-center gap-2">
+                <Badge variant={calculations.employmentType === "Contract" ? "secondary" : "default"}>
+                  {calculations.employmentType} Employee
+                </Badge>
+                <span className="text-xs text-muted-foreground">
+                  Tax Type: {calculations.taxType}
+                </span>
+              </div>
+
               {/* Earnings */}
-              <div>
-                <h3 className="font-semibold text-lg mb-3">Payroll Structure</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>Gross Salary:</span>
-                      <span>{formatCurrency(parseFloat(payrollData.grossSalary) || 0)}</span>
-                    </div>
-                    {calculations.employmentType === "Full-time" && (
-                      <>
-                        <div className="flex justify-between text-sm">
-                          <span>Basic Salary (40%):</span>
-                          <span>{formatCurrency(calculations.basic)}</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span>Housing Allowance (20%):</span>
-                          <span>{formatCurrency(calculations.housing)}</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span>Transport Allowance (9%):</span>
-                          <span>{formatCurrency(calculations.transport)}</span>
-                        </div>
-                         <div className="flex justify-between text-sm">
-                           <span>Other Allowance (31%):</span>
-                           <span>{formatCurrency(calculations.other)}</span>
-                         </div>
-                       </>
-                     )}
-                     {calculations.employmentType === "Contract" && (
-                       <div className="flex justify-between text-sm">
-                         <span>Contract Amount:</span>
-                         <span>{formatCurrency(calculations.basic)}</span>
-                       </div>
-                     )}
-                     {calculations.earnings > 0 && (
-                       <div className="flex justify-between text-sm border-t pt-2 mt-2">
-                         <span>Additional Earnings:</span>
-                         <span className="text-success font-medium">{formatCurrency(calculations.earnings)}</span>
-                       </div>
-                     )}
+              <div className="border rounded-lg p-4 bg-card">
+                <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
+                  <span className="w-2 h-2 bg-success rounded-full"></span>
+                  Earnings & Compensation
+                </h3>
+                <div className="space-y-3">
+                  <div className="flex justify-between text-sm pb-2 border-b">
+                    <span className="font-medium">{calculations.employmentType === "Contract" ? "Contract Amount" : "Base Gross Salary"}:</span>
+                    <span className="font-semibold">{formatCurrency(parseFloat(payrollData.grossSalary) || 0)}</span>
                   </div>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>Tax Type:</span>
-                      <span className="font-medium">{calculations.taxType}</span>
+                  {calculations.employmentType === "Full-time" && (
+                    <div className="pl-4 space-y-2 text-sm text-muted-foreground">
+                      <div className="flex justify-between">
+                        <span>• Basic Salary (40%):</span>
+                        <span>{formatCurrency(calculations.basic)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>• Housing Allowance (20%):</span>
+                        <span>{formatCurrency(calculations.housing)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>• Transport Allowance (9%):</span>
+                        <span>{formatCurrency(calculations.transport)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>• Other Allowances (31%):</span>
+                        <span>{formatCurrency(calculations.other)}</span>
+                      </div>
                     </div>
-                    <div className="flex justify-between text-sm font-semibold border-t pt-2">
-                      <span>Gross Pay:</span>
-                      <span className="text-primary">{formatCurrency(calculations.grossPay)}</span>
+                  )}
+                  {calculations.employmentType === "Contract" && (
+                    <div className="pl-4 text-sm text-muted-foreground">
+                      <p>• No allowance breakdown for contract employees</p>
                     </div>
+                  )}
+                  {calculations.earnings > 0 && (
+                    <div className="flex justify-between text-sm border-t pt-2 bg-success/5 p-2 rounded">
+                      <span className="font-medium">
+                        Additional Earnings
+                        {payrollData.earningsRemarks && (
+                          <span className="text-xs text-muted-foreground ml-2">({payrollData.earningsRemarks})</span>
+                        )}:
+                      </span>
+                      <span className="text-success font-semibold">+{formatCurrency(calculations.earnings)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-base font-bold border-t-2 pt-3">
+                    <span>Total Gross Pay:</span>
+                    <span className="text-primary">{formatCurrency(calculations.grossPay)}</span>
                   </div>
                 </div>
               </div>
 
               {/* Deductions */}
-              <div>
-                <h3 className="font-semibold text-lg mb-3">Statutory Deductions</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>{calculations.taxType}:</span>
-                      <span>{formatCurrency(calculations.tax)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span>Pension (Employee 8%):</span>
-                      <span>{formatCurrency(calculations.pensionEmployee)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span>NHF (2.5%):</span>
-                      <span>{formatCurrency(calculations.nhf)}</span>
-                    </div>
-                    {calculations.deduction > 0 && (
-                      <div className="flex justify-between text-sm border-t pt-2 mt-2">
-                        <span>Personal Deduction:</span>
-                        <span className="text-destructive font-medium">{formatCurrency(calculations.deduction)}</span>
-                      </div>
-                    )}
+              <div className="border rounded-lg p-4 bg-card">
+                <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
+                  <span className="w-2 h-2 bg-destructive rounded-full"></span>
+                  Statutory Deductions
+                </h3>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>{calculations.taxType}:</span>
+                    <span>{formatCurrency(calculations.tax)}</span>
                   </div>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm font-semibold border-t pt-2">
-                      <span>Total Deductions:</span>
-                      <span className="text-destructive">{formatCurrency(calculations.totalDeductions)}</span>
+                  {calculations.employmentType === "Full-time" ? (
+                    <>
+                      <div className="flex justify-between text-sm">
+                        <span>Pension Contribution (8%):</span>
+                        <span>{formatCurrency(calculations.pensionEmployee)}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span>National Housing Fund (2.5%):</span>
+                        <span>{formatCurrency(calculations.nhf)}</span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-sm text-muted-foreground italic pl-4">
+                      • No pension or NHF deductions for contract staff
                     </div>
-                    <div className="flex justify-between text-sm font-bold text-lg border-t pt-2">
-                      <span>Net Pay:</span>
-                      <span className="text-success">{formatCurrency(calculations.netPay)}</span>
+                  )}
+                  {calculations.deduction > 0 && (
+                    <div className="flex justify-between text-sm border-t pt-2 bg-destructive/5 p-2 rounded">
+                      <span className="font-medium">
+                        Personal Deduction
+                        {payrollData.deductionRemarks && (
+                          <span className="text-xs text-muted-foreground ml-2">({payrollData.deductionRemarks})</span>
+                        )}:
+                      </span>
+                      <span className="text-destructive font-semibold">-{formatCurrency(calculations.deduction)}</span>
                     </div>
+                  )}
+                  <div className="flex justify-between text-base font-bold border-t-2 pt-3">
+                    <span>Total Deductions:</span>
+                    <span className="text-destructive">{formatCurrency(calculations.totalDeductions)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Net Pay */}
+              <div className="border-2 border-success rounded-lg p-4 bg-success/5">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">Employee Net Take Home Pay</p>
+                    <p className="text-3xl font-bold text-success">{formatCurrency(calculations.netPay)}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-muted-foreground">Gross Pay</p>
+                    <p className="text-sm font-semibold">{formatCurrency(calculations.grossPay)}</p>
+                    <p className="text-xs text-destructive mt-1">- {formatCurrency(calculations.totalDeductions)}</p>
                   </div>
                 </div>
               </div>
 
               {/* Employer Costs */}
-              <div>
-                <h3 className="font-semibold text-lg mb-3">Employer Costs</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>Pension (Employer 10%):</span>
-                      <span>{formatCurrency(calculations.pensionEmployer)}</span>
+              <div className="border rounded-lg p-4 bg-muted/20">
+                <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
+                  <span className="w-2 h-2 bg-primary rounded-full"></span>
+                  Employer Additional Costs
+                </h3>
+                <div className="space-y-2">
+                  {calculations.employmentType === "Full-time" ? (
+                    <>
+                      <div className="flex justify-between text-sm">
+                        <span>Pension Contribution (10%):</span>
+                        <span>{formatCurrency(calculations.pensionEmployer)}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span>NSITF Contribution (1%):</span>
+                        <span>{formatCurrency(calculations.nsitf)}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span>ITF Contribution (1%):</span>
+                        <span>{formatCurrency(calculations.itf)}</span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-sm text-muted-foreground italic">
+                      • Minimal employer costs for contract staff
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span>NSITF (1%):</span>
-                      <span>{formatCurrency(calculations.nsitf)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span>ITF (1%):</span>
-                      <span>{formatCurrency(calculations.itf)}</span>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm font-semibold border-t pt-2">
-                      <span>Total Employer Cost:</span>
-                      <span className="text-primary">{formatCurrency(calculations.totalEmployerCost)}</span>
-                    </div>
+                  )}
+                  <div className="flex justify-between text-base font-bold border-t-2 pt-3">
+                    <span>Total Employer Cost:</span>
+                    <span className="text-primary">{formatCurrency(calculations.totalEmployerCost)}</span>
                   </div>
                 </div>
               </div>

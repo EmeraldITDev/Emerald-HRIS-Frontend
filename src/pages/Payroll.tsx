@@ -612,8 +612,8 @@ export default function Payroll() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
-        {/* Payroll Calculator - Only for HR Manager */}
-        <RoleBasedComponent allowedRoles={['hr_manager']}>
+        {/* Payroll Calculator - For HR Manager and Finance */}
+        <RoleBasedComponent allowedRoles={['hr_manager', 'finance']}>
           <Card className="lg:col-span-1 border-border/50 shadow-sm">
             <CardHeader>
               <CardTitle className="text-primary flex items-center">

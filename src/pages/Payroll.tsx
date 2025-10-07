@@ -612,8 +612,8 @@ export default function Payroll() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
-        {/* Payroll Calculator */}
-        <RoleBasedComponent allowedRoles={['executive', 'hr_manager', 'corporate_hr', 'line_manager', 'finance', 'it_power_user', 'contract_employee', 'general_employee']}>
+        {/* Payroll Calculator - For HR Manager, Executive, and Finance */}
+        <RoleBasedComponent allowedRoles={['executive', 'hr_manager', 'finance']}>
           <Card className="lg:col-span-1 border-border/50 shadow-sm">
             <CardHeader>
               <CardTitle className="text-primary flex items-center">
@@ -763,29 +763,6 @@ export default function Payroll() {
                     <span className="font-medium">{calculations.employmentType === "Contract" ? "Contract Amount" : "Base Gross Salary"}:</span>
                     <span className="font-semibold">{formatCurrency(parseFloat(payrollData.grossSalary) || 0)}</span>
                   </div>
-                  
-                  {/* Detailed Salary Breakdown - Hidden from contract employees */}
-                  <RoleBasedComponent allowedRoles={['executive', 'hr_manager', 'corporate_hr', 'line_manager', 'finance', 'it_power_user', 'general_employee']}>
-                    <div className="ml-4 space-y-2 text-sm text-muted-foreground border-l-2 border-primary/20 pl-4">
-                      <div className="flex justify-between">
-                        <span>Basic Salary:</span>
-                        <span>{formatCurrency((parseFloat(payrollData.grossSalary) || 0) * 0.5)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Housing Allowance:</span>
-                        <span>{formatCurrency((parseFloat(payrollData.grossSalary) || 0) * 0.25)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Transport Allowance:</span>
-                        <span>{formatCurrency((parseFloat(payrollData.grossSalary) || 0) * 0.15)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Other Allowance:</span>
-                        <span>{formatCurrency((parseFloat(payrollData.grossSalary) || 0) * 0.1)}</span>
-                      </div>
-                    </div>
-                  </RoleBasedComponent>
-                  
                   {calculations.employmentType === "Full-time"}
                   {calculations.earnings > 0 && <div className="flex justify-between text-sm border-t pt-2 bg-success/5 p-2 rounded">
                       <span className="font-medium">
@@ -899,7 +876,7 @@ export default function Payroll() {
       </div>
 
       {/* Payroll History */}
-      <RoleBasedComponent allowedRoles={['executive', 'hr_manager', 'corporate_hr', 'line_manager', 'finance', 'it_power_user', 'contract_employee', 'general_employee']}>
+      <RoleBasedComponent allowedRoles={['executive', 'hr_manager', 'finance']}>
         <Card className="border-border/50 shadow-sm">
           <CardHeader>
             <CardTitle className="text-primary">Payroll History</CardTitle>

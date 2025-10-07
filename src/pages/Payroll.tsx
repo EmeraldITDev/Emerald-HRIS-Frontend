@@ -712,6 +712,7 @@ export default function Payroll() {
         </RoleBasedComponent>
 
         {/* Payroll Breakdown */}
+        <RoleBasedComponent allowedRoles={['executive', 'hr_manager', 'finance']}>
         <Card className="lg:col-span-2 border-border/50 shadow-sm">
           <CardHeader>
             <CardTitle className="text-primary flex items-center">
@@ -869,6 +870,7 @@ export default function Payroll() {
             </div>
           </CardContent>
         </Card>
+        </RoleBasedComponent>
       </div>
 
       {/* Payroll History */}

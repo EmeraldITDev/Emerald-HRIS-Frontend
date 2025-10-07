@@ -29,12 +29,14 @@ export default function Layout({ children }: LayoutProps) {
       hr_manager: 'HR Manager',
       corporate_hr: 'Corporate HR',
       line_manager: 'Line Manager',
+      finance: 'Finance',
       it_admin: 'IT Admin',
       it_power_user: 'IT Power User',
       consulting_hr: 'Consulting HR',
       contract_hr: 'Contract HR',
       corporate_user: 'Corporate User',
       contract_staff: 'Contract Staff',
+      contract_employee: 'Contract Employee',
       general_employee: 'Employee'
     };
     return roleNames[role] || role;
@@ -42,7 +44,7 @@ export default function Layout({ children }: LayoutProps) {
 
   const getRoleBadgeVariant = (role: string) => {
     if (['executive', 'hr_manager'].includes(role)) return 'default';
-    if (['corporate_hr', 'line_manager'].includes(role)) return 'secondary';
+    if (['corporate_hr', 'line_manager', 'finance'].includes(role)) return 'secondary';
     if (role.includes('it_')) return 'outline';
     return 'secondary';
   };

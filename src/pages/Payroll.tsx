@@ -232,8 +232,8 @@ export default function Payroll() {
   const getVisiblePayrollRecords = () => {
     if (!user) return []
     
-    if (user.role === 'hr_manager') {
-      // HR Manager can see all payroll records
+    if (user.role === 'hr_manager' || user.role === 'executive' || user.role === 'finance') {
+      // HR Manager, Executive, and Finance team can see all payroll records
       return payrollRecords
     } else {
       // Other users can only see their own payroll
@@ -547,7 +547,7 @@ export default function Payroll() {
               Tax Settings
             </Button>
           </RoleBasedComponent>
-          <RoleBasedComponent allowedRoles={['hr_manager', 'executive']}>
+          <RoleBasedComponent allowedRoles={['hr_manager', 'executive', 'finance']}>
             <Button variant="outline" size="sm" onClick={handleExportPayroll}>
               <Download className="mr-2 h-4 w-4" />
               Export Payroll
@@ -789,7 +789,7 @@ export default function Payroll() {
       </div>
 
       {/* Payroll History */}
-      <RoleBasedComponent allowedRoles={['executive', 'hr_manager']}>
+      <RoleBasedComponent allowedRoles={['executive', 'hr_manager', 'finance']}>
         <Card className="border-border/50 shadow-sm">
           <CardHeader>
             <CardTitle className="text-primary">Payroll History</CardTitle>

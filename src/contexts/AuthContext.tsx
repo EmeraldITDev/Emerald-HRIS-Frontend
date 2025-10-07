@@ -5,6 +5,7 @@ export type UserRole =
   | 'hr_manager' 
   | 'corporate_hr' 
   | 'line_manager' 
+  | 'finance'
   | 'it_admin' 
   | 'it_power_user' 
   | 'consulting_hr' 
@@ -102,6 +103,16 @@ const dummyUsers: Record<string, { user: User; password: string }> = {
       role: 'general_employee'
     },
     password: 'password123'
+  },
+  'finance@company.com': {
+    user: {
+      id: '8',
+      firstName: 'Finance',
+      lastName: 'Manager',
+      email: 'finance@company.com',
+      role: 'finance'
+    },
+    password: 'password123'
   }
 };
 
@@ -130,6 +141,14 @@ const rolePermissions: Record<UserRole, string[]> = {
     'payroll.view_own',
     'benefits.view',
     'training.view'
+  ],
+  finance: [
+    'payroll.view_all',
+    'payroll.calculate',
+    'payroll.export',
+    'reports.view',
+    'dashboard.view',
+    'financials.view_all'
   ],
   it_admin: [
     'payroll.view_own',

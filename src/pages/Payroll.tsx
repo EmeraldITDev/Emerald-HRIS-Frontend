@@ -168,7 +168,7 @@ const payrollRecords = [
     employeeId: "EMP009",
     employeeName: "Chinedu Okafor",
     department: "Technical Operations",
-    role: "general_employee",
+    role: "contract_employee",
     basicSalary: 1200000,
     allowances: 0,
     grossPay: 1200000,
@@ -207,7 +207,7 @@ const employees = [
   { id: "EMP006", name: "Alex Chen", basicSalary: 2000000, pensionId: "PEN006", taxId: "TIN006", employmentType: "Full-time", status: "On-board", role: "it_admin" },
   { id: "EMP007", name: "Adebayo Johnson", basicSalary: 1600000, pensionId: "PEN007", taxId: "TIN007", employmentType: "Full-time", status: "On-board", role: "general_employee" },
   { id: "EMP008", name: "Fatima Abdul", basicSalary: 1800000, pensionId: "PEN008", taxId: "TIN008", employmentType: "Full-time", status: "On-board", role: "general_employee" },
-  { id: "EMP009", name: "Chinedu Okafor", basicSalary: 1200000, pensionId: "PEN009", taxId: "TIN009", employmentType: "Contract", status: "On-board", role: "general_employee" },
+  { id: "EMP009", name: "Chinedu Okafor", basicSalary: 1200000, pensionId: "PEN009", taxId: "TIN009", employmentType: "Contract", status: "On-board", role: "contract_employee" },
   { id: "EMP010", name: "Kemi Adeleke", basicSalary: 1400000, pensionId: "PEN010", taxId: "TIN010", employmentType: "Full-time", status: "On-board", role: "general_employee" },
 ]
 

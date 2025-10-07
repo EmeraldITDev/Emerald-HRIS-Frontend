@@ -12,6 +12,7 @@ export type UserRole =
   | 'contract_hr' 
   | 'corporate_user' 
   | 'contract_staff' 
+  | 'contract_employee'
   | 'general_employee';
 
 export interface User {
@@ -113,6 +114,16 @@ const dummyUsers: Record<string, { user: User; password: string }> = {
       role: 'finance'
     },
     password: 'password123'
+  },
+  'contractor@company.com': {
+    user: {
+      id: '9',
+      firstName: 'Contract',
+      lastName: 'Employee',
+      email: 'contractor@company.com',
+      role: 'contract_employee'
+    },
+    password: 'password123'
   }
 };
 
@@ -182,6 +193,13 @@ const rolePermissions: Record<UserRole, string[]> = {
     'payroll.view_own',
     'benefits.view',
     'leave.request'
+  ],
+  contract_employee: [
+    'payroll.view_own',
+    'benefits.view',
+    'leave.request',
+    'dashboard.view',
+    'profile.view'
   ],
   general_employee: [
     'payroll.view_own',

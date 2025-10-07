@@ -5,6 +5,7 @@ export const ROLES = {
   LINE_MANAGER: 'line_manager',
   FINANCE: 'finance',
   IT_POWER: 'it_power_user',
+  CONTRACT_EMPLOYEE: 'contract_employee',
   EMPLOYEE: 'general_employee',
 } as const;
 
@@ -24,6 +25,7 @@ export const ROLE_OPTIONS = [
   { label: 'Line Managers', value: 'line_manager' },
   { label: 'Finance Team', value: 'finance' },
   { label: 'IT (Power User)', value: 'it_power_user' },
+  { label: 'Contract Employees', value: 'contract_employee' },
   { label: 'General Employees', value: 'general_employee' },
 ];
 
@@ -33,5 +35,6 @@ export const ROLE_PREFIX: Record<string, string> = {
   line_manager: 'LM',
   finance: 'FIN',
   it_power_user: 'IT',
+  contract_employee: 'CON',
   general_employee: 'EMP',
 };

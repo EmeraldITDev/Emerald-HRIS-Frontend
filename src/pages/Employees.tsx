@@ -34,7 +34,9 @@ const VALID_SYSTEM_ROLES = new Set([
   'hr_manager',
   'corporate_hr',
   'line_manager',
+  'finance',
   'it_power_user',
+  'contract_employee',
   'general_employee',
 ]);
 

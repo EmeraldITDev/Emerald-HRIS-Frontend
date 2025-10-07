@@ -169,12 +169,12 @@ const payrollRecords = [
     employeeName: "Chinedu Okafor",
     department: "Technical Operations",
     role: "contract_employee",
-    basicSalary: 1200000,
-    allowances: 0,
-    grossPay: 1200000,
+    basicSalary: 0, // Contract staff don't have basic salary
+    allowances: 0, // No allowances for contract staff
+    grossPay: 1200000, // Only gross contract amount
     paye: 60000, // 5% Withholding Tax for contract
-    pension: 0,
-    nhf: 0,
+    pension: 0, // No pension for contract staff
+    nhf: 0, // No NHF for contract staff
     netPay: 1140000,
     period: "2024-01",
     status: "Processed"
@@ -207,7 +207,7 @@ const employees = [
   { id: "EMP006", name: "Alex Chen", basicSalary: 2000000, pensionId: "PEN006", taxId: "TIN006", employmentType: "Full-time", status: "On-board", role: "it_admin" },
   { id: "EMP007", name: "Adebayo Johnson", basicSalary: 1600000, pensionId: "PEN007", taxId: "TIN007", employmentType: "Full-time", status: "On-board", role: "general_employee" },
   { id: "EMP008", name: "Fatima Abdul", basicSalary: 1800000, pensionId: "PEN008", taxId: "TIN008", employmentType: "Full-time", status: "On-board", role: "general_employee" },
-  { id: "EMP009", name: "Chinedu Okafor", basicSalary: 1200000, pensionId: "PEN009", taxId: "TIN009", employmentType: "Contract", status: "On-board", role: "contract_employee" },
+  { id: "EMP009", name: "Chinedu Okafor", basicSalary: 0, pensionId: "PEN009", taxId: "TIN009", employmentType: "Contract", status: "On-board", role: "contract_employee" },
   { id: "EMP010", name: "Kemi Adeleke", basicSalary: 1400000, pensionId: "PEN010", taxId: "TIN010", employmentType: "Full-time", status: "On-board", role: "general_employee" },
 ]
 
@@ -219,9 +219,6 @@ export default function Payroll() {
   const [selectedPeriod, setSelectedPeriod] = useState("2024-01")
   const [payrollData, setPayrollData] = useState({
     grossSalary: "4000000",
-    housingAllowance: "",
-    transportAllowance: "",
-    otherAllowance: "",
     earnings: "50000",
     earningsRemarks: "",
     deduction: "25000",
@@ -497,7 +494,7 @@ export default function Payroll() {
       employeeName: selectedEmp.name,
       department: "Unknown",
       role: selectedEmp.role || "general_employee",
-      basicSalary: parseFloat(payrollData.grossSalary) || 0,
+      basicSalary: calculations.employmentType === "Contract" ? 0 : calculations.basic,
       allowances: calculations.housing + calculations.transport + calculations.other,
       grossPay: calculations.grossPay,
       paye: calculations.tax,
@@ -518,9 +515,6 @@ export default function Payroll() {
     // Reset form
     setPayrollData({
       grossSalary: "",
-      housingAllowance: "",
-      transportAllowance: "",
-      otherAllowance: "",
       earnings: "",
       earningsRemarks: "",
       deduction: "",
@@ -912,19 +906,23 @@ export default function Payroll() {
                   <TableRow>
                     <TableHead className="text-xs md:text-sm">Employee</TableHead>
                     <TableHead className="text-xs md:text-sm">Period</TableHead>
-                    <TableHead className="hidden md:table-cell text-xs md:text-sm">Basic Salary</TableHead>
+                    <TableHead className="hidden md:table-cell text-xs md:text-sm">Type</TableHead>
                     <TableHead className="hidden lg:table-cell text-xs md:text-sm">Gross Pay</TableHead>
-                    <TableHead className="text-xs md:text-sm">PAYE</TableHead>
+                    <TableHead className="text-xs md:text-sm">Tax</TableHead>
                     <TableHead className="text-xs md:text-sm">Net Pay</TableHead>
                     <TableHead className="text-xs md:text-sm">Status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {payrollRecords.map((record) => (
+                  {getVisiblePayrollRecords().map((record) => (
                     <TableRow key={record.id}>
                       <TableCell className="font-medium text-xs md:text-sm">{record.employeeName}</TableCell>
                       <TableCell className="text-xs md:text-sm">{record.period}</TableCell>
-                      <TableCell className="hidden md:table-cell text-xs md:text-sm">{formatCurrency(record.basicSalary)}</TableCell>
+                      <TableCell className="hidden md:table-cell text-xs md:text-sm">
+                        <Badge variant={record.role === "contract_employee" ? "secondary" : "outline"} className="text-xs">
+                          {record.role === "contract_employee" ? "Contract" : "Full-time"}
+                        </Badge>
+                      </TableCell>
                       <TableCell className="hidden lg:table-cell text-xs md:text-sm">{formatCurrency(record.grossPay)}</TableCell>
                       <TableCell className="text-xs md:text-sm">{formatCurrency(record.paye)}</TableCell>
                       <TableCell className="font-medium text-xs md:text-sm">{formatCurrency(record.netPay)}</TableCell>

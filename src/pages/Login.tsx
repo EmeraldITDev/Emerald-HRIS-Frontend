@@ -50,8 +50,10 @@ const Login = () => {
     { email: 'frank@company.com', role: 'HR Manager', password: 'password123' },
     { email: 'sarah@company.com', role: 'Corporate HR', password: 'password123' },
     { email: 'mike@company.com', role: 'Line Manager', password: 'password123' },
+    { email: 'finance@company.com', role: 'Finance Manager', password: 'password123' },
     { email: 'tech@company.com', role: 'IT Admin', password: 'password123' },
     { email: 'poweruser@company.com', role: 'IT Power User', password: 'password123' },
+    { email: 'contractor@company.com', role: 'Contract Employee', password: 'password123' },
     { email: 'john@company.com', role: 'General Employee', password: 'password123' }
   ];
 
@@ -171,7 +173,9 @@ const Login = () => {
                 <div><strong>Executives & HR Managers:</strong> Full access to all features</div>
                 <div><strong>Corporate HR:</strong> Employee management, CSV imports, approvals</div>
                 <div><strong>Line Managers:</strong> Reports, approvals, reviews, comments</div>
+                <div><strong>Finance Manager:</strong> All payroll, financials, and reports</div>
                 <div><strong>IT (Power User):</strong> Admin tools, system controls</div>
+                <div><strong>Contract Employees:</strong> Own payroll, benefits, leave requests</div>
                 <div><strong>General Employees:</strong> Self-service features only</div>
               </div>
             </div>

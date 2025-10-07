@@ -759,11 +759,6 @@ export default function Payroll() {
                       </div>
                     </div>
                   )}
-                  {calculations.employmentType === "Contract" && (
-                    <div className="pl-4 text-sm text-muted-foreground">
-                      <p>• No allowance breakdown for contract employees</p>
-                    </div>
-                  )}
                   {calculations.earnings > 0 && (
                     <div className="flex justify-between text-sm border-t pt-2 bg-success/5 p-2 rounded">
                       <span className="font-medium">

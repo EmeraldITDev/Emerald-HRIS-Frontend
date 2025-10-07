@@ -743,7 +743,7 @@ export default function Payroll() {
               {/* Employment Type Badge */}
               <div className="flex items-center gap-2">
                 <Badge variant={calculations.employmentType === "Contract" ? "secondary" : "default"}>
-                  {calculations.employmentType} Employee
+                  {calculations.employmentType === "Contract" ? "Contract Employee" : "Full-time Employee"}
                 </Badge>
                 <span className="text-xs text-muted-foreground">
                   Tax Type: {calculations.taxType}

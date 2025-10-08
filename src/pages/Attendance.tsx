@@ -225,20 +225,22 @@ export default function Attendance() {
   const [isLoadingLeaveRequests, setIsLoadingLeaveRequests] = useState(false)
   const [todayStatus, setTodayStatus] = useState<any>(null);
   const [isPunching, setIsPunching] = useState(false);
+  const [todayAttendance, setTodayAttendance] = useState<any[]>([]);
 
-  const loadTodayStatus = async () => {
+  const loadTodayStatus = () => {
     if (!user) return;
-    try {
-      const res = await fetch('http://localhost:8000/api/attendance/today-status', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify({ employee_id: user.id }),
-      });
-      const data = await res.json();
-      if (data.success) setTodayStatus(data.data);
-    } catch (e) {
-      console.error('today-status failed', e);
-    }
+    const today = format(new Date(), 'yyyy-MM-dd');
+    const attendanceRecords = JSON.parse(localStorage.getItem('attendanceRecords') || '[]');
+    const todayRecord = attendanceRecords.find(
+      (record: any) => record.employee_id === user.id && record.date === today
+    );
+    setTodayStatus(todayRecord || null);
+    
+    // Load all today's attendance for display
+    const allTodayRecords = attendanceRecords.filter(
+      (record: any) => record.date === today
+    );
+    setTodayAttendance(allTodayRecords);
   };
 
   useEffect(() => {
@@ -463,52 +465,86 @@ export default function Attendance() {
     }
   }
 
-  const handleClockIn = async () => {
+  const handleClockIn = () => {
     if (!user) {
-      toast({ title: "Error", description: "No linked employee on this account.", variant: "destructive" });
+      toast({ title: "Error", description: "No user logged in.", variant: "destructive" });
       return;
     }
     try {
       setIsPunching(true);
-      const res = await fetch('http://localhost:8000/api/attendance/clock-in', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify({ employee_id: user.id, location: 'office' }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        toast({ title: "Success", description: data.message });
-        await loadTodayStatus();
-      } else {
-        toast({ title: "Error", description: data.message, variant: "destructive" });
+      const today = format(new Date(), 'yyyy-MM-dd');
+      const now = format(new Date(), 'HH:mm:ss');
+      const attendanceRecords = JSON.parse(localStorage.getItem('attendanceRecords') || '[]');
+      
+      // Check if already clocked in today
+      const existingRecord = attendanceRecords.find(
+        (record: any) => record.employee_id === user.id && record.date === today
+      );
+      
+      if (existingRecord && existingRecord.clock_in_time) {
+        toast({ title: "Already Clocked In", description: "You have already clocked in today.", variant: "destructive" });
+        setIsPunching(false);
+        return;
       }
-    } catch {
+
+      const newRecord = {
+        id: Date.now(),
+        employee_id: user.id,
+        employee_name: `${user.firstName} ${user.lastName}`,
+        date: today,
+        clock_in_time: now,
+        clock_out_time: null,
+        is_clocked_in: true,
+        location: 'office'
+      };
+
+      const updatedRecords = existingRecord 
+        ? attendanceRecords.map((r: any) => r.id === existingRecord.id ? newRecord : r)
+        : [...attendanceRecords, newRecord];
+      
+      localStorage.setItem('attendanceRecords', JSON.stringify(updatedRecords));
+      loadTodayStatus();
+      toast({ title: "Success", description: "Clocked in successfully!" });
+    } catch (error) {
+      console.error('Clock in error:', error);
       toast({ title: "Error", description: "Failed to clock in.", variant: "destructive" });
     } finally {
       setIsPunching(false);
     }
   };
 
-  const handleClockOut = async () => {
+  const handleClockOut = () => {
     if (!user) {
-      toast({ title: "Error", description: "No linked employee on this account.", variant: "destructive" });
+      toast({ title: "Error", description: "No user logged in.", variant: "destructive" });
       return;
     }
     try {
       setIsPunching(true);
-      const res = await fetch('http://localhost:8000/api/attendance/clock-out', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify({ employee_id: user.id }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        toast({ title: "Success", description: data.message });
-        await loadTodayStatus();
-      } else {
-        toast({ title: "Error", description: data.message, variant: "destructive" });
+      const today = format(new Date(), 'yyyy-MM-dd');
+      const now = format(new Date(), 'HH:mm:ss');
+      const attendanceRecords = JSON.parse(localStorage.getItem('attendanceRecords') || '[]');
+      
+      const existingRecordIndex = attendanceRecords.findIndex(
+        (record: any) => record.employee_id === user.id && record.date === today && record.is_clocked_in
+      );
+      
+      if (existingRecordIndex === -1) {
+        toast({ title: "Not Clocked In", description: "You need to clock in first.", variant: "destructive" });
+        setIsPunching(false);
+        return;
       }
-    } catch {
+
+      attendanceRecords[existingRecordIndex] = {
+        ...attendanceRecords[existingRecordIndex],
+        clock_out_time: now,
+        is_clocked_in: false
+      };
+      
+      localStorage.setItem('attendanceRecords', JSON.stringify(attendanceRecords));
+      loadTodayStatus();
+      toast({ title: "Success", description: "Clocked out successfully!" });
+    } catch (error) {
+      console.error('Clock out error:', error);
       toast({ title: "Error", description: "Failed to clock out.", variant: "destructive" });
     } finally {
       setIsPunching(false);
@@ -746,19 +782,61 @@ export default function Attendance() {
               <div className="flex items-center space-x-3">
                 <User className="h-5 w-5 text-primary" />
                 <div>
-                  <div className="font-medium text-sm">Current User: {user?.email}</div>
-                  <div className="text-xs text-muted-foreground">Ready to clock in</div>
+                  <div className="font-medium text-sm">
+                    {user?.firstName} {user?.lastName}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {todayStatus?.is_clocked_in ? 'Currently clocked in' : 'Ready to clock in'}
+                  </div>
                 </div>
               </div>
+              {getAttendanceStatusBadge()}
             </div>
-            <Button 
-              onClick={handleClockIn} 
-              className="w-full"
-              disabled={!user || isPunching}
-            >
-              <LogIn className="mr-2 h-4 w-4" />
-              Clock In
-            </Button>
+            
+            {!todayStatus?.is_clocked_in ? (
+              <Button 
+                onClick={handleClockIn} 
+                className="w-full"
+                disabled={!user || isPunching}
+              >
+                <LogIn className="mr-2 h-4 w-4" />
+                Clock In
+              </Button>
+            ) : todayStatus?.clock_out_time ? (
+              <Button 
+                className="w-full"
+                disabled
+                variant="outline"
+              >
+                <Clock className="mr-2 h-4 w-4" />
+                Shift Completed
+              </Button>
+            ) : (
+              <Button 
+                onClick={handleClockOut} 
+                className="w-full"
+                disabled={!user || isPunching}
+                variant="destructive"
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                Clock Out
+              </Button>
+            )}
+            
+            {todayStatus?.clock_in_time && (
+              <div className="p-3 bg-muted/30 rounded-lg text-xs space-y-1">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Clock In:</span>
+                  <span className="font-medium">{todayStatus.clock_in_time}</span>
+                </div>
+                {todayStatus.clock_out_time && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Clock Out:</span>
+                    <span className="font-medium">{todayStatus.clock_out_time}</span>
+                  </div>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -772,26 +850,28 @@ export default function Attendance() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {attendance
-                  .filter(record => record.date === new Date().toISOString().split('T')[0])
-                  .map((record) => (
+                {todayAttendance.length > 0 ? (
+                  todayAttendance.map((record) => (
                     <div key={record.id} className="flex justify-between items-center p-2 bg-accent/50 rounded-lg">
                       <div>
-                        <div className="font-medium text-sm">{record.employeeName}</div>
+                        <div className="font-medium text-sm">{record.employee_name}</div>
                         <div className="text-xs text-muted-foreground">
-                          In: {record.clockIn} {record.clockOut && `• Out: ${record.clockOut}`}
+                          In: {record.clock_in_time} {record.clock_out_time && `• Out: ${record.clock_out_time}`}
                         </div>
                       </div>
-                      {!record.clockOut && (
-                        <Button size="sm" onClick={() => handleClockOut()} variant="outline">
-                          <LogOut className="mr-1 h-3 w-3" />
-                          Clock Out
-                        </Button>
+                      {record.is_clocked_in && (
+                        <Badge variant="default" className="text-xs">
+                          Active
+                        </Badge>
+                      )}
+                      {record.clock_out_time && (
+                        <Badge variant="outline" className="text-xs">
+                          Completed
+                        </Badge>
                       )}
                     </div>
                   ))
-                }
-                {attendance.filter(record => record.date === new Date().toISOString().split('T')[0]).length === 0 && (
+                ) : (
                   <p className="text-sm text-muted-foreground">No attendance records for today</p>
                 )}
               </div>
@@ -1135,26 +1215,38 @@ export default function Attendance() {
                             {getStatusBadge(request.status)}
                           </TableCell>
                           <TableCell>
-                            <div className="flex space-x-2">
-                              {request.status === "Pending" && (
-                                <>
-                                  <Button 
-                                    size="sm" 
-                                    variant="outline"
-                                    onClick={() => handleUpdateLeaveStatus(request.id, "Approved")}
-                                  >
-                                    Approve
-                                  </Button>
-                                  <Button 
-                                    size="sm" 
-                                    variant="outline"
-                                    onClick={() => handleUpdateLeaveStatus(request.id, "Rejected")}
-                                  >
-                                    Reject
-                                  </Button>
-                                </>
-                              )}
-                            </div>
+                            <RoleBasedComponent 
+                              allowedRoles={['hr_manager', 'corporate_hr', 'line_manager', 'executive']}
+                              fallback={<span className="text-xs text-muted-foreground">No actions available</span>}
+                            >
+                              <div className="flex space-x-2">
+                                {request.status === "Pending" && (
+                                  <>
+                                    <Button 
+                                      size="sm" 
+                                      variant="outline"
+                                      onClick={() => handleUpdateLeaveStatus(request.id, "Approved")}
+                                      className="text-xs"
+                                    >
+                                      Approve
+                                    </Button>
+                                    <Button 
+                                      size="sm" 
+                                      variant="outline"
+                                      onClick={() => handleUpdateLeaveStatus(request.id, "Rejected")}
+                                      className="text-xs"
+                                    >
+                                      Reject
+                                    </Button>
+                                  </>
+                                )}
+                                {request.status !== "Pending" && (
+                                  <span className="text-xs text-muted-foreground">
+                                    {request.status}
+                                  </span>
+                                )}
+                              </div>
+                            </RoleBasedComponent>
                           </TableCell>
                         </TableRow>
                       )

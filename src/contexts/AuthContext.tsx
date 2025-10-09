@@ -36,93 +36,98 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Dummy users for testing
 const dummyUsers: Record<string, { user: User; password: string }> = {
-  'james@company.com': {
+  // Executive Team
+  'bunmi.babajide@emeraldcfze.com': {
     user: {
       id: '1',
-      firstName: 'James',
-      lastName: 'Executive',
-      email: 'james@company.com',
+      firstName: 'Bunmi',
+      lastName: 'Babajide',
+      email: 'bunmi.babajide@emeraldcfze.com',
       role: 'executive'
     },
     password: 'password123'
   },
-  'frank@company.com': {
+  'laa@emeraldcfze.com': {
     user: {
       id: '2',
-      firstName: 'Frank',
-      lastName: 'Manager',
-      email: 'frank@company.com',
+      firstName: 'LAA',
+      lastName: 'Executive',
+      email: 'laa@emeraldcfze.com',
+      role: 'executive'
+    },
+    password: 'password123'
+  },
+  // HR Team
+  'austin.nwachwukwu@emeraldcfze.com': {
+    user: {
+      id: '3',
+      firstName: 'Austin',
+      lastName: 'Nwachwukwu',
+      email: 'austin.nwachwukwu@emeraldcfze.com',
       role: 'hr_manager'
     },
     password: 'password123'
   },
-  'sarah@company.com': {
+  'oluwapelumi.adeyefa@emeraldcfze.com': {
     user: {
-      id: '3',
-      firstName: 'Sarah',
-      lastName: 'HR',
-      email: 'sarah@company.com',
+      id: '4',
+      firstName: 'Oluwapelumi',
+      lastName: 'Adeyefa',
+      email: 'oluwapelumi.adeyefa@emeraldcfze.com',
       role: 'corporate_hr'
     },
     password: 'password123'
   },
-  'mike@company.com': {
+  // Line Manager
+  'henry.marcus@emeraldcfze.com': {
     user: {
-      id: '4',
-      firstName: 'Mike',
-      lastName: 'Smith',
-      email: 'mike@company.com',
+      id: '5',
+      firstName: 'Henry',
+      lastName: 'Marcus',
+      email: 'henry.marcus@emeraldcfze.com',
       role: 'line_manager'
     },
     password: 'password123'
   },
-  'tech@company.com': {
-    user: {
-      id: '5',
-      firstName: 'Tech',
-      lastName: 'Support',
-      email: 'tech@company.com',
-      role: 'it_admin'
-    },
-    password: 'password123'
-  },
-  'poweruser@company.com': {
+  // IT Power User
+  'it@emeraldcfze.com': {
     user: {
       id: '6',
-      firstName: 'Power',
-      lastName: 'User',
-      email: 'poweruser@company.com',
+      firstName: 'IT',
+      lastName: 'Admin',
+      email: 'it@emeraldcfze.com',
       role: 'it_power_user'
     },
     password: 'password123'
   },
-  'john@company.com': {
+  // Finance Team (General Employees)
+  'temitope.lawal@emeraldcfze.com': {
     user: {
       id: '7',
-      firstName: 'John',
-      lastName: 'Doe',
-      email: 'john@company.com',
+      firstName: 'Temitope',
+      lastName: 'Lawal',
+      email: 'temitope.lawal@emeraldcfze.com',
       role: 'general_employee'
     },
     password: 'password123'
   },
-  'finance@company.com': {
+  'rachael.daniel@emeraldcfze.com': {
     user: {
       id: '8',
-      firstName: 'Finance',
-      lastName: 'Manager',
-      email: 'finance@company.com',
-      role: 'finance'
+      firstName: 'Rachael',
+      lastName: 'Daniel',
+      email: 'rachael.daniel@emeraldcfze.com',
+      role: 'general_employee'
     },
     password: 'password123'
   },
-  'contractor@company.com': {
+  'adeniyi.bamigbade@emeraldcfze.com': {
     user: {
       id: '9',
-      firstName: 'Contract',
-      lastName: 'Employee',
-      email: 'contractor@company.com',
-      role: 'contract_employee'
+      firstName: 'Adeniyi',
+      lastName: 'Bamigbade',
+      email: 'adeniyi.bamigbade@emeraldcfze.com',
+      role: 'general_employee'
     },
     password: 'password123'
   }

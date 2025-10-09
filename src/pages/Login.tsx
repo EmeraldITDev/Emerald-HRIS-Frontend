@@ -46,15 +46,15 @@ const Login = () => {
   };
 
   const demoUsers = [
-    { email: 'james@company.com', role: 'Executive', password: 'password123' },
-    { email: 'frank@company.com', role: 'HR Manager', password: 'password123' },
-    { email: 'sarah@company.com', role: 'Corporate HR', password: 'password123' },
-    { email: 'mike@company.com', role: 'Line Manager', password: 'password123' },
-    { email: 'finance@company.com', role: 'Finance Manager', password: 'password123' },
-    { email: 'tech@company.com', role: 'IT Admin', password: 'password123' },
-    { email: 'poweruser@company.com', role: 'IT Power User', password: 'password123' },
-    { email: 'contractor@company.com', role: 'Contract Employee', password: 'password123' },
-    { email: 'john@company.com', role: 'General Employee', password: 'password123' }
+    { email: 'bunmi.babajide@emeraldcfze.com', role: 'Executive', password: 'password123' },
+    { email: 'laa@emeraldcfze.com', role: 'Executive', password: 'password123' },
+    { email: 'austin.nwachwukwu@emeraldcfze.com', role: 'HR Manager', password: 'password123' },
+    { email: 'oluwapelumi.adeyefa@emeraldcfze.com', role: 'Corporate HR', password: 'password123' },
+    { email: 'henry.marcus@emeraldcfze.com', role: 'Line Manager', password: 'password123' },
+    { email: 'it@emeraldcfze.com', role: 'IT Power User', password: 'password123' },
+    { email: 'temitope.lawal@emeraldcfze.com', role: 'Finance - General Employee', password: 'password123' },
+    { email: 'rachael.daniel@emeraldcfze.com', role: 'Finance - General Employee', password: 'password123' },
+    { email: 'adeniyi.bamigbade@emeraldcfze.com', role: 'Finance - General Employee', password: 'password123' }
   ];
 
   const fillDemoCredentials = (demoEmail: string) => {

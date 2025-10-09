@@ -6,12 +6,14 @@ export type UserRole =
   | 'hr_manager' 
   | 'corporate_hr' 
   | 'line_manager' 
+  | 'finance'
   | 'it_admin' 
   | 'it_power_user' 
   | 'consulting_hr' 
   | 'contract_hr' 
   | 'corporate_user' 
   | 'contract_staff' 
+  | 'contract_employee'
   | 'general_employee';
 
 export interface User {
@@ -103,6 +105,26 @@ const dummyUsers: Record<string, { user: User; password: string }> = {
       role: 'general_employee'
     },
     password: 'password123'
+  },
+  'finance@company.com': {
+    user: {
+      id: '8',
+      firstName: 'Finance',
+      lastName: 'Manager',
+      email: 'finance@company.com',
+      role: 'finance'
+    },
+    password: 'password123'
+  },
+  'contractor@company.com': {
+    user: {
+      id: '9',
+      firstName: 'Contract',
+      lastName: 'Employee',
+      email: 'contractor@company.com',
+      role: 'contract_employee'
+    },
+    password: 'password123'
   }
 };
 
@@ -131,6 +153,14 @@ const rolePermissions: Record<UserRole, string[]> = {
     'payroll.view_own',
     'benefits.view',
     'training.view'
+  ],
+  finance: [
+    'payroll.view_all',
+    'payroll.calculate',
+    'payroll.export',
+    'reports.view',
+    'dashboard.view',
+    'financials.view_all'
   ],
   it_admin: [
     'payroll.view_own',
@@ -164,6 +194,13 @@ const rolePermissions: Record<UserRole, string[]> = {
     'payroll.view_own',
     'benefits.view',
     'leave.request'
+  ],
+  contract_employee: [
+    'payroll.view_own',
+    'benefits.view',
+    'leave.request',
+    'dashboard.view',
+    'profile.view'
   ],
   general_employee: [
     'payroll.view_own',

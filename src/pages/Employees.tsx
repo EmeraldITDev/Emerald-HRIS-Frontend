@@ -34,7 +34,9 @@ const VALID_SYSTEM_ROLES = new Set([
   'hr_manager',
   'corporate_hr',
   'line_manager',
+  'finance',
   'it_power_user',
+  'contract_employee',
   'general_employee',
 ]);
 
@@ -573,11 +575,11 @@ export default function Employees() {
       gender: employee.gender || '',
       maritalStatus: employee.marital_status || '',
       nationality: employee.nationality || '',
-      phoneNumber: employee.phone_number || '', // Fixed: use phone_number
+      phoneNumber: employee.phone_number || '',
       email: employee.email || '',
       homeAddress: employee.address || '',
       
-      // Emergency Contact Information - These fields don't exist in database
+      // Emergency Contact Information
       emergencyContact: '',
       emergencyContactNumber: '',
       nextOfKinName: '',
@@ -598,31 +600,49 @@ export default function Employees() {
       confirmation_date: employee.confirmation_date ? new Date(employee.confirmation_date) : undefined,
       employment_status: employee.employment_status || 'Active',
       
-      // Financial Information (pull from nested financial_details)
-      gross_salary: employee.financial_details?.gross_salary?.toString() || '',
-      basic_salary: employee.financial_details?.basic_salary?.toString() || '',
-      housing_allowance: employee.financial_details?.housing_allowance?.toString() || '',
-      transport_allowance: employee.financial_details?.transport_allowance?.toString() || '',
-      other_allowance: employee.financial_details?.other_allowance?.toString() || '',
-      meal_allowance: employee.financial_details?.meal_allowance?.toString() || '',
+      // Financial Information
+      gross_salary: employee.gross_salary?.toString() || '',
+      basic_salary: '',
+      housing_allowance: employee.housing_allowance?.toString() || '',
+      transport_allowance: employee.transport_allowance?.toString() || '',
+      other_allowance: '',
+      meal_allowance: employee.meal_allowance?.toString() || '',
       
-      // Banking Information (also from financial_details)
-      bank_account: employee.financial_details?.bank_account || '',
-      bank_name: employee.financial_details?.bank_name || '',
-      account_number: employee.financial_details?.account_number || '',
-      nuban: employee.financial_details?.nuban || '',
-      sort_code: employee.financial_details?.sort_code || '',
+      // Banking Information
+      bank_account: employee.bank_account || '',
+      bank_name: '',
+      account_number: '',
+      nuban: '',
+      sort_code: '',
       
-      // Government IDs (from governmentIds relation)
-      national_id: employee.government_ids?.nin || '', // Fixed: use nin from governmentIds
-      passport_number: '', // This field doesn't exist
-      tin: employee.government_ids?.tin || '',
-      pension_pin: employee.government_ids?.pension_pin || '',
-      nhf_number: employee.government_ids?.nhf_number || '',
-      tax_id: employee.government_ids?.tax_id || '',
-      bvn: employee.government_ids?.bvn || '',
+      // Government IDs
+      national_id: employee.national_id || '',
+      passport_number: '',
+      tin: employee.tin || '',
+      pension_pin: employee.pension_pin || '',
+      nhf_number: employee.nhf_number || '',
+      tax_id: employee.tax_id || '',
+      bvn: employee.bvn || '',
+      
+      // Additional
+      vacation_days: employee.vacation_days?.toString() || '',
+      
+      // Contract Information (if available in database)
+      contract_amount: '',
+      payment_frequency: '',
+      contract_duration: '',
+      contract_terms: '',
+      
+      // Document fields (set to null for now)
+      ninDocument: null,
+      passportPhoto: null,
+      certifications: [],
+      cv: null
     });
-    setEditSystemRole(employee.user_role || '');
+    
+    // Set the edit system role based on existing user role
+    setEditSystemRole('');
+    
     setShowEditEmployee(true);
   };
   const handleUpdateEmployee = async () => {
@@ -897,32 +917,9 @@ export default function Employees() {
     }
   };
 
-  const login = async (email: string, password: string): Promise<boolean> => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/auth/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setUser(data.user);
-        localStorage.setItem('hris_user', JSON.stringify(data.user));
-        localStorage.setItem('auth_token', data.token);
-        return true;
-      }
-      return false;
-    } catch (error) {
-      console.error('Login error:', error);
-      return false;
-    }
-  };
 
   return (
-    <ProtectedRoute roles={PERMISSIONS.FULL}>
+    <ProtectedRoute roles={[...PERMISSIONS.FULL]}>
       <div className="space-y-4 md:space-y-6">
         <div className="flex flex-col space-y-3 md:space-y-0 md:flex-row md:items-center md:justify-between">
           <div>
@@ -959,7 +956,7 @@ export default function Employees() {
                   <DialogTitle>Add New Employee</DialogTitle>
                   <DialogDescription className="sr-only">Employee dialog</DialogDescription>
                 </DialogHeader>
-                <RoleBasedComponent allowedRoles={PERMISSIONS.FULL}>
+                <RoleBasedComponent allowedRoles={[...PERMISSIONS.FULL]}>
                   <div className="mt-2 mb-4 space-y-2">
                     <Label>System Role</Label>
                     <Select

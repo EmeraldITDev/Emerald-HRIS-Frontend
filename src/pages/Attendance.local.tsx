@@ -57,7 +57,7 @@ export default function Attendance() {
   useEffect(() => {
     const fetchAttendance = async () => {
       try {
-        const data = await apiService.getAttendance()
+        const data: any = await apiService.getAttendance()
         const rows = Array.isArray(data) ? data : (data?.data?.data || data?.data || []);
         setAttendance(rows || [])
       } catch (error) {
@@ -70,7 +70,7 @@ export default function Attendance() {
   useEffect(() => {
     const fetchLeaveRequests = async () => {
       try {
-        const data = await apiService.getLeaveRequests()
+        const data: any = await apiService.getLeaveRequests()
         const rows = Array.isArray(data) ? data : (data?.data?.data || data?.data || []);
         setLeaveRequests(rows || [])
       } catch (error) {
@@ -92,12 +92,14 @@ export default function Attendance() {
     try {
       const response = await apiService.createAttendance({
         employee_id: parseInt(clockInEmployee),
+        date: new Date().toISOString(),
         location: "office",
-        notes: "Clocked in"
-      })
+        notes: "Clocked in",
+        status: "Present"
+      }) as any
 
       // Refresh attendance data
-      const data = await apiService.getAttendance()
+      const data: any = await apiService.getAttendance()
       const rows = Array.isArray(data) ? data : (data?.data?.data || data?.data || []);
       setAttendance(rows || [])
 
@@ -128,11 +130,13 @@ export default function Attendance() {
     try {
       const response = await apiService.clockOut({
         employee_id: record.employee_id,
-        notes: "Clocked out"
-      })
+        date: new Date().toISOString(),
+        notes: "Clocked out",
+        status: "Present"
+      }) as any
 
       // Refresh attendance data
-      const data = await apiService.getAttendance()
+      const data: any = await apiService.getAttendance()
       const rows = Array.isArray(data) ? data : (data?.data?.data || data?.data || []);
       setAttendance(rows || [])
 
@@ -244,7 +248,7 @@ export default function Attendance() {
   // Update leave status
   const handleUpdateLeaveStatus = async (requestId: number, status: string) => {
     try {
-      await apiService.updateLeaveRequest(requestId, { status })
+      await apiService.updateLeaveRequest(requestId, status)
       toast({ title: "Success", description: `Leave request ${status.toLowerCase()}` })
       
       // Refresh list
@@ -278,8 +282,8 @@ export default function Attendance() {
 
     employees.forEach(emp => {
       // Birthday events in current month
-      if (emp.date_of_birth && isInCurrentMonth(emp.date_of_birth)) {
-        const birthdayDate = new Date(emp.date_of_birth)
+      if (emp.dob && isInCurrentMonth(emp.dob)) {
+        const birthdayDate = new Date(emp.dob)
         birthdayDate.setFullYear(today.getFullYear())
         events.birthdays.push({
           type: 'birthday',

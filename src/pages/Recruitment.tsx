@@ -438,6 +438,61 @@ export default function Recruitment() {
         </TabsList>
         
         <TabsContent value="candidates" className="space-y-6">
+          {/* Filters Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Filter Candidates</CardTitle>
+              <CardDescription>Search and filter candidates by email, position, and status</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="filter-email">Email</Label>
+                  <Input
+                    id="filter-email"
+                    placeholder="Enter email"
+                    value={filters.email}
+                    onChange={(e) => setFilters({...filters, email: e.target.value})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="filter-position">Position</Label>
+                  <Input
+                    id="filter-position"
+                    placeholder="Enter position"
+                    value={filters.position}
+                    onChange={(e) => setFilters({...filters, position: e.target.value})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="filter-status">Status</Label>
+                  <Select value={filters.status} onValueChange={(value) => setFilters({...filters, status: value})}>
+                    <SelectTrigger id="filter-status">
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Statuses</SelectItem>
+                      <SelectItem value="New">New</SelectItem>
+                      <SelectItem value="Reviewing">Reviewing</SelectItem>
+                      <SelectItem value="Interview Scheduled">Interview Scheduled</SelectItem>
+                      <SelectItem value="Interviewed">Interviewed</SelectItem>
+                      <SelectItem value="Offered">Offered</SelectItem>
+                      <SelectItem value="Hired">Hired</SelectItem>
+                      <SelectItem value="Rejected">Rejected</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2 flex items-end gap-2">
+                  <Button onClick={handleSearch} className="flex-1">
+                    Search
+                  </Button>
+                  <Button variant="outline" onClick={handleClearFilters}>
+                    Clear
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto my-8">
             <DialogHeader>

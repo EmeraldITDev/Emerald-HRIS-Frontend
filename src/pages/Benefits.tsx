@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Shield, Wifi, Monitor, Heart, Upload, Plus, Users } from "lucide-react"
+import { Shield, Wifi, Monitor, Heart, Upload, Plus, Users, Award } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from '@/contexts/AuthContext'
 import { apiService, Employee } from '@/lib/api'
@@ -77,6 +77,14 @@ export default function Benefits() {
     internet: false,
     computer: false
   })
+  
+  const [customBenefits, setCustomBenefits] = useState<{id: string, name: string}[]>([])
+  const [isAddingCustomBenefit, setIsAddingCustomBenefit] = useState(false)
+  const [newCustomBenefitName, setNewCustomBenefitName] = useState('')
+  const [employeeBenefitAssignment, setEmployeeBenefitAssignment] = useState<{[key: string]: {[benefitId: string]: boolean}}>({})
+  const [showAssignBenefitDialog, setShowAssignBenefitDialog] = useState(false)
+  const [selectedEmployeeForBenefit, setSelectedEmployeeForBenefit] = useState('')
+  const [selectedCustomBenefit, setSelectedCustomBenefit] = useState('')
 
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const { toast } = useToast()
@@ -132,6 +140,62 @@ export default function Benefits() {
     toast({
       title: "Benefits updated",
       description: `Benefits have been configured for ${benefit.employeeName}.`
+    })
+  }
+  
+  const handleAddCustomBenefit = () => {
+    if (!newCustomBenefitName.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a benefit name",
+        variant: "destructive"
+      })
+      return
+    }
+    
+    const newBenefit = {
+      id: `custom_${Date.now()}`,
+      name: newCustomBenefitName
+    }
+    
+    setCustomBenefits(prev => [...prev, newBenefit])
+    setNewCustomBenefitName('')
+    setIsAddingCustomBenefit(false)
+    
+    toast({
+      title: "Custom Benefit Created",
+      description: `${newCustomBenefitName} has been added to the benefits list`
+    })
+  }
+  
+  const handleAssignCustomBenefit = () => {
+    if (!selectedEmployeeForBenefit || !selectedCustomBenefit) {
+      toast({
+        title: "Error",
+        description: "Please select both employee and benefit",
+        variant: "destructive"
+      })
+      return
+    }
+    
+    setEmployeeBenefitAssignment(prev => ({
+      ...prev,
+      [selectedEmployeeForBenefit]: {
+        ...prev[selectedEmployeeForBenefit],
+        [selectedCustomBenefit]: true
+      }
+    }))
+    
+    const employee = employees.find(e => e.id?.toString() === selectedEmployeeForBenefit)
+    const benefit = customBenefits.find(b => b.id === selectedCustomBenefit)
+    
+    setShowAssignBenefitDialog(false)
+    setSelectedEmployeeForBenefit('')
+    setSelectedCustomBenefit('')
+    
+    toast({
+      title: "Benefit Assigned",
+      description: `${benefit?.name} has been assigned to ${employee?.first_name} ${employee?.last_name}`
     })
   }
 
@@ -203,6 +267,84 @@ export default function Benefits() {
                 </label>
               </Button>
             </div>
+            
+            <Dialog open={isAddingCustomBenefit} onOpenChange={setIsAddingCustomBenefit}>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  Create Custom Benefit
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Create Custom Benefit</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label>Benefit Name</Label>
+                    <Input
+                      placeholder="e.g., Gym Membership, Phone Allowance"
+                      value={newCustomBenefitName}
+                      onChange={(e) => setNewCustomBenefitName(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsAddingCustomBenefit(false)}>Cancel</Button>
+                  <Button onClick={handleAddCustomBenefit}>Create Benefit</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+            
+            <Dialog open={showAssignBenefitDialog} onOpenChange={setShowAssignBenefitDialog}>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="gap-2">
+                  <Award className="h-4 w-4" />
+                  Assign Custom Benefit
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Assign Custom Benefit</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label>Select Employee</Label>
+                    <Select value={selectedEmployeeForBenefit} onValueChange={setSelectedEmployeeForBenefit}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Choose employee" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {employees.map((emp) => (
+                          <SelectItem key={emp.id} value={emp.id?.toString() || ''}>
+                            {emp.first_name} {emp.last_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Select Benefit</Label>
+                    <Select value={selectedCustomBenefit} onValueChange={setSelectedCustomBenefit}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Choose benefit" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {customBenefits.map((benefit) => (
+                          <SelectItem key={benefit.id} value={benefit.id}>
+                            {benefit.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setShowAssignBenefitDialog(false)}>Cancel</Button>
+                  <Button onClick={handleAssignCustomBenefit}>Assign Benefit</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
             
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>

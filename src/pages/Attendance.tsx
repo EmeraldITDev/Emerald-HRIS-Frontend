@@ -339,9 +339,65 @@ export default function Attendance() {
   }
 
   const handleGenerateReport = (reportType: string) => {
+    const today = new Date()
+    let startDate: Date
+    let endDate: Date = new Date()
+    
+    switch(reportType) {
+      case 'Daily':
+        startDate = new Date(today)
+        break
+      case 'Weekly':
+        startDate = new Date(today)
+        startDate.setDate(today.getDate() - 7)
+        break
+      case 'Monthly':
+        startDate = new Date(today.getFullYear(), today.getMonth(), 1)
+        break
+      case 'Yearly':
+        startDate = new Date(today.getFullYear(), 0, 1)
+        break
+      default:
+        startDate = new Date(today)
+    }
+    
+    // Get attendance records from localStorage
+    const attendanceRecords = JSON.parse(localStorage.getItem('attendanceRecords') || '[]')
+    const filteredRecords = attendanceRecords.filter((record: any) => {
+      const recordDate = new Date(record.date)
+      return recordDate >= startDate && recordDate <= endDate
+    })
+    
+    // Create CSV content
+    const headers = ['Employee ID', 'Employee Name', 'Date', 'Clock In', 'Clock Out', 'Status']
+    const rows = filteredRecords.map((record: any) => [
+      record.employee_id,
+      record.employee_name,
+      record.date,
+      record.clock_in_time || 'N/A',
+      record.clock_out_time || 'N/A',
+      record.is_clocked_in ? 'Clocked In' : 'Completed'
+    ])
+    
+    const csvContent = [
+      headers.join(','),
+      ...rows.map((row: any[]) => row.join(','))
+    ].join('\n')
+    
+    // Download CSV
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    link.setAttribute('href', url)
+    link.setAttribute('download', `attendance_${reportType.toLowerCase()}_${format(today, 'yyyy-MM-dd')}.csv`)
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    
     toast({
-      title: "Generating Report",
-      description: `${reportType} attendance report is being generated...`,
+      title: "Report Downloaded",
+      description: `${reportType} attendance report has been downloaded successfully.`,
     })
   }
 

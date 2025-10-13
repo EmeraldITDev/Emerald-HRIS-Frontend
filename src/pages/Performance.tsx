@@ -92,9 +92,8 @@ export default function Performance() {
       return review.employeeId === currentEmployeeId
     }
     
-    const matchesSearch = review.employeeName.toLowerCase().includes('')
-    const matchesDepartment = !userDepartment || review.department === userDepartment
-    return matchesSearch && matchesDepartment
+    // For other roles, show all reviews
+    return true
   })
   
   const handleCreateNewReview = () => {
@@ -338,7 +337,7 @@ export default function Performance() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Employee</TableHead>
-                  {!isGeneralEmployee && <TableHead>Department</TableHead>}
+                  <TableHead>Department</TableHead>
                   <TableHead>Review Period</TableHead>
                   <TableHead>Rating</TableHead>
                   <TableHead>Status</TableHead>
@@ -349,7 +348,7 @@ export default function Performance() {
                 {filteredReviews.map((review) => (
                   <TableRow key={review.id}>
                     <TableCell className="font-medium">{review.employeeName}</TableCell>
-                    {!isGeneralEmployee && <TableCell>{review.department}</TableCell>}
+                    <TableCell>{review.department}</TableCell>
                     <TableCell>{review.reviewPeriod}</TableCell>
                     <TableCell>{renderStars(review.rating)}</TableCell>
                     <TableCell>

@@ -41,6 +41,8 @@ interface Policy {
   fileName: string
   fileSize: string
   uploadedBy: string
+  fileUrl?: string
+  fileData?: File
 }
 
 const policies: Policy[] = [
@@ -158,7 +160,9 @@ export default function Policies() {
       fileType,
       fileName: newPolicy.file.name,
       fileSize,
-      uploadedBy: "Current User" // This would come from auth context in real app
+      uploadedBy: "Current User", // This would come from auth context in real app
+      fileUrl: URL.createObjectURL(newPolicy.file),
+      fileData: newPolicy.file
     }
 
     setPolicyList(prev => [...prev, policy])
@@ -188,6 +192,37 @@ export default function Policies() {
       title: "Policy Deleted",
       description: `${policy.title} has been removed.`,
     })
+  }
+  
+  const handleViewPolicy = (policy: Policy) => {
+    if (policy.fileUrl) {
+      window.open(policy.fileUrl, '_blank')
+    } else {
+      toast({
+        title: "File Not Available",
+        description: "This is a sample policy. Upload a new policy to view documents.",
+        variant: "destructive"
+      })
+    }
+  }
+  
+  const handleDownloadPolicy = (policy: Policy) => {
+    if (policy.fileData) {
+      const link = document.createElement('a')
+      link.href = URL.createObjectURL(policy.fileData)
+      link.download = policy.fileName
+      link.click()
+      toast({
+        title: "Policy Downloaded",
+        description: `${policy.title} has been downloaded.`,
+      })
+    } else {
+      toast({
+        title: "File Not Available",
+        description: "This is a sample policy. Upload a new policy to download documents.",
+        variant: "destructive"
+      })
+    }
   }
 
   const getCategoryBadge = (category: string) => {
@@ -364,11 +399,11 @@ export default function Policies() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent className="bg-popover border shadow-lg">
-                          <DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleViewPolicy(policy)}>
                             <Eye className="h-3 w-3 mr-2" />
                             View
                           </DropdownMenuItem>
-                          <DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleDownloadPolicy(policy)}>
                             <Download className="h-3 w-3 mr-2" />
                             Download
                           </DropdownMenuItem>

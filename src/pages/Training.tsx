@@ -175,6 +175,50 @@ export default function Training() {
       employeeName: employee ? `${employee.first_name} ${employee.last_name}` : ''
     })
   }
+  
+  const handleUploadCertificateForTraining = (trainingId: string, event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    
+    // Validate file size (5MB max)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Certificate file must be smaller than 5MB",
+        variant: "destructive"
+      })
+      return
+    }
+    
+    // Validate file type
+    if (!file.type.includes('pdf') && !file.type.includes('image')) {
+      toast({
+        title: "Invalid file type",
+        description: "Please upload a PDF or image file",
+        variant: "destructive"
+      })
+      return
+    }
+    
+    // Update the training record with certificate
+    const updatedTrainings = trainings.map(training => 
+      training.id === trainingId 
+        ? { 
+            ...training, 
+            certificate: file,
+            certificateName: file.name,
+            status: 'Completed' as const
+          }
+        : training
+    )
+    
+    setTrainings(updatedTrainings)
+    
+    toast({
+      title: "Certificate uploaded",
+      description: "Training certificate has been uploaded and status updated to Completed."
+    })
+  }
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -364,6 +408,7 @@ export default function Training() {
                   <TableHead>Completion Date</TableHead>
                   <TableHead className="hidden sm:table-cell">Cost</TableHead>
                   <TableHead>Status</TableHead>
+                  {canUploadCertificate && <TableHead>Certificate</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -379,6 +424,39 @@ export default function Training() {
                       ₦{training.cost.toLocaleString()}
                     </TableCell>
                     <TableCell>{getStatusBadge(training.status)}</TableCell>
+                    {canUploadCertificate && (
+                      <TableCell>
+                        {training.certificateName ? (
+                          <div className="flex items-center gap-2">
+                            <Award className="h-4 w-4 text-green-600" />
+                            <span className="text-sm text-muted-foreground truncate max-w-[100px]">
+                              {training.certificateName}
+                            </span>
+                          </div>
+                        ) : (training.status === 'In Progress' || training.status === 'Scheduled') ? (
+                          <>
+                            <input
+                              ref={fileInputRef}
+                              type="file"
+                              accept=".pdf,.jpg,.jpeg,.png"
+                              onChange={(e) => handleUploadCertificateForTraining(training.id, e)}
+                              className="hidden"
+                              id={`cert-upload-${training.id}`}
+                            />
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => document.getElementById(`cert-upload-${training.id}`)?.click()}
+                            >
+                              <Upload className="h-4 w-4 mr-1" />
+                              Upload
+                            </Button>
+                          </>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">N/A</span>
+                        )}
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>

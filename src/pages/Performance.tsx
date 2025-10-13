@@ -215,7 +215,7 @@ export default function Performance() {
                 New Review
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px]">
+            <DialogContent className="max-w-[600px] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
               <DialogHeader>
                 <DialogTitle>Create Performance Review</DialogTitle>
                 <DialogDescription>
@@ -390,7 +390,7 @@ export default function Performance() {
 
       {/* View Review Dialog */}
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-        <DialogContent className="sm:max-w-[700px]">
+        <DialogContent className="max-w-[700px] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle>Performance Review Details</DialogTitle>
           </DialogHeader>
@@ -454,7 +454,7 @@ export default function Performance() {
       
       {/* Employee Comment Dialog */}
       <Dialog open={commentDialogOpen} onOpenChange={setCommentDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="max-w-[600px] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle>Add Your Comment</DialogTitle>
             <DialogDescription>

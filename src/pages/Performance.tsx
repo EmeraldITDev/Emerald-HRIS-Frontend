@@ -35,18 +35,49 @@ export default function Performance() {
   const [reviews, setReviews] = useState<Review[]>([
     {
       id: '1',
-      employeeId: '1',
-      employeeName: 'Adebayo Johnson',
+      employeeId: '101',
+      employeeName: 'Henry Marcus',
       department: 'IT',
       reviewPeriod: 'Q4 2024',
       reviewDate: '2024-12-15',
       rating: 4,
       status: 'Completed',
       reviewer: 'Austin Nwachwukwu',
-      goals: 'Complete 3 major projects',
-      achievements: 'Successfully delivered all projects on time',
-      areasForImprovement: 'Communication with stakeholders',
-      comments: 'Excellent performance overall'
+      goals: 'Complete system integration projects and improve database performance',
+      achievements: 'Successfully delivered 4 major projects on time, improved database query performance by 35%',
+      areasForImprovement: 'Enhanced communication with cross-functional teams',
+      comments: 'Excellent technical performance. Henry has shown strong dedication and problem-solving skills throughout the quarter.'
+    },
+    {
+      id: '2',
+      employeeId: '101',
+      employeeName: 'Henry Marcus',
+      department: 'IT',
+      reviewPeriod: 'Q3 2024',
+      reviewDate: '2024-09-15',
+      rating: 5,
+      status: 'Completed',
+      reviewer: 'Austin Nwachwukwu',
+      goals: 'Lead migration to new infrastructure and mentor junior developers',
+      achievements: 'Successfully led cloud migration project, mentored 2 junior developers, reduced system downtime by 40%',
+      areasForImprovement: 'Continue developing leadership skills',
+      comments: 'Outstanding performance this quarter. Henry exceeded all expectations and demonstrated excellent leadership qualities.',
+      employeeComments: 'Thank you for the feedback. I really enjoyed leading the migration project and will continue to focus on my leadership development.'
+    },
+    {
+      id: '3',
+      employeeId: '101',
+      employeeName: 'Henry Marcus',
+      department: 'IT',
+      reviewPeriod: 'Q2 2024',
+      reviewDate: '2024-06-15',
+      rating: 4,
+      status: 'Completed',
+      reviewer: 'Austin Nwachwukwu',
+      goals: 'Implement new security protocols and complete certifications',
+      achievements: 'Implemented enhanced security measures, completed AWS certification, improved system security score by 25%',
+      areasForImprovement: 'Time management on concurrent projects',
+      comments: 'Strong performance with notable achievements in security improvements. Keep up the excellent work.'
     }
   ])
   

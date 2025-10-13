@@ -40,6 +40,8 @@ const trainingTypes = [
 
 export default function Training() {
   const { user, hasPermission } = useAuth()
+  const canUploadCertificate = user?.role === 'hr_manager' || user?.role === 'executive' || user?.role === 'line_manager'
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [employees, setEmployees] = useState<Employee[]>([])
   const [isLoadingEmployees, setIsLoadingEmployees] = useState(true)
   const [trainings, setTrainings] = useState<TrainingRecord[]>([

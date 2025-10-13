@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
@@ -10,6 +10,8 @@ import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Shield, Wifi, Monitor, Heart, Upload, Plus, Users } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { useAuth } from '@/contexts/AuthContext'
+import { apiService, Employee } from '@/lib/api'
 
 interface EmployeeBenefit {
   id: string
@@ -22,14 +24,8 @@ interface EmployeeBenefit {
   lastUpdated: string
 }
 
-const employees = [
-  { id: "EMP001", name: "Adebayo Johnson" },
-  { id: "EMP002", name: "Fatima Abdul" },
-  { id: "EMP003", name: "Chinedu Okafor" },
-  { id: "EMP004", name: "Kemi Adeleke" }
-]
-
 export default function Benefits() {
+  const [employees, setEmployees] = useState<Employee[]>([])
   const [benefits, setBenefits] = useState<EmployeeBenefit[]>([
     {
       id: '1',
@@ -84,6 +80,22 @@ export default function Benefits() {
 
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const { toast } = useToast()
+  const { user } = useAuth()
+  
+  const canManageBenefits = user?.role === 'executive' || user?.role === 'hr_manager'
+  
+  useEffect(() => {
+    fetchEmployees()
+  }, [])
+  
+  const fetchEmployees = async () => {
+    try {
+      const data = await apiService.getEmployees()
+      setEmployees(data)
+    } catch (error) {
+      console.error('Failed to fetch employees:', error)
+    }
+  }
 
   const handleAddBenefit = () => {
     if (!newBenefit.employeeId) {
@@ -124,11 +136,11 @@ export default function Benefits() {
   }
 
   const handleEmployeeChange = (employeeId: string) => {
-    const employee = employees.find(emp => emp.id === employeeId)
+    const employee = employees.find(emp => emp.id?.toString() === employeeId)
     setNewBenefit({
       ...newBenefit,
       employeeId,
-      employeeName: employee?.name || ''
+      employeeName: employee ? `${employee.first_name} ${employee.last_name}` : ''
     })
   }
 
@@ -174,30 +186,31 @@ export default function Benefits() {
           <p className="text-muted-foreground">Manage employee benefits and enrollments</p>
         </div>
         
-        <div className="flex flex-col sm:flex-row gap-2">
-          <div className="relative">
-            <Input
-              type="file"
-              accept=".csv"
-              onChange={handleCSVUpload}
-              className="hidden"
-              id="csv-upload"
-            />
-            <Button variant="outline" asChild>
-              <label htmlFor="csv-upload" className="cursor-pointer">
-                <Upload className="mr-2 h-4 w-4" />
-                Import CSV
-              </label>
-            </Button>
-          </div>
-          
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="bg-emerald-600 hover:bg-emerald-700 text-white">
-                <Plus className="mr-2 h-4 w-4" />
-                Configure Benefits
+        {canManageBenefits && (
+          <div className="flex flex-col sm:flex-row gap-2">
+            <div className="relative">
+              <Input
+                type="file"
+                accept=".csv"
+                onChange={handleCSVUpload}
+                className="hidden"
+                id="csv-upload"
+              />
+              <Button variant="outline" asChild>
+                <label htmlFor="csv-upload" className="cursor-pointer">
+                  <Upload className="mr-2 h-4 w-4" />
+                  Import CSV
+                </label>
               </Button>
-            </DialogTrigger>
+            </div>
+            
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Configure Benefits
+                </Button>
+              </DialogTrigger>
             <DialogContent className="sm:max-w-[500px]">
               <DialogHeader>
                 <DialogTitle>Configure Employee Benefits</DialogTitle>
@@ -215,8 +228,8 @@ export default function Benefits() {
                     </SelectTrigger>
                     <SelectContent>
                       {employees.map((employee) => (
-                        <SelectItem key={employee.id} value={employee.id}>
-                          {employee.name}
+                        <SelectItem key={employee.id} value={employee.id?.toString() || ''}>
+                          {employee.first_name} {employee.last_name} - {employee.department}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -278,7 +291,8 @@ export default function Benefits() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
-        </div>
+            </div>
+        )}
       </div>
 
       {/* Statistics Cards */}

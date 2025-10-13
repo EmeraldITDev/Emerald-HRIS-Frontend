@@ -43,6 +43,14 @@ interface JobRequisition {
 }
 
 export default function Recruitment() {
+  const [filters, setFilters] = useState({
+    email: '',
+    position: '',
+    status: '',
+    appliedDateFrom: '',
+    appliedDateTo: ''
+  })
+  
   const [candidates, setCandidates] = useState<Candidate[]>([
     {
       id: '1',
@@ -123,6 +131,33 @@ export default function Recruitment() {
   const [isEditJobRequisitionDialogOpen, setIsEditJobRequisitionDialogOpen] = useState(false)
   const [activeTab, setActiveTab] = useState('candidates')
   const { toast } = useToast()
+  
+  const handleSearch = () => {
+    toast({
+      title: "Filters applied",
+      description: "Candidate list has been filtered based on your criteria."
+    })
+  }
+  
+  const handleClearFilters = () => {
+    setFilters({
+      email: '',
+      position: '',
+      status: '',
+      appliedDateFrom: '',
+      appliedDateTo: ''
+    })
+  }
+  
+  const filteredCandidates = candidates.filter(candidate => {
+    const matchesEmail = !filters.email || candidate.email.toLowerCase().includes(filters.email.toLowerCase())
+    const matchesPosition = !filters.position || candidate.position.toLowerCase().includes(filters.position.toLowerCase())
+    const matchesStatus = !filters.status || candidate.status === filters.status
+    const matchesDateFrom = !filters.appliedDateFrom || new Date(candidate.appliedDate) >= new Date(filters.appliedDateFrom)
+    const matchesDateTo = !filters.appliedDateTo || new Date(candidate.appliedDate) <= new Date(filters.appliedDateTo)
+    
+    return matchesEmail && matchesPosition && matchesStatus && matchesDateFrom && matchesDateTo
+  })
 
   const departments = [
     'Engineering',
@@ -736,7 +771,7 @@ export default function Recruitment() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {candidates.map((candidate) => (
+                {filteredCandidates.map((candidate) => (
                   <TableRow key={candidate.id}>
                     <TableCell className="font-medium">{candidate.name}</TableCell>
                     <TableCell className="hidden sm:table-cell">{candidate.phone}</TableCell>

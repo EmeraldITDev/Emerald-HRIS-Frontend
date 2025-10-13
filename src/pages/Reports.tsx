@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -6,8 +6,9 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Download, FileText, User, Calendar, MapPin, Phone, Mail, Building, Briefcase } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { apiService, Employee } from '@/lib/api'
 
-const employees = [
+const dummyEmployeesOld = [
   {
     id: "EMP001",
     firstName: "Adebayo",
@@ -139,14 +140,59 @@ const employees = [
 ]
 
 export default function Reports() {
+  const [employees, setEmployees] = useState<Employee[]>([])
   const [selectedEmployee, setSelectedEmployee] = useState("")
   const [reportData, setReportData] = useState<any>(null)
   const { toast } = useToast()
+  
+  useEffect(() => {
+    fetchEmployees()
+  }, [])
+  
+  const fetchEmployees = async () => {
+    try {
+      const data = await apiService.getEmployees()
+      setEmployees(data)
+    } catch (error) {
+      console.error('Failed to fetch employees:', error)
+    }
+  }
 
   const handleEmployeeSelect = (employeeId: string) => {
-    const employee = employees.find(emp => emp.id === employeeId)
+    const employee = employees.find(emp => emp.id?.toString() === employeeId)
     setSelectedEmployee(employeeId)
-    setReportData(employee)
+    if (employee) {
+      // Transform employee data to match report format
+      setReportData({
+        id: employee.employee_code || `EMP${employee.id?.toString().padStart(3, '0')}`,
+        firstName: employee.first_name,
+        lastName: employee.last_name,
+        email: employee.email,
+        phone: employee.phone_number || 'N/A',
+        department: employee.department || 'N/A',
+        position: employee.job_title,
+        employmentType: employee.employment_type || 'N/A',
+        status: employee.employment_status || 'Active',
+        joinDate: employee.hire_date || 'N/A',
+        vacationDays: employee.vacation_days || 0,
+        vacationTaken: 0, // Would need to fetch from attendance/leave data
+        salary: employee.gross_salary ? `₦${employee.gross_salary.toLocaleString()}` : 'N/A',
+        address: employee.address || 'N/A',
+        emergencyContact: 'N/A', // Would need additional field
+        benefits: {
+          hmo: false,
+          lifeInsurance: false,
+          internet: false,
+          computer: false
+        },
+        performance: {
+          lastReview: 'N/A',
+          rating: 'N/A',
+          achievements: 'N/A'
+        },
+        training: []
+      })
+    }
   }
 
   const handleDownloadReport = () => {
@@ -219,8 +265,8 @@ export default function Reports() {
             </SelectTrigger>
             <SelectContent>
               {employees.map((employee) => (
-                <SelectItem key={employee.id} value={employee.id}>
-                  {employee.firstName} {employee.lastName} - {employee.id}
+                <SelectItem key={employee.id} value={employee.id?.toString() || ''}>
+                  {employee.first_name} {employee.last_name} - {employee.employee_code || `EMP${employee.id?.toString().padStart(3, '0')}`}
                 </SelectItem>
               ))}
             </SelectContent>

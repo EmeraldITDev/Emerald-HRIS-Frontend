@@ -1,45 +1,80 @@
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Users, UserCheck, UserX, DollarSign } from "lucide-react"
-
-const stats = [
-  {
-    title: "Total Employees",
-    value: "247",
-    change: "+12 this month",
-    icon: Users,
-    changeType: "positive" as const,
-  },
-  {
-    title: "Contract Employees",
-    value: "68",
-    change: "27.5% of workforce",
-    icon: UserCheck,
-    changeType: "neutral" as const,
-  },
-  {
-    title: "FTE (Full-Time Employees)",
-    value: "179",
-    change: "72.5% of workforce",
-    icon: Users,
-    changeType: "positive" as const,
-  },
-  {
-    title: "Monthly Payroll",
-    value: "₦47.2M",
-    change: "+8.2% from last month",
-    icon: null,
-    changeType: "positive" as const,
-  },
-  {
-    title: "Onboard Employees",
-    value: "15",
-    change: "Today",
-    icon: UserCheck,
-    changeType: "positive" as const,
-  },
-]
+import { Users, UserCheck } from "lucide-react"
+import apiService, { Employee } from "@/lib/api"
 
 export function DashboardStats() {
+  const [employees, setEmployees] = useState<Employee[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchEmployees = async () => {
+      try {
+        const data = await apiService.getEmployees()
+        setEmployees(data)
+      } catch (error) {
+        console.error('Failed to fetch employees:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    fetchEmployees()
+  }, [])
+
+  const totalEmployees = employees.length
+  const contractEmployees = employees.filter(emp => emp.employment_type === 'Contract').length
+  const fteEmployees = employees.filter(emp => emp.employment_type === 'Full-time').length
+  const totalPayroll = employees.reduce((sum, emp) => sum + (emp.gross_salary || 0) + 
+    (emp.meal_allowance || 0) + (emp.housing_allowance || 0) + (emp.transport_allowance || 0), 0)
+  
+  const onboardToday = employees.filter(emp => {
+    if (!emp.hire_date) return false
+    const hireDate = new Date(emp.hire_date)
+    const today = new Date()
+    return hireDate.toDateString() === today.toDateString()
+  }).length
+
+  const contractPercentage = totalEmployees > 0 ? ((contractEmployees / totalEmployees) * 100).toFixed(1) : '0'
+  const ftePercentage = totalEmployees > 0 ? ((fteEmployees / totalEmployees) * 100).toFixed(1) : '0'
+
+  const stats = [
+    {
+      title: "Total Employees",
+      value: isLoading ? "..." : totalEmployees.toString(),
+      change: `${fteEmployees} FTE + ${contractEmployees} Contract`,
+      icon: Users,
+      changeType: "positive" as const,
+    },
+    {
+      title: "Contract Employees",
+      value: isLoading ? "..." : contractEmployees.toString(),
+      change: `${contractPercentage}% of workforce`,
+      icon: UserCheck,
+      changeType: "neutral" as const,
+    },
+    {
+      title: "FTE (Full-Time Employees)",
+      value: isLoading ? "..." : fteEmployees.toString(),
+      change: `${ftePercentage}% of workforce`,
+      icon: Users,
+      changeType: "positive" as const,
+    },
+    {
+      title: "Monthly Payroll",
+      value: isLoading ? "..." : `₦${(totalPayroll / 1000000).toFixed(1)}M`,
+      change: "Total compensation",
+      icon: null,
+      changeType: "positive" as const,
+    },
+    {
+      title: "Onboard Employees",
+      value: isLoading ? "..." : onboardToday.toString(),
+      change: "Today",
+      icon: UserCheck,
+      changeType: "positive" as const,
+    },
+  ]
+
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
       {stats.map((stat) => (

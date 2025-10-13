@@ -1,5 +1,6 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
+import apiService, { Employee } from "@/lib/api"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -27,16 +28,9 @@ interface PerformanceReview {
   progress: number
 }
 
-const employees = [
-  { id: "EMP001", name: "Adebayo Johnson", department: "Engineering", jobTitle: "Senior Software Engineer" },
-  { id: "EMP002", name: "Fatima Abdul", department: "Sales", jobTitle: "Sales Manager" },
-  { id: "EMP003", name: "Chinedu Okafor", department: "Marketing", jobTitle: "Marketing Specialist" },
-  { id: "EMP004", name: "Kemi Adeleke", department: "HR", jobTitle: "HR Business Partner" },
-  { id: "EMP005", name: "Babatunde Okafor", department: "Finance", jobTitle: "Financial Analyst" },
-  { id: "EMP006", name: "Amina Hassan", department: "Operations", jobTitle: "Operations Coordinator" }
-]
-
 export default function Performance() {
+  const [employees, setEmployees] = useState<Employee[]>([])
+  const [isLoadingEmployees, setIsLoadingEmployees] = useState(true)
   const [reviews, setReviews] = useState<PerformanceReview[]>([
     {
       id: '1',
@@ -126,10 +120,24 @@ export default function Performance() {
   const [currentReviewId, setCurrentReviewId] = useState<string | null>(null)
   const [currentUserRole] = useState<'employee' | 'manager' | 'hr'>('manager') // This would come from auth context
 
+  useEffect(() => {
+    const fetchEmployees = async () => {
+      try {
+        const data = await apiService.getEmployees()
+        setEmployees(data)
+      } catch (error) {
+        console.error('Failed to fetch employees:', error)
+      } finally {
+        setIsLoadingEmployees(false)
+      }
+    }
+    fetchEmployees()
+  }, [])
+
   // Transform PerformanceReview to PerformanceReviewData for form component
   const transformReviewToFormData = (review: PerformanceReview) => {
-    const employee = employees.find(emp => emp.id === review.employeeId)
-    const manager = employees.find(emp => emp.id === review.managerId)
+    const employee = employees.find(emp => emp.id?.toString() === review.employeeId)
+    const manager = employees.find(emp => emp.id?.toString() === review.managerId)
     
     // Map status to form-compatible values
     const mapStatus = (status: string): 'draft' | 'submitted' | 'completed' => {

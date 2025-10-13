@@ -1,5 +1,6 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import apiService, { Employee } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -198,24 +199,12 @@ const payrollRecords = [
   }
 ]
 
-const employees = [
-  { id: "EMP001", name: "James Thompson", basicSalary: 8000000, pensionId: "PEN001", taxId: "TIN001", employmentType: "Full-time", status: "On-board", role: "executive" },
-  { id: "EMP002", name: "Sarah Williams", basicSalary: 4000000, pensionId: "PEN002", taxId: "TIN002", employmentType: "Full-time", status: "On-board", role: "hr_manager" },
-  { id: "EMP003", name: "Emily Johnson", basicSalary: 2000000, pensionId: "PEN003", taxId: "TIN003", employmentType: "Full-time", status: "On-board", role: "corporate_hr" },
-  { id: "EMP004", name: "Michael Brown", basicSalary: 2400000, pensionId: "PEN004", taxId: "TIN004", employmentType: "Full-time", status: "On-board", role: "line_manager" },
-  { id: "EMP005", name: "David Martinez", basicSalary: 3200000, pensionId: "PEN005", taxId: "TIN005", employmentType: "Full-time", status: "On-board", role: "it_power_user" },
-  { id: "EMP006", name: "Alex Chen", basicSalary: 2000000, pensionId: "PEN006", taxId: "TIN006", employmentType: "Full-time", status: "On-board", role: "it_admin" },
-  { id: "EMP007", name: "Adebayo Johnson", basicSalary: 1600000, pensionId: "PEN007", taxId: "TIN007", employmentType: "Full-time", status: "On-board", role: "general_employee" },
-  { id: "EMP008", name: "Fatima Abdul", basicSalary: 1800000, pensionId: "PEN008", taxId: "TIN008", employmentType: "Full-time", status: "On-board", role: "general_employee" },
-  { id: "EMP009", name: "Chinedu Okafor", basicSalary: 0, pensionId: "PEN009", taxId: "TIN009", employmentType: "Contract", status: "On-board", role: "contract_employee" },
-  { id: "EMP010", name: "Kemi Adeleke", basicSalary: 1400000, pensionId: "PEN010", taxId: "TIN010", employmentType: "Full-time", status: "On-board", role: "general_employee" },
-]
-
-// Filter to show only On-board employees in dropdown
-const onboardEmployees = employees.filter(emp => emp.status === "On-board")
+// Fetch employees from API - defined at component level
 
 export default function Payroll() {
-  const [selectedEmployee, setSelectedEmployee] = useState("EMP007")
+  const [employees, setEmployees] = useState<Employee[]>([])
+  const [isLoadingEmployees, setIsLoadingEmployees] = useState(true)
+  const [selectedEmployee, setSelectedEmployee] = useState("")
   const [selectedPeriod, setSelectedPeriod] = useState("2024-01")
   const [payrollData, setPayrollData] = useState({
     grossSalary: "4000000",
@@ -226,6 +215,36 @@ export default function Payroll() {
   })
   const { toast } = useToast()
   const { user } = useAuth()
+
+  useEffect(() => {
+    const fetchEmployees = async () => {
+      try {
+        const data = await apiService.getEmployees()
+        setEmployees(data.filter(emp => emp.employment_status === 'Active'))
+      } catch (error) {
+        console.error('Failed to fetch employees:', error)
+        toast({
+          title: "Error",
+          description: "Failed to load employees from database",
+          variant: "destructive"
+        })
+      } finally {
+        setIsLoadingEmployees(false)
+      }
+    }
+    fetchEmployees()
+  }, [])
+
+  const onboardEmployees = employees.map(emp => ({
+    id: emp.id?.toString() || '',
+    name: `${emp.first_name} ${emp.last_name}`,
+    basicSalary: emp.gross_salary || 0,
+    pensionId: emp.pension_pin || '',
+    taxId: emp.tax_id || '',
+    employmentType: emp.employment_type || 'Full-time',
+    status: emp.employment_status || 'Active',
+    role: 'general_employee'
+  }))
 
   // Filter payroll records based on user role
   const getVisiblePayrollRecords = () => {
@@ -478,22 +497,16 @@ export default function Payroll() {
   const savePayroll = () => {
     if (!selectedEmployee || !selectedPeriod) return
 
-    const selectedEmp = employees.find(emp => emp.id === selectedEmployee)
+    const selectedEmp = employees.find(emp => emp.id?.toString() === selectedEmployee)
     if (!selectedEmp) return
-
-    // Update employee salary in the system
-    const employeeIndex = employees.findIndex(emp => emp.id === selectedEmployee)
-    if (employeeIndex !== -1) {
-      employees[employeeIndex].basicSalary = calculations.netPay
-    }
 
     // Create payroll record
     const newPayrollRecord = {
       id: `PAY${String(payrollRecords.length + 1).padStart(3, '0')}`,
       employeeId: selectedEmployee,
-      employeeName: selectedEmp.name,
-      department: "Unknown",
-      role: selectedEmp.role || "general_employee",
+      employeeName: `${selectedEmp.first_name} ${selectedEmp.last_name}`,
+      department: selectedEmp.department || "Unknown",
+      role: "general_employee",
       basicSalary: calculations.employmentType === "Contract" ? 0 : calculations.basic,
       allowances: calculations.housing + calculations.transport + calculations.other,
       grossPay: calculations.grossPay,
@@ -509,7 +522,7 @@ export default function Payroll() {
 
     toast({
       title: "Payroll Saved",
-      description: `Payroll for ${selectedEmp.name} has been saved and employee salary updated to ${formatCurrency(calculations.netPay)}.`
+      description: `Payroll for ${selectedEmp.first_name} ${selectedEmp.last_name} has been saved successfully.`
     })
 
     // Reset form
@@ -589,11 +602,17 @@ export default function Payroll() {
                     <SelectValue placeholder="Select employee" />
                   </SelectTrigger>
                   <SelectContent className="bg-popover border shadow-lg">
-                    {onboardEmployees.map((emp) => (
-                      <SelectItem key={emp.id} value={emp.id}>
-                        {emp.name} - {emp.employmentType}
-                      </SelectItem>
-                    ))}
+                    {isLoadingEmployees ? (
+                      <SelectItem value="loading" disabled>Loading employees...</SelectItem>
+                    ) : onboardEmployees.length === 0 ? (
+                      <SelectItem value="none" disabled>No employees found</SelectItem>
+                    ) : (
+                      onboardEmployees.map((emp) => (
+                        <SelectItem key={emp.id} value={emp.id}>
+                          {emp.name} - {emp.employmentType}
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
                 {selectedEmployee && (

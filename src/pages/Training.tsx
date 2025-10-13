@@ -1,5 +1,6 @@
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
+import apiService, { Employee } from "@/lib/api"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
@@ -26,13 +27,6 @@ interface TrainingRecord {
   certificateName?: string
 }
 
-const employees = [
-  { id: "EMP001", name: "Adebayo Johnson" },
-  { id: "EMP002", name: "Fatima Abdul" },
-  { id: "EMP003", name: "Chinedu Okafor" },
-  { id: "EMP004", name: "Kemi Adeleke" }
-]
-
 const trainingTypes = [
   'Technical Skills',
   'Leadership Development',
@@ -46,6 +40,8 @@ const trainingTypes = [
 
 export default function Training() {
   const { user, hasPermission } = useAuth()
+  const [employees, setEmployees] = useState<Employee[]>([])
+  const [isLoadingEmployees, setIsLoadingEmployees] = useState(true)
   const [trainings, setTrainings] = useState<TrainingRecord[]>([
     {
       id: '1',
@@ -83,6 +79,25 @@ export default function Training() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const certificateInputRef = useRef<HTMLInputElement>(null)
   const { toast } = useToast()
+
+  useEffect(() => {
+    const fetchEmployees = async () => {
+      try {
+        const data = await apiService.getEmployees()
+        setEmployees(data.filter(emp => emp.employment_status === 'Active'))
+      } catch (error) {
+        console.error('Failed to fetch employees:', error)
+        toast({
+          title: "Error",
+          description: "Failed to load employees from database",
+          variant: "destructive"
+        })
+      } finally {
+        setIsLoadingEmployees(false)
+      }
+    }
+    fetchEmployees()
+  }, [])
 
   const handleAddTraining = () => {
     if (!newTraining.employeeId || !newTraining.trainingType || !newTraining.completionDate) {
@@ -151,11 +166,11 @@ export default function Training() {
   }
 
   const handleEmployeeChange = (employeeId: string) => {
-    const employee = employees.find(emp => emp.id === employeeId)
+    const employee = employees.find(emp => emp.id?.toString() === employeeId)
     setNewTraining({
       ...newTraining,
       employeeId,
-      employeeName: employee?.name || ''
+      employeeName: employee ? `${employee.first_name} ${employee.last_name}` : ''
     })
   }
 
@@ -208,11 +223,15 @@ export default function Training() {
                     <SelectValue placeholder="Select employee" />
                   </SelectTrigger>
                   <SelectContent>
-                    {employees.map((employee) => (
-                      <SelectItem key={employee.id} value={employee.id}>
-                        {employee.name}
-                      </SelectItem>
-                    ))}
+                    {isLoadingEmployees ? (
+                      <SelectItem value="loading" disabled>Loading...</SelectItem>
+                    ) : (
+                      employees.map((employee) => (
+                        <SelectItem key={employee.id} value={employee.id?.toString() || ''}>
+                          {employee.first_name} {employee.last_name}
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
               </div>

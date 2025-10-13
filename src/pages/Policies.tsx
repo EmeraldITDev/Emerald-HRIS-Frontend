@@ -29,6 +29,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useToast } from "@/hooks/use-toast"
+import { useAuth } from '@/contexts/AuthContext'
 
 interface Policy {
   id: string
@@ -89,6 +90,9 @@ export default function Policies() {
   const [showAddPolicy, setShowAddPolicy] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { toast } = useToast()
+  const { user } = useAuth()
+  
+  const canUploadPolicy = user?.role === 'hr_manager' || user?.role === 'executive'
 
   const [newPolicy, setNewPolicy] = useState({
     title: "",
@@ -251,14 +255,15 @@ export default function Policies() {
             Manage and store company policy documents
           </p>
         </div>
-        <div className="flex flex-col sm:flex-row gap-2">
-          <Dialog open={showAddPolicy} onOpenChange={setShowAddPolicy}>
-            <DialogTrigger asChild>
-              <Button size="sm" className="text-xs md:text-sm">
-                <Plus className="mr-2 h-3 w-3 md:h-4 md:w-4" />
-                Upload Policy
-              </Button>
-            </DialogTrigger>
+        {canUploadPolicy && (
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Dialog open={showAddPolicy} onOpenChange={setShowAddPolicy}>
+              <DialogTrigger asChild>
+                <Button size="sm" className="text-xs md:text-sm">
+                  <Plus className="mr-2 h-3 w-3 md:h-4 md:w-4" />
+                  Upload Policy
+                </Button>
+              </DialogTrigger>
             <DialogContent className="max-w-2xl">
               <DialogHeader>
                 <DialogTitle>Upload New Policy</DialogTitle>
@@ -344,7 +349,8 @@ export default function Policies() {
               </div>
             </DialogContent>
           </Dialog>
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Policies Table */}
@@ -407,13 +413,15 @@ export default function Policies() {
                             <Download className="h-3 w-3 mr-2" />
                             Download
                           </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            className="text-destructive"
-                            onClick={() => handleDeletePolicy(policy)}
-                          >
-                            <Trash2 className="h-3 w-3 mr-2" />
-                            Delete
-                          </DropdownMenuItem>
+                          {canUploadPolicy && (
+                            <DropdownMenuItem 
+                              className="text-destructive"
+                              onClick={() => handleDeletePolicy(policy)}
+                            >
+                              <Trash2 className="h-3 w-3 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>

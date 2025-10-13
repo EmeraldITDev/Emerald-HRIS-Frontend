@@ -85,10 +85,12 @@ export default function Performance() {
   const isGeneralEmployee = user?.role === 'general_employee'
   const canManageReviews = user?.role === 'executive' || user?.role === 'hr_manager' || user?.role === 'line_manager'
 
+  // Get current employee ID for filtering
+  const currentEmployeeId = employees.find(emp => emp.email === user?.email)?.id?.toString()
+
   const filteredReviews = reviews.filter(review => {
     // General employees can only see their own reviews
     if (isGeneralEmployee) {
-      const currentEmployeeId = employees.find(emp => emp.email === user?.email)?.id?.toString()
       return review.employeeId === currentEmployeeId
     }
     
@@ -356,7 +358,7 @@ export default function Performance() {
                         {review.status}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right">
+                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
                         <Button variant="ghost" size="sm" onClick={() => {
                           setSelectedReview(review)
@@ -364,7 +366,7 @@ export default function Performance() {
                         }}>
                           <Eye className="h-4 w-4" />
                         </Button>
-                        {isGeneralEmployee && (
+                        {isGeneralEmployee && review.employeeId === currentEmployeeId && (
                           <>
                             <Button variant="ghost" size="sm" onClick={() => {
                               setSelectedReview(review)

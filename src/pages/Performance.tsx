@@ -228,11 +228,11 @@ export default function Performance() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 md:gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Performance Management</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground">Performance Management</h1>
+          <p className="text-sm md:text-base text-muted-foreground">
             {isGeneralEmployee 
               ? "View your performance reviews and add comments"
               : "Track and manage employee performance reviews"
@@ -243,9 +243,9 @@ export default function Performance() {
         {canManageReviews && (
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="bg-emerald-600 hover:bg-emerald-700 text-white">
+              <Button className="bg-emerald-600 hover:bg-emerald-700 text-white w-full sm:w-auto">
                 <Plus className="mr-2 h-4 w-4" />
-                New Review
+                <span className="text-sm md:text-base">New Review</span>
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-[600px] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
@@ -355,59 +355,64 @@ export default function Performance() {
 
       {/* Performance Reviews Table */}
       <Card>
-        <CardHeader>
-          <CardTitle>Performance Reviews</CardTitle>
-          <CardDescription>
+        <CardHeader className="p-4 md:p-6">
+          <CardTitle className="text-lg md:text-xl">Performance Reviews</CardTitle>
+          <CardDescription className="text-sm">
             {isGeneralEmployee 
               ? "Your performance evaluation history"
               : "Track and manage employee performance evaluations"
             }
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0 md:p-6">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Employee</TableHead>
-                  <TableHead>Department</TableHead>
-                  <TableHead>Review Period</TableHead>
-                  <TableHead>Rating</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead className="text-xs md:text-sm">Employee</TableHead>
+                  <TableHead className="hidden md:table-cell text-xs md:text-sm">Department</TableHead>
+                  <TableHead className="text-xs md:text-sm">Period</TableHead>
+                  <TableHead className="hidden sm:table-cell text-xs md:text-sm">Rating</TableHead>
+                  <TableHead className="hidden lg:table-cell text-xs md:text-sm">Status</TableHead>
+                  <TableHead className="text-right text-xs md:text-sm">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredReviews.map((review) => (
                   <TableRow key={review.id}>
-                    <TableCell className="font-medium">{review.employeeName}</TableCell>
-                    <TableCell>{review.department}</TableCell>
-                    <TableCell>{review.reviewPeriod}</TableCell>
-                    <TableCell>{renderStars(review.rating)}</TableCell>
-                    <TableCell>
-                      <Badge className={review.status === 'Completed' ? 'bg-success/10 text-success border-success/20' : 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400'}>
+                    <TableCell className="font-medium text-xs md:text-sm">
+                      <div>
+                        <div>{review.employeeName}</div>
+                        <div className="md:hidden text-xs text-muted-foreground">{review.department}</div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell text-xs md:text-sm">{review.department}</TableCell>
+                    <TableCell className="text-xs md:text-sm">{review.reviewPeriod}</TableCell>
+                    <TableCell className="hidden sm:table-cell text-xs md:text-sm">{renderStars(review.rating)}</TableCell>
+                    <TableCell className="hidden lg:table-cell">
+                      <Badge className={review.status === 'Completed' ? 'bg-success/10 text-success border-success/20 text-xs' : 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400 text-xs'}>
                         {review.status}
                       </Badge>
                     </TableCell>
                      <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button variant="ghost" size="sm" onClick={() => {
+                      <div className="flex justify-end gap-1 md:gap-2">
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => {
                           setSelectedReview(review)
                           setViewDialogOpen(true)
                         }}>
-                          <Eye className="h-4 w-4" />
+                          <Eye className="h-3 w-3 md:h-4 md:w-4" />
                         </Button>
                         {isGeneralEmployee && review.employeeId === currentEmployeeId && (
                           <>
-                            <Button variant="ghost" size="sm" onClick={() => {
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => {
                               setSelectedReview(review)
                               setEmployeeComment(review.employeeComments || "")
                               setCommentDialogOpen(true)
                             }}>
-                              <MessageSquare className="h-4 w-4" />
+                              <MessageSquare className="h-3 w-3 md:h-4 md:w-4" />
                             </Button>
-                            <Button variant="ghost" size="sm" onClick={() => handleExportReview(review)}>
-                              <Download className="h-4 w-4" />
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hidden sm:inline-flex" onClick={() => handleExportReview(review)}>
+                              <Download className="h-3 w-3 md:h-4 md:w-4" />
                             </Button>
                           </>
                         )}

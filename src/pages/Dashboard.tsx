@@ -481,18 +481,18 @@ export default function Dashboard() {
 
       {/* Hide aggregate stats for general_employee, corporate_hr, line_manager, it_admin */}
       {!['general_employee', 'corporate_hr', 'line_manager', 'it_admin'].includes(user?.role || '') && (
-        <div className="grid gap-4 md:gap-6 grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
+        <div className="grid gap-3 md:gap-4 lg:gap-6 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
           <Card className="border-border/50 shadow-sm">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Employees</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-3 md:p-6">
+              <CardTitle className="text-xs md:text-sm font-medium">Total Employees</CardTitle>
+              <Users className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-3 md:p-6 pt-0">
               {isLoading ? (
-                <div className="h-8 bg-muted rounded animate-pulse"></div>
+                <div className="h-6 md:h-8 bg-muted rounded animate-pulse"></div>
               ) : (
                 <>
-                  <div className="text-2xl font-bold">{allEmployees.length}</div>
+                  <div className="text-xl md:text-2xl font-bold">{allEmployees.length}</div>
                   <p className="text-xs text-muted-foreground">
                     +{allEmployees.filter(emp => {
                       if (!emp.hire_date) return false
@@ -507,16 +507,16 @@ export default function Dashboard() {
           </Card>
 
           <Card className="border-border/50 shadow-sm">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Contract Employees</CardTitle>
-              <UserCheck className="h-4 w-4 text-muted-foreground" />
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-3 md:p-6">
+              <CardTitle className="text-xs md:text-sm font-medium">Contract</CardTitle>
+              <UserCheck className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-3 md:p-6 pt-0">
               {isLoading ? (
-                <div className="h-8 bg-muted rounded animate-pulse"></div>
+                <div className="h-6 md:h-8 bg-muted rounded animate-pulse"></div>
               ) : (
                 <>
-                  <div className="text-2xl font-bold">
+                  <div className="text-xl md:text-2xl font-bold">
                     {allEmployees.filter(emp => emp.employment_type === 'Contract').length}
                   </div>
                   <p className="text-xs text-muted-foreground">
@@ -528,16 +528,16 @@ export default function Dashboard() {
           </Card>
 
           <Card className="border-border/50 shadow-sm">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">FTE</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-3 md:p-6">
+              <CardTitle className="text-xs md:text-sm font-medium">FTE</CardTitle>
+              <Users className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-3 md:p-6 pt-0">
               {isLoading ? (
-                <div className="h-8 bg-muted rounded animate-pulse"></div>
+                <div className="h-6 md:h-8 bg-muted rounded animate-pulse"></div>
               ) : (
                 <>
-                  <div className="text-2xl font-bold">
+                  <div className="text-xl md:text-2xl font-bold">
                     {allEmployees.filter(emp => emp.employment_type === 'Full-time').length}
                   </div>
                   <p className="text-xs text-muted-foreground">
@@ -549,24 +549,24 @@ export default function Dashboard() {
           </Card>
 
           <Card className="border-border/50 shadow-sm">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                {['it_power_user', 'executive'].includes(user?.role || '') ? 'Personal Payroll' : 'Monthly Payroll'}
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-3 md:p-6">
+              <CardTitle className="text-xs md:text-sm font-medium">
+                {['it_power_user', 'executive'].includes(user?.role || '') ? 'Payroll' : 'Payroll'}
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-3 md:p-6 pt-0">
               {isLoading ? (
-                <div className="h-8 bg-muted rounded animate-pulse"></div>
+                <div className="h-6 md:h-8 bg-muted rounded animate-pulse"></div>
               ) : (
                 <>
-                  <div className="text-2xl font-bold">
+                  <div className="text-xl md:text-2xl font-bold">
                     {['it_power_user', 'executive'].includes(user?.role || '') 
-                      ? '₦450,000' 
+                      ? '₦450K' 
                       : `₦${(allEmployees.reduce((sum, emp) => sum + (emp.gross_salary || 0), 0) / 1000000).toFixed(1)}M`
                     }
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    {['it_power_user', 'executive'].includes(user?.role || '') ? 'Monthly salary' : `${allEmployees.length} employees`}
+                    {['it_power_user', 'executive'].includes(user?.role || '') ? 'Monthly' : `${allEmployees.length} employees`}
                   </p>
                 </>
               )}
@@ -574,16 +574,16 @@ export default function Dashboard() {
           </Card>
 
           <Card className="border-border/50 shadow-sm">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Onboard Employees</CardTitle>
-              <UserPlus className="h-4 w-4 text-muted-foreground" />
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-3 md:p-6">
+              <CardTitle className="text-xs md:text-sm font-medium">Onboard</CardTitle>
+              <UserPlus className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-3 md:p-6 pt-0">
               {isLoading ? (
-                <div className="h-8 bg-muted rounded animate-pulse"></div>
+                <div className="h-6 md:h-8 bg-muted rounded animate-pulse"></div>
               ) : (
                 <>
-                  <div className="text-2xl font-bold">
+                  <div className="text-xl md:text-2xl font-bold">
                     {allEmployees.filter(emp => {
                       if (!emp.hire_date) return false
                       const hireDate = new Date(emp.hire_date)
@@ -600,16 +600,16 @@ export default function Dashboard() {
           </Card>
 
           <Card className="border-border/50 shadow-sm">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active</CardTitle>
-              <UserCheck className="h-4 w-4 text-muted-foreground" />
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-3 md:p-6">
+              <CardTitle className="text-xs md:text-sm font-medium">Active</CardTitle>
+              <UserCheck className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-3 md:p-6 pt-0">
               {isLoading ? (
-                <div className="h-8 bg-muted rounded animate-pulse"></div>
+                <div className="h-6 md:h-8 bg-muted rounded animate-pulse"></div>
               ) : (
                 <>
-                  <div className="text-2xl font-bold">{allEmployees.filter(emp => emp.employment_status === 'Active').length}</div>
+                  <div className="text-xl md:text-2xl font-bold">{allEmployees.filter(emp => emp.employment_status === 'Active').length}</div>
                   <p className="text-xs text-muted-foreground">
                     {allEmployees.length > 0 ? Math.round((allEmployees.filter(emp => emp.employment_status === 'Active').length / allEmployees.length) * 100) : 0}% of total
                   </p>
@@ -621,11 +621,11 @@ export default function Dashboard() {
       )}
 
       {/* Grid sections */}
-      <div className="grid gap-4 md:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-3 md:gap-4 lg:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
         <Card className="border-border/50 shadow-sm">
-          <CardHeader>
-            <CardTitle className="flex items-center text-primary">
-              <FileText className="mr-2 h-5 w-5" />
+          <CardHeader className="p-4 md:p-6">
+            <CardTitle className="flex items-center text-primary text-base md:text-lg">
+              <FileText className="mr-2 h-4 w-4 md:h-5 md:w-5" />
               Recent Activities
             </CardTitle>
           </CardHeader>

@@ -1084,9 +1084,6 @@ export default function Employees() {
                                 date > new Date() || date < new Date("1900-01-01")
                               }
                               initialFocus
-                              captionLayout="dropdown-buttons"
-                              fromYear={1940}
-                              toYear={new Date().getFullYear()}
                               className="p-3 pointer-events-auto"
                             />
                           </PopoverContent>
@@ -1323,9 +1320,6 @@ export default function Employees() {
                                 hireDate: date
                               })} 
                               initialFocus 
-                              captionLayout="dropdown-buttons"
-                              fromYear={1960}
-                              toYear={2030}
                               className="p-3 pointer-events-auto" 
                             />
                           </PopoverContent>

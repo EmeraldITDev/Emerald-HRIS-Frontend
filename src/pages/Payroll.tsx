@@ -282,17 +282,17 @@ export default function Payroll() {
     let grossForCRA, cra, totalRelief, taxableIncome, annualTax, annualNet;
     
     if (employmentType === "Full-time") {
-      // Calculate Annual Gross from Basic Salary
+      // Calculate Annual Gross from Basic Salary (rounded to nearest whole number)
       // Since Basic = 40% of Annual Gross, then Annual Gross = Basic / 0.40
-      annualGross = basicSalary / 0.40
+      annualGross = Math.round(basicSalary / 0.40)
       
       // Calculate allowances as percentages of Annual Gross (rounded to nearest whole number)
       housing = Math.round(annualGross * 0.20)     // Housing Allowance = 20% × Annual Gross
       transport = Math.round(annualGross * 0.09)   // Transport Allowance = 9% × Annual Gross
       other = Math.round(annualGross * 0.31)       // Other Allowances = 31% × Annual Gross
       
-      // Pension calculations based on Annual Gross
-      pensionEmployee = annualGross * 0.08  // Employee Pension = 8% × Annual Gross
+      // Pension calculations: 8% of (Housing + Transport + Basic Salary)
+      pensionEmployee = (housing + transport + basicSalary) * 0.08  // Employee Pension = 8% × (Housing + Transport + Basic)
       pensionEmployer = annualGross * 0.10  // Employer Pension = 10% × Annual Gross
       
       // NHF based on Basic Salary
@@ -302,7 +302,8 @@ export default function Payroll() {
       grossForCRA = annualGross - (pensionEmployee + nhf)
       
       // CRA (Consolidated Relief Allowance)
-      cra = (grossForCRA * 0.20) + 200000  // CRA = (20% × Gross for CRA) + 200,000
+      // Formula: 20% of Gross for CRA + MAX(1% of Gross for CRA, 200000)
+      cra = (grossForCRA * 0.20) + Math.max(grossForCRA * 0.01, 200000)
       
       // Total Relief Allowances
       totalRelief = cra + pensionEmployee + nhf
@@ -436,16 +437,16 @@ export default function Payroll() {
       let grossForCRA, cra, totalRelief, taxableIncome, annualTax, annualNet;
       
       if (employmentType === "Full-time") {
-        // Calculate Annual Gross from Basic Salary
-        annualGross = basicSalary / 0.40
+        // Calculate Annual Gross from Basic Salary (rounded to nearest whole number)
+        annualGross = Math.round(basicSalary / 0.40)
         
-        // Calculate allowances as percentages of Annual Gross
-        housing = annualGross * 0.20
-        transport = annualGross * 0.09
-        other = annualGross * 0.31
+        // Calculate allowances as percentages of Annual Gross (rounded to nearest whole number)
+        housing = Math.round(annualGross * 0.20)
+        transport = Math.round(annualGross * 0.09)
+        other = Math.round(annualGross * 0.31)
         
-        // Pension calculations based on Annual Gross
-        pensionEmployee = annualGross * 0.08
+        // Pension calculations: 8% of (Housing + Transport + Basic Salary)
+        pensionEmployee = (housing + transport + basicSalary) * 0.08
         pensionEmployer = annualGross * 0.10
         
         // NHF based on Basic Salary
@@ -455,7 +456,8 @@ export default function Payroll() {
         grossForCRA = annualGross - (pensionEmployee + nhf)
         
         // CRA (Consolidated Relief Allowance)
-        cra = (grossForCRA * 0.20) + 200000
+        // Formula: 20% of Gross for CRA + MAX(1% of Gross for CRA, 200000)
+        cra = (grossForCRA * 0.20) + Math.max(grossForCRA * 0.01, 200000)
         
         // Total Relief Allowances
         totalRelief = cra + pensionEmployee + nhf
@@ -514,7 +516,7 @@ export default function Payroll() {
         'Annual Transport Allowance': transport,
         'Annual Other Allowance': other,
         'Annual Gross Salary': annualGross,
-        'Employee Pension (8%)': pensionEmployee,
+        'Employee Pension (8% of Housing + Transport + Basic)': pensionEmployee,
         'NHF (2.5% of Basic)': nhf,
         'Gross for CRA': grossForCRA,
         'CRA': cra,
@@ -879,7 +881,7 @@ export default function Payroll() {
                   </h3>
                   <div className="space-y-3">
                     <div className="flex justify-between text-sm">
-                      <span>Employee Pension (8% of Gross):</span>
+                      <span>Employee Pension (8% of Housing + Transport + Basic):</span>
                       <span>{formatCurrency(calculations.pensionEmployee)}</span>
                     </div>
                     <div className="flex justify-between text-sm">

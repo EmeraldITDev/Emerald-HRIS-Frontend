@@ -207,7 +207,7 @@ export default function Payroll() {
   const [selectedEmployee, setSelectedEmployee] = useState("")
   const [selectedPeriod, setSelectedPeriod] = useState("2024-01")
   const [payrollData, setPayrollData] = useState({
-    grossSalary: "4000000",
+    basicSalary: "1600000",
     earnings: "50000",
     earningsRemarks: "",
     deduction: "25000",
@@ -274,96 +274,148 @@ export default function Payroll() {
     const selectedEmp = onboardEmployees.find(emp => emp.id === selectedEmployee)
     const employmentType = selectedEmp?.employmentType || "Full-time"
     
-    const gross = parseFloat(payrollData.grossSalary) || 0
+    const basicSalary = parseFloat(payrollData.basicSalary) || 0
     const earnings = parseFloat(payrollData.earnings) || 0
     const deduction = parseFloat(payrollData.deduction) || 0
     
-    let basic, housing, transport, other, pensionEmployee, pensionEmployer, nhf;
+    let annualGross, housing, transport, other, pensionEmployee, pensionEmployer, nhf;
+    let grossForCRA, cra, totalRelief, taxableIncome, annualTax, annualNet;
     
     if (employmentType === "Full-time") {
-      // Full-time breakdown: 40% Basic, 20% Housing, 9% Transport, 31% Other
-      basic = gross * 0.40
-      housing = gross * 0.20
-      transport = gross * 0.09
-      other = gross * 0.31
+      // Calculate Annual Gross from Basic Salary
+      // Since Basic = 40% of Annual Gross, then Annual Gross = Basic / 0.40
+      annualGross = basicSalary / 0.40
+      
+      // Calculate allowances as percentages of Annual Gross
+      housing = annualGross * 0.20     // Housing Allowance = 20% × Annual Gross
+      transport = annualGross * 0.09   // Transport Allowance = 9% × Annual Gross
+      other = annualGross * 0.31       // Other Allowances = 31% × Annual Gross
+      
+      // Pension calculations based on Annual Gross
+      pensionEmployee = annualGross * 0.08  // Employee Pension = 8% × Annual Gross
+      pensionEmployer = annualGross * 0.10  // Employer Pension = 10% × Annual Gross
+      
+      // NHF based on Basic Salary
+      nhf = basicSalary * 0.025  // NHF = 2.5% × Basic
+      
+      // Gross for CRA calculation
+      grossForCRA = annualGross - (pensionEmployee + nhf)
+      
+      // CRA (Consolidated Relief Allowance)
+      cra = (grossForCRA * 0.20) + 200000  // CRA = (20% × Gross for CRA) + 200,000
+      
+      // Total Relief Allowances
+      totalRelief = cra + pensionEmployee + nhf
+      
+      // Taxable Income
+      taxableIncome = annualGross - totalRelief
+      
+      // PAYE Tax Calculation (Progressive Nigerian Tax Rates)
+      annualTax = 0
+      if (taxableIncome > 300000) {
+        if (taxableIncome <= 600000) {
+          annualTax = (taxableIncome - 300000) * 0.07
+        } else if (taxableIncome <= 1100000) {
+          annualTax = 21000 + (taxableIncome - 600000) * 0.11
+        } else if (taxableIncome <= 1600000) {
+          annualTax = 76000 + (taxableIncome - 1100000) * 0.15
+        } else if (taxableIncome <= 3200000) {
+          annualTax = 151000 + (taxableIncome - 1600000) * 0.19
+        } else if (taxableIncome <= 3900000) {
+          annualTax = 455000 + (taxableIncome - 3200000) * 0.21
+        } else {
+          annualTax = 602000 + (taxableIncome - 3900000) * 0.24
+        }
+      }
+      
+      // Annual Net Pay
+      annualNet = annualGross - annualTax
+      
     } else {
-      // Contract: Only gross salary, no allowance breakdown
-      basic = gross
+      // Contract: Simple calculation with withholding tax
+      annualGross = basicSalary  // For contracts, treat input as total contract amount
       housing = 0
       transport = 0
       other = 0
-    }
-    
-    // Add earnings to gross pay
-    const grossPay = basic + housing + transport + other + earnings
-    
-    // Nigerian statutory deductions - different for contract vs full-time
-    if (employmentType === "Full-time") {
-      const pensionableIncome = basic + housing + transport // Pensionable income excludes other allowances
-      pensionEmployee = pensionableIncome * 0.08 // Employee 8%
-      pensionEmployer = pensionableIncome * 0.10 // Employer 10%
-      nhf = grossPay * 0.025 // 2.5%
-    } else {
-      // Contract employees don't have pension or NHF deductions
       pensionEmployee = 0
       pensionEmployer = 0
       nhf = 0
+      grossForCRA = 0
+      cra = 0
+      totalRelief = 0
+      taxableIncome = annualGross
+      annualTax = annualGross * 0.05  // 5% Withholding Tax
+      annualNet = annualGross - annualTax
     }
     
-    const nsitf = grossPay * 0.01 // 1% (employer paid)
-    const itf = grossPay * 0.01 // 1% (employer paid)
-    
-    // Tax calculation based on employment type
-    let tax = 0
-    let taxType = ""
-    
-    if (employmentType === "Full-time") {
-      // PAYE calculation for full-time employees
-      taxType = "PAYE"
-      const taxableIncome = grossPay - pensionEmployee
-      if (taxableIncome > 300000) {
-        if (taxableIncome <= 600000) {
-          tax = (taxableIncome - 300000) * 0.07
-        } else if (taxableIncome <= 1100000) {
-          tax = 21000 + (taxableIncome - 600000) * 0.11
-        } else if (taxableIncome <= 1600000) {
-          tax = 76000 + (taxableIncome - 1100000) * 0.15
-        } else if (taxableIncome <= 3200000) {
-          tax = 151000 + (taxableIncome - 1600000) * 0.19
-        } else {
-          tax = 455000 + (taxableIncome - 3200000) * 0.21
-        }
-      }
-    } else {
-      // Withholding Tax for contract employees (5% of gross)
-      taxType = "Withholding Tax"
-      tax = grossPay * 0.05
-    }
-    
-    // Add personal deduction to total deductions
-    const totalDeductions = pensionEmployee + nhf + tax + deduction
+    // Add earnings and deductions
+    const grossPay = annualGross + earnings
+    const totalDeductions = annualTax + deduction
     const netPay = grossPay - totalDeductions
+    
+    // Employer costs
+    const nsitf = employmentType === "Full-time" ? annualGross * 0.01 : 0
+    const itf = employmentType === "Full-time" ? annualGross * 0.01 : 0
     const totalEmployerCost = grossPay + pensionEmployer + nsitf + itf
     
+    // Monthly figures (divide annual by 12)
+    const monthlyBasic = basicSalary / 12
+    const monthlyHousing = housing / 12
+    const monthlyTransport = transport / 12
+    const monthlyOther = other / 12
+    const monthlyGross = annualGross / 12
+    const monthlyPensionEmployee = pensionEmployee / 12
+    const monthlyPensionEmployer = pensionEmployer / 12
+    const monthlyNHF = nhf / 12
+    const monthlyCRA = cra / 12
+    const monthlyRelief = totalRelief / 12
+    const monthlyTaxableIncome = taxableIncome / 12
+    const monthlyTax = annualTax / 12
+    const monthlyNet = annualNet / 12
+    
     return {
-      grossPay,
-      basic,
+      // Annual values
+      basicSalary,
+      annualGross,
       housing,
       transport,
       other,
-      earnings,
-      deduction,
       pensionEmployee,
       pensionEmployer,
       nhf,
+      grossForCRA,
+      cra,
+      totalRelief,
+      taxableIncome,
+      annualTax,
+      annualNet,
       nsitf,
       itf,
-      tax,
-      taxType,
+      
+      // Monthly values
+      monthlyBasic,
+      monthlyHousing,
+      monthlyTransport,
+      monthlyOther,
+      monthlyGross,
+      monthlyPensionEmployee,
+      monthlyPensionEmployer,
+      monthlyNHF,
+      monthlyCRA,
+      monthlyRelief,
+      monthlyTaxableIncome,
+      monthlyTax,
+      monthlyNet,
+      
+      // Additional
+      earnings,
+      deduction,
+      grossPay,
       totalDeductions,
       netPay,
       totalEmployerCost,
-      employmentType
+      employmentType,
+      taxType: employmentType === "Full-time" ? "PAYE" : "Withholding Tax"
     }
   }
 
@@ -379,86 +431,108 @@ export default function Payroll() {
   const handleExportPayroll = () => {
     // Calculate comprehensive payroll data for all employees
     const exportData = onboardEmployees.map(employee => {
-      // Use a standardized gross salary for calculation (could be their current basic salary)
-      const grossSalary = employee.basicSalary
+      // Use employee's basic salary for calculation
+      const basicSalary = employee.basicSalary
       const employmentType = employee.employmentType
       
-      // Calculate all payroll components
-      let basic, housing, transport, other;
+      let annualGross, housing, transport, other, pensionEmployee, pensionEmployer, nhf;
+      let grossForCRA, cra, totalRelief, taxableIncome, annualTax, annualNet;
       
       if (employmentType === "Full-time") {
-        // Full-time breakdown: 40% Basic, 20% Housing, 9% Transport, 31% Other
-        basic = grossSalary * 0.40
-        housing = grossSalary * 0.20
-        transport = grossSalary * 0.09
-        other = grossSalary * 0.31
+        // Calculate Annual Gross from Basic Salary
+        annualGross = basicSalary / 0.40
+        
+        // Calculate allowances as percentages of Annual Gross
+        housing = annualGross * 0.20
+        transport = annualGross * 0.09
+        other = annualGross * 0.31
+        
+        // Pension calculations based on Annual Gross
+        pensionEmployee = annualGross * 0.08
+        pensionEmployer = annualGross * 0.10
+        
+        // NHF based on Basic Salary
+        nhf = basicSalary * 0.025
+        
+        // Gross for CRA calculation
+        grossForCRA = annualGross - (pensionEmployee + nhf)
+        
+        // CRA (Consolidated Relief Allowance)
+        cra = (grossForCRA * 0.20) + 200000
+        
+        // Total Relief Allowances
+        totalRelief = cra + pensionEmployee + nhf
+        
+        // Taxable Income
+        taxableIncome = annualGross - totalRelief
+        
+        // PAYE Tax Calculation
+        annualTax = 0
+        if (taxableIncome > 300000) {
+          if (taxableIncome <= 600000) {
+            annualTax = (taxableIncome - 300000) * 0.07
+          } else if (taxableIncome <= 1100000) {
+            annualTax = 21000 + (taxableIncome - 600000) * 0.11
+          } else if (taxableIncome <= 1600000) {
+            annualTax = 76000 + (taxableIncome - 1100000) * 0.15
+          } else if (taxableIncome <= 3200000) {
+            annualTax = 151000 + (taxableIncome - 1600000) * 0.19
+          } else if (taxableIncome <= 3900000) {
+            annualTax = 455000 + (taxableIncome - 3200000) * 0.21
+          } else {
+            annualTax = 602000 + (taxableIncome - 3900000) * 0.24
+          }
+        }
+        
+        // Annual Net Pay
+        annualNet = annualGross - annualTax
+        
       } else {
-        // Contract: Single gross amount
-        basic = grossSalary
+        // Contract: Simple calculation
+        annualGross = basicSalary
         housing = 0
         transport = 0
         other = 0
+        pensionEmployee = 0
+        pensionEmployer = 0
+        nhf = 0
+        grossForCRA = 0
+        cra = 0
+        totalRelief = 0
+        taxableIncome = annualGross
+        annualTax = annualGross * 0.05
+        annualNet = annualGross - annualTax
       }
       
-      const grossPay = basic + housing + transport + other
-      
-      // Nigerian statutory deductions
-      const pensionableIncome = basic + housing + transport
-      const pensionEmployee = employmentType === "Full-time" ? pensionableIncome * 0.08 : 0
-      const pensionEmployer = employmentType === "Full-time" ? pensionableIncome * 0.10 : 0
-      const nhf = employmentType === "Full-time" ? grossPay * 0.025 : 0
-      const nsitf = grossPay * 0.01 // Employer paid
-      const itf = grossPay * 0.01 // Employer paid
-      
-      // Tax calculation based on employment type
-      let tax = 0
-      let taxType = ""
-      
-      if (employmentType === "Full-time") {
-        // PAYE calculation for full-time employees
-        taxType = "PAYE"
-        const taxableIncome = grossPay - pensionEmployee
-        if (taxableIncome > 300000) {
-          if (taxableIncome <= 600000) {
-            tax = (taxableIncome - 300000) * 0.07
-          } else if (taxableIncome <= 1100000) {
-            tax = 21000 + (taxableIncome - 600000) * 0.11
-          } else if (taxableIncome <= 1600000) {
-            tax = 76000 + (taxableIncome - 1100000) * 0.15
-          } else if (taxableIncome <= 3200000) {
-            tax = 151000 + (taxableIncome - 1600000) * 0.19
-          } else {
-            tax = 455000 + (taxableIncome - 3200000) * 0.21
-          }
-        }
-      } else {
-        // Withholding Tax for contract employees (5% of gross)
-        taxType = "Withholding Tax"
-        tax = grossPay * 0.05
-      }
-      
-      const totalDeductions = pensionEmployee + nhf + tax
-      const netPay = grossPay - totalDeductions
-      const totalEmployerCost = grossPay + pensionEmployer + nsitf + itf
+      const nsitf = employmentType === "Full-time" ? annualGross * 0.01 : 0
+      const itf = employmentType === "Full-time" ? annualGross * 0.01 : 0
+      const totalEmployerCost = annualGross + pensionEmployer + nsitf + itf
       
       return {
         'Employee ID': employee.id,
         'Employee Name': employee.name,
         'Employment Type': employmentType,
-        'Gross Salary': grossSalary,
-        'Basic Salary': basic,
-        'Housing Allowance': housing,
-        'Transport Allowance': transport,
-        'Other Allowance': other,
-        'PAYE/Withholding Tax': tax,
-        'Employee Pension Contribution': pensionEmployee,
-        'NHF': nhf,
-        'Total Employee Deductions': totalDeductions,
-        'Net Pay': netPay,
-        'Employer Pension Contribution': pensionEmployer,
+        'Annual Basic Salary': basicSalary,
+        'Annual Housing Allowance': housing,
+        'Annual Transport Allowance': transport,
+        'Annual Other Allowance': other,
+        'Annual Gross Salary': annualGross,
+        'Employee Pension (8%)': pensionEmployee,
+        'NHF (2.5% of Basic)': nhf,
+        'Gross for CRA': grossForCRA,
+        'CRA': cra,
+        'Total Relief Allowances': totalRelief,
+        'Taxable Income': taxableIncome,
+        'Annual PAYE/Withholding Tax': annualTax,
+        'Annual Net Pay': annualNet,
+        'Employer Pension (10%)': pensionEmployer,
         'NSITF': nsitf,
         'ITF': itf,
-        'Total Employer Cost': totalEmployerCost
+        'Total Employer Cost': totalEmployerCost,
+        'Monthly Basic': basicSalary / 12,
+        'Monthly Gross': annualGross / 12,
+        'Monthly Tax': annualTax / 12,
+        'Monthly Net': annualNet / 12
       }
     })
 
@@ -507,13 +581,13 @@ export default function Payroll() {
       employeeName: `${selectedEmp.first_name} ${selectedEmp.last_name}`,
       department: selectedEmp.department || "Unknown",
       role: "general_employee",
-      basicSalary: calculations.employmentType === "Contract" ? 0 : calculations.basic,
+      basicSalary: calculations.employmentType === "Contract" ? 0 : calculations.basicSalary,
       allowances: calculations.housing + calculations.transport + calculations.other,
-      grossPay: calculations.grossPay,
-      paye: calculations.tax,
+      grossPay: calculations.annualGross,
+      paye: calculations.annualTax,
       pension: calculations.pensionEmployee,
       nhf: calculations.nhf,
-      netPay: calculations.netPay,
+      netPay: calculations.annualNet,
       period: selectedPeriod,
       status: "Processed"
     }
@@ -527,7 +601,7 @@ export default function Payroll() {
 
     // Reset form
     setPayrollData({
-      grossSalary: "",
+      basicSalary: "",
       earnings: "",
       earningsRemarks: "",
       deduction: "",
@@ -639,20 +713,20 @@ export default function Payroll() {
 
               <div className="space-y-3 border-t pt-3">
                 <div>
-                  <Label htmlFor="grossSalary" className="font-semibold">
-                    {calculations.employmentType === "Contract" ? "Contract Amount (₦) *" : "Gross Salary (₦) *"}
+                  <Label htmlFor="basicSalary" className="font-semibold">
+                    {calculations.employmentType === "Contract" ? "Contract Amount (₦) *" : "Annual Basic Salary (₦) *"}
                   </Label>
                   <Input
-                    id="grossSalary"
+                    id="basicSalary"
                     type="number"
-                    placeholder="2,500,000"
-                    value={payrollData.grossSalary}
-                    onChange={(e) => setPayrollData({...payrollData, grossSalary: e.target.value})}
+                    placeholder="1,600,000"
+                    value={payrollData.basicSalary}
+                    onChange={(e) => setPayrollData({...payrollData, basicSalary: e.target.value})}
                   />
                   <p className="text-xs text-muted-foreground mt-1">
                     {calculations.employmentType === "Contract" 
-                      ? "Total contract payment amount" 
-                      : "Will be split: 40% Basic, 20% Housing, 9% Transport, 31% Other"}
+                      ? "Total annual contract payment" 
+                      : "Annual gross will be calculated (Basic = 40% of Annual Gross)"}
                   </p>
                 </div>
 
@@ -722,18 +796,26 @@ export default function Payroll() {
           <CardContent>
             <div className="space-y-6">
               {/* Summary Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-muted/30 rounded-lg border">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-3 p-4 bg-muted/30 rounded-lg border">
                 <div className="text-center">
-                  <p className="text-xs text-muted-foreground mb-1">Total Gross Pay</p>
-                  <p className="text-xl font-bold text-primary">{formatCurrency(calculations.grossPay)}</p>
+                  <p className="text-xs text-muted-foreground mb-1">Annual Gross</p>
+                  <p className="text-lg font-bold text-primary">{formatCurrency(calculations.annualGross)}</p>
+                  <p className="text-xs text-muted-foreground">₦{(calculations.monthlyGross).toFixed(0)}/mo</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-xs text-muted-foreground mb-1">Total Deductions</p>
-                  <p className="text-xl font-bold text-destructive">{formatCurrency(calculations.totalDeductions)}</p>
+                  <p className="text-xs text-muted-foreground mb-1">Annual Tax (PAYE)</p>
+                  <p className="text-lg font-bold text-destructive">{formatCurrency(calculations.annualTax)}</p>
+                  <p className="text-xs text-muted-foreground">₦{(calculations.monthlyTax).toFixed(0)}/mo</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-xs text-muted-foreground mb-1">Net Take Home</p>
-                  <p className="text-xl font-bold text-success">{formatCurrency(calculations.netPay)}</p>
+                  <p className="text-xs text-muted-foreground mb-1">Annual Net</p>
+                  <p className="text-lg font-bold text-success">{formatCurrency(calculations.annualNet)}</p>
+                  <p className="text-xs text-muted-foreground">₦{(calculations.monthlyNet).toFixed(0)}/mo</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-xs text-muted-foreground mb-1">Total Relief</p>
+                  <p className="text-lg font-bold text-info">{formatCurrency(calculations.totalRelief)}</p>
+                  <p className="text-xs text-muted-foreground">₦{(calculations.monthlyRelief).toFixed(0)}/mo</p>
                 </div>
               </div>
 
@@ -747,111 +829,157 @@ export default function Payroll() {
                 </span>
               </div>
 
-              {/* Earnings */}
+              {/* Annual Breakdown */}
               <div className="border rounded-lg p-4 bg-card">
                 <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
                   <span className="w-2 h-2 bg-success rounded-full"></span>
-                  Earnings & Compensation
+                  Annual Salary Breakdown
                 </h3>
                 <div className="space-y-3">
-                  <div className="flex justify-between text-sm pb-2 border-b">
-                    <span className="font-medium">{calculations.employmentType === "Contract" ? "Contract Amount" : "Base Gross Salary"}:</span>
-                    <span className="font-semibold">{formatCurrency(parseFloat(payrollData.grossSalary) || 0)}</span>
-                  </div>
-                  {calculations.employmentType === "Full-time" && (
-                    <div className="pl-4 space-y-2 text-sm text-muted-foreground">
-                      <div className="flex justify-between">
-                        <span>• Basic Salary (40%):</span>
-                        <span>{formatCurrency(calculations.basic)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>• Housing Allowance (20%):</span>
-                        <span>{formatCurrency(calculations.housing)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>• Transport Allowance (9%):</span>
-                        <span>{formatCurrency(calculations.transport)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>• Other Allowances (31%):</span>
-                        <span>{formatCurrency(calculations.other)}</span>
-                      </div>
-                    </div>
-                  )}
-                  {calculations.earnings > 0 && (
-                    <div className="flex justify-between text-sm border-t pt-2 bg-success/5 p-2 rounded">
-                      <span className="font-medium">
-                        Additional Earnings
-                        {payrollData.earningsRemarks && (
-                          <span className="text-xs text-muted-foreground ml-2">({payrollData.earningsRemarks})</span>
-                        )}:
-                      </span>
-                      <span className="text-success font-semibold">+{formatCurrency(calculations.earnings)}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between text-base font-bold border-t-2 pt-3">
-                    <span>Total Gross Pay:</span>
-                    <span className="text-primary">{formatCurrency(calculations.grossPay)}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Deductions */}
-              <div className="border rounded-lg p-4 bg-card">
-                <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
-                  <span className="w-2 h-2 bg-destructive rounded-full"></span>
-                  Statutory Deductions
-                </h3>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>{calculations.taxType}:</span>
-                    <span>{formatCurrency(calculations.tax)}</span>
-                  </div>
                   {calculations.employmentType === "Full-time" ? (
                     <>
                       <div className="flex justify-between text-sm">
-                        <span>Pension Contribution (8%):</span>
-                        <span>{formatCurrency(calculations.pensionEmployee)}</span>
+                        <span className="font-medium">Basic Salary (Entered):</span>
+                        <span className="font-semibold">{formatCurrency(calculations.basicSalary)}</span>
                       </div>
-                      <div className="flex justify-between text-sm">
-                        <span>National Housing Fund (2.5%):</span>
-                        <span>{formatCurrency(calculations.nhf)}</span>
+                      <div className="pl-4 space-y-2 text-sm border-l-2 border-primary/20">
+                        <div className="flex justify-between">
+                          <span>Housing Allowance (20% of Gross):</span>
+                          <span>{formatCurrency(calculations.housing)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Transport Allowance (9% of Gross):</span>
+                          <span>{formatCurrency(calculations.transport)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Other Allowances (31% of Gross):</span>
+                          <span>{formatCurrency(calculations.other)}</span>
+                        </div>
+                      </div>
+                      <div className="flex justify-between text-base font-bold border-t-2 pt-3 bg-primary/5 p-2 rounded">
+                        <span>Annual Gross Salary:</span>
+                        <span className="text-primary">{formatCurrency(calculations.annualGross)}</span>
+                      </div>
+                      <div className="text-xs text-muted-foreground text-right">
+                        Monthly: ₦{(calculations.monthlyGross).toFixed(2)}
                       </div>
                     </>
                   ) : (
-                    <div className="text-sm text-muted-foreground italic pl-4">
-                      • No pension or NHF deductions for contract staff
+                    <div className="flex justify-between text-sm">
+                      <span className="font-medium">Annual Contract Amount:</span>
+                      <span className="font-semibold">{formatCurrency(calculations.basicSalary)}</span>
                     </div>
                   )}
-                  {calculations.deduction > 0 && (
-                    <div className="flex justify-between text-sm border-t pt-2 bg-destructive/5 p-2 rounded">
-                      <span className="font-medium">
-                        Personal Deduction
-                        {payrollData.deductionRemarks && (
-                          <span className="text-xs text-muted-foreground ml-2">({payrollData.deductionRemarks})</span>
-                        )}:
-                      </span>
-                      <span className="text-destructive font-semibold">-{formatCurrency(calculations.deduction)}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between text-base font-bold border-t-2 pt-3">
-                    <span>Total Deductions:</span>
-                    <span className="text-destructive">{formatCurrency(calculations.totalDeductions)}</span>
-                  </div>
                 </div>
               </div>
 
-              {/* Net Pay */}
-              <div className="border-2 border-success rounded-lg p-4 bg-success/5">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">Employee Net Take Home Pay</p>
-                    <p className="text-3xl font-bold text-success">{formatCurrency(calculations.netPay)}</p>
+              {/* Relief Allowances */}
+              {calculations.employmentType === "Full-time" && (
+                <div className="border rounded-lg p-4 bg-card">
+                  <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
+                    <span className="w-2 h-2 bg-info rounded-full"></span>
+                    Relief Allowances & Deductions
+                  </h3>
+                  <div className="space-y-3">
+                    <div className="flex justify-between text-sm">
+                      <span>Employee Pension (8% of Gross):</span>
+                      <span>{formatCurrency(calculations.pensionEmployee)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>NHF (2.5% of Basic):</span>
+                      <span>{formatCurrency(calculations.nhf)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm font-medium border-t pt-2">
+                      <span>Gross for CRA:</span>
+                      <span>{formatCurrency(calculations.grossForCRA)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm bg-info/5 p-2 rounded">
+                      <span>CRA (20% × Gross for CRA + ₦200,000):</span>
+                      <span className="font-semibold">{formatCurrency(calculations.cra)}</span>
+                    </div>
+                    <div className="flex justify-between text-base font-bold border-t-2 pt-3">
+                      <span>Total Relief Allowances:</span>
+                      <span className="text-info">{formatCurrency(calculations.totalRelief)}</span>
+                    </div>
+                    <div className="text-xs text-muted-foreground text-right">
+                      Monthly Relief: ₦{(calculations.monthlyRelief).toFixed(2)}
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-xs text-muted-foreground">Gross Pay</p>
-                    <p className="text-sm font-semibold">{formatCurrency(calculations.grossPay)}</p>
-                    <p className="text-xs text-destructive mt-1">- {formatCurrency(calculations.totalDeductions)}</p>
+                </div>
+              )}
+
+              {/* Tax Calculation */}
+              <div className="border rounded-lg p-4 bg-card">
+                <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
+                  <span className="w-2 h-2 bg-destructive rounded-full"></span>
+                  Tax Calculation ({calculations.taxType})
+                </h3>
+                <div className="space-y-3">
+                  {calculations.employmentType === "Full-time" ? (
+                    <>
+                      <div className="flex justify-between text-sm">
+                        <span>Annual Gross Salary:</span>
+                        <span>{formatCurrency(calculations.annualGross)}</span>
+                      </div>
+                      <div className="flex justify-between text-sm text-destructive">
+                        <span>Less: Total Relief Allowances:</span>
+                        <span>-{formatCurrency(calculations.totalRelief)}</span>
+                      </div>
+                      <div className="flex justify-between text-sm font-medium border-t pt-2 bg-warning/5 p-2 rounded">
+                        <span>Taxable Income:</span>
+                        <span>{formatCurrency(calculations.taxableIncome)}</span>
+                      </div>
+                      <div className="text-xs text-muted-foreground pl-4 space-y-1 border-l-2 border-muted">
+                        <p>• First ₦300,000: Exempt</p>
+                        <p>• Next ₦300,000: 7%</p>
+                        <p>• Next ₦500,000: 11%</p>
+                        <p>• Next ₦500,000: 15%</p>
+                        <p>• Next ₦1,600,000: 19%</p>
+                        <p>• Next ₦700,000: 21%</p>
+                        <p>• Above ₦3,900,000: 24%</p>
+                      </div>
+                      <div className="flex justify-between text-base font-bold border-t-2 pt-3 bg-destructive/5 p-2 rounded">
+                        <span>Annual PAYE Tax:</span>
+                        <span className="text-destructive">{formatCurrency(calculations.annualTax)}</span>
+                      </div>
+                      <div className="text-xs text-muted-foreground text-right">
+                        Monthly Tax: ₦{(calculations.monthlyTax).toFixed(2)}
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex justify-between text-sm">
+                        <span>Contract Amount:</span>
+                        <span>{formatCurrency(calculations.annualGross)}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span>Withholding Tax (5%):</span>
+                        <span className="text-destructive">{formatCurrency(calculations.annualTax)}</span>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Net Pay Summary */}
+              <div className="border-2 border-success rounded-lg p-4 bg-success/5">
+                <h3 className="font-semibold text-lg mb-3">Net Pay Summary</h3>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">Annual Net Pay</p>
+                    <p className="text-3xl font-bold text-success">{formatCurrency(calculations.annualNet)}</p>
+                    <div className="text-xs text-muted-foreground mt-2 space-y-1">
+                      <p>Annual Gross: {formatCurrency(calculations.annualGross)}</p>
+                      <p className="text-destructive">Annual Tax: -{formatCurrency(calculations.annualTax)}</p>
+                    </div>
+                  </div>
+                  <div className="border-l pl-4">
+                    <p className="text-sm text-muted-foreground mb-1">Monthly Net Pay</p>
+                    <p className="text-3xl font-bold text-success">₦{(calculations.monthlyNet).toFixed(2)}</p>
+                    <div className="text-xs text-muted-foreground mt-2 space-y-1">
+                      <p>Monthly Gross: ₦{(calculations.monthlyGross).toFixed(2)}</p>
+                      <p className="text-destructive">Monthly Tax: -₦{(calculations.monthlyTax).toFixed(2)}</p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -866,7 +994,7 @@ export default function Payroll() {
                   {calculations.employmentType === "Full-time" ? (
                     <>
                       <div className="flex justify-between text-sm">
-                        <span>Pension Contribution (10%):</span>
+                        <span>Employer Pension (10% of Gross):</span>
                         <span>{formatCurrency(calculations.pensionEmployer)}</span>
                       </div>
                       <div className="flex justify-between text-sm">
@@ -895,7 +1023,7 @@ export default function Payroll() {
                 <div className="flex justify-end border-t pt-4">
                   <Button 
                     onClick={() => savePayroll()}
-                    disabled={!selectedEmployee || !selectedPeriod || !payrollData.grossSalary}
+                    disabled={!selectedEmployee || !selectedPeriod || !payrollData.basicSalary}
                     className="bg-emerald-600 hover:bg-emerald-700 text-white"
                   >
                     Save Payroll & Update Employee Record

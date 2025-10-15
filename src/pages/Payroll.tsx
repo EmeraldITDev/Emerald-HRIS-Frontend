@@ -736,6 +736,7 @@ export default function Payroll() {
                     <Input
                       id="earnings"
                       type="number"
+                      min="0"
                       placeholder="50,000"
                       value={payrollData.earnings}
                       onChange={(e) => setPayrollData({...payrollData, earnings: e.target.value})}
@@ -760,6 +761,7 @@ export default function Payroll() {
                     <Input
                       id="deduction"
                       type="number"
+                      min="0"
                       placeholder="25,000"
                       value={payrollData.deduction}
                       onChange={(e) => setPayrollData({...payrollData, deduction: e.target.value})}

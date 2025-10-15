@@ -310,22 +310,19 @@ export default function Payroll() {
       // Taxable Income
       taxableIncome = annualGross - totalRelief
       
-      // PAYE Tax Calculation (Progressive Nigerian Tax Rates)
-      annualTax = 0
-      if (taxableIncome > 300000) {
-        if (taxableIncome <= 600000) {
-          annualTax = (taxableIncome - 300000) * 0.07
-        } else if (taxableIncome <= 1100000) {
-          annualTax = 21000 + (taxableIncome - 600000) * 0.11
-        } else if (taxableIncome <= 1600000) {
-          annualTax = 76000 + (taxableIncome - 1100000) * 0.15
-        } else if (taxableIncome <= 3200000) {
-          annualTax = 151000 + (taxableIncome - 1600000) * 0.19
-        } else if (taxableIncome <= 3900000) {
-          annualTax = 455000 + (taxableIncome - 3200000) * 0.21
-        } else {
-          annualTax = 602000 + (taxableIncome - 3900000) * 0.24
-        }
+      // PAYE Tax Calculation (Official Nigerian Progressive Tax Rates)
+      if (taxableIncome > 3200000) {
+        annualTax = 560000 + (taxableIncome - 3200000) * 0.24
+      } else if (taxableIncome > 1600000) {
+        annualTax = 224000 + (taxableIncome - 1600000) * 0.21
+      } else if (taxableIncome > 1100000) {
+        annualTax = 129000 + (taxableIncome - 1100000) * 0.19
+      } else if (taxableIncome > 600000) {
+        annualTax = 54000 + (taxableIncome - 600000) * 0.15
+      } else if (taxableIncome > 300000) {
+        annualTax = 21000 + (taxableIncome - 300000) * 0.11
+      } else {
+        annualTax = taxableIncome * 0.07
       }
       
       // Annual Net Pay

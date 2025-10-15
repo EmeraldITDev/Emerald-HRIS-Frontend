@@ -798,19 +798,19 @@ export default function Payroll() {
               {/* Summary Cards */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-3 p-4 bg-muted/30 rounded-lg border">
                 <div className="text-center">
-                  <p className="text-xs text-muted-foreground mb-1">Annual Gross</p>
-                  <p className="text-lg font-bold text-primary">{formatCurrency(calculations.annualGross)}</p>
-                  <p className="text-xs text-muted-foreground">₦{(calculations.monthlyGross).toFixed(0)}/mo</p>
+                  <p className="text-xs text-muted-foreground mb-1">Gross Pay</p>
+                  <p className="text-lg font-bold text-primary">{formatCurrency(calculations.grossPay)}</p>
+                  <p className="text-xs text-muted-foreground">₦{(calculations.grossPay / 12).toFixed(0)}/mo</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-xs text-muted-foreground mb-1">Annual Tax (PAYE)</p>
-                  <p className="text-lg font-bold text-destructive">{formatCurrency(calculations.annualTax)}</p>
-                  <p className="text-xs text-muted-foreground">₦{(calculations.monthlyTax).toFixed(0)}/mo</p>
+                  <p className="text-xs text-muted-foreground mb-1">Total Deductions</p>
+                  <p className="text-lg font-bold text-destructive">{formatCurrency(calculations.totalDeductions)}</p>
+                  <p className="text-xs text-muted-foreground">₦{(calculations.totalDeductions / 12).toFixed(0)}/mo</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-xs text-muted-foreground mb-1">Annual Net</p>
-                  <p className="text-lg font-bold text-success">{formatCurrency(calculations.annualNet)}</p>
-                  <p className="text-xs text-muted-foreground">₦{(calculations.monthlyNet).toFixed(0)}/mo</p>
+                  <p className="text-xs text-muted-foreground mb-1">Final Net Pay</p>
+                  <p className="text-lg font-bold text-success">{formatCurrency(calculations.netPay)}</p>
+                  <p className="text-xs text-muted-foreground">₦{(calculations.netPay / 12).toFixed(0)}/mo</p>
                 </div>
                 <div className="text-center">
                   <p className="text-xs text-muted-foreground mb-1">Total Relief</p>
@@ -961,24 +961,76 @@ export default function Payroll() {
                 </div>
               </div>
 
+              {/* Additional Earnings & Deductions */}
+              {(calculations.earnings > 0 || calculations.deduction > 0) && (
+                <div className="border rounded-lg p-4 bg-card">
+                  <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
+                    <span className="w-2 h-2 bg-warning rounded-full"></span>
+                    Additional Earnings & Personal Deductions
+                  </h3>
+                  <div className="space-y-3">
+                    <div className="flex justify-between text-sm">
+                      <span>Annual Gross Salary:</span>
+                      <span>{formatCurrency(calculations.annualGross)}</span>
+                    </div>
+                    {calculations.earnings > 0 && (
+                      <div className="flex justify-between text-sm text-success bg-success/5 p-2 rounded">
+                        <span>Add: Additional Earnings{payrollData.earningsRemarks && ` (${payrollData.earningsRemarks})`}:</span>
+                        <span className="font-semibold">+{formatCurrency(calculations.earnings)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between text-base font-bold border-t pt-2">
+                      <span>Gross Pay (with earnings):</span>
+                      <span className="text-primary">{formatCurrency(calculations.grossPay)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm text-destructive mt-4 border-t pt-3">
+                      <span>Annual Tax ({calculations.taxType}):</span>
+                      <span>-{formatCurrency(calculations.annualTax)}</span>
+                    </div>
+                    {calculations.deduction > 0 && (
+                      <div className="flex justify-between text-sm text-destructive bg-destructive/5 p-2 rounded">
+                        <span>Less: Personal Deduction{payrollData.deductionRemarks && ` (${payrollData.deductionRemarks})`}:</span>
+                        <span className="font-semibold">-{formatCurrency(calculations.deduction)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between text-base font-bold border-t pt-2">
+                      <span>Total Deductions:</span>
+                      <span className="text-destructive">{formatCurrency(calculations.totalDeductions)}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Net Pay Summary */}
               <div className="border-2 border-success rounded-lg p-4 bg-success/5">
-                <h3 className="font-semibold text-lg mb-3">Net Pay Summary</h3>
+                <h3 className="font-semibold text-lg mb-3">Final Net Pay Summary</h3>
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-muted-foreground mb-1">Annual Net Pay</p>
-                    <p className="text-3xl font-bold text-success">{formatCurrency(calculations.annualNet)}</p>
+                    <p className="text-3xl font-bold text-success">{formatCurrency(calculations.netPay)}</p>
                     <div className="text-xs text-muted-foreground mt-2 space-y-1">
-                      <p>Annual Gross: {formatCurrency(calculations.annualGross)}</p>
-                      <p className="text-destructive">Annual Tax: -{formatCurrency(calculations.annualTax)}</p>
+                      <p>Gross Pay: {formatCurrency(calculations.grossPay)}</p>
+                      {calculations.earnings > 0 && (
+                        <p className="text-success">Additional Earnings: +{formatCurrency(calculations.earnings)}</p>
+                      )}
+                      <p className="text-destructive">Tax: -{formatCurrency(calculations.annualTax)}</p>
+                      {calculations.deduction > 0 && (
+                        <p className="text-destructive">Personal Deductions: -{formatCurrency(calculations.deduction)}</p>
+                      )}
                     </div>
                   </div>
                   <div className="border-l pl-4">
                     <p className="text-sm text-muted-foreground mb-1">Monthly Net Pay</p>
-                    <p className="text-3xl font-bold text-success">₦{(calculations.monthlyNet).toFixed(2)}</p>
+                    <p className="text-3xl font-bold text-success">₦{(calculations.netPay / 12).toFixed(2)}</p>
                     <div className="text-xs text-muted-foreground mt-2 space-y-1">
-                      <p>Monthly Gross: ₦{(calculations.monthlyGross).toFixed(2)}</p>
+                      <p>Monthly Gross: ₦{(calculations.grossPay / 12).toFixed(2)}</p>
+                      {calculations.earnings > 0 && (
+                        <p className="text-success">Monthly Earnings: +₦{(calculations.earnings / 12).toFixed(2)}</p>
+                      )}
                       <p className="text-destructive">Monthly Tax: -₦{(calculations.monthlyTax).toFixed(2)}</p>
+                      {calculations.deduction > 0 && (
+                        <p className="text-destructive">Monthly Deductions: -₦{(calculations.deduction / 12).toFixed(2)}</p>
+                      )}
                     </div>
                   </div>
                 </div>

@@ -286,10 +286,10 @@ export default function Payroll() {
       // Since Basic = 40% of Annual Gross, then Annual Gross = Basic / 0.40
       annualGross = basicSalary / 0.40
       
-      // Calculate allowances as percentages of Annual Gross
-      housing = annualGross * 0.20     // Housing Allowance = 20% × Annual Gross
-      transport = annualGross * 0.09   // Transport Allowance = 9% × Annual Gross
-      other = annualGross * 0.31       // Other Allowances = 31% × Annual Gross
+      // Calculate allowances as percentages of Annual Gross (rounded to nearest whole number)
+      housing = Math.round(annualGross * 0.20)     // Housing Allowance = 20% × Annual Gross
+      transport = Math.round(annualGross * 0.09)   // Transport Allowance = 9% × Annual Gross
+      other = Math.round(annualGross * 0.31)       // Other Allowances = 31% × Annual Gross
       
       // Pension calculations based on Annual Gross
       pensionEmployee = annualGross * 0.08  // Employee Pension = 8% × Annual Gross

@@ -550,9 +550,8 @@ export default function Dashboard() {
 
           <Card className="border-border/50 shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-3 md:p-6">
-              <CardTitle className="text-xs md:text-sm font-medium">
-                {['it_power_user', 'executive'].includes(user?.role || '') ? 'Payroll' : 'Payroll'}
-              </CardTitle>
+              <CardTitle className="text-xs md:text-sm font-medium">Total Salary Budget</CardTitle>
+              <DollarSign className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent className="p-3 md:p-6 pt-0">
               {isLoading ? (
@@ -560,13 +559,10 @@ export default function Dashboard() {
               ) : (
                 <>
                   <div className="text-xl md:text-2xl font-bold">
-                    {['it_power_user', 'executive'].includes(user?.role || '') 
-                      ? '₦450K' 
-                      : `₦${(allEmployees.reduce((sum, emp) => sum + (emp.gross_salary || 0), 0) / 1000000).toFixed(1)}M`
-                    }
+                    ₦{(allEmployees.reduce((sum, emp) => sum + (emp.gross_salary || 0), 0) / 1000000).toFixed(1)}M
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    {['it_power_user', 'executive'].includes(user?.role || '') ? 'Monthly' : `${allEmployees.length} employees`}
+                    Total monthly payroll
                   </p>
                 </>
               )}
@@ -601,17 +597,82 @@ export default function Dashboard() {
 
           <Card className="border-border/50 shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-3 md:p-6">
-              <CardTitle className="text-xs md:text-sm font-medium">Active</CardTitle>
-              <UserCheck className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
+              <CardTitle className="text-xs md:text-sm font-medium">NIN Registered</CardTitle>
+              <Shield className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent className="p-3 md:p-6 pt-0">
               {isLoading ? (
                 <div className="h-6 md:h-8 bg-muted rounded animate-pulse"></div>
               ) : (
                 <>
-                  <div className="text-xl md:text-2xl font-bold">{allEmployees.filter(emp => emp.employment_status === 'Active').length}</div>
+                  <div className="text-xl md:text-2xl font-bold">
+                    {allEmployees.filter(emp => emp.national_id).length}
+                  </div>
                   <p className="text-xs text-muted-foreground">
-                    {allEmployees.length > 0 ? Math.round((allEmployees.filter(emp => emp.employment_status === 'Active').length / allEmployees.length) * 100) : 0}% of total
+                    {allEmployees.length > 0 ? Math.round((allEmployees.filter(emp => emp.national_id).length / allEmployees.length) * 100) : 0}% registered
+                  </p>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/50 shadow-sm">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-3 md:p-6">
+              <CardTitle className="text-xs md:text-sm font-medium">BVN Registered</CardTitle>
+              <Shield className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent className="p-3 md:p-6 pt-0">
+              {isLoading ? (
+                <div className="h-6 md:h-8 bg-muted rounded animate-pulse"></div>
+              ) : (
+                <>
+                  <div className="text-xl md:text-2xl font-bold">
+                    {allEmployees.filter(emp => emp.bvn).length}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {allEmployees.length > 0 ? Math.round((allEmployees.filter(emp => emp.bvn).length / allEmployees.length) * 100) : 0}% registered
+                  </p>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/50 shadow-sm">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-3 md:p-6">
+              <CardTitle className="text-xs md:text-sm font-medium">Pension PIN</CardTitle>
+              <Shield className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent className="p-3 md:p-6 pt-0">
+              {isLoading ? (
+                <div className="h-6 md:h-8 bg-muted rounded animate-pulse"></div>
+              ) : (
+                <>
+                  <div className="text-xl md:text-2xl font-bold">
+                    {allEmployees.filter(emp => emp.pension_pin).length}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {allEmployees.length > 0 ? Math.round((allEmployees.filter(emp => emp.pension_pin).length / allEmployees.length) * 100) : 0}% registered
+                  </p>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/50 shadow-sm">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-3 md:p-6">
+              <CardTitle className="text-xs md:text-sm font-medium">NHF Registered</CardTitle>
+              <Shield className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent className="p-3 md:p-6 pt-0">
+              {isLoading ? (
+                <div className="h-6 md:h-8 bg-muted rounded animate-pulse"></div>
+              ) : (
+                <>
+                  <div className="text-xl md:text-2xl font-bold">
+                    {allEmployees.filter(emp => emp.nhf_number).length}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {allEmployees.length > 0 ? Math.round((allEmployees.filter(emp => emp.nhf_number).length / allEmployees.length) * 100) : 0}% registered
                   </p>
                 </>
               )}

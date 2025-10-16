@@ -26,8 +26,8 @@ interface User {
 const initialUsers: User[] = [
   {
     id: "1",
-    name: "John Administrator",
-    email: "john.admin@company.com",
+    name: "IT Admin",
+    email: "it@emeraldcfze.com",
     department: "IT",
     accessLevel: "Power User",
     lastLogin: "2024-01-15 09:30",
@@ -35,20 +35,65 @@ const initialUsers: User[] = [
   },
   {
     id: "2", 
-    name: "Sarah Manager",
-    email: "sarah.manager@company.com",
-    department: "HR",
+    name: "Bunmi Babajide",
+    email: "bunmi.babajide@emeraldcfze.com",
+    department: "Executive",
     accessLevel: "Leadership",
     lastLogin: "2024-01-15 08:45",
     status: "Active"
   },
   {
     id: "3",
-    name: "Mike Employee",
-    email: "mike.employee@company.com", 
+    name: "Austin Nwachwukwu",
+    email: "austin.nwachwukwu@emeraldcfze.com",
+    department: "HR",
+    accessLevel: "Leadership",
+    lastLogin: "2024-01-15 10:20",
+    status: "Active"
+  },
+  {
+    id: "4",
+    name: "Temitope Lawal",
+    email: "temitope.lawal@emeraldcfze.com",
     department: "Finance",
+    accessLevel: "Leadership",
+    lastLogin: "2024-01-15 11:15",
+    status: "Active"
+  },
+  {
+    id: "5",
+    name: "Rachael Daniel",
+    email: "rachael.daniel@emeraldcfze.com",
+    department: "Finance",
+    accessLevel: "Leadership",
+    lastLogin: "2024-01-15 09:50",
+    status: "Active"
+  },
+  {
+    id: "6",
+    name: "Adeniyi Bamigbade",
+    email: "adeniyi.bamigbade@emeraldcfze.com",
+    department: "Finance",
+    accessLevel: "Leadership",
+    lastLogin: "2024-01-15 08:30",
+    status: "Active"
+  },
+  {
+    id: "7",
+    name: "General Employee",
+    email: "employee@emeraldcfze.com", 
+    department: "Operations",
     accessLevel: "Staff",
     lastLogin: "2024-01-14 17:20",
+    status: "Active"
+  },
+  {
+    id: "8",
+    name: "Contract Staff",
+    email: "contractor@emeraldcfze.com", 
+    department: "Projects",
+    accessLevel: "Staff",
+    lastLogin: "2024-01-14 16:45",
     status: "Active"
   }
 ];
@@ -142,9 +187,9 @@ const Security = () => {
   };
 
   const accessLevelDescriptions = {
-    "Power User": "Full administrative access to all system features and data",
-    "Leadership": "Access to manage team members and view departmental information", 
-    "Staff": "View-only access to personal information and basic features"
+    "Power User": "IT administrators with full system access and troubleshooting capabilities",
+    "Leadership": "Executives, HR Managers, and Finance Team with management access", 
+    "Staff": "General employees and contract staff with personal information access"
   };
 
   return (
@@ -271,26 +316,28 @@ const Security = () => {
                       {level === "Power User" && (
                         <>
                           <li>• Full system administration</li>
-                          <li>• User management</li>
-                          <li>• All employee data access</li>
-                          <li>• System configuration</li>
-                          <li>• Reports and analytics</li>
+                          <li>• System troubleshooting</li>
+                          <li>• Override system controls</li>
+                          <li>• Technical configuration</li>
+                          <li>• IT support and maintenance</li>
                         </>
                       )}
                       {level === "Leadership" && (
                         <>
-                          <li>• Team member data access</li>
-                          <li>• Departmental reports</li>
-                          <li>• Performance reviews</li>
-                          <li>• Limited user management</li>
+                          <li>• All employee data access</li>
+                          <li>• Full payroll management</li>
+                          <li>• Financial reporting</li>
+                          <li>• Approvals and reviews</li>
+                          <li>• Strategic planning access</li>
                         </>
                       )}
                       {level === "Staff" && (
                         <>
                           <li>• Personal information view</li>
-                          <li>• Own attendance records</li>
-                          <li>• Personal payroll information</li>
-                          <li>• No editing capabilities</li>
+                          <li>• Own payroll information</li>
+                          <li>• Benefits and leave requests</li>
+                          <li>• Training access</li>
+                          <li>• Limited system features</li>
                         </>
                       )}
                     </ul>

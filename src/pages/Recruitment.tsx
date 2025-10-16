@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { Upload, Users, Calendar, FileText, Edit2, Trash2, MoreHorizontal, Plus, ClipboardList } from "lucide-react"
+import { Upload, Users, Calendar, FileText, Edit2, Trash2, MoreHorizontal, Plus, ClipboardList, Search } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { useToast } from "@/hooks/use-toast"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -49,6 +49,15 @@ export default function Recruitment() {
     status: '',
     appliedDateFrom: '',
     appliedDateTo: ''
+  })
+  
+  const [requisitionFilters, setRequisitionFilters] = useState({
+    searchTerm: '',
+    jobTitle: '',
+    department: '',
+    hiringManager: '',
+    dateFrom: '',
+    dateTo: ''
   })
   
   const [candidates, setCandidates] = useState<Candidate[]>([
@@ -157,6 +166,19 @@ export default function Recruitment() {
     const matchesDateTo = !filters.appliedDateTo || new Date(candidate.appliedDate) <= new Date(filters.appliedDateTo)
     
     return matchesEmail && matchesPosition && matchesStatus && matchesDateFrom && matchesDateTo
+  })
+  
+  const filteredJobRequisitions = jobRequisitions.filter(requisition => {
+    const matchesSearch = !requisitionFilters.searchTerm || 
+      requisition.jobTitle.toLowerCase().includes(requisitionFilters.searchTerm.toLowerCase()) ||
+      requisition.id.toLowerCase().includes(requisitionFilters.searchTerm.toLowerCase())
+    const matchesJobTitle = !requisitionFilters.jobTitle || requisition.jobTitle.toLowerCase().includes(requisitionFilters.jobTitle.toLowerCase())
+    const matchesDepartment = !requisitionFilters.department || requisition.department === requisitionFilters.department
+    const matchesHiringManager = !requisitionFilters.hiringManager || requisition.hiringManager === requisitionFilters.hiringManager
+    const matchesDateFrom = !requisitionFilters.dateFrom || new Date(requisition.dateCreated) >= new Date(requisitionFilters.dateFrom)
+    const matchesDateTo = !requisitionFilters.dateTo || new Date(requisition.dateCreated) <= new Date(requisitionFilters.dateTo)
+    
+    return matchesSearch && matchesJobTitle && matchesDepartment && matchesHiringManager && matchesDateFrom && matchesDateTo
   })
 
   const departments = [
@@ -896,6 +918,93 @@ export default function Recruitment() {
         </TabsContent>
         
         <TabsContent value="requisitions" className="space-y-6">
+          {/* Requisition Filters Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Filter Job Requisitions</CardTitle>
+              <CardDescription>Search and filter requisitions by job title, department, hiring manager, and date</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search by job title or requisition ID..."
+                      value={requisitionFilters.searchTerm}
+                      onChange={(e) => setRequisitionFilters({...requisitionFilters, searchTerm: e.target.value})}
+                      className="pl-9"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="filter-req-jobtitle">Job Title</Label>
+                    <Input
+                      id="filter-req-jobtitle"
+                      placeholder="Enter job title"
+                      value={requisitionFilters.jobTitle}
+                      onChange={(e) => setRequisitionFilters({...requisitionFilters, jobTitle: e.target.value})}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="filter-req-department">Department</Label>
+                    <Select value={requisitionFilters.department} onValueChange={(value) => setRequisitionFilters({...requisitionFilters, department: value})}>
+                      <SelectTrigger id="filter-req-department">
+                        <SelectValue placeholder="All Departments" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Departments</SelectItem>
+                        {departments.map((dept) => (
+                          <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="filter-req-manager">Hiring Manager</Label>
+                    <Select value={requisitionFilters.hiringManager} onValueChange={(value) => setRequisitionFilters({...requisitionFilters, hiringManager: value})}>
+                      <SelectTrigger id="filter-req-manager">
+                        <SelectValue placeholder="All Managers" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Managers</SelectItem>
+                        {hiringManagers.map((manager) => (
+                          <SelectItem key={manager} value={manager}>{manager}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="filter-req-date">Date Created From</Label>
+                    <Input
+                      id="filter-req-date"
+                      type="date"
+                      value={requisitionFilters.dateFrom}
+                      onChange={(e) => setRequisitionFilters({...requisitionFilters, dateFrom: e.target.value})}
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setRequisitionFilters({
+                      searchTerm: '',
+                      jobTitle: '',
+                      department: '',
+                      hiringManager: '',
+                      dateFrom: '',
+                      dateTo: ''
+                    })}
+                  >
+                    Clear Filters
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
           <Dialog open={isRequisitionDialogOpen} onOpenChange={setIsRequisitionDialogOpen}>
             <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto my-8">
               <DialogHeader>
@@ -1276,7 +1385,7 @@ export default function Recruitment() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {jobRequisitions.map((requisition) => (
+                    {filteredJobRequisitions.map((requisition) => (
                       <TableRow key={requisition.id}>
                         <TableCell className="font-medium">{requisition.id}</TableCell>
                         <TableCell>{requisition.jobTitle}</TableCell>
@@ -1290,9 +1399,21 @@ export default function Recruitment() {
                         </TableCell>
                         <TableCell className="hidden lg:table-cell">{requisition.targetHireDate}</TableCell>
                         <TableCell className="hidden md:table-cell">
-                          <Badge variant="outline">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => {
+                              if (requisition.linkedCandidates.length > 0) {
+                                setActiveTab('candidates')
+                                toast({
+                                  title: "Viewing linked candidates",
+                                  description: `Showing ${requisition.linkedCandidates.length} candidate(s) for ${requisition.jobTitle}`
+                                })
+                              }
+                            }}
+                          >
                             {requisition.linkedCandidates.length} linked
-                          </Badge>
+                          </Button>
                         </TableCell>
                         <TableCell>
                           <DropdownMenu>

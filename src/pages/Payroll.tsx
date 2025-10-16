@@ -206,6 +206,7 @@ export default function Payroll() {
   const [isLoadingEmployees, setIsLoadingEmployees] = useState(true)
   const [selectedEmployee, setSelectedEmployee] = useState("")
   const [selectedPeriod, setSelectedPeriod] = useState("2024-01")
+  const [isPayrollLocked, setIsPayrollLocked] = useState(false)
   const [payrollData, setPayrollData] = useState({
     basicSalary: "1600000",
     earnings: "50000",
@@ -560,9 +561,12 @@ export default function Payroll() {
   }
 
   const handleLockPeriod = () => {
+    setIsPayrollLocked(!isPayrollLocked)
     toast({
-      title: "Lock Period",
-      description: "Period locking functionality will be available in the next update.",
+      title: isPayrollLocked ? "Payroll Unlocked" : "Payroll Locked",
+      description: isPayrollLocked 
+        ? "Payroll period has been unlocked and can now be edited." 
+        : "Payroll period has been locked and cannot be edited.",
       variant: "default"
     })
   }
@@ -646,9 +650,9 @@ export default function Payroll() {
             </Button>
           </RoleBasedComponent>
           <RoleBasedComponent allowedRoles={['hr_manager']}>
-            <Button size="sm" onClick={handleLockPeriod}>
+            <Button size="sm" onClick={handleLockPeriod} variant={isPayrollLocked ? "destructive" : "default"}>
               <Lock className="mr-2 h-4 w-4" />
-              Lock Period
+              {isPayrollLocked ? "Unlock Payroll" : "Lock Period"}
             </Button>
           </RoleBasedComponent>
         </div>

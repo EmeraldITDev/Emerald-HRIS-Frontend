@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Search, UserPlus, Edit, Trash2, Shield, Eye, Settings } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-type AccessLevel = "Power User" | "Leadership" | "Staff";
+type AccessLevel = "Power User" | "Leadership" | "Line Manager" | "Staff";
 
 interface User {
   id: string;
@@ -188,7 +188,8 @@ const Security = () => {
 
   const accessLevelDescriptions = {
     "Power User": "IT administrators with full system access and troubleshooting capabilities",
-    "Leadership": "Executives, HR Managers, and Finance Team with management access", 
+    "Leadership": "Executives, HR Managers, and Finance Team with management access",
+    "Line Manager": "Department managers with team oversight and approval capabilities", 
     "Staff": "General employees and contract staff with personal information access"
   };
 
@@ -331,6 +332,15 @@ const Security = () => {
                           <li>• Strategic planning access</li>
                         </>
                       )}
+                      {level === "Line Manager" && (
+                        <>
+                          <li>• Team member data access</li>
+                          <li>• Leave approvals</li>
+                          <li>• Performance reviews</li>
+                          <li>• Team reports</li>
+                          <li>• Departmental oversight</li>
+                        </>
+                      )}
                       {level === "Staff" && (
                         <>
                           <li>• Personal information view</li>
@@ -421,6 +431,7 @@ const UserDialog = ({ user, isEditMode, onSave, onClose }: UserDialogProps) => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="Staff">Staff - View Only</SelectItem>
+                <SelectItem value="Line Manager">Line Manager - Team Oversight</SelectItem>
                 <SelectItem value="Leadership">Leadership - Team Management</SelectItem>
                 <SelectItem value="Power User">Power User - Full Admin</SelectItem>
               </SelectContent>

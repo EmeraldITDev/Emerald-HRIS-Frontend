@@ -100,14 +100,14 @@ const dummyUsers: Record<string, { user: User; password: string }> = {
     },
     password: 'password123'
   },
-  // Finance Team (General Employees)
+  // Finance Team
   'temitope.lawal@emeraldcfze.com': {
     user: {
       id: '7',
       firstName: 'Temitope',
       lastName: 'Lawal',
       email: 'temitope.lawal@emeraldcfze.com',
-      role: 'general_employee'
+      role: 'finance'
     },
     password: 'password123'
   },
@@ -117,7 +117,7 @@ const dummyUsers: Record<string, { user: User; password: string }> = {
       firstName: 'Rachael',
       lastName: 'Daniel',
       email: 'rachael.daniel@emeraldcfze.com',
-      role: 'general_employee'
+      role: 'finance'
     },
     password: 'password123'
   },
@@ -127,7 +127,7 @@ const dummyUsers: Record<string, { user: User; password: string }> = {
       firstName: 'Adeniyi',
       lastName: 'Bamigbade',
       email: 'adeniyi.bamigbade@emeraldcfze.com',
-      role: 'general_employee'
+      role: 'finance'
     },
     password: 'password123'
   }

@@ -24,6 +24,7 @@ import Announcements from "./pages/Announcements";
 import Policies from "./pages/Policies";
 import { useEffect, useState } from "react";
 import { getUsers } from "./api";
+import { PasswordChangeModal } from "./components/PasswordChangeModal";
 
 const queryClient = new QueryClient();
 
@@ -38,13 +39,82 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   return <>{children}</>;
 };
 
-const App = () => {
-  // Remove these lines:
-  // const [users, setUsers] = useState<any[]>([]);
-  // useEffect(() => {
-  //   getUsers().then(setUsers);
-  // }, []);
+// Create a wrapper component that uses useAuth
+const AppContent = () => {
+  const { user } = useAuth();
+  const [showPasswordChange, setShowPasswordChange] = useState(false);
 
+  useEffect(() => {
+    if (user?.mustChangePassword) {
+      setShowPasswordChange(true);
+    } else {
+      setShowPasswordChange(false);
+    }
+  }, [user]);
+
+  return (
+    <>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/*" element={
+            <ProtectedRoute>
+              <Layout>
+                <Routes>
+                  <Route path="/" element={<Dashboard />} />
+                  <Route path="/employees" element={<Employees />} />
+                  <Route path="/attendance" element={<Attendance />} />
+                  <Route path="/recruitment" element={<Recruitment />} />
+                  <Route path="/payroll" element={<Payroll />} />
+                  <Route path="/performance" element={<Performance />} />
+                  <Route path="/training" element={<Training />} />
+                  <Route path="/benefits" element={<Benefits />} />
+                  <Route path="/analytics" element={<Analytics />} />
+                  <Route
+                    path="/time"
+                    element={
+                      <ComingSoon
+                        title="Time Tracking"
+                        description="Advanced time and attendance tracking"
+                      />
+                    }
+                  />
+                  <Route path="/reports" element={<Reports />} />
+                  <Route path="/announcements" element={<Announcements />} />
+                  <Route path="/policies" element={<Policies />} />
+                  <Route path="/security" element={<Security />} />
+                  <Route
+                    path="/settings"
+                    element={
+                      <ComingSoon
+                        title="Settings"
+                        description="System configuration and preferences"
+                      />
+                    }
+                  />
+                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </Layout>
+            </ProtectedRoute>
+          } />
+        </Routes>
+      </BrowserRouter>
+      
+      <PasswordChangeModal 
+        isOpen={showPasswordChange} 
+        onPasswordChanged={() => {
+          window.location.reload(); // Reload to get updated user state
+        }}
+        onDismiss={() => {
+          setShowPasswordChange(false); // Allow user to dismiss
+        }}
+      />
+    </>
+  );
+};
+
+const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
@@ -52,52 +122,7 @@ const App = () => {
           <TooltipProvider>
             <Toaster />
             <Sonner />
-            <BrowserRouter>
-              <Routes>
-                <Route path="/login" element={<Login />} />
-                <Route path="/*" element={
-                  <ProtectedRoute>
-                    <Layout>
-                      <Routes>
-                <Route path="/" element={<Dashboard />} />
-                <Route path="/employees" element={<Employees />} />
-                <Route path="/attendance" element={<Attendance />} />
-                <Route path="/recruitment" element={<Recruitment />} />
-                <Route path="/payroll" element={<Payroll />} />
-                <Route path="/performance" element={<Performance />} />
-                <Route path="/training" element={<Training />} />
-                <Route path="/benefits" element={<Benefits />} />
-                <Route path="/analytics" element={<Analytics />} />
-                <Route
-                  path="/time"
-                  element={
-                    <ComingSoon
-                      title="Time Tracking"
-                      description="Advanced time and attendance tracking"
-                    />
-                  }
-                />
-                <Route path="/reports" element={<Reports />} />
-                <Route path="/announcements" element={<Announcements />} />
-                <Route path="/policies" element={<Policies />} />
-                <Route path="/security" element={<Security />} />
-                <Route
-                  path="/settings"
-                  element={
-                    <ComingSoon
-                      title="Settings"
-                      description="System configuration and preferences"
-                    />
-                  }
-                />
-                        {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                        <Route path="*" element={<NotFound />} />
-                      </Routes>
-                    </Layout>
-                  </ProtectedRoute>
-                } />
-              </Routes>
-            </BrowserRouter>
+            <AppContent />
           </TooltipProvider>
         </ThemeProvider>
       </AuthProvider>

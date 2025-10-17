@@ -22,6 +22,7 @@ export interface User {
   lastName: string;
   email: string;
   role: UserRole;
+  mustChangePassword?: boolean; // Add this optional field
 }
 
 interface AuthContextType {
@@ -223,17 +224,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      // Try backend authentication first
       const response = await apiService.login(email, password);
       
       if (response.user && response.token) {
-        // Transform backend user to frontend format
         const user: User = {
           id: response.user.id.toString(),
           firstName: response.user.name.split(' ')[0],
           lastName: response.user.name.split(' ').slice(1).join(' '),
           email: response.user.email,
           role: response.user.role as UserRole,
+          mustChangePassword: response.user.must_change_password, // Add this
         };
         
         setUser(user);

@@ -18,6 +18,7 @@ interface TrainingRecord {
   id: string
   employeeId: string
   employeeName: string
+  employeeDepartment: string
   trainingType: string
   notes: string
   completionDate: string
@@ -51,7 +52,8 @@ export default function Training() {
     {
       id: '1',
       employeeId: 'EMP001',
-      employeeName: 'Adebayo Johnson',
+      employeeName: 'Chidi Okonkwo',
+      employeeDepartment: 'Technical Operations',
       trainingType: 'Technical Skills',
       notes: 'Advanced React development course',
       completionDate: '2024-03-15',
@@ -61,13 +63,36 @@ export default function Training() {
     {
       id: '2',
       employeeId: 'EMP002',
-      employeeName: 'Fatima Abdul',
+      employeeName: 'Ibrahim Suleiman',
+      employeeDepartment: 'IT',
       trainingType: 'Leadership Development',
-      notes: 'Management fundamentals training',
+      notes: 'IT Management fundamentals training',
       completionDate: '2024-02-28',
       cost: 200000,
       status: 'Completed',
       certificateName: 'leadership_certificate.pdf'
+    },
+    {
+      id: '3',
+      employeeId: 'EMP003',
+      employeeName: 'Kunle Adeyemi',
+      employeeDepartment: 'Business Development',
+      trainingType: 'Sales Training',
+      notes: 'Advanced sales techniques and customer relationship management',
+      completionDate: '2024-04-10',
+      cost: 120000,
+      status: 'Scheduled'
+    },
+    {
+      id: '4',
+      employeeId: 'EMP004',
+      employeeName: 'Rachael Daniel',
+      employeeDepartment: 'Finance',
+      trainingType: 'Professional Certification',
+      notes: 'ACCA Financial Reporting certification',
+      completionDate: '2024-05-15',
+      cost: 300000,
+      status: 'In Progress'
     }
   ])
 
@@ -121,10 +146,13 @@ export default function Training() {
       return
     }
 
+    const employee = employees.find(emp => emp.id?.toString() === newTraining.employeeId)
+    
     const training: TrainingRecord = {
       id: (trainings.length + 1).toString(),
       employeeId: newTraining.employeeId,
       employeeName: newTraining.employeeName,
+      employeeDepartment: employee?.department || 'Unknown',
       trainingType: newTraining.trainingType,
       notes: newTraining.notes,
       completionDate: newTraining.completionDate,
@@ -245,15 +273,25 @@ export default function Training() {
     }
   }
 
-  const totalCost = trainings.reduce((sum, training) => sum + training.cost, 0)
-  const completedTrainings = trainings.filter(t => t.status === 'Completed').length
+  // Filter trainings based on department for line managers
+  const filteredTrainings = isLineManager && userDepartment
+    ? trainings.filter(t => t.employeeDepartment === userDepartment)
+    : trainings
+
+  const totalCost = filteredTrainings.reduce((sum, training) => sum + training.cost, 0)
+  const completedTrainings = filteredTrainings.filter(t => t.status === 'Completed').length
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Training & Development</h1>
-          <p className="text-muted-foreground">Track training programs and employee development</p>
+          <p className="text-muted-foreground">
+            {isLineManager && userDepartment 
+              ? `Track training programs for ${userDepartment} department`
+              : 'Track training programs and employee development'
+            }
+          </p>
         </div>
         
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -360,7 +398,7 @@ export default function Training() {
             <BookOpen className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-emerald-600">{trainings.length}</div>
+            <div className="text-2xl font-bold text-emerald-600">{filteredTrainings.length}</div>
           </CardContent>
         </Card>
         
@@ -381,7 +419,7 @@ export default function Training() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">
-              {trainings.filter(t => t.status === 'In Progress').length}
+              {filteredTrainings.filter(t => t.status === 'In Progress').length}
             </div>
           </CardContent>
         </Card>
@@ -404,7 +442,10 @@ export default function Training() {
         <CardHeader>
           <CardTitle>Training Programs</CardTitle>
           <CardDescription>
-            Track all employee training and development programs
+            {isLineManager && userDepartment 
+              ? `Training programs for ${userDepartment} department employees`
+              : 'Track all employee training and development programs'
+            }
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -422,7 +463,7 @@ export default function Training() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {trainings.map((training) => (
+                {filteredTrainings.map((training) => (
                   <TableRow key={training.id}>
                     <TableCell className="font-medium">{training.employeeName}</TableCell>
                     <TableCell>{training.trainingType}</TableCell>

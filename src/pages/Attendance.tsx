@@ -436,6 +436,16 @@ export default function Attendance() {
       return
     }
 
+    // All users (including HR Manager) can only submit leave requests for themselves
+    if (user && selectedEmployee !== user.id?.toString()) {
+      toast({
+        title: "Access Denied",
+        description: "You can only submit leave requests for yourself",
+        variant: "destructive",
+      })
+      return
+    }
+
     try {
       // Calculate leave days
       const start = new Date(startDate)
@@ -965,11 +975,14 @@ export default function Attendance() {
                       </SelectTrigger>
                       <SelectContent className="bg-popover border shadow-lg max-h-60">
                         {employees.length > 0 ? (
-                          employees.filter(emp => emp.employment_type !== 'Contract').map((emp) => (
-                            <SelectItem key={emp.id} value={emp.id?.toString() || '0'}>
-                              {emp.employee_code} - {emp.first_name} {emp.last_name}
-                            </SelectItem>
-                          ))
+                          employees
+                            .filter(emp => emp.employment_type !== 'Contract')
+                            .filter(emp => emp.id?.toString() === user?.id?.toString()) // Only show current user
+                            .map((emp) => (
+                              <SelectItem key={emp.id} value={emp.id?.toString() || '0'}>
+                                {emp.employee_code} - {emp.first_name} {emp.last_name}
+                              </SelectItem>
+                            ))
                         ) : (
                           <SelectItem value="no-employees" disabled>
                             {isLoadingEmployees ? "Loading..." : "No employees available"}
@@ -1243,91 +1256,100 @@ export default function Attendance() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {leaveRequests.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Employee</TableHead>
-                      <TableHead>Leave Type</TableHead>
-                      <TableHead>Start Date</TableHead>
-                      <TableHead>End Date</TableHead>
-                      <TableHead>Days</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {leaveRequests.map((request) => {
-                      // Calculate days for display
-                      const start = new Date(request.start_date)
-                      const end = new Date(request.end_date)
-                      const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1
-                      
-                      return (
-                        <TableRow key={request.id}>
-                          <TableCell className="font-medium">
-                            {request.employee_name || `Employee ${request.employee_id}`}
-                          </TableCell>
-                          <TableCell>{request.leave_type}</TableCell>
-                          <TableCell>{format(new Date(request.start_date), "MMM dd, yyyy")}</TableCell>
-                          <TableCell>{format(new Date(request.end_date), "MMM dd, yyyy")}</TableCell>
-                          <TableCell>{days} day{days > 1 ? 's' : ''}</TableCell>
-                          <TableCell>
-                            {getStatusBadge(request.status)}
-                          </TableCell>
-                          <TableCell>
-                            <RoleBasedComponent 
-                              allowedRoles={['hr_manager', 'corporate_hr', 'line_manager', 'executive']}
-                              fallback={<span className="text-xs text-muted-foreground">No actions available</span>}
-                            >
-                              <div className="flex space-x-2">
-                                {request.status === "Pending" && (
-                                  <>
-                                    <Button 
-                                      size="sm" 
-                                      variant="outline"
-                                      onClick={() => handleUpdateLeaveStatus(request.id, "Approved")}
-                                      className="text-xs"
-                                    >
-                                      Approve
-                                    </Button>
-                                    <Button 
-                                      size="sm" 
-                                      variant="outline"
-                                      onClick={() => handleUpdateLeaveStatus(request.id, "Rejected")}
-                                      className="text-xs"
-                                    >
-                                      Reject
-                                    </Button>
-                                  </>
-                                )}
-                                {request.status !== "Pending" && (
-                                  <span className="text-xs text-muted-foreground">
-                                    {request.status}
-                                  </span>
-                                )}
-                              </div>
-                            </RoleBasedComponent>
-                          </TableCell>
-                        </TableRow>
-                      )
-                    })}
-                  </TableBody>
-                </Table>
-              ) : (
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground">
-                    {isLoadingLeaveRequests ? "Loading leave requests..." : "No leave requests found"}
-                  </p>
-                </div>
-              )}
+              {(() => {
+                // Filter leave requests based on user role
+                const filteredRequests = user?.role === 'hr_manager'
+                  ? leaveRequests // HR Manager sees all leave requests
+                  : leaveRequests.filter(req => req.employee_id === user?.id) // Others see only their own
+                
+                return filteredRequests.length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        {user?.role === 'hr_manager' && <TableHead>Employee</TableHead>}
+                        <TableHead>Leave Type</TableHead>
+                        <TableHead>Start Date</TableHead>
+                        <TableHead>End Date</TableHead>
+                        <TableHead>Days</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredRequests.map((request) => {
+                        // Calculate days for display
+                        const start = new Date(request.start_date)
+                        const end = new Date(request.end_date)
+                        const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1
+                        
+                        return (
+                          <TableRow key={request.id}>
+                            {user?.role === 'hr_manager' && (
+                              <TableCell className="font-medium">
+                                {request.employee_name || `Employee ${request.employee_id}`}
+                              </TableCell>
+                            )}
+                            <TableCell>{request.leave_type}</TableCell>
+                            <TableCell>{format(new Date(request.start_date), "MMM dd, yyyy")}</TableCell>
+                            <TableCell>{format(new Date(request.end_date), "MMM dd, yyyy")}</TableCell>
+                            <TableCell>{days} day{days > 1 ? 's' : ''}</TableCell>
+                            <TableCell>
+                              {getStatusBadge(request.status)}
+                            </TableCell>
+                            <TableCell>
+                              <RoleBasedComponent 
+                                allowedRoles={['hr_manager']}
+                                fallback={<span className="text-xs text-muted-foreground">-</span>}
+                              >
+                                <div className="flex space-x-2">
+                                  {request.status === "Pending" && (
+                                    <>
+                                      <Button 
+                                        size="sm" 
+                                        variant="outline"
+                                        onClick={() => handleUpdateLeaveStatus(request.id, "Approved")}
+                                        className="text-xs"
+                                      >
+                                        Approve
+                                      </Button>
+                                      <Button 
+                                        size="sm" 
+                                        variant="outline"
+                                        onClick={() => handleUpdateLeaveStatus(request.id, "Rejected")}
+                                        className="text-xs"
+                                      >
+                                        Reject
+                                      </Button>
+                                    </>
+                                  )}
+                                  {request.status !== "Pending" && (
+                                    <span className="text-xs text-muted-foreground">
+                                      {request.status}
+                                    </span>
+                                  )}
+                                </div>
+                              </RoleBasedComponent>
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground">
+                      {isLoadingLeaveRequests ? "Loading leave requests..." : "No leave requests found"}
+                    </p>
+                  </div>
+                )
+              })()}
             </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Employee Leave Balances */}
-      <RoleBasedComponent allowedRoles={['hr_manager', 'executive']}>
+      <RoleBasedComponent allowedRoles={['hr_manager']}>
         <Card className="border-border/50 shadow-sm">
           <CardHeader>
             <CardTitle className="text-primary">Employee Leave Balances</CardTitle>

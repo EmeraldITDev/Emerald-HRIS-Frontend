@@ -251,11 +251,16 @@ export default function Payroll() {
   const getVisiblePayrollRecords = () => {
     if (!user) return []
     
-    // Adeniyi, HR Manager, and Executive can see all payroll records
-    if (user.role === 'hr_manager' || user.role === 'executive' || user.email === 'adeniyi.bamigbade@emeraldcfze.com') {
+    // HR Manager can see all payroll records
+    if (user.role === 'hr_manager') {
       return payrollRecords
-    } else {
-      // Other users (including other finance staff) can only see their own payroll
+    } 
+    // Executives see only their department's payroll
+    else if (user.role === 'executive' && user.department) {
+      return payrollRecords.filter(record => record.department === user.department)
+    } 
+    // Other users can only see their own payroll
+    else {
       return payrollRecords.filter(record => 
         record.employeeId === user.email || 
         record.employeeName.toLowerCase().includes(user.email.split('@')[0].toLowerCase())

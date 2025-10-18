@@ -167,11 +167,12 @@ export default function Dashboard() {
       try {
         let employees = await apiService.getEmployees()
         
-        // Filter by department for line managers
+        // Filter by department for line managers and executives
         const isLineManager = user?.role === 'line_manager'
+        const isExecutive = user?.role === 'executive'
         const userDepartment = user?.department
         
-        if (isLineManager && userDepartment) {
+        if ((isLineManager || isExecutive) && userDepartment) {
           employees = employees.filter(emp => emp.department === userDepartment)
         }
         

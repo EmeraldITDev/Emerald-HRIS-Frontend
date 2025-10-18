@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
+import { useAuth } from "@/contexts/AuthContext"
 import { 
   Plus, 
   Save, 
@@ -55,6 +56,9 @@ export default function Announcements() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { toast } = useToast()
+  const { user } = useAuth()
+  
+  const canCreateAnnouncements = user?.role === 'hr_manager'
 
   const modules = {
     toolbar: [
@@ -284,10 +288,12 @@ export default function Announcements() {
           <h1 className="text-3xl font-bold text-foreground">Announcements</h1>
           <p className="text-muted-foreground">Company communications and updates</p>
         </div>
-        <Button onClick={() => setIsCreating(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          New Announcement
-        </Button>
+        {canCreateAnnouncements && (
+          <Button onClick={() => setIsCreating(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            New Announcement
+          </Button>
+        )}
       </div>
 
 
@@ -353,13 +359,18 @@ export default function Announcements() {
                 <div className="space-y-2">
                   <h3 className="text-lg font-medium">No announcements yet</h3>
                   <p className="text-muted-foreground">
-                    Create your first announcement to share updates with your team
+                    {canCreateAnnouncements 
+                      ? "Create your first announcement to share updates with your team"
+                      : "Check back later for company updates"
+                    }
                   </p>
                 </div>
-                <Button onClick={() => setIsCreating(true)}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Create Announcement
-                </Button>
+                {canCreateAnnouncements && (
+                  <Button onClick={() => setIsCreating(true)}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Create Announcement
+                  </Button>
+                )}
               </div>
             </CardContent>
           </Card>

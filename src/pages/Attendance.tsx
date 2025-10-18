@@ -901,128 +901,45 @@ export default function Attendance() {
         )}
       </Card>
 
-      {/* Attendance Tracking Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-6">
-        <Card className="border-border/50 shadow-sm">
+      {/* Today's Attendance Section */}
+      <RoleBasedComponent allowedRoles={['hr_manager', 'corporate_hr', 'executive']}>
+        <Card className="border-border/50 shadow-sm mb-6">
           <CardHeader>
             <CardTitle className="text-primary flex items-center">
-              <LogIn className="mr-2 h-5 w-5" />
-              Clock In/Out System
+              <Clock className="mr-2 h-5 w-5" />
+              Today's Attendance
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between p-3 bg-accent/20 rounded-lg">
-              <div className="flex items-center space-x-3">
-                <User className="h-5 w-5 text-primary" />
-                <div>
-                  <div className="font-medium text-sm">
-                    {user?.firstName} {user?.lastName}
+          <CardContent>
+            <div className="space-y-3">
+              {todayAttendance.length > 0 ? (
+                todayAttendance.map((record) => (
+                  <div key={record.id} className="flex justify-between items-center p-2 bg-accent/50 rounded-lg">
+                    <div>
+                      <div className="font-medium text-sm">{record.employee_name}</div>
+                      <div className="text-xs text-muted-foreground">
+                        In: {record.clock_in_time} {record.clock_out_time && `• Out: ${record.clock_out_time}`}
+                      </div>
+                    </div>
+                    {record.is_clocked_in && (
+                      <Badge variant="default" className="text-xs">
+                        Active
+                      </Badge>
+                    )}
+                    {record.clock_out_time && (
+                      <Badge variant="outline" className="text-xs">
+                        Completed
+                      </Badge>
+                    )}
                   </div>
-                  <div className="text-xs text-muted-foreground">
-                    {todayStatus?.is_clocked_in ? 'Currently clocked in' : 'Ready to clock in'}
-                  </div>
-                </div>
-              </div>
-              {getAttendanceStatusBadge()}
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground">No attendance records for today</p>
+              )}
             </div>
-            
-            {!todayStatus?.is_clocked_in ? (
-              <Button 
-                onClick={handleClockIn} 
-                className="w-full"
-                disabled={!user || isPunching}
-              >
-                <LogIn className="mr-2 h-4 w-4" />
-                Clock In
-              </Button>
-            ) : todayStatus?.clock_out_time ? (
-              <Button 
-                className="w-full"
-                disabled
-                variant="outline"
-              >
-                <Clock className="mr-2 h-4 w-4" />
-                Shift Completed
-              </Button>
-            ) : (
-              <div className="space-y-2">
-                <Button 
-                  onClick={handleClockOut} 
-                  className="w-full"
-                  disabled={!user || isPunching}
-                  variant="destructive"
-                >
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Clock Out
-                </Button>
-                <Button 
-                  onClick={handleLunchBreak} 
-                  className="w-full"
-                  disabled={!user || isPunching}
-                  variant="outline"
-                >
-                  <Clock className="mr-2 h-4 w-4" />
-                  Lunch Break
-                </Button>
-              </div>
-            )}
-            
-            {todayStatus?.clock_in_time && (
-              <div className="p-3 bg-muted/30 rounded-lg text-xs space-y-1">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Clock In:</span>
-                  <span className="font-medium">{todayStatus.clock_in_time}</span>
-                </div>
-                {todayStatus.clock_out_time && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Clock Out:</span>
-                    <span className="font-medium">{todayStatus.clock_out_time}</span>
-                  </div>
-                )}
-              </div>
-            )}
           </CardContent>
         </Card>
-
-        <RoleBasedComponent allowedRoles={['hr_manager', 'corporate_hr', 'executive']}>
-          <Card className="border-border/50 shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-primary flex items-center">
-                <Clock className="mr-2 h-5 w-5" />
-                Today's Attendance
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {todayAttendance.length > 0 ? (
-                  todayAttendance.map((record) => (
-                    <div key={record.id} className="flex justify-between items-center p-2 bg-accent/50 rounded-lg">
-                      <div>
-                        <div className="font-medium text-sm">{record.employee_name}</div>
-                        <div className="text-xs text-muted-foreground">
-                          In: {record.clock_in_time} {record.clock_out_time && `• Out: ${record.clock_out_time}`}
-                        </div>
-                      </div>
-                      {record.is_clocked_in && (
-                        <Badge variant="default" className="text-xs">
-                          Active
-                        </Badge>
-                      )}
-                      {record.clock_out_time && (
-                        <Badge variant="outline" className="text-xs">
-                          Completed
-                        </Badge>
-                      )}
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-sm text-muted-foreground">No attendance records for today</p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </RoleBasedComponent>
-      </div>
+      </RoleBasedComponent>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
         {/* Enhanced Leave Request Form */}

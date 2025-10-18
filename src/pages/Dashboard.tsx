@@ -3,6 +3,7 @@ import { DashboardStats } from "@/components/DashboardStats"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Label } from "@/components/ui/label"
 import { 
   Plus, 
   Download, 
@@ -23,7 +24,10 @@ import {
   Settings,
   Timer,
   ArrowRight,
-  ArrowLeft
+  ArrowLeft,
+  Clock,
+  LogIn,
+  LogOut
 } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 import { useToast } from "@/hooks/use-toast"
@@ -47,6 +51,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Textarea } from "@/components/ui/textarea"
 import ApiTest from "@/components/ApiTest"
 import { useAuth } from "@/contexts/AuthContext"
 import RoleBasedComponent from "@/components/RoleBasedComponent"
@@ -60,6 +73,11 @@ export default function Dashboard() {
   const [recentEmployees, setRecentEmployees] = useState<Employee[]>([])
   const [departmentStats, setDepartmentStats] = useState<{ [key: string]: number }>({})
   const [isLoading, setIsLoading] = useState(true)
+  const [todayStatus, setTodayStatus] = useState<any>(null)
+  const [isPunching, setIsPunching] = useState(false)
+  const [showClockOutDialog, setShowClockOutDialog] = useState(false)
+  const [clockOutReason, setClockOutReason] = useState("")
+  const [isLunchBreak, setIsLunchBreak] = useState(false)
 
   const getRoleSpecificTitle = () => {
     switch (user?.role) {
@@ -125,6 +143,21 @@ export default function Dashboard() {
     
     return actions
   }
+
+  const loadTodayStatus = () => {
+    if (!user) return
+    const today = format(new Date(), 'yyyy-MM-dd')
+    const attendanceRecords = JSON.parse(localStorage.getItem('attendanceRecords') || '[]')
+    const todayRecord = attendanceRecords.find(
+      (record: any) => record.employee_id === user.id && record.date === today
+    )
+    setTodayStatus(todayRecord || null)
+  }
+
+  useEffect(() => {
+    loadTodayStatus()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user])
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -422,6 +455,152 @@ export default function Dashboard() {
     }
   };
 
+  const handleClockIn = () => {
+    if (!user) {
+      toast({ title: "Error", description: "No user logged in.", variant: "destructive" })
+      return
+    }
+    try {
+      setIsPunching(true)
+      const today = format(new Date(), 'yyyy-MM-dd')
+      const now = format(new Date(), 'HH:mm:ss')
+      const attendanceRecords = JSON.parse(localStorage.getItem('attendanceRecords') || '[]')
+      
+      const existingRecord = attendanceRecords.find(
+        (record: any) => record.employee_id === user.id && record.date === today
+      )
+      
+      if (existingRecord && existingRecord.clock_in_time) {
+        toast({ title: "Already Clocked In", description: "You have already clocked in today.", variant: "destructive" })
+        setIsPunching(false)
+        return
+      }
+
+      const newRecord = {
+        id: Date.now(),
+        employee_id: user.id,
+        employee_name: `${user.firstName} ${user.lastName}`,
+        date: today,
+        clock_in_time: now,
+        clock_out_time: null,
+        is_clocked_in: true,
+        location: 'office'
+      }
+
+      const updatedRecords = existingRecord 
+        ? attendanceRecords.map((r: any) => r.id === existingRecord.id ? newRecord : r)
+        : [...attendanceRecords, newRecord]
+      
+      localStorage.setItem('attendanceRecords', JSON.stringify(updatedRecords))
+      loadTodayStatus()
+      toast({ title: "Success", description: "Clocked in successfully!" })
+    } catch (error) {
+      console.error('Clock in error:', error)
+      toast({ title: "Error", description: "Failed to clock in.", variant: "destructive" })
+    } finally {
+      setIsPunching(false)
+    }
+  }
+
+  const handleClockOut = () => {
+    if (!user) {
+      toast({ title: "Error", description: "No user logged in.", variant: "destructive" })
+      return
+    }
+
+    const now = new Date()
+    const currentHour = now.getHours()
+    
+    if (currentHour < 17) {
+      setShowClockOutDialog(true)
+      setIsLunchBreak(false)
+      return
+    }
+    
+    performClockOut()
+  }
+
+  const handleLunchBreak = () => {
+    if (!user) {
+      toast({ title: "Error", description: "No user logged in.", variant: "destructive" })
+      return
+    }
+
+    const now = new Date()
+    const currentHour = now.getHours()
+    
+    if (currentHour >= 11 && currentHour < 14) {
+      setShowClockOutDialog(true)
+      setIsLunchBreak(true)
+    } else {
+      toast({ 
+        title: "Invalid Time", 
+        description: "Lunch break is only available between 11:00 AM and 2:00 PM.", 
+        variant: "destructive" 
+      })
+    }
+  }
+
+  const performClockOut = (reason?: string, isLunch?: boolean) => {
+    if (!user) return
+    
+    try {
+      setIsPunching(true)
+      const today = format(new Date(), 'yyyy-MM-dd')
+      const now = format(new Date(), 'HH:mm:ss')
+      const attendanceRecords = JSON.parse(localStorage.getItem('attendanceRecords') || '[]')
+      
+      const existingRecordIndex = attendanceRecords.findIndex(
+        (record: any) => record.employee_id === user.id && record.date === today && record.is_clocked_in
+      )
+      
+      if (existingRecordIndex === -1) {
+        toast({ title: "Not Clocked In", description: "You need to clock in first.", variant: "destructive" })
+        setIsPunching(false)
+        return
+      }
+
+      if (isLunch) {
+        attendanceRecords[existingRecordIndex] = {
+          ...attendanceRecords[existingRecordIndex],
+          lunch_break_start: now,
+          lunch_break_reason: reason || "Lunch break"
+        }
+        toast({ title: "Success", description: "Lunch break started. Don't forget to clock back in!" })
+      } else {
+        attendanceRecords[existingRecordIndex] = {
+          ...attendanceRecords[existingRecordIndex],
+          clock_out_time: now,
+          is_clocked_in: false,
+          early_departure_reason: reason || ""
+        }
+        toast({ title: "Success", description: "Clocked out successfully!" })
+      }
+      
+      localStorage.setItem('attendanceRecords', JSON.stringify(attendanceRecords))
+      loadTodayStatus()
+      setShowClockOutDialog(false)
+      setClockOutReason("")
+    } catch (error) {
+      console.error('Clock out error:', error)
+      toast({ title: "Error", description: "Failed to clock out.", variant: "destructive" })
+    } finally {
+      setIsPunching(false)
+    }
+  }
+
+  const handleConfirmClockOut = () => {
+    if (!clockOutReason.trim() && new Date().getHours() < 17) {
+      toast({ 
+        title: "Reason Required", 
+        description: "Please provide a reason for early departure.", 
+        variant: "destructive" 
+      })
+      return
+    }
+    performClockOut(clockOutReason, isLunchBreak)
+  }
+
   return (
     <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col space-y-3 md:space-y-0 md:flex-row md:items-center md:justify-between">
@@ -480,6 +659,115 @@ export default function Dashboard() {
         onChange={handleFileChange}
         className="hidden"
       />
+
+      {/* Clock In/Out Card - Visible to Everyone */}
+      <Card className="border-border/50 shadow-sm bg-gradient-to-r from-primary/5 to-primary/10">
+        <CardHeader>
+          <CardTitle className="flex items-center text-primary">
+            <Clock className="mr-2 h-5 w-5" />
+            Time Clock
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col sm:flex-row items-center gap-4">
+            <div className="flex-1 space-y-2">
+              <div className="text-sm text-muted-foreground">
+                {todayStatus?.clock_in_time ? (
+                  <>
+                    <div className="flex items-center gap-2">
+                      <LogIn className="h-4 w-4 text-success" />
+                      <span>Clocked in at {todayStatus.clock_in_time}</span>
+                    </div>
+                    {todayStatus?.clock_out_time && (
+                      <div className="flex items-center gap-2 mt-1">
+                        <LogOut className="h-4 w-4 text-destructive" />
+                        <span>Clocked out at {todayStatus.clock_out_time}</span>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <span>Not clocked in today</span>
+                )}
+              </div>
+              <div className="text-lg font-semibold">
+                {format(new Date(), 'EEEE, MMMM d, yyyy')}
+              </div>
+            </div>
+            <div className="flex gap-2">
+              {!todayStatus?.is_clocked_in ? (
+                <Button 
+                  onClick={handleClockIn}
+                  disabled={isPunching}
+                  className="gap-2"
+                >
+                  <LogIn className="h-4 w-4" />
+                  Clock In
+                </Button>
+              ) : (
+                <>
+                  <Button 
+                    onClick={handleLunchBreak}
+                    disabled={isPunching || todayStatus?.clock_out_time}
+                    variant="outline"
+                    className="gap-2"
+                  >
+                    <Timer className="h-4 w-4" />
+                    Lunch Break
+                  </Button>
+                  <Button 
+                    onClick={handleClockOut}
+                    disabled={isPunching || todayStatus?.clock_out_time}
+                    variant="destructive"
+                    className="gap-2"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    Clock Out
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Clock Out Dialog */}
+      <Dialog open={showClockOutDialog} onOpenChange={setShowClockOutDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {isLunchBreak ? "Lunch Break" : "Early Clock Out"}
+            </DialogTitle>
+            <DialogDescription>
+              {isLunchBreak 
+                ? "Please provide a reason for your lunch break."
+                : "You are clocking out before 5:00 PM. Please provide a reason."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="reason">Reason</Label>
+              <Textarea
+                id="reason"
+                placeholder={isLunchBreak ? "e.g., Lunch break" : "e.g., Doctor's appointment, Personal emergency"}
+                value={clockOutReason}
+                onChange={(e) => setClockOutReason(e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setShowClockOutDialog(false)
+              setClockOutReason("")
+            }}>
+              Cancel
+            </Button>
+            <Button onClick={handleConfirmClockOut} disabled={isPunching}>
+              Confirm
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Hide aggregate stats for general_employee, finance, corporate_hr, line_manager, it_admin */}
       {!['general_employee', 'finance', 'corporate_hr', 'line_manager', 'it_admin'].includes(user?.role || '') && (

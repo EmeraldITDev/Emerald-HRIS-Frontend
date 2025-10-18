@@ -75,6 +75,8 @@ export default function Dashboard() {
         return 'IT Power User Dashboard'
       case 'it_admin':
         return 'Employee Self-Service'
+      case 'finance':
+        return 'Employee Self-Service'
       case 'general_employee':
         return 'Employee Self-Service'
       default:
@@ -426,7 +428,7 @@ export default function Dashboard() {
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-foreground">{getRoleSpecificTitle()}</h1>
           <p className="text-sm md:text-base text-muted-foreground">
-            {user?.role === 'general_employee' 
+            {['general_employee', 'finance'].includes(user?.role || '')
               ? `Welcome ${user.firstName}! Access your payroll, benefits, and leave requests here.`
               : user?.role === 'line_manager'
               ? 'Manage your team, view reports, and handle approvals'
@@ -479,8 +481,8 @@ export default function Dashboard() {
         className="hidden"
       />
 
-      {/* Hide aggregate stats for general_employee, corporate_hr, line_manager, it_admin */}
-      {!['general_employee', 'corporate_hr', 'line_manager', 'it_admin'].includes(user?.role || '') && (
+      {/* Hide aggregate stats for general_employee, finance, corporate_hr, line_manager, it_admin */}
+      {!['general_employee', 'finance', 'corporate_hr', 'line_manager', 'it_admin'].includes(user?.role || '') && (
         <div className="grid gap-3 md:gap-4 lg:gap-6 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
           <Card className="border-border/50 shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-3 md:p-6">
@@ -747,7 +749,7 @@ export default function Dashboard() {
                   </div>
                 ))}
               </div>
-            ) : ['general_employee', 'corporate_hr', 'line_manager', 'it_admin'].includes(user?.role || '') ? (
+            ) : ['general_employee', 'finance', 'corporate_hr', 'line_manager', 'it_admin'].includes(user?.role || '') ? (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-sm">Performance Review Form</span>
@@ -810,7 +812,7 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        {!['general_employee', 'corporate_hr', 'line_manager', 'it_admin'].includes(user?.role || '') && (
+        {!['general_employee', 'finance', 'corporate_hr', 'line_manager', 'it_admin'].includes(user?.role || '') && (
           <RoleBasedComponent allowedRoles={['executive', 'hr_manager']}>
             <Card className="border-border/50 shadow-sm">
               <CardHeader>
@@ -860,7 +862,7 @@ export default function Dashboard() {
         )}
 
         {/* Personal Benefits & Payroll for specific roles */}
-        {['general_employee', 'corporate_hr', 'line_manager', 'it_admin'].includes(user?.role || '') && (
+        {['general_employee', 'finance', 'corporate_hr', 'line_manager', 'it_admin'].includes(user?.role || '') && (
           <Card className="border-border/50 shadow-sm">
             <CardHeader>
               <CardTitle className="text-primary">My Benefits & Payroll</CardTitle>
@@ -896,8 +898,8 @@ export default function Dashboard() {
           </Card>
         )}
 
-        {/* Clock In/Out Widget for General Employees and IT Admin */}
-        {['general_employee', 'it_admin'].includes(user?.role || '') && (
+        {/* Clock In/Out Widget for General Employees, Finance, and IT Admin */}
+        {['general_employee', 'finance', 'it_admin'].includes(user?.role || '') && (
           <Card className="border-border/50 shadow-sm">
             <CardHeader>
             <CardTitle className="flex items-center text-primary">
@@ -947,8 +949,8 @@ export default function Dashboard() {
           </Card>
         )}
 
-        {/* Department Breakdown - Hidden for general employees */}
-        {user?.role !== 'general_employee' && (
+        {/* Department Breakdown - Hidden for general employees and finance */}
+        {!['general_employee', 'finance'].includes(user?.role || '') && (
           <Card className="border-border/50 shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center text-primary">
@@ -994,7 +996,7 @@ export default function Dashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {user?.role === 'general_employee' ? (
+            {['general_employee', 'finance'].includes(user?.role || '') ? (
               <div className="space-y-3">
                 <Button 
                   variant="outline" 

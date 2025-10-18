@@ -161,12 +161,10 @@ const rolePermissions: Record<UserRole, string[]> = {
     'training.view'
   ],
   finance: [
-    'payroll.view_all',
-    'payroll.calculate',
-    'payroll.export',
-    'reports.view',
-    'dashboard.view',
-    'financials.view_all'
+    'payroll.view_own',
+    'benefits.view',
+    'leave.request',
+    'comments.create'
   ],
   it_admin: [
     'payroll.view_own',

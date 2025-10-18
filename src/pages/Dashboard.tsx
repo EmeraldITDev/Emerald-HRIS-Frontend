@@ -781,8 +781,8 @@ export default function Dashboard() {
         </DialogContent>
       </Dialog>
 
-      {/* Hide aggregate stats for general_employee, finance, corporate_hr, line_manager, it_admin */}
-      {!['general_employee', 'finance', 'corporate_hr', 'line_manager', 'it_admin'].includes(user?.role || '') && (
+      {/* Hide aggregate stats for general_employee, finance, corporate_hr, line_manager, it_admin, executive */}
+      {!['general_employee', 'finance', 'corporate_hr', 'line_manager', 'it_admin', 'executive'].includes(user?.role || '') && (
         <div className="grid gap-3 md:gap-4 lg:gap-6 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
           <Card className="border-border/50 shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-3 md:p-6">
@@ -1003,7 +1003,7 @@ export default function Dashboard() {
                   </div>
                 ))}
               </div>
-            ) : ['general_employee', 'finance', 'line_manager'].includes(user?.role || '') ? (
+            ) : ['general_employee', 'finance', 'line_manager', 'executive'].includes(user?.role || '') ? (
               <div className="space-y-3">
                 <div className="flex items-center justify-between text-sm">
                   <span>Clocked in today</span>
@@ -1066,7 +1066,7 @@ export default function Dashboard() {
                   </div>
                 ))}
               </div>
-            ) : ['general_employee', 'finance', 'corporate_hr', 'line_manager', 'it_admin'].includes(user?.role || '') ? (
+            ) : ['general_employee', 'finance', 'corporate_hr', 'line_manager', 'it_admin', 'executive'].includes(user?.role || '') ? (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-sm">Performance Review Form</span>
@@ -1179,7 +1179,7 @@ export default function Dashboard() {
         )}
 
         {/* Personal Benefits & Payroll for specific roles */}
-        {['general_employee', 'finance', 'corporate_hr', 'line_manager', 'it_admin'].includes(user?.role || '') && (
+        {['general_employee', 'finance', 'corporate_hr', 'line_manager', 'it_admin', 'executive'].includes(user?.role || '') && (
           <Card className="border-border/50 shadow-sm">
             <CardHeader>
               <CardTitle className="text-primary">My Benefits & Payroll</CardTitle>
@@ -1310,7 +1310,7 @@ export default function Dashboard() {
                   Performance Review
                 </Button>
               </div>
-            ) : ['corporate_hr', 'line_manager', 'it_power_user', 'it_admin'].includes(user?.role || '') ? (
+            ) : ['corporate_hr', 'line_manager', 'it_power_user', 'it_admin', 'executive'].includes(user?.role || '') ? (
               <div className="space-y-3">
                 <Button 
                   variant="outline" 

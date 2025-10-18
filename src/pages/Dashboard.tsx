@@ -80,6 +80,9 @@ export default function Dashboard() {
   const [isLunchBreak, setIsLunchBreak] = useState(false)
 
   const getRoleSpecificTitle = () => {
+    const isLineManager = user?.role === 'line_manager'
+    const department = user?.department
+    
     switch (user?.role) {
       case 'executive':
         return 'Executive Dashboard'
@@ -88,7 +91,7 @@ export default function Dashboard() {
       case 'corporate_hr':
         return 'Corporate HR Dashboard'
       case 'line_manager':
-        return 'Line Manager Dashboard'
+        return `${department} - Line Manager Dashboard`
       case 'it_power_user':
         return 'IT Power User Dashboard'
       case 'it_admin':
@@ -162,7 +165,15 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const employees = await apiService.getEmployees()
+        let employees = await apiService.getEmployees()
+        
+        // Filter by department for line managers
+        const isLineManager = user?.role === 'line_manager'
+        const userDepartment = user?.department
+        
+        if (isLineManager && userDepartment) {
+          employees = employees.filter(emp => emp.department === userDepartment)
+        }
         
         // Store all employees for stats calculations
         setAllEmployees(employees)
@@ -191,7 +202,7 @@ export default function Dashboard() {
     }
 
     fetchDashboardData()
-  }, [])
+  }, [user])
 
   const handleAddEmployee = () => {
     // Navigate to employees page and open the add employee dialog

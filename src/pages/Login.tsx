@@ -45,16 +45,13 @@ const Login = () => {
     }
   };
 
+  // Featured demo users for quick access
   const demoUsers = [
     { email: 'bunmi.babajide@emeraldcfze.com', role: 'Executive', password: 'password123' },
-    { email: 'laa@emeraldcfze.com', role: 'Executive', password: 'password123' },
     { email: 'austin.nwachwukwu@emeraldcfze.com', role: 'HR Manager', password: 'password123' },
-    { email: 'oluwapelumi.adeyefa@emeraldcfze.com', role: 'Corporate HR', password: 'password123' },
-    { email: 'henry.marcus@emeraldcfze.com', role: 'Line Manager', password: 'password123' },
-    { email: 'it@emeraldcfze.com', role: 'IT Power User', password: 'password123' },
-    { email: 'temitope.lawal@emeraldcfze.com', role: 'Finance - General Employee', password: 'password123' },
-    { email: 'rachael.daniel@emeraldcfze.com', role: 'Finance - General Employee', password: 'password123' },
-    { email: 'adeniyi.bamigbade@emeraldcfze.com', role: 'Finance - General Employee', password: 'password123' }
+    { email: 'henry.marcus@emeraldcfze.com', role: 'Line Manager - Technical Operations', password: 'password123' },
+    { email: 'aisha.bello@emeraldcfze.com', role: 'Line Manager - Business Development', password: 'password123' },
+    { email: 'chidi.okonkwo@emeraldcfze.com', role: 'Employee - Technical Operations', password: 'password123' }
   ];
 
   const fillDemoCredentials = (demoEmail: string) => {
@@ -141,43 +138,48 @@ const Login = () => {
         {/* Demo Users Panel */}
         <Card className="flex-1 max-w-2xl">
           <CardHeader>
-            <CardTitle>Demo Users</CardTitle>
+            <CardTitle>Quick Access Demo Users</CardTitle>
             <CardDescription>
-              Click on any user to auto-fill their credentials for testing different role interfaces
+              Click on any user to auto-fill their credentials. For all departments and users, visit the Demo Users page.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="space-y-3">
               {demoUsers.map((user, index) => (
                 <Button
                   key={index}
                   variant="outline"
-                  className="justify-start h-auto p-4 text-left"
+                  className="justify-start h-auto p-4 text-left w-full"
                   onClick={() => fillDemoCredentials(user.email)}
                   disabled={isLoading}
                 >
-                  <div>
+                  <div className="w-full">
                     <div className="font-medium">{user.email}</div>
                     <div className="text-sm text-muted-foreground">{user.role}</div>
-                    <div className="text-xs text-muted-foreground mt-1">
-                      Password: {user.password}
-                    </div>
                   </div>
                 </Button>
               ))}
             </div>
             
+            <Button
+              className="w-full mt-4"
+              variant="secondary"
+              onClick={() => window.location.href = '/demo-users'}
+            >
+              <Building2 className="mr-2 h-4 w-4" />
+              View All Demo Users by Department
+            </Button>
+            
             <div className="mt-6 p-4 bg-muted/50 rounded-lg">
-              <h4 className="font-medium mb-2">Role Permissions Preview:</h4>
+              <h4 className="font-medium mb-2">Department-Based Access:</h4>
               <div className="text-sm text-muted-foreground space-y-1">
-                <div><strong>Executives & HR Managers:</strong> Full access to all features</div>
-                <div><strong>Corporate HR:</strong> Employee management, CSV imports, approvals</div>
-                <div><strong>Line Managers:</strong> Reports, approvals, reviews, comments</div>
-                <div><strong>Finance Manager:</strong> All payroll, financials, and reports</div>
-                <div><strong>IT (Power User):</strong> Admin tools, system controls</div>
-                <div><strong>Contract Employees:</strong> Own payroll, benefits, leave requests</div>
-                <div><strong>General Employees:</strong> Self-service features only</div>
+                <div><strong>Executives & HR:</strong> Full system access, all departments visible</div>
+                <div><strong>Line Managers:</strong> Department-specific access, can only manage their team</div>
+                <div><strong>Employees:</strong> Self-service, can view department data only</div>
               </div>
+              <p className="text-xs mt-3 text-muted-foreground">
+                All accounts use password: <code className="bg-background px-1 py-0.5 rounded">password123</code>
+              </p>
             </div>
           </CardContent>
         </Card>

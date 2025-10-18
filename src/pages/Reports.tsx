@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Download, FileText, User, Calendar, MapPin, Phone, Mail, Building, Briefcase } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { useAuth } from "@/contexts/AuthContext"
 import { apiService, Employee } from '@/lib/api'
 
 const dummyEmployeesOld = [
@@ -140,6 +141,11 @@ const dummyEmployeesOld = [
 ]
 
 export default function Reports() {
+  const { user } = useAuth()
+  const isLineManager = user?.role === 'line_manager'
+  const isExecutiveOrHR = user?.role === 'executive' || user?.role === 'hr_manager' || user?.role === 'corporate_hr'
+  const userDepartment = user?.department
+  
   const [employees, setEmployees] = useState<Employee[]>([])
   const [selectedEmployee, setSelectedEmployee] = useState("")
   const [reportData, setReportData] = useState<any>(null)
@@ -151,7 +157,13 @@ export default function Reports() {
   
   const fetchEmployees = async () => {
     try {
-      const data = await apiService.getEmployees()
+      let data = await apiService.getEmployees()
+      
+      // Filter by department for line managers
+      if (isLineManager && userDepartment) {
+        data = data.filter(emp => emp.department === userDepartment)
+      }
+      
       setEmployees(data)
     } catch (error) {
       console.error('Failed to fetch employees:', error)
@@ -239,7 +251,12 @@ export default function Reports() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Employee Reports</h1>
-          <p className="text-muted-foreground">Generate comprehensive employee reports and documentation</p>
+          <p className="text-muted-foreground">
+            {isLineManager && userDepartment 
+              ? `Generate reports for ${userDepartment} department employees`
+              : 'Generate comprehensive employee reports and documentation'
+            }
+          </p>
         </div>
         
         <Button 

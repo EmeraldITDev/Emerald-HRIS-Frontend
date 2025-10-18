@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import Layout from "./components/Layout";
 import Login from "./pages/Login";
+import DemoUsers from "./pages/DemoUsers";
 import Dashboard from "./pages/Dashboard";
 import Employees from "./pages/Employees";
 import Attendance from "./pages/Attendance";
@@ -57,6 +58,7 @@ const AppContent = () => {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/demo-users" element={<DemoUsers />} />
           <Route path="/*" element={
             <ProtectedRoute>
               <Layout>

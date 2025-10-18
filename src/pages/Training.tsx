@@ -41,6 +41,9 @@ const trainingTypes = [
 export default function Training() {
   const { user, hasPermission } = useAuth()
   const canUploadCertificate = user?.role === 'hr_manager' || user?.role === 'executive' || user?.role === 'line_manager'
+  const isLineManager = user?.role === 'line_manager'
+  const isExecutiveOrHR = user?.role === 'executive' || user?.role === 'hr_manager' || user?.role === 'corporate_hr'
+  const userDepartment = user?.department
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [employees, setEmployees] = useState<Employee[]>([])
   const [isLoadingEmployees, setIsLoadingEmployees] = useState(true)
@@ -86,7 +89,14 @@ export default function Training() {
     const fetchEmployees = async () => {
       try {
         const data = await apiService.getEmployees()
-        setEmployees(data.filter(emp => emp.employment_status === 'Active'))
+        let activeEmployees = data.filter(emp => emp.employment_status === 'Active')
+        
+        // Filter by department for line managers
+        if (isLineManager && userDepartment) {
+          activeEmployees = activeEmployees.filter(emp => emp.department === userDepartment)
+        }
+        
+        setEmployees(activeEmployees)
       } catch (error) {
         console.error('Failed to fetch employees:', error)
         toast({
@@ -99,7 +109,7 @@ export default function Training() {
       }
     }
     fetchEmployees()
-  }, [])
+  }, [isLineManager, userDepartment])
 
   const handleAddTraining = () => {
     if (!newTraining.employeeId || !newTraining.trainingType || !newTraining.completionDate) {

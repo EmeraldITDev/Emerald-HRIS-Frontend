@@ -112,22 +112,36 @@ export default function Performance() {
     }
   }
   
-  const userDepartment = user?.email === 'henry.marcus@emeraldcfze.com' ? 'IT' : undefined
+  // Determine user's access level
+  const isExecutiveOrHR = user?.role === 'executive' || user?.role === 'hr_manager' || user?.role === 'corporate_hr'
+  const isLineManager = user?.role === 'line_manager'
   const isGeneralEmployee = user?.role === 'general_employee'
-  const canManageReviews = user?.role === 'executive' || user?.role === 'hr_manager' || user?.role === 'line_manager'
+  const canManageReviews = isExecutiveOrHR || isLineManager
+  const userDepartment = user?.department
 
   // Get current employee ID for filtering
   const currentEmployeeId = employees.find(emp => emp.email === user?.email)?.id?.toString()
 
+  // Filter reviews based on role and department
   const filteredReviews = reviews.filter(review => {
     // General employees can only see their own reviews
     if (isGeneralEmployee) {
       return review.employeeId === currentEmployeeId
     }
     
-    // For other roles, show all reviews
+    // Line managers can only see reviews from their department
+    if (isLineManager && userDepartment) {
+      return review.department === userDepartment
+    }
+    
+    // Executives and HR can see all reviews
     return true
   })
+  
+  // Filter employees based on department for line managers
+  const filteredEmployees = isLineManager && userDepartment
+    ? employees.filter(emp => emp.department === userDepartment)
+    : employees
   
   const handleCreateNewReview = () => {
     if (!newReview.employeeId || !newReview.reviewPeriod || !newReview.rating) {
@@ -264,7 +278,7 @@ export default function Performance() {
                       <SelectValue placeholder="Select employee" />
                     </SelectTrigger>
                     <SelectContent>
-                      {employees.filter(emp => !userDepartment || emp.department === userDepartment).map((employee) => (
+                      {filteredEmployees.map((employee) => (
                         <SelectItem key={employee.id} value={employee.id?.toString() || ''}>
                           {employee.first_name} {employee.last_name} - {employee.department}
                         </SelectItem>

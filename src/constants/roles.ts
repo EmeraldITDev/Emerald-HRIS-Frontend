@@ -20,21 +20,33 @@ export const PERMISSIONS = {
 } as const;
 
 export const ROLE_OPTIONS = [
-  { label: 'Executives & HR Managers', value: 'full' },
+  { label: 'Executive', value: 'executive' },
+  { label: 'HR Manager', value: 'hr_manager' },
   { label: 'Corporate HR', value: 'corporate_hr' },
-  { label: 'Line Managers', value: 'line_manager' },
-  { label: 'Finance Team', value: 'finance' },
-  { label: 'IT (Power User)', value: 'it_power_user' },
-  { label: 'Contract Employees', value: 'contract_employee' },
-  { label: 'General Employees', value: 'general_employee' },
+  { label: 'Line Manager', value: 'line_manager' },
+  { label: 'Finance', value: 'finance' },
+  { label: 'IT Admin', value: 'it_admin' },
+  { label: 'IT Power User', value: 'it_power_user' },
+  { label: 'Consulting HR', value: 'consulting_hr' },
+  { label: 'Contract HR', value: 'contract_hr' },
+  { label: 'Corporate User', value: 'corporate_user' },
+  { label: 'Contract Staff', value: 'contract_staff' },
+  { label: 'Contract Employee', value: 'contract_employee' },
+  { label: 'General Employee', value: 'general_employee' },
 ];
 
 export const ROLE_PREFIX: Record<string, string> = {
-  full: 'EX',
+  executive: 'EX',
+  hr_manager: 'HR',
   corporate_hr: 'CH',
   line_manager: 'LM',
   finance: 'FIN',
-  it_power_user: 'IT',
-  contract_employee: 'CON',
+  it_admin: 'ITA',
+  it_power_user: 'ITP',
+  consulting_hr: 'COH',
+  contract_hr: 'CRH',
+  corporate_user: 'CU',
+  contract_staff: 'CS',
+  contract_employee: 'CE',
   general_employee: 'EMP',
 };

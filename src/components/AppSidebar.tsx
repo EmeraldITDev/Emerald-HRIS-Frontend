@@ -98,7 +98,7 @@ const managementItems = [
     title: "Analytics", 
     url: "/analytics", 
     icon: BarChart3,
-    permission: "reports.view"
+    permission: "analytics.view"
   }
 ]
 

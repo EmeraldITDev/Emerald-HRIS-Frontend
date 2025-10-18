@@ -12,6 +12,7 @@ import { Shield, Wifi, Monitor, Heart, Upload, Plus, Users, Award } from "lucide
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from '@/contexts/AuthContext'
 import { apiService, Employee } from '@/lib/api'
+import RoleBasedComponent from '@/components/RoleBasedComponent'
 
 interface EmployeeBenefit {
   id: string
@@ -481,50 +482,52 @@ export default function Benefits() {
       </div>
 
       {/* Benefits Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Employee Benefits</CardTitle>
-          <CardDescription>
-            Track and manage employee benefit enrollments
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Employee</TableHead>
-                  <TableHead>HMO</TableHead>
-                  <TableHead>Life Insurance</TableHead>
-                  <TableHead className="hidden sm:table-cell">Internet</TableHead>
-                  <TableHead className="hidden md:table-cell">Computer</TableHead>
-                  <TableHead className="hidden lg:table-cell">Last Updated</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {benefits.map((benefit) => (
-                  <TableRow key={benefit.id}>
-                    <TableCell className="font-medium">{benefit.employeeName}</TableCell>
-                    <TableCell>
-                      {getBenefitBadge(benefit.hmo, "HMO", <Heart className="h-3 w-3 text-red-500" />)}
-                    </TableCell>
-                    <TableCell>
-                      {getBenefitBadge(benefit.lifeInsurance, "Insurance", <Shield className="h-3 w-3 text-blue-500" />)}
-                    </TableCell>
-                    <TableCell className="hidden sm:table-cell">
-                      {getBenefitBadge(benefit.internet, "Internet", <Wifi className="h-3 w-3 text-green-500" />)}
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell">
-                      {getBenefitBadge(benefit.computer, "Computer", <Monitor className="h-3 w-3 text-purple-500" />)}
-                    </TableCell>
-                    <TableCell className="hidden lg:table-cell">{benefit.lastUpdated}</TableCell>
+      <RoleBasedComponent allowedRoles={['hr_manager', 'executive']}>
+        <Card>
+          <CardHeader>
+            <CardTitle>Employee Benefits</CardTitle>
+            <CardDescription>
+              Track and manage employee benefit enrollments
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Employee</TableHead>
+                    <TableHead>HMO</TableHead>
+                    <TableHead>Life Insurance</TableHead>
+                    <TableHead className="hidden sm:table-cell">Internet</TableHead>
+                    <TableHead className="hidden md:table-cell">Computer</TableHead>
+                    <TableHead className="hidden lg:table-cell">Last Updated</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+                </TableHeader>
+                <TableBody>
+                  {benefits.map((benefit) => (
+                    <TableRow key={benefit.id}>
+                      <TableCell className="font-medium">{benefit.employeeName}</TableCell>
+                      <TableCell>
+                        {getBenefitBadge(benefit.hmo, "HMO", <Heart className="h-3 w-3 text-red-500" />)}
+                      </TableCell>
+                      <TableCell>
+                        {getBenefitBadge(benefit.lifeInsurance, "Insurance", <Shield className="h-3 w-3 text-blue-500" />)}
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell">
+                        {getBenefitBadge(benefit.internet, "Internet", <Wifi className="h-3 w-3 text-green-500" />)}
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        {getBenefitBadge(benefit.computer, "Computer", <Monitor className="h-3 w-3 text-purple-500" />)}
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell">{benefit.lastUpdated}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      </RoleBasedComponent>
     </div>
   )
 }

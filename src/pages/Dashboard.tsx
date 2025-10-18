@@ -703,7 +703,7 @@ export default function Dashboard() {
                   </div>
                 ))}
               </div>
-            ) : ['general_employee', 'finance'].includes(user?.role || '') ? (
+            ) : ['general_employee', 'finance', 'line_manager'].includes(user?.role || '') ? (
               <div className="space-y-3">
                 <div className="flex items-center justify-between text-sm">
                   <span>Clocked in today</span>
@@ -1061,7 +1061,7 @@ export default function Dashboard() {
                   Performance Review
                 </Button>
               </div>
-            ) : ['corporate_hr', 'line_manager', 'it_power_user'].includes(user?.role || '') ? (
+            ) : ['corporate_hr', 'line_manager', 'it_power_user', 'it_admin'].includes(user?.role || '') ? (
               <div className="space-y-3">
                 <Button 
                   variant="outline" 
@@ -1089,6 +1089,24 @@ export default function Dashboard() {
                 >
                   <Calendar className="mr-2 h-4 w-4" />
                   Submit Leave Request
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full justify-start text-sm"
+                  onClick={() => navigate('/training')}
+                >
+                  <FileText className="mr-2 h-4 w-4" />
+                  My Training
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full justify-start text-sm"
+                  onClick={() => navigate('/performance')}
+                >
+                  <TrendingUp className="mr-2 h-4 w-4" />
+                  Performance Review
                 </Button>
               </div>
             ) : (

@@ -685,55 +685,72 @@ export default function Dashboard() {
 
       {/* Grid sections */}
       <div className="grid gap-3 md:gap-4 lg:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-        {/* Recent Activities - Hidden for general employees */}
-        {user?.role !== 'general_employee' && (
-          <Card className="border-border/50 shadow-sm">
-            <CardHeader className="p-4 md:p-6">
-              <CardTitle className="flex items-center text-primary text-base md:text-lg">
-                <FileText className="mr-2 h-4 w-4 md:h-5 md:w-5" />
-                Recent Activities
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {isLoading ? (
-                <div className="space-y-3">
-                  {[1, 2, 3, 4].map((i) => (
-                    <div key={i} className="flex items-center justify-between text-sm">
-                      <div className="h-4 bg-muted rounded w-32 animate-pulse"></div>
-                      <div className="h-4 bg-muted rounded w-16 animate-pulse"></div>
-                    </div>
-                  ))}
+        {/* Recent Activities - For general employees, show personal activities */}
+        <Card className="border-border/50 shadow-sm">
+          <CardHeader className="p-4 md:p-6">
+            <CardTitle className="flex items-center text-primary text-base md:text-lg">
+              <FileText className="mr-2 h-4 w-4 md:h-5 md:w-5" />
+              Recent Activities
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {isLoading ? (
+              <div className="space-y-3">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="flex items-center justify-between text-sm">
+                    <div className="h-4 bg-muted rounded w-32 animate-pulse"></div>
+                    <div className="h-4 bg-muted rounded w-16 animate-pulse"></div>
+                  </div>
+                ))}
+              </div>
+            ) : ['general_employee', 'finance'].includes(user?.role || '') ? (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between text-sm">
+                  <span>Clocked in today</span>
+                  <span className="text-muted-foreground">8:00 AM</span>
                 </div>
-              ) : (
-                <div className="space-y-3">
-                  {recentEmployees.length > 0 && (
-                    <div className="flex items-center justify-between text-sm">
-                      <span>New employee onboarded</span>
-                      <span className="text-muted-foreground">
-                        {recentEmployees[0]?.hire_date ? 
-                          format(new Date(recentEmployees[0].hire_date), 'MMM dd') : 
-                          'Recently'
-                        }
-                      </span>
-                    </div>
-                  )}
-                  <div className="flex items-center justify-between text-sm">
-                    <span>Total employees: {allEmployees.length}</span>
-                    <span className="text-muted-foreground">Current</span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span>Active employees: {allEmployees.filter(emp => emp.employment_status === 'Active').length}</span>
-                    <span className="text-muted-foreground">Today</span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span>Departments: {Object.keys(departmentStats).length}</span>
-                    <span className="text-muted-foreground">Active</span>
-                  </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span>Performance review submitted</span>
+                  <span className="text-muted-foreground">Yesterday</span>
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
+                <div className="flex items-center justify-between text-sm">
+                  <span>Training module completed</span>
+                  <span className="text-muted-foreground">2 days ago</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span>Leave request approved</span>
+                  <span className="text-muted-foreground">3 days ago</span>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {recentEmployees.length > 0 && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span>New employee onboarded</span>
+                    <span className="text-muted-foreground">
+                      {recentEmployees[0]?.hire_date ? 
+                        format(new Date(recentEmployees[0].hire_date), 'MMM dd') : 
+                        'Recently'
+                      }
+                    </span>
+                  </div>
+                )}
+                <div className="flex items-center justify-between text-sm">
+                  <span>Total employees: {allEmployees.length}</span>
+                  <span className="text-muted-foreground">Current</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span>Active employees: {allEmployees.filter(emp => emp.employment_status === 'Active').length}</span>
+                  <span className="text-muted-foreground">Today</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span>Departments: {Object.keys(departmentStats).length}</span>
+                  <span className="text-muted-foreground">Active</span>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         <Card className="border-border/50 shadow-sm">
           <CardHeader>

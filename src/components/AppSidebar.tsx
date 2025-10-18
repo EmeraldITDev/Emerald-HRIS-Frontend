@@ -104,12 +104,6 @@ const managementItems = [
 
 const systemItems = [
   { 
-    title: "Time Tracking", 
-    url: "/time", 
-    icon: Clock,
-    permission: "*"
-  },
-  { 
     title: "Reports", 
     url: "/reports", 
     icon: FileText,

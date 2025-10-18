@@ -19,6 +19,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Calendar, Plus, Clock, CalendarDays, LogIn, LogOut, Bell, Cake, Award, ChevronDown, Download, FileText, User, Phone, Building, Users, Upload } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
@@ -226,6 +234,9 @@ export default function Attendance() {
   const [todayStatus, setTodayStatus] = useState<any>(null);
   const [isPunching, setIsPunching] = useState(false);
   const [todayAttendance, setTodayAttendance] = useState<any[]>([]);
+  const [showClockOutDialog, setShowClockOutDialog] = useState(false);
+  const [clockOutReason, setClockOutReason] = useState("");
+  const [isLunchBreak, setIsLunchBreak] = useState(false);
 
   const loadTodayStatus = () => {
     if (!user) return;
@@ -574,6 +585,46 @@ export default function Attendance() {
       toast({ title: "Error", description: "No user logged in.", variant: "destructive" });
       return;
     }
+
+    const now = new Date();
+    const currentHour = now.getHours();
+    
+    // Check if clocking out before 5pm (17:00)
+    if (currentHour < 17) {
+      setShowClockOutDialog(true);
+      setIsLunchBreak(false);
+      return;
+    }
+    
+    // After 5pm, clock out directly
+    performClockOut();
+  };
+
+  const handleLunchBreak = () => {
+    if (!user) {
+      toast({ title: "Error", description: "No user logged in.", variant: "destructive" });
+      return;
+    }
+
+    const now = new Date();
+    const currentHour = now.getHours();
+    
+    // Check if it's around lunch time (11am - 2pm)
+    if (currentHour >= 11 && currentHour < 14) {
+      setShowClockOutDialog(true);
+      setIsLunchBreak(true);
+    } else {
+      toast({ 
+        title: "Invalid Time", 
+        description: "Lunch break is only available between 11:00 AM and 2:00 PM.", 
+        variant: "destructive" 
+      });
+    }
+  };
+
+  const performClockOut = (reason?: string, isLunch?: boolean) => {
+    if (!user) return;
+    
     try {
       setIsPunching(true);
       const today = format(new Date(), 'yyyy-MM-dd');
@@ -590,21 +641,47 @@ export default function Attendance() {
         return;
       }
 
-      attendanceRecords[existingRecordIndex] = {
-        ...attendanceRecords[existingRecordIndex],
-        clock_out_time: now,
-        is_clocked_in: false
-      };
+      if (isLunch) {
+        // For lunch break, just record the break time
+        attendanceRecords[existingRecordIndex] = {
+          ...attendanceRecords[existingRecordIndex],
+          lunch_break_start: now,
+          lunch_break_reason: reason || "Lunch break"
+        };
+        toast({ title: "Success", description: "Lunch break started. Don't forget to clock back in!" });
+      } else {
+        // Regular clock out
+        attendanceRecords[existingRecordIndex] = {
+          ...attendanceRecords[existingRecordIndex],
+          clock_out_time: now,
+          is_clocked_in: false,
+          early_departure_reason: reason || ""
+        };
+        toast({ title: "Success", description: "Clocked out successfully!" });
+      }
       
       localStorage.setItem('attendanceRecords', JSON.stringify(attendanceRecords));
       loadTodayStatus();
-      toast({ title: "Success", description: "Clocked out successfully!" });
+      setShowClockOutDialog(false);
+      setClockOutReason("");
     } catch (error) {
       console.error('Clock out error:', error);
       toast({ title: "Error", description: "Failed to clock out.", variant: "destructive" });
     } finally {
       setIsPunching(false);
     }
+  };
+
+  const handleConfirmClockOut = () => {
+    if (!clockOutReason.trim() && new Date().getHours() < 17) {
+      toast({ 
+        title: "Reason Required", 
+        description: "Please provide a reason for early departure.", 
+        variant: "destructive" 
+      });
+      return;
+    }
+    performClockOut(clockOutReason, isLunchBreak);
   };
 
   // Example helpers (replace your current variants if desired)
@@ -868,15 +945,26 @@ export default function Attendance() {
                 Shift Completed
               </Button>
             ) : (
-              <Button 
-                onClick={handleClockOut} 
-                className="w-full"
-                disabled={!user || isPunching}
-                variant="destructive"
-              >
-                <LogOut className="mr-2 h-4 w-4" />
-                Clock Out
-              </Button>
+              <div className="space-y-2">
+                <Button 
+                  onClick={handleClockOut} 
+                  className="w-full"
+                  disabled={!user || isPunching}
+                  variant="destructive"
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Clock Out
+                </Button>
+                <Button 
+                  onClick={handleLunchBreak} 
+                  className="w-full"
+                  disabled={!user || isPunching}
+                  variant="outline"
+                >
+                  <Clock className="mr-2 h-4 w-4" />
+                  Lunch Break
+                </Button>
+              </div>
             )}
             
             {todayStatus?.clock_in_time && (
@@ -1351,6 +1439,43 @@ export default function Attendance() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Clock Out Confirmation Dialog */}
+      <Dialog open={showClockOutDialog} onOpenChange={setShowClockOutDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {isLunchBreak ? "Lunch Break Confirmation" : "Early Departure Confirmation"}
+            </DialogTitle>
+            <DialogDescription>
+              {isLunchBreak 
+                ? "You're clocking out for lunch break. Please provide a note if needed."
+                : "You are clocking out before 5:00 PM. Please provide a reason for early departure."
+              }
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Label htmlFor="clockOutReason" className="mb-2 block">
+              {isLunchBreak ? "Note (optional)" : "Reason *"}
+            </Label>
+            <Textarea
+              id="clockOutReason"
+              placeholder={isLunchBreak ? "Optional note..." : "Enter reason for early departure..."}
+              value={clockOutReason}
+              onChange={(e) => setClockOutReason(e.target.value)}
+              rows={3}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowClockOutDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleConfirmClockOut} disabled={isPunching}>
+              {isLunchBreak ? "Start Break" : "Confirm Clock Out"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

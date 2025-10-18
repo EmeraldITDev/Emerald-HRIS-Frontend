@@ -70,15 +70,6 @@ const AppContent = () => {
                   <Route path="/training" element={<Training />} />
                   <Route path="/benefits" element={<Benefits />} />
                   <Route path="/analytics" element={<Analytics />} />
-                  <Route
-                    path="/time"
-                    element={
-                      <ComingSoon
-                        title="Time Tracking"
-                        description="Advanced time and attendance tracking"
-                      />
-                    }
-                  />
                   <Route path="/reports" element={<Reports />} />
                   <Route path="/announcements" element={<Announcements />} />
                   <Route path="/policies" element={<Policies />} />

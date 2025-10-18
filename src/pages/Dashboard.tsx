@@ -683,52 +683,55 @@ export default function Dashboard() {
 
       {/* Grid sections */}
       <div className="grid gap-3 md:gap-4 lg:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-        <Card className="border-border/50 shadow-sm">
-          <CardHeader className="p-4 md:p-6">
-            <CardTitle className="flex items-center text-primary text-base md:text-lg">
-              <FileText className="mr-2 h-4 w-4 md:h-5 md:w-5" />
-              Recent Activities
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {isLoading ? (
-              <div className="space-y-3">
-                {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="flex items-center justify-between text-sm">
-                    <div className="h-4 bg-muted rounded w-32 animate-pulse"></div>
-                    <div className="h-4 bg-muted rounded w-16 animate-pulse"></div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {recentEmployees.length > 0 && (
+        {/* Recent Activities - Hidden for general employees */}
+        {user?.role !== 'general_employee' && (
+          <Card className="border-border/50 shadow-sm">
+            <CardHeader className="p-4 md:p-6">
+              <CardTitle className="flex items-center text-primary text-base md:text-lg">
+                <FileText className="mr-2 h-4 w-4 md:h-5 md:w-5" />
+                Recent Activities
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {isLoading ? (
+                <div className="space-y-3">
+                  {[1, 2, 3, 4].map((i) => (
+                    <div key={i} className="flex items-center justify-between text-sm">
+                      <div className="h-4 bg-muted rounded w-32 animate-pulse"></div>
+                      <div className="h-4 bg-muted rounded w-16 animate-pulse"></div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {recentEmployees.length > 0 && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span>New employee onboarded</span>
+                      <span className="text-muted-foreground">
+                        {recentEmployees[0]?.hire_date ? 
+                          format(new Date(recentEmployees[0].hire_date), 'MMM dd') : 
+                          'Recently'
+                        }
+                      </span>
+                    </div>
+                  )}
                   <div className="flex items-center justify-between text-sm">
-                    <span>New employee onboarded</span>
-                    <span className="text-muted-foreground">
-                      {recentEmployees[0]?.hire_date ? 
-                        format(new Date(recentEmployees[0].hire_date), 'MMM dd') : 
-                        'Recently'
-                      }
-                    </span>
+                    <span>Total employees: {allEmployees.length}</span>
+                    <span className="text-muted-foreground">Current</span>
                   </div>
-                )}
-                <div className="flex items-center justify-between text-sm">
-                  <span>Total employees: {allEmployees.length}</span>
-                  <span className="text-muted-foreground">Current</span>
+                  <div className="flex items-center justify-between text-sm">
+                    <span>Active employees: {allEmployees.filter(emp => emp.employment_status === 'Active').length}</span>
+                    <span className="text-muted-foreground">Today</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span>Departments: {Object.keys(departmentStats).length}</span>
+                    <span className="text-muted-foreground">Active</span>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span>Active employees: {allEmployees.filter(emp => emp.employment_status === 'Active').length}</span>
-                  <span className="text-muted-foreground">Today</span>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span>Departments: {Object.keys(departmentStats).length}</span>
-                  <span className="text-muted-foreground">Active</span>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         <Card className="border-border/50 shadow-sm">
           <CardHeader>
@@ -944,41 +947,44 @@ export default function Dashboard() {
           </Card>
         )}
 
-        <Card className="border-border/50 shadow-sm">
-          <CardHeader>
-            <CardTitle className="flex items-center text-primary">
-              <Building2 className="mr-2 h-5 w-5" />
-              Department Breakdown
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {isLoading ? (
-              <div className="space-y-3">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="flex items-center justify-between">
-                    <div className="h-4 bg-muted rounded w-20 animate-pulse"></div>
-                    <div className="h-4 bg-muted rounded w-8 animate-pulse"></div>
-                  </div>
-                ))}
-              </div>
-            ) : Object.keys(departmentStats).length > 0 ? (
-              <div className="space-y-3">
-                {Object.entries(departmentStats)
-                  .sort(([,a], [,b]) => b - a)
-                  .map(([dept, count]) => (
-                    <div key={dept} className="flex items-center justify-between">
-                      <span className="text-sm">{dept}</span>
-                      <Badge variant="secondary" className="text-xs">{count} employees</Badge>
+        {/* Department Breakdown - Hidden for general employees */}
+        {user?.role !== 'general_employee' && (
+          <Card className="border-border/50 shadow-sm">
+            <CardHeader>
+              <CardTitle className="flex items-center text-primary">
+                <Building2 className="mr-2 h-5 w-5" />
+                Department Breakdown
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {isLoading ? (
+                <div className="space-y-3">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="flex items-center justify-between">
+                      <div className="h-4 bg-muted rounded w-20 animate-pulse"></div>
+                      <div className="h-4 bg-muted rounded w-8 animate-pulse"></div>
                     </div>
                   ))}
-              </div>
-            ) : (
-              <div className="text-center text-muted-foreground text-sm py-4">
-                No department data available
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                </div>
+              ) : Object.keys(departmentStats).length > 0 ? (
+                <div className="space-y-3">
+                  {Object.entries(departmentStats)
+                    .sort(([,a], [,b]) => b - a)
+                    .map(([dept, count]) => (
+                      <div key={dept} className="flex items-center justify-between">
+                        <span className="text-sm">{dept}</span>
+                        <Badge variant="secondary" className="text-xs">{count} employees</Badge>
+                      </div>
+                    ))}
+                </div>
+              ) : (
+                <div className="text-center text-muted-foreground text-sm py-4">
+                  No department data available
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         <Card className="border-border/50 shadow-sm">
           <CardHeader>
@@ -988,7 +994,55 @@ export default function Dashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {['general_employee', 'corporate_hr', 'line_manager', 'it_power_user'].includes(user?.role || '') ? (
+            {user?.role === 'general_employee' ? (
+              <div className="space-y-3">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full justify-start text-sm"
+                  onClick={() => navigate('/payroll')}
+                >
+                  <DollarSign className="mr-2 h-4 w-4" />
+                  View My Payroll
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full justify-start text-sm"
+                  onClick={() => navigate('/benefits')}
+                >
+                  <Shield className="mr-2 h-4 w-4" />
+                  View My Benefits
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full justify-start text-sm"
+                  onClick={() => navigate('/attendance')}
+                >
+                  <Calendar className="mr-2 h-4 w-4" />
+                  Submit Leave Request
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full justify-start text-sm"
+                  onClick={() => navigate('/training')}
+                >
+                  <FileText className="mr-2 h-4 w-4" />
+                  My Training
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full justify-start text-sm"
+                  onClick={() => navigate('/performance')}
+                >
+                  <TrendingUp className="mr-2 h-4 w-4" />
+                  Performance Review
+                </Button>
+              </div>
+            ) : ['corporate_hr', 'line_manager', 'it_power_user'].includes(user?.role || '') ? (
               <div className="space-y-3">
                 <Button 
                   variant="outline" 

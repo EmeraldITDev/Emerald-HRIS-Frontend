@@ -1203,57 +1203,6 @@ export default function Dashboard() {
           </Card>
         )}
 
-        {/* Clock In/Out Widget for General Employees, Finance, and IT Admin */}
-        {['general_employee', 'finance', 'it_admin'].includes(user?.role || '') && (
-          <Card className="border-border/50 shadow-sm">
-            <CardHeader>
-            <CardTitle className="flex items-center text-primary">
-              <Timer className="mr-2 h-5 w-5" />
-              Time Clock
-            </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-foreground">
-                  {format(new Date(), 'HH:mm:ss')}
-                </div>
-                <div className="text-sm text-muted-foreground">
-                  {format(new Date(), 'EEEE, MMMM do, yyyy')}
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <Button 
-                  size="sm" 
-                  className="flex-1"
-                  onClick={() => {
-                    toast({
-                      title: "Clocked In",
-                      description: `Successfully clocked in at ${format(new Date(), 'HH:mm')}`,
-                    })
-                  }}
-                >
-                  <ArrowRight className="mr-2 h-4 w-4" />
-                  Clock In
-                </Button>
-                <Button 
-                  size="sm" 
-                  variant="outline" 
-                  className="flex-1"
-                  onClick={() => {
-                    toast({
-                      title: "Clocked Out",
-                      description: `Successfully clocked out at ${format(new Date(), 'HH:mm')}`,
-                    })
-                  }}
-                >
-                  <ArrowLeft className="mr-2 h-4 w-4" />
-                  Clock Out
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
         {/* Department Breakdown - Hidden for general employees and finance */}
         {!['general_employee', 'finance'].includes(user?.role || '') && (
           <Card className="border-border/50 shadow-sm">

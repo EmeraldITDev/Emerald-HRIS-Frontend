@@ -1009,14 +1009,14 @@ export default function Attendance() {
                           isLoadingEmployees 
                             ? "Loading..." 
                             : employees.length === 0
-                            ? user?.email || "Loading employee information..."
+                            ? `${user?.firstName} ${user?.lastName}` || "Loading employee information..."
                             : (() => {
                                 const currentEmployee = employees.find(emp => 
                                   emp.email?.toLowerCase() === user?.email?.toLowerCase()
                                 );
                                 return currentEmployee 
                                   ? `${currentEmployee.employee_code} - ${currentEmployee.first_name} ${currentEmployee.last_name}`
-                                  : user?.email || "Employee not found";
+                                  : `${user?.firstName} ${user?.lastName}` || "Employee not found";
                               })()
                         }
                         disabled

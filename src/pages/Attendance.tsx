@@ -267,6 +267,16 @@ export default function Attendance() {
     fetchLeaveRequests()
   }, [])
 
+  // Auto-select current user for non-HR managers
+  useEffect(() => {
+    if (user && employees.length > 0 && user.role !== 'hr_manager') {
+      const currentUser = employees.find(emp => emp.id?.toString() === user.id?.toString())
+      if (currentUser) {
+        setSelectedEmployee(currentUser.id?.toString() || '')
+      }
+    }
+  }, [user, employees])
+
   const fetchEmployees = async () => {
     try {
       setIsLoadingEmployees(true)
@@ -969,27 +979,38 @@ export default function Attendance() {
                   
                   <div className="space-y-2">
                     <Label htmlFor="employee">Employee *</Label>
-                    <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
-                      <SelectTrigger>
-                        <SelectValue placeholder={isLoadingEmployees ? "Loading employees..." : "Select employee"} />
-                      </SelectTrigger>
-                      <SelectContent className="bg-popover border shadow-lg max-h-60">
-                        {employees.length > 0 ? (
-                          employees
-                            .filter(emp => emp.employment_type !== 'Contract')
-                            .filter(emp => emp.id?.toString() === user?.id?.toString()) // Only show current user
-                            .map((emp) => (
-                              <SelectItem key={emp.id} value={emp.id?.toString() || '0'}>
-                                {emp.employee_code} - {emp.first_name} {emp.last_name}
-                              </SelectItem>
-                            ))
-                        ) : (
-                          <SelectItem value="no-employees" disabled>
-                            {isLoadingEmployees ? "Loading..." : "No employees available"}
-                          </SelectItem>
-                        )}
-                      </SelectContent>
-                    </Select>
+                    {user?.role === 'hr_manager' ? (
+                      <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
+                        <SelectTrigger>
+                          <SelectValue placeholder={isLoadingEmployees ? "Loading employees..." : "Select employee"} />
+                        </SelectTrigger>
+                        <SelectContent className="bg-popover border shadow-lg max-h-60">
+                          {employees.length > 0 ? (
+                            employees
+                              .filter(emp => emp.employment_type !== 'Contract')
+                              .map((emp) => (
+                                <SelectItem key={emp.id} value={emp.id?.toString() || '0'}>
+                                  {emp.employee_code} - {emp.first_name} {emp.last_name}
+                                </SelectItem>
+                              ))
+                          ) : (
+                            <SelectItem value="no-employees" disabled>
+                              {isLoadingEmployees ? "Loading..." : "No employees available"}
+                            </SelectItem>
+                          )}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <Input
+                        id="employee"
+                        value={employees.find(emp => emp.id?.toString() === user?.id?.toString())
+                          ? `${employees.find(emp => emp.id?.toString() === user?.id?.toString())?.employee_code} - ${employees.find(emp => emp.id?.toString() === user?.id?.toString())?.first_name} ${employees.find(emp => emp.id?.toString() === user?.id?.toString())?.last_name}`
+                          : isLoadingEmployees ? "Loading..." : "Employee not found"
+                        }
+                        disabled
+                        className="bg-muted cursor-not-allowed"
+                      />
+                    )}
                   </div>
 
                   {selectedEmp && (

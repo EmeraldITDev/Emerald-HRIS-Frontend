@@ -559,6 +559,24 @@ export default function Attendance() {
       toast({ title: "Error", description: "No user logged in.", variant: "destructive" });
       return;
     }
+
+    // Check if current time is within allowed clock in window (7:00 AM - 9:30 AM)
+    const currentTime = new Date();
+    const currentHour = currentTime.getHours();
+    const currentMinute = currentTime.getMinutes();
+    const currentTimeInMinutes = currentHour * 60 + currentMinute;
+    const clockInStartTime = 7 * 60; // 7:00 AM in minutes
+    const clockInEndTime = 9 * 60 + 30; // 9:30 AM in minutes
+
+    if (currentTimeInMinutes < clockInStartTime || currentTimeInMinutes > clockInEndTime) {
+      toast({ 
+        title: "Clock In Unavailable", 
+        description: "Clock in is only allowed between 7:00 AM and 9:30 AM.", 
+        variant: "destructive" 
+      });
+      return;
+    }
+
     try {
       setIsPunching(true);
       const today = format(new Date(), 'yyyy-MM-dd');

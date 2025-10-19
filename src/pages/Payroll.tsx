@@ -440,16 +440,33 @@ export default function Payroll() {
   }
 
   const handleExportCSV = () => {
-    if (!selectedEmployee) {
-      toast({
-        title: "No Employee Selected",
-        description: "Please select an employee before exporting.",
-        variant: "destructive"
-      })
-      return
+    let selectedEmp;
+    
+    // For non-HR Manager users, automatically use their own data
+    if (user?.role !== 'hr_manager') {
+      selectedEmp = onboardEmployees.find(emp => 
+        emp.name.toLowerCase().includes(user?.email.split('@')[0].toLowerCase() || '')
+      )
+      if (!selectedEmp) {
+        toast({
+          title: "Employee Not Found",
+          description: "Could not find your employee record.",
+          variant: "destructive"
+        })
+        return
+      }
+    } else {
+      // HR Manager must select an employee
+      if (!selectedEmployee) {
+        toast({
+          title: "No Employee Selected",
+          description: "Please select an employee before exporting.",
+          variant: "destructive"
+        })
+        return
+      }
+      selectedEmp = onboardEmployees.find(emp => emp.id === selectedEmployee)
     }
-
-    const selectedEmp = onboardEmployees.find(emp => emp.id === selectedEmployee)
     if (!selectedEmp) return
 
     // Calculate payroll for selected employee
@@ -562,16 +579,33 @@ export default function Payroll() {
   }
 
   const handleExportPDF = () => {
-    if (!selectedEmployee) {
-      toast({
-        title: "No Employee Selected",
-        description: "Please select an employee before exporting.",
-        variant: "destructive"
-      })
-      return
+    let selectedEmp;
+    
+    // For non-HR Manager users, automatically use their own data
+    if (user?.role !== 'hr_manager') {
+      selectedEmp = onboardEmployees.find(emp => 
+        emp.name.toLowerCase().includes(user?.email.split('@')[0].toLowerCase() || '')
+      )
+      if (!selectedEmp) {
+        toast({
+          title: "Employee Not Found",
+          description: "Could not find your employee record.",
+          variant: "destructive"
+        })
+        return
+      }
+    } else {
+      // HR Manager must select an employee
+      if (!selectedEmployee) {
+        toast({
+          title: "No Employee Selected",
+          description: "Please select an employee before exporting.",
+          variant: "destructive"
+        })
+        return
+      }
+      selectedEmp = onboardEmployees.find(emp => emp.id === selectedEmployee)
     }
-
-    const selectedEmp = onboardEmployees.find(emp => emp.id === selectedEmployee)
     if (!selectedEmp) return
 
     // Calculate payroll for selected employee

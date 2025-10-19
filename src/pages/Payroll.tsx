@@ -20,6 +20,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { Calculator, Download, FileText, Lock, Settings, FileDown } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/contexts/AuthContext"
@@ -780,6 +786,105 @@ export default function Payroll() {
     })
   }
 
+  const handleExportPayrollPDF = () => {
+    if (onboardEmployees.length === 0) {
+      toast({
+        title: "No Data",
+        description: "No employees to export",
+        variant: "destructive"
+      })
+      return
+    }
+
+    // Generate PDF payslips for all employees
+    const currentDate = new Date()
+    const currentMonth = currentDate.toLocaleString('default', { month: 'long' })
+    const currentYear = currentDate.getFullYear().toString()
+
+    onboardEmployees.forEach(employee => {
+      const empData = employees.find(e => e.id?.toString() === employee.id)
+      if (!empData) return
+
+      const basicSalary = employee.basicSalary / 12 // Monthly basic salary
+      const isContractor = employee.employmentType !== 'Full-time'
+
+      if (isContractor) {
+        // Contract staff payslip
+        const contractFee = basicSalary
+        const withholdingTax = contractFee * 0.02
+        const netPay = contractFee - withholdingTax
+
+        const payrollData: ContractorPayrollData = {
+          employee: empData,
+          month: currentMonth,
+          year: currentYear,
+          contractFee,
+          withholdingTax,
+          netPay
+        }
+
+        const doc = generateContractorPayslipPDF(payrollData)
+        doc.save(`${empData.first_name}_${empData.last_name}_Payslip.pdf`)
+      } else {
+        // Regular employee payslip
+        const annualGross = Math.round(basicSalary / 0.40)
+        const housingAllowance = Math.round(annualGross * 0.20)
+        const transportAllowance = Math.round(annualGross * 0.09)
+        const otherAllowances = Math.round(annualGross * 0.31)
+        
+        const pension = (housingAllowance + transportAllowance + basicSalary) * 0.08
+        const nhf = basicSalary * 0.025
+        
+        const grossForCRA = annualGross - (pension + nhf)
+        const cra = (grossForCRA * 0.20) + Math.max(grossForCRA * 0.01, 200000)
+        const totalRelief = cra + pension + nhf
+        const taxableIncome = annualGross - totalRelief
+        
+        let paye = 0
+        if (taxableIncome > 3200000) {
+          paye = 560000 + (taxableIncome - 3200000) * 0.24
+        } else if (taxableIncome > 1600000) {
+          paye = 224000 + (taxableIncome - 1600000) * 0.21
+        } else if (taxableIncome > 1100000) {
+          paye = 129000 + (taxableIncome - 1100000) * 0.19
+        } else if (taxableIncome > 600000) {
+          paye = 54000 + (taxableIncome - 600000) * 0.15
+        } else if (taxableIncome > 300000) {
+          paye = 21000 + (taxableIncome - 300000) * 0.11
+        } else {
+          paye = taxableIncome * 0.07
+        }
+        
+        const totalDeductions = paye + pension + nhf
+        const netPay = annualGross - totalDeductions
+
+        const payrollData: PayrollData = {
+          employee: empData,
+          month: currentMonth,
+          year: currentYear,
+          basicSalary,
+          housingAllowance,
+          transportAllowance,
+          otherAllowances,
+          grossSalary: annualGross,
+          paye,
+          pension,
+          nhf,
+          totalDeductions,
+          netPay
+        }
+
+        const doc = generateEmployeePayslipPDF(payrollData)
+        doc.save(`${empData.first_name}_${empData.last_name}_Payslip.pdf`)
+      }
+    })
+
+    toast({
+      title: "Success",
+      description: `Generated ${onboardEmployees.length} payslip PDF(s)`
+    })
+  }
+
   const handleLockPeriod = () => {
     setIsPayrollLocked(!isPayrollLocked)
     toast({
@@ -864,10 +969,24 @@ export default function Payroll() {
             </Button>
           </RoleBasedComponent>
           <RoleBasedComponent allowedRoles={['hr_manager', 'executive', 'finance']}>
-            <Button variant="outline" size="sm" onClick={handleExportPayroll}>
-              <Download className="mr-2 h-4 w-4" />
-              Export Payroll
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Download className="mr-2 h-4 w-4" />
+                  Export Payroll
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onClick={handleExportPayroll}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  Export as CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportPayrollPDF}>
+                  <FileDown className="mr-2 h-4 w-4" />
+                  Export as PDF
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </RoleBasedComponent>
           <RoleBasedComponent allowedRoles={['hr_manager']}>
             <Button size="sm" onClick={handleLockPeriod} variant={isPayrollLocked ? "destructive" : "default"}>
@@ -1313,6 +1432,7 @@ export default function Payroll() {
       </div>
 
       {/* Payroll History */}
+      <RoleBasedComponent allowedRoles={['executive', 'hr_manager', 'finance']}>
         <Card className="border-border/50 shadow-sm">
           <CardHeader>
             <CardTitle className="text-primary">Payroll History</CardTitle>
@@ -1373,6 +1493,7 @@ export default function Payroll() {
             </div>
           </CardContent>
         </Card>
+      </RoleBasedComponent>
     </div>
   )
 }

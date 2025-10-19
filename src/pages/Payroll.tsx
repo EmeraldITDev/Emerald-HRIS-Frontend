@@ -20,10 +20,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Calculator, Download, FileText, Lock, Settings } from "lucide-react"
+import { Calculator, Download, FileText, Lock, Settings, FileDown } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/contexts/AuthContext"
 import { RoleBasedComponent } from "@/components/RoleBasedComponent"
+import { 
+  generateEmployeePayslipPDF, 
+  generateContractorPayslipPDF, 
+  exportPayslipCSV,
+  downloadFile,
+  PayrollData,
+  ContractorPayrollData
+} from "@/utils/payslipExport"
 
 // Sample payroll data with realistic values for different roles
 const payrollRecords = [
@@ -429,6 +437,213 @@ export default function Payroll() {
     toast({
       title: "Tax Settings",
       description: "Tax settings panel will be available in the next update."
+    })
+  }
+
+  const handleExportPayslipPDF = (employeeId: string, period: string) => {
+    const employee = onboardEmployees.find(emp => emp.id === employeeId)
+    if (!employee) {
+      toast({
+        title: "Error",
+        description: "Employee not found",
+        variant: "destructive"
+      })
+      return
+    }
+
+    const empData = employees.find(e => e.id?.toString() === employeeId)
+    if (!empData) {
+      toast({
+        title: "Error",
+        description: "Employee data not found",
+        variant: "destructive"
+      })
+      return
+    }
+
+    const [year, month] = period.split('-')
+    const monthName = new Date(parseInt(year), parseInt(month) - 1).toLocaleString('default', { month: 'long' })
+    
+    const basicSalary = employee.basicSalary / 12 // Monthly basic salary
+    const isContractor = employee.employmentType !== 'Full-time'
+
+    if (isContractor) {
+      // Contract staff payslip
+      const contractFee = basicSalary
+      const withholdingTax = contractFee * 0.02 // 2% withholding tax
+      const netPay = contractFee - withholdingTax
+
+      const payrollData: ContractorPayrollData = {
+        employee: empData,
+        month: monthName,
+        year: year,
+        contractFee,
+        withholdingTax,
+        netPay
+      }
+
+      const doc = generateContractorPayslipPDF(payrollData)
+      doc.save(`${empData.first_name}_${empData.last_name}_Payslip.pdf`)
+    } else {
+      // Regular employee payslip
+      const annualGross = Math.round(basicSalary / 0.40)
+      const housingAllowance = Math.round(annualGross * 0.20)
+      const transportAllowance = Math.round(annualGross * 0.09)
+      const otherAllowances = Math.round(annualGross * 0.31)
+      
+      const pension = (housingAllowance + transportAllowance + basicSalary) * 0.08
+      const nhf = basicSalary * 0.025
+      
+      const grossForCRA = annualGross - (pension + nhf)
+      const cra = (grossForCRA * 0.20) + Math.max(grossForCRA * 0.01, 200000)
+      const totalRelief = cra + pension + nhf
+      const taxableIncome = annualGross - totalRelief
+      
+      let paye = 0
+      if (taxableIncome > 3200000) {
+        paye = 560000 + (taxableIncome - 3200000) * 0.24
+      } else if (taxableIncome > 1600000) {
+        paye = 224000 + (taxableIncome - 1600000) * 0.21
+      } else if (taxableIncome > 1100000) {
+        paye = 129000 + (taxableIncome - 1100000) * 0.19
+      } else if (taxableIncome > 600000) {
+        paye = 54000 + (taxableIncome - 600000) * 0.15
+      } else if (taxableIncome > 300000) {
+        paye = 21000 + (taxableIncome - 300000) * 0.11
+      } else {
+        paye = taxableIncome * 0.07
+      }
+      
+      const totalDeductions = paye + pension + nhf
+      const netPay = annualGross - totalDeductions
+
+      const payrollData: PayrollData = {
+        employee: empData,
+        month: monthName,
+        year: year,
+        basicSalary,
+        housingAllowance,
+        transportAllowance,
+        otherAllowances,
+        grossSalary: annualGross,
+        paye,
+        pension,
+        nhf,
+        totalDeductions,
+        netPay
+      }
+
+      const doc = generateEmployeePayslipPDF(payrollData)
+      doc.save(`${empData.first_name}_${empData.last_name}_Payslip.pdf`)
+    }
+
+    toast({
+      title: "Success",
+      description: "Payslip downloaded successfully"
+    })
+  }
+
+  const handleExportPayslipCSV = (employeeId: string, period: string) => {
+    const employee = onboardEmployees.find(emp => emp.id === employeeId)
+    if (!employee) {
+      toast({
+        title: "Error",
+        description: "Employee not found",
+        variant: "destructive"
+      })
+      return
+    }
+
+    const empData = employees.find(e => e.id?.toString() === employeeId)
+    if (!empData) {
+      toast({
+        title: "Error",
+        description: "Employee data not found",
+        variant: "destructive"
+      })
+      return
+    }
+
+    const [year, month] = period.split('-')
+    const monthName = new Date(parseInt(year), parseInt(month) - 1).toLocaleString('default', { month: 'long' })
+    
+    const basicSalary = employee.basicSalary / 12
+    const isContractor = employee.employmentType !== 'Full-time'
+
+    let csvContent: string
+
+    if (isContractor) {
+      const contractFee = basicSalary
+      const withholdingTax = contractFee * 0.02
+      const netPay = contractFee - withholdingTax
+
+      const payrollData: ContractorPayrollData = {
+        employee: empData,
+        month: monthName,
+        year: year,
+        contractFee,
+        withholdingTax,
+        netPay
+      }
+
+      csvContent = exportPayslipCSV(payrollData)
+    } else {
+      const annualGross = Math.round(basicSalary / 0.40)
+      const housingAllowance = Math.round(annualGross * 0.20)
+      const transportAllowance = Math.round(annualGross * 0.09)
+      const otherAllowances = Math.round(annualGross * 0.31)
+      
+      const pension = (housingAllowance + transportAllowance + basicSalary) * 0.08
+      const nhf = basicSalary * 0.025
+      
+      const grossForCRA = annualGross - (pension + nhf)
+      const cra = (grossForCRA * 0.20) + Math.max(grossForCRA * 0.01, 200000)
+      const totalRelief = cra + pension + nhf
+      const taxableIncome = annualGross - totalRelief
+      
+      let paye = 0
+      if (taxableIncome > 3200000) {
+        paye = 560000 + (taxableIncome - 3200000) * 0.24
+      } else if (taxableIncome > 1600000) {
+        paye = 224000 + (taxableIncome - 1600000) * 0.21
+      } else if (taxableIncome > 1100000) {
+        paye = 129000 + (taxableIncome - 1100000) * 0.19
+      } else if (taxableIncome > 600000) {
+        paye = 54000 + (taxableIncome - 600000) * 0.15
+      } else if (taxableIncome > 300000) {
+        paye = 21000 + (taxableIncome - 300000) * 0.11
+      } else {
+        paye = taxableIncome * 0.07
+      }
+      
+      const totalDeductions = paye + pension + nhf
+      const netPay = annualGross - totalDeductions
+
+      const payrollData: PayrollData = {
+        employee: empData,
+        month: monthName,
+        year: year,
+        basicSalary,
+        housingAllowance,
+        transportAllowance,
+        otherAllowances,
+        grossSalary: annualGross,
+        paye,
+        pension,
+        nhf,
+        totalDeductions,
+        netPay
+      }
+
+      csvContent = exportPayslipCSV(payrollData)
+    }
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    downloadFile(blob, `${empData.first_name}_${empData.last_name}_Payslip.csv`)
+
+    toast({
+      title: "Success",
+      description: "CSV exported successfully"
     })
   }
 
@@ -1115,11 +1330,12 @@ export default function Payroll() {
                     <TableHead className="text-xs md:text-sm">Tax</TableHead>
                     <TableHead className="text-xs md:text-sm">Net Pay</TableHead>
                     <TableHead className="text-xs md:text-sm">Status</TableHead>
+                    <TableHead className="text-xs md:text-sm">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {getVisiblePayrollRecords().map((record) => (
-                    <TableRow key={record.id}>
+                  <TableRow key={record.id}>
                       <TableCell className="font-medium text-xs md:text-sm">{record.employeeName}</TableCell>
                       <TableCell className="text-xs md:text-sm">{record.period}</TableCell>
                       <TableCell className="hidden md:table-cell text-xs md:text-sm">
@@ -1131,6 +1347,26 @@ export default function Payroll() {
                       <TableCell className="text-xs md:text-sm">{formatCurrency(record.paye)}</TableCell>
                       <TableCell className="font-medium text-xs md:text-sm">{formatCurrency(record.netPay)}</TableCell>
                       <TableCell>{getStatusBadge(record.status)}</TableCell>
+                      <TableCell>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleExportPayslipPDF(record.employeeId, record.period)}
+                            title="Download PDF Payslip"
+                          >
+                            <FileDown className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleExportPayslipCSV(record.employeeId, record.period)}
+                            title="Download CSV Payslip"
+                          >
+                            <FileText className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

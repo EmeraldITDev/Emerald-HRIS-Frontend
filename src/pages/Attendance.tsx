@@ -270,7 +270,9 @@ export default function Attendance() {
   // Auto-select current user for non-HR managers
   useEffect(() => {
     if (user && employees.length > 0 && user.role !== 'hr_manager') {
-      const currentUser = employees.find(emp => emp.id?.toString() === user.id?.toString())
+      const currentUser = employees.find(emp => 
+        emp.email?.toLowerCase() === user.email?.toLowerCase()
+      )
       if (currentUser) {
         setSelectedEmployee(currentUser.id?.toString() || '')
       }
@@ -1003,9 +1005,19 @@ export default function Attendance() {
                     ) : (
                       <Input
                         id="employee"
-                        value={employees.find(emp => emp.id?.toString() === user?.id?.toString())
-                          ? `${employees.find(emp => emp.id?.toString() === user?.id?.toString())?.employee_code} - ${employees.find(emp => emp.id?.toString() === user?.id?.toString())?.first_name} ${employees.find(emp => emp.id?.toString() === user?.id?.toString())?.last_name}`
-                          : isLoadingEmployees ? "Loading..." : "Employee not found"
+                        value={
+                          isLoadingEmployees 
+                            ? "Loading..." 
+                            : employees.length === 0
+                            ? user?.email || "Loading employee information..."
+                            : (() => {
+                                const currentEmployee = employees.find(emp => 
+                                  emp.email?.toLowerCase() === user?.email?.toLowerCase()
+                                );
+                                return currentEmployee 
+                                  ? `${currentEmployee.employee_code} - ${currentEmployee.first_name} ${currentEmployee.last_name}`
+                                  : user?.email || "Employee not found";
+                              })()
                         }
                         disabled
                         className="bg-muted cursor-not-allowed"

@@ -29,7 +29,9 @@ INSERT INTO employees (employee_id, first_name, last_name, email, phone, positio
 ('EMP007', 'James', 'Anderson', 'james.anderson@company.com', '+1-555-0107', 'Operations Coordinator', 'Operations', '2021-08-14', 58000.00, 'Full-time', 'Active'),
 ('EMP008', 'Jennifer', 'Martinez', 'jennifer.martinez@company.com', '+1-555-0108', 'Content Marketing Specialist', 'Marketing', '2023-04-03', 62000.00, 'Full-time', 'Active'),
 ('EMP009', 'Robert', 'Garcia', 'robert.garcia@company.com', '+1-555-0109', 'DevOps Engineer', 'Engineering', '2022-07-18', 88000.00, 'Full-time', 'Active'),
-('EMP010', 'Amanda', 'Lee', 'amanda.lee@company.com', '+1-555-0110', 'Sales Manager', 'Sales', '2020-12-01', 92000.00, 'Full-time', 'Active');
+('EMP010', 'Amanda', 'Lee', 'amanda.lee@company.com', '+1-555-0110', 'Sales Manager', 'Sales', '2020-12-01', 92000.00, 'Full-time', 'Active'),
+('EMP011', 'Bunmi', 'Babajide', 'bunmi.babajide@emeraldcfze.com', '+234 801 234 5678', 'Chief Executive Officer', 'Executive', '2020-01-15', 20000000.00, 'Full-time', 'Active'),
+('EMP012', 'Oluwapelumi', 'Adeyefa', 'oluwapelumi.adeyefa@emeraldcfze.com', '+234 802 345 6789', 'Corporate HR Manager', 'Human Resources', '2021-06-01', 5000000.00, 'Full-time', 'Active');
 
 -- Insert sample attendance records (last 30 days)
 INSERT INTO attendance (employee_id, date, check_in_time, check_out_time, total_hours, status) 

@@ -20,7 +20,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Calculator, Download, FileText, Lock, Settings } from "lucide-react"
+import { Calculator, Download, FileText, Lock, Settings, ChevronDown } from "lucide-react"
+import jsPDF from "jspdf"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/contexts/AuthContext"
 import { RoleBasedComponent } from "@/components/RoleBasedComponent"
@@ -432,117 +439,104 @@ export default function Payroll() {
     })
   }
 
-  const handleExportPayroll = () => {
-    // Calculate comprehensive payroll data for all employees
-    const exportData = onboardEmployees.map(employee => {
-      // Use employee's basic salary for calculation
-      const basicSalary = employee.basicSalary
-      const employmentType = employee.employmentType
+  const handleExportCSV = () => {
+    if (!selectedEmployee) {
+      toast({
+        title: "No Employee Selected",
+        description: "Please select an employee before exporting.",
+        variant: "destructive"
+      })
+      return
+    }
+
+    const selectedEmp = onboardEmployees.find(emp => emp.id === selectedEmployee)
+    if (!selectedEmp) return
+
+    // Calculate payroll for selected employee
+    const basicSalary = selectedEmp.basicSalary
+    const employmentType = selectedEmp.employmentType
+    
+    let annualGross, housing, transport, other, pensionEmployee, pensionEmployer, nhf;
+    let grossForCRA, cra, totalRelief, taxableIncome, annualTax, annualNet;
+    
+    if (employmentType === "Full-time") {
+      annualGross = Math.round(basicSalary / 0.40)
+      housing = Math.round(annualGross * 0.20)
+      transport = Math.round(annualGross * 0.09)
+      other = Math.round(annualGross * 0.31)
+      pensionEmployee = (housing + transport + basicSalary) * 0.08
+      pensionEmployer = annualGross * 0.10
+      nhf = basicSalary * 0.025
+      grossForCRA = annualGross - (pensionEmployee + nhf)
+      cra = (grossForCRA * 0.20) + Math.max(grossForCRA * 0.01, 200000)
+      totalRelief = cra + pensionEmployee + nhf
+      taxableIncome = annualGross - totalRelief
       
-      let annualGross, housing, transport, other, pensionEmployee, pensionEmployer, nhf;
-      let grossForCRA, cra, totalRelief, taxableIncome, annualTax, annualNet;
-      
-      if (employmentType === "Full-time") {
-        // Calculate Annual Gross from Basic Salary (rounded to nearest whole number)
-        annualGross = Math.round(basicSalary / 0.40)
-        
-        // Calculate allowances as percentages of Annual Gross (rounded to nearest whole number)
-        housing = Math.round(annualGross * 0.20)
-        transport = Math.round(annualGross * 0.09)
-        other = Math.round(annualGross * 0.31)
-        
-        // Pension calculations: 8% of (Housing + Transport + Basic Salary)
-        pensionEmployee = (housing + transport + basicSalary) * 0.08
-        pensionEmployer = annualGross * 0.10
-        
-        // NHF based on Basic Salary
-        nhf = basicSalary * 0.025
-        
-        // Gross for CRA calculation
-        grossForCRA = annualGross - (pensionEmployee + nhf)
-        
-        // CRA (Consolidated Relief Allowance)
-        // Formula: 20% of Gross for CRA + MAX(1% of Gross for CRA, 200000)
-        cra = (grossForCRA * 0.20) + Math.max(grossForCRA * 0.01, 200000)
-        
-        // Total Relief Allowances
-        totalRelief = cra + pensionEmployee + nhf
-        
-        // Taxable Income
-        taxableIncome = annualGross - totalRelief
-        
-        // PAYE Tax Calculation
-        annualTax = 0
-        if (taxableIncome > 300000) {
-          if (taxableIncome <= 600000) {
-            annualTax = (taxableIncome - 300000) * 0.07
-          } else if (taxableIncome <= 1100000) {
-            annualTax = 21000 + (taxableIncome - 600000) * 0.11
-          } else if (taxableIncome <= 1600000) {
-            annualTax = 76000 + (taxableIncome - 1100000) * 0.15
-          } else if (taxableIncome <= 3200000) {
-            annualTax = 151000 + (taxableIncome - 1600000) * 0.19
-          } else if (taxableIncome <= 3900000) {
-            annualTax = 455000 + (taxableIncome - 3200000) * 0.21
-          } else {
-            annualTax = 602000 + (taxableIncome - 3900000) * 0.24
-          }
-        }
-        
-        // Annual Net Pay
-        annualNet = annualGross - annualTax
-        
+      // PAYE Tax Calculation
+      if (taxableIncome > 3200000) {
+        annualTax = 560000 + (taxableIncome - 3200000) * 0.24
+      } else if (taxableIncome > 1600000) {
+        annualTax = 224000 + (taxableIncome - 1600000) * 0.21
+      } else if (taxableIncome > 1100000) {
+        annualTax = 129000 + (taxableIncome - 1100000) * 0.19
+      } else if (taxableIncome > 600000) {
+        annualTax = 54000 + (taxableIncome - 600000) * 0.15
+      } else if (taxableIncome > 300000) {
+        annualTax = 21000 + (taxableIncome - 300000) * 0.11
       } else {
-        // Contract: Simple calculation
-        annualGross = basicSalary
-        housing = 0
-        transport = 0
-        other = 0
-        pensionEmployee = 0
-        pensionEmployer = 0
-        nhf = 0
-        grossForCRA = 0
-        cra = 0
-        totalRelief = 0
-        taxableIncome = annualGross
-        annualTax = annualGross * 0.05
-        annualNet = annualGross - annualTax
+        annualTax = taxableIncome * 0.07
       }
       
-      const nsitf = employmentType === "Full-time" ? annualGross * 0.01 : 0
-      const itf = employmentType === "Full-time" ? annualGross * 0.01 : 0
-      const totalEmployerCost = annualGross + pensionEmployer + nsitf + itf
-      
-      return {
-        'Employee ID': employee.id,
-        'Employee Name': employee.name,
-        'Employment Type': employmentType,
-        'Annual Basic Salary': basicSalary,
-        'Annual Housing Allowance': housing,
-        'Annual Transport Allowance': transport,
-        'Annual Other Allowance': other,
-        'Annual Gross Salary': annualGross,
-        'Employee Pension (8% of Housing + Transport + Basic)': pensionEmployee,
-        'NHF (2.5% of Basic)': nhf,
-        'Gross for CRA': grossForCRA,
-        'CRA': cra,
-        'Total Relief Allowances': totalRelief,
-        'Taxable Income': taxableIncome,
-        'Annual PAYE/Withholding Tax': annualTax,
-        'Annual Net Pay': annualNet,
-        'Employer Pension (10%)': pensionEmployer,
-        'NSITF': nsitf,
-        'ITF': itf,
-        'Total Employer Cost': totalEmployerCost,
-        'Monthly Basic': basicSalary / 12,
-        'Monthly Gross': annualGross / 12,
-        'Monthly Tax': annualTax / 12,
-        'Monthly Net': annualNet / 12
-      }
-    })
+      annualNet = annualGross - annualTax
+    } else {
+      annualGross = basicSalary
+      housing = 0
+      transport = 0
+      other = 0
+      pensionEmployee = 0
+      pensionEmployer = 0
+      nhf = 0
+      grossForCRA = 0
+      cra = 0
+      totalRelief = 0
+      taxableIncome = annualGross
+      annualTax = annualGross * 0.05
+      annualNet = annualGross - annualTax
+    }
+    
+    const nsitf = employmentType === "Full-time" ? annualGross * 0.01 : 0
+    const itf = employmentType === "Full-time" ? annualGross * 0.01 : 0
+    const totalEmployerCost = annualGross + pensionEmployer + nsitf + itf
+    
+    const exportData = [{
+      'Employee ID': selectedEmp.id,
+      'Employee Name': selectedEmp.name,
+      'Employment Type': employmentType,
+      'Annual Basic Salary': basicSalary,
+      'Annual Housing Allowance': housing,
+      'Annual Transport Allowance': transport,
+      'Annual Other Allowance': other,
+      'Annual Gross Salary': annualGross,
+      'Employee Pension (8% of Housing + Transport + Basic)': pensionEmployee,
+      'NHF (2.5% of Basic)': nhf,
+      'Gross for CRA': grossForCRA,
+      'CRA': cra,
+      'Total Relief Allowances': totalRelief,
+      'Taxable Income': taxableIncome,
+      'Annual PAYE/Withholding Tax': annualTax,
+      'Annual Net Pay': annualNet,
+      'Employer Pension (10%)': pensionEmployer,
+      'NSITF': nsitf,
+      'ITF': itf,
+      'Total Employer Cost': totalEmployerCost,
+      'Monthly Basic': basicSalary / 12,
+      'Monthly Gross': annualGross / 12,
+      'Monthly Tax': annualTax / 12,
+      'Monthly Net': annualNet / 12
+    }]
 
     // Convert to CSV
-    const headers = Object.keys(exportData[0] || {})
+    const headers = Object.keys(exportData[0])
     const csvContent = [
       headers.join(','),
       ...exportData.map(row => headers.map(header => row[header as keyof typeof row]).join(','))
@@ -553,7 +547,9 @@ export default function Payroll() {
     const url = window.URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `comprehensive_payroll_export_${new Date().toISOString().split('T')[0]}.csv`
+    const firstName = selectedEmp.name.split(' ')[0]
+    const lastName = selectedEmp.name.split(' ').slice(1).join('_')
+    a.download = `${firstName}_${lastName}_Payslip.csv`
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
@@ -561,7 +557,233 @@ export default function Payroll() {
 
     toast({
       title: "Export Complete",
-      description: `Comprehensive payroll data exported for ${exportData.length} employees with all salary components and deductions.`
+      description: `Payroll data exported for ${selectedEmp.name}`
+    })
+  }
+
+  const handleExportPDF = () => {
+    if (!selectedEmployee) {
+      toast({
+        title: "No Employee Selected",
+        description: "Please select an employee before exporting.",
+        variant: "destructive"
+      })
+      return
+    }
+
+    const selectedEmp = onboardEmployees.find(emp => emp.id === selectedEmployee)
+    if (!selectedEmp) return
+
+    // Calculate payroll for selected employee
+    const basicSalary = selectedEmp.basicSalary
+    const employmentType = selectedEmp.employmentType
+    
+    let annualGross, housing, transport, other, pensionEmployee, nhf, annualTax, annualNet;
+    
+    if (employmentType === "Full-time") {
+      annualGross = Math.round(basicSalary / 0.40)
+      housing = Math.round(annualGross * 0.20)
+      transport = Math.round(annualGross * 0.09)
+      other = Math.round(annualGross * 0.31)
+      pensionEmployee = (housing + transport + basicSalary) * 0.08
+      nhf = basicSalary * 0.025
+      const grossForCRA = annualGross - (pensionEmployee + nhf)
+      const cra = (grossForCRA * 0.20) + Math.max(grossForCRA * 0.01, 200000)
+      const totalRelief = cra + pensionEmployee + nhf
+      const taxableIncome = annualGross - totalRelief
+      
+      // PAYE Tax Calculation
+      if (taxableIncome > 3200000) {
+        annualTax = 560000 + (taxableIncome - 3200000) * 0.24
+      } else if (taxableIncome > 1600000) {
+        annualTax = 224000 + (taxableIncome - 1600000) * 0.21
+      } else if (taxableIncome > 1100000) {
+        annualTax = 129000 + (taxableIncome - 1100000) * 0.19
+      } else if (taxableIncome > 600000) {
+        annualTax = 54000 + (taxableIncome - 600000) * 0.15
+      } else if (taxableIncome > 300000) {
+        annualTax = 21000 + (taxableIncome - 300000) * 0.11
+      } else {
+        annualTax = taxableIncome * 0.07
+      }
+      
+      annualNet = annualGross - annualTax
+    } else {
+      annualGross = basicSalary
+      housing = 0
+      transport = 0
+      other = 0
+      pensionEmployee = 0
+      nhf = 0
+      annualTax = annualGross * 0.02 // 2% Withholding Tax for contractors
+      annualNet = annualGross - annualTax
+    }
+
+    // Monthly values
+    const monthlyGross = annualGross / 12
+    const monthlyBasic = basicSalary / 12
+    const monthlyHousing = housing / 12
+    const monthlyTransport = transport / 12
+    const monthlyOther = other / 12
+    const monthlyPension = pensionEmployee / 12
+    const monthlyNHF = nhf / 12
+    const monthlyTax = annualTax / 12
+    const monthlyNet = annualNet / 12
+    const totalDeductions = monthlyTax + monthlyPension + monthlyNHF
+
+    // Create PDF
+    const pdf = new jsPDF()
+    const pageWidth = pdf.internal.pageSize.getWidth()
+    
+    // Company Header
+    pdf.setFontSize(10)
+    pdf.text("Sapetro Towers,", pageWidth / 2, 15, { align: "center" })
+    pdf.setFontSize(12)
+    pdf.setFont("helvetica", "bold")
+    pdf.text("EMERALD", 20, 22)
+    pdf.setFontSize(10)
+    pdf.setFont("helvetica", "normal")
+    pdf.text("5th Floor Aureum Suite 1,", pageWidth / 2, 22, { align: "center" })
+    pdf.text("Adeola Odeku Street,", pageWidth / 2, 27, { align: "center" })
+    pdf.setFont("helvetica", "bold")
+    pdf.text("INDUSTRIAL CO.", 20, 29)
+    pdf.setFontSize(9)
+    pdf.setFont("helvetica", "normal")
+    pdf.text("Victoria Island, Lagos, Nigeria.", pageWidth / 2, 32, { align: "center" })
+    pdf.text("CFZE", 20, 35)
+    pdf.text("+234 123 456 7890", pageWidth / 2, 37, { align: "center" })
+    pdf.text("employee@emeraldcfze.com", pageWidth / 2, 42, { align: "center" })
+
+    // Title
+    pdf.setFontSize(16)
+    pdf.setFont("helvetica", "bold")
+    pdf.text("PAYSLIP", pageWidth / 2, 55, { align: "center" })
+
+    // Employee Details
+    pdf.setFontSize(10)
+    pdf.setFont("helvetica", "normal")
+    pdf.text(`${employmentType === "Full-time" ? "Employee" : "Contractor"} Name: ${selectedEmp.name}`, 20, 70)
+    const currentDate = new Date()
+    const monthYear = currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+    pdf.text(`Month and Year: ${monthYear}`, 20, 77)
+
+    let yPos = 90
+
+    if (employmentType === "Full-time") {
+      // Full-time payslip format
+      pdf.setFont("helvetica", "bold")
+      pdf.text("Pay Component", 20, yPos)
+      pdf.setFont("helvetica", "normal")
+      
+      // Table headers
+      yPos += 5
+      pdf.line(20, yPos, pageWidth - 20, yPos)
+      yPos += 7
+      pdf.text("Basic Salary (40%)", 20, yPos)
+      pdf.text(`₦${monthlyBasic.toFixed(2)}`, 120, yPos)
+      pdf.text("40% of Gross", 160, yPos)
+      
+      yPos += 7
+      pdf.text("Housing Allowance (20%)", 20, yPos)
+      pdf.text(`₦${monthlyHousing.toFixed(2)}`, 120, yPos)
+      pdf.text("20% of Gross", 160, yPos)
+      
+      yPos += 7
+      pdf.text("Transport Allowance (9%)", 20, yPos)
+      pdf.text(`₦${monthlyTransport.toFixed(2)}`, 120, yPos)
+      pdf.text("9% of Gross", 160, yPos)
+      
+      yPos += 7
+      pdf.text("All Other Allowances (31%)", 20, yPos)
+      pdf.text(`₦${monthlyOther.toFixed(2)}`, 120, yPos)
+      pdf.text("31% of Gross", 160, yPos)
+      
+      yPos += 7
+      pdf.setFont("helvetica", "bold")
+      pdf.text("Gross Monthly Salary", 20, yPos)
+      pdf.text(`₦${monthlyGross.toFixed(2)}`, 120, yPos)
+      
+      // Deductions
+      yPos += 12
+      pdf.text("Deductions", 20, yPos)
+      pdf.setFont("helvetica", "normal")
+      
+      yPos += 5
+      pdf.line(20, yPos, pageWidth - 20, yPos)
+      yPos += 7
+      pdf.text("PAYE", 20, yPos)
+      pdf.text(`₦${monthlyTax.toFixed(2)}`, 120, yPos)
+      pdf.text("Statutory tax", 160, yPos)
+      
+      yPos += 7
+      pdf.text("Pension (Employee)", 20, yPos)
+      pdf.text(`₦${monthlyPension.toFixed(2)}`, 120, yPos)
+      pdf.text("8% of BHT", 160, yPos)
+      
+      yPos += 7
+      pdf.text("NHF (2.5%)", 20, yPos)
+      pdf.text(`₦${monthlyNHF.toFixed(2)}`, 120, yPos)
+      pdf.text("2.5% of Basic Salary", 160, yPos)
+      
+      yPos += 7
+      pdf.setFont("helvetica", "bold")
+      pdf.text("Total Deductions", 20, yPos)
+      pdf.text(`₦${totalDeductions.toFixed(2)}`, 120, yPos)
+      
+      yPos += 7
+      pdf.text("Net Monthly Pay", 20, yPos)
+      pdf.text(`₦${monthlyNet.toFixed(2)}`, 120, yPos)
+    } else {
+      // Contractor payslip format
+      pdf.setFont("helvetica", "bold")
+      pdf.text("Pay Component", 20, yPos)
+      pdf.setFont("helvetica", "normal")
+      
+      yPos += 5
+      pdf.line(20, yPos, pageWidth - 20, yPos)
+      yPos += 7
+      pdf.text("Contract Fee (Gross)", 20, yPos)
+      pdf.text(`₦${monthlyGross.toFixed(2)}`, 120, yPos)
+      
+      // Deductions
+      yPos += 12
+      pdf.setFont("helvetica", "bold")
+      pdf.text("Deductions", 20, yPos)
+      pdf.setFont("helvetica", "normal")
+      
+      yPos += 5
+      pdf.line(20, yPos, pageWidth - 20, yPos)
+      yPos += 7
+      pdf.text("Withholding Tax (2%)", 20, yPos)
+      pdf.text(`₦${monthlyTax.toFixed(2)}`, 120, yPos)
+      
+      yPos += 7
+      pdf.setFont("helvetica", "bold")
+      pdf.text("Total Deductions", 20, yPos)
+      pdf.text(`₦${monthlyTax.toFixed(2)}`, 120, yPos)
+      
+      yPos += 7
+      pdf.text("Net Pay", 20, yPos)
+      pdf.text(`₦${monthlyNet.toFixed(2)}`, 120, yPos)
+      pdf.text("Gross minus deduction", 160, yPos)
+    }
+
+    // Signature
+    yPos += 15
+    pdf.setFont("helvetica", "normal")
+    pdf.setFontSize(9)
+    pdf.text("Signature:", 20, yPos)
+    yPos += 10
+    pdf.text("Human Resource Department", 20, yPos)
+
+    // Save PDF
+    const firstName = selectedEmp.name.split(' ')[0]
+    const lastName = selectedEmp.name.split(' ').slice(1).join('_')
+    pdf.save(`${firstName}_${lastName}_Payslip.pdf`)
+
+    toast({
+      title: "PDF Export Complete",
+      description: `Payslip generated for ${selectedEmp.name}`
     })
   }
 
@@ -648,24 +870,35 @@ export default function Payroll() {
               Tax Settings
             </Button>
           </RoleBasedComponent>
-          <RoleBasedComponent allowedRoles={['hr_manager', 'executive', 'finance']}>
-            <Button variant="outline" size="sm" onClick={handleExportPayroll}>
-              <Download className="mr-2 h-4 w-4" />
-              Export Payroll
-            </Button>
-          </RoleBasedComponent>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Download className="mr-2 h-4 w-4" />
+                Export Payroll
+                <ChevronDown className="ml-2 h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="bg-popover border shadow-lg">
+              <DropdownMenuItem onClick={handleExportPDF}>
+                Export as PDF
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportCSV}>
+                Export as CSV
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <RoleBasedComponent allowedRoles={['hr_manager']}>
             <Button size="sm" onClick={handleLockPeriod} variant={isPayrollLocked ? "destructive" : "default"}>
               <Lock className="mr-2 h-4 w-4" />
-              {isPayrollLocked ? "Unlock Payroll" : "Lock Period"}
+              {isPayrollLocked ? "Unlock Period" : "Lock Period"}
             </Button>
           </RoleBasedComponent>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
-        {/* Payroll Calculator - For HR Manager and Finance */}
-        <RoleBasedComponent allowedRoles={['hr_manager', 'finance']}>
+        {/* Payroll Calculator - For HR Manager only */}
+        <RoleBasedComponent allowedRoles={['hr_manager']}>
           <Card className="lg:col-span-1 border-border/50 shadow-sm">
             <CardHeader>
               <CardTitle className="text-primary flex items-center">
@@ -1080,25 +1313,13 @@ export default function Payroll() {
                 </div>
               </div>
 
-              {/* Save Payroll Button */}
-              <RoleBasedComponent allowedRoles={['hr_manager', 'executive', 'finance']}>
-                <div className="flex justify-end border-t pt-4">
-                  <Button 
-                    onClick={() => savePayroll()}
-                    disabled={!selectedEmployee || !selectedPeriod || !payrollData.basicSalary}
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white"
-                  >
-                    Save Payroll & Update Employee Record
-                  </Button>
-                </div>
-              </RoleBasedComponent>
             </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Payroll History */}
-      <RoleBasedComponent allowedRoles={['executive', 'hr_manager', 'finance']}>
+      <RoleBasedComponent allowedRoles={['hr_manager']}>
         <Card className="border-border/50 shadow-sm">
           <CardHeader>
             <CardTitle className="text-primary">Payroll History</CardTitle>

@@ -568,10 +568,12 @@ export default function Attendance() {
     const clockInStartTime = 7 * 60; // 7:00 AM in minutes
     const clockInEndTime = 9 * 60 + 30; // 9:30 AM in minutes
 
+    console.log('Current time:', currentTime.toLocaleTimeString(), 'Minutes:', currentTimeInMinutes, 'Allowed:', clockInStartTime, '-', clockInEndTime);
+
     if (currentTimeInMinutes < clockInStartTime || currentTimeInMinutes > clockInEndTime) {
       toast({ 
         title: "Clock In Unavailable", 
-        description: "Clock in is only allowed between 7:00 AM and 9:30 AM.", 
+        description: `Clock in is only allowed between 7:00 AM and 9:30 AM. Current time: ${currentTime.toLocaleTimeString()}`, 
         variant: "destructive" 
       });
       return;

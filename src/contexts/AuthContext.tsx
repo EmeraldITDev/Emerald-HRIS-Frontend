@@ -311,19 +311,6 @@ const dummyUsers: Record<string, { user: User; password: string }> = {
       department: 'Procurement'
     },
     password: 'password123'
-  },
-  
-  // ============ CONTRACT STAFF ============
-  'contractor@emeraldcfze.com': {
-    user: {
-      id: '24',
-      firstName: 'Samson',
-      lastName: 'Contractor',
-      email: 'contractor@emeraldcfze.com',
-      role: 'contract_staff',
-      department: 'Contract Services'
-    },
-    password: 'password123'
   }
 };
 

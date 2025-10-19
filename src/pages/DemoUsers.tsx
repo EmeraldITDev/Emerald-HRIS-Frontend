@@ -21,7 +21,6 @@ const demoUsersByDepartment = {
   'Technical Operations': [
     { email: 'henry.marcus@emeraldcfze.com', name: 'Henry Marcus', role: 'Line Manager', password: 'password123' },
     { email: 'chidi.okonkwo@emeraldcfze.com', name: 'Chidi Okonkwo', role: 'Employee', password: 'password123' },
-    { email: 'contractor@emeraldcfze.com', name: 'Samson Contractor', role: 'Contract Staff', password: 'password123' },
   ],
   'Business Development': [
     { email: 'aisha.bello@emeraldcfze.com', name: 'Aisha Bello', role: 'Line Manager', password: 'password123' },
@@ -63,7 +62,6 @@ const getRoleBadgeColor = (role: string) => {
   if (role.includes('Manager') || role.includes('HR')) return 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400';
   if (role.includes('Finance')) return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-400';
   if (role.includes('IT')) return 'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400';
-  if (role.includes('Contract')) return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400';
   return 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400';
 };
 

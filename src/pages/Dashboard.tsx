@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from "react"
 import { DashboardStats } from "@/components/DashboardStats"
-import { ContractStaffDashboard } from "@/components/ContractStaffDashboard"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -615,12 +614,7 @@ export default function Dashboard() {
   }
 
   return (
-    <>
-      {/* Contract Staff Dashboard */}
-      {user?.role === 'contract_staff' ? (
-        <ContractStaffDashboard />
-      ) : (
-        <div className="space-y-4 md:space-y-6">
+    <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col space-y-3 md:space-y-0 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-foreground">{getRoleSpecificTitle()}</h1>
@@ -1404,7 +1398,5 @@ export default function Dashboard() {
         <ApiTest />
       </RoleBasedComponent>
     </div>
-      )}
-    </>
   )
 }

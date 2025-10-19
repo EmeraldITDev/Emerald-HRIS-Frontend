@@ -472,6 +472,25 @@ export default function Dashboard() {
       toast({ title: "Error", description: "No user logged in.", variant: "destructive" })
       return
     }
+
+    // Enforce clock-in window (7:00 AM - 9:30 AM)
+    const nowDate = new Date()
+    const currentHour = nowDate.getHours()
+    const currentMinute = nowDate.getMinutes()
+    const currentTimeInMinutes = currentHour * 60 + currentMinute
+    const clockInStartTime = 7 * 60 // 7:00 AM
+    const clockInEndTime = 9 * 60 + 30 // 9:30 AM
+    console.log('Clock-in (Dashboard):', nowDate.toLocaleTimeString(), 'mins:', currentTimeInMinutes, 'allowed:', clockInStartTime, '-', clockInEndTime)
+
+    if (currentTimeInMinutes < clockInStartTime || currentTimeInMinutes > clockInEndTime) {
+      toast({
+        title: "Clock In Unavailable",
+        description: `Clock in is only allowed between 7:00 AM and 9:30 AM. Current time: ${nowDate.toLocaleTimeString()}`,
+        variant: "destructive"
+      })
+      return
+    }
+
     try {
       setIsPunching(true)
       const today = format(new Date(), 'yyyy-MM-dd')

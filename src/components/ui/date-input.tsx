@@ -43,18 +43,29 @@ export function DateInput({
 }: DateInputProps) {
   const [inputValue, setInputValue] = React.useState("")
   const [isOpen, setIsOpen] = React.useState(false)
+  const [displayMonth, setDisplayMonth] = React.useState<Date>(value || new Date())
 
   // Update input value when date prop changes
   React.useEffect(() => {
     if (value) {
       setInputValue(format(value, "MM/dd/yy"))
+      setDisplayMonth(value)
     } else {
       setInputValue("")
     }
   }, [value])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = e.target.value
+    let newValue = e.target.value.replace(/[^\d]/g, '') // Remove non-digits
+    
+    // Auto-format with slashes
+    if (newValue.length >= 2) {
+      newValue = newValue.slice(0, 2) + '/' + newValue.slice(2)
+    }
+    if (newValue.length >= 5) {
+      newValue = newValue.slice(0, 5) + '/' + newValue.slice(5, 9)
+    }
+    
     setInputValue(newValue)
 
     // Try to parse the date in multiple formats
@@ -69,6 +80,7 @@ export function DateInput({
           if (maxDate && parsedDate > maxDate) return
           
           onChange?.(parsedDate)
+          setDisplayMonth(parsedDate)
           return
         }
       } catch {
@@ -92,12 +104,14 @@ export function DateInput({
   const handleYearChange = (year: string) => {
     const currentDate = value || new Date()
     const newDate = new Date(parseInt(year), currentDate.getMonth(), currentDate.getDate())
+    setDisplayMonth(newDate)
     onChange?.(newDate)
   }
 
   const handleMonthChange = (month: string) => {
     const currentDate = value || new Date()
     const newDate = new Date(currentDate.getFullYear(), parseInt(month), currentDate.getDate())
+    setDisplayMonth(newDate)
     onChange?.(newDate)
   }
 
@@ -172,8 +186,11 @@ export function DateInput({
           <Calendar
             mode="single"
             selected={value}
+            month={displayMonth}
+            onMonthChange={setDisplayMonth}
             onSelect={(date) => {
               onChange?.(date)
+              if (date) setDisplayMonth(date)
               setIsOpen(false)
             }}
             disabled={(date) => {

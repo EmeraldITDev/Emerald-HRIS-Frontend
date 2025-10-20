@@ -261,8 +261,11 @@ export default function Benefits() {
     }))
   }
   
-  // Get current user's benefits
-  const myBenefits = benefits.find(b => b.employeeId === user?.id)
+  // Get current user's benefits (match by email for reliability)
+  const myBenefits = benefits.find(b => {
+    const employee = employees.find(e => e.id?.toString() === b.employeeId)
+    return employee?.email?.toLowerCase() === user?.email?.toLowerCase()
+  })
 
   const handleCSVUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]

@@ -183,7 +183,10 @@ export default function Performance() {
       achievements: 'Reduced processing errors by 20%, contributed to team projects consistently',
       areasForImprovement: 'Time management, taking more initiative on projects',
       comments: 'Lisa meets expectations but has room to grow. Encourage her to take on more challenging tasks and be more proactive.',
-      employeeComments: 'I appreciate the feedback and will work on being more proactive in identifying improvement opportunities.'
+      employeeComments: 'I appreciate the feedback and will work on being more proactive in identifying improvement opportunities.',
+      selfAssessment: 'I have worked on reducing errors in our operational processes. I completed my assigned tasks on time and collaborated with team members on various projects. I recognize I need to be more proactive in suggesting improvements.',
+      selfAssessmentDate: '2024-11-28',
+      selfAssessmentStatus: 'Sent to Line Manager'
     }
   ])
   

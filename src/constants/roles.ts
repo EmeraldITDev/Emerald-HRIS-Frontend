@@ -20,17 +20,11 @@ export const PERMISSIONS = {
 } as const;
 
 export const ROLE_OPTIONS = [
-  { label: 'Executive', value: 'executive' },
-  { label: 'HR Manager', value: 'hr_manager' },
+  { label: 'Executives & HR Managers', value: 'executive' }, // Combined - uses executive role
   { label: 'Corporate HR', value: 'corporate_hr' },
   { label: 'Line Manager', value: 'line_manager' },
-  { label: 'Finance', value: 'finance' },
-  { label: 'IT Admin', value: 'it_admin' },
-  { label: 'IT Power User', value: 'it_power_user' },
-  { label: 'Consulting HR', value: 'consulting_hr' },
-  { label: 'Contract HR', value: 'contract_hr' },
-  { label: 'Corporate User', value: 'corporate_user' },
-  { label: 'Contract Staff', value: 'contract_staff' },
+  { label: 'Finance Manager', value: 'finance' },
+  { label: 'IT (Power User)', value: 'it_power_user' },
   { label: 'Contract Employee', value: 'contract_employee' },
   { label: 'General Employee', value: 'general_employee' },
 ];

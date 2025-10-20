@@ -516,7 +516,8 @@ export default function Performance() {
   // Determine user's access level
   const isExecutiveOrHR = user?.role === 'executive' || user?.role === 'hr_manager' || user?.role === 'corporate_hr'
   const isLineManager = user?.role === 'line_manager'
-  const isGeneralEmployee = user?.role === 'general_employee'
+  // All employee-level roles (not executive, HR, or line manager)
+  const isGeneralEmployee = !isExecutiveOrHR && !isLineManager
   const canManageReviews = isExecutiveOrHR || isLineManager
   const userDepartment = user?.department
 
@@ -525,7 +526,7 @@ export default function Performance() {
 
   // Filter reviews based on role and department
   const filteredReviews = reviews.filter(review => {
-    // General employees can only see their own reviews
+    // General employees (including finance, IT, etc.) can only see their own reviews
     if (isGeneralEmployee) {
       return review.employeeId === currentEmployeeEmail
     }

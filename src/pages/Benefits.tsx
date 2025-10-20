@@ -14,14 +14,21 @@ import { useAuth } from '@/contexts/AuthContext'
 import { apiService, Employee } from '@/lib/api'
 import RoleBasedComponent from '@/components/RoleBasedComponent'
 
+interface BenefitDetail {
+  status: 'active' | 'inactive'
+  cost: number
+  usage: number // percentage 0-100
+  details?: string
+}
+
 interface EmployeeBenefit {
   id: string
   employeeId: string
   employeeName: string
-  hmo: boolean
-  lifeInsurance: boolean
-  internet: boolean
-  computer: boolean
+  hmo: BenefitDetail
+  lifeInsurance: BenefitDetail
+  internet: BenefitDetail
+  equipment: BenefitDetail
   lastUpdated: string
 }
 
@@ -32,51 +39,52 @@ export default function Benefits() {
       id: '1',
       employeeId: 'EMP001',
       employeeName: 'Adebayo Johnson',
-      hmo: true,
-      lifeInsurance: true,
-      internet: false,
-      computer: true,
+      hmo: { status: 'active', cost: 50000, usage: 60, details: 'Family plan' },
+      lifeInsurance: { status: 'active', cost: 25000, usage: 0, details: '₦5M coverage' },
+      internet: { status: 'inactive', cost: 0, usage: 0 },
+      equipment: { status: 'active', cost: 450000, usage: 100, details: 'MacBook Pro 2023' },
       lastUpdated: '2024-01-15'
     },
     {
       id: '2',
       employeeId: 'EMP002',
       employeeName: 'Fatima Abdul',
-      hmo: true,
-      lifeInsurance: false,
-      internet: true,
-      computer: true,
+      hmo: { status: 'active', cost: 50000, usage: 45, details: 'Individual plan' },
+      lifeInsurance: { status: 'inactive', cost: 0, usage: 0 },
+      internet: { status: 'active', cost: 15000, usage: 70, details: '₦15k/month' },
+      equipment: { status: 'active', cost: 350000, usage: 100, details: 'Dell Latitude' },
       lastUpdated: '2024-01-10'
     },
     {
       id: '3',
       employeeId: 'EMP003',
       employeeName: 'Chinedu Okafor',
-      hmo: false,
-      lifeInsurance: true,
-      internet: true,
-      computer: false,
+      hmo: { status: 'inactive', cost: 0, usage: 0 },
+      lifeInsurance: { status: 'active', cost: 25000, usage: 0, details: '₦3M coverage' },
+      internet: { status: 'active', cost: 15000, usage: 85, details: '₦15k/month' },
+      equipment: { status: 'inactive', cost: 0, usage: 0 },
       lastUpdated: '2024-01-20'
     },
     {
       id: '4',
       employeeId: 'EMP004',
       employeeName: 'Kemi Adeleke',
-      hmo: true,
-      lifeInsurance: true,
-      internet: true,
-      computer: true,
+      hmo: { status: 'active', cost: 50000, usage: 30, details: 'Family plan' },
+      lifeInsurance: { status: 'active', cost: 25000, usage: 0, details: '₦5M coverage' },
+      internet: { status: 'active', cost: 15000, usage: 50, details: '₦15k/month' },
+      equipment: { status: 'active', cost: 400000, usage: 100, details: 'HP EliteBook' },
       lastUpdated: '2024-01-18'
     }
   ])
 
-  const [newBenefit, setNewBenefit] = useState({
-    employeeId: '',
-    employeeName: '',
-    hmo: false,
-    lifeInsurance: false,
-    internet: false,
-    computer: false
+  const [selectedEmployee, setSelectedEmployee] = useState('')
+  const [editingBenefit, setEditingBenefit] = useState<EmployeeBenefit | null>(null)
+  const [showManageBenefitDialog, setShowManageBenefitDialog] = useState(false)
+  const [benefitForm, setBenefitForm] = useState({
+    hmo: { status: 'inactive' as 'active' | 'inactive', cost: 0, usage: 0, details: '' },
+    lifeInsurance: { status: 'inactive' as 'active' | 'inactive', cost: 0, usage: 0, details: '' },
+    internet: { status: 'inactive' as 'active' | 'inactive', cost: 0, usage: 0, details: '' },
+    equipment: { status: 'inactive' as 'active' | 'inactive', cost: 0, usage: 0, details: '' }
   })
   
   const [customBenefits, setCustomBenefits] = useState<{id: string, name: string}[]>([])
@@ -106,8 +114,34 @@ export default function Benefits() {
     }
   }
 
-  const handleAddBenefit = () => {
-    if (!newBenefit.employeeId) {
+  const handleOpenManageBenefit = (employeeId?: string) => {
+    if (employeeId) {
+      const existing = benefits.find(b => b.employeeId === employeeId)
+      if (existing) {
+        setEditingBenefit(existing)
+        setBenefitForm({
+          hmo: { ...existing.hmo, details: existing.hmo.details || '' },
+          lifeInsurance: { ...existing.lifeInsurance, details: existing.lifeInsurance.details || '' },
+          internet: { ...existing.internet, details: existing.internet.details || '' },
+          equipment: { ...existing.equipment, details: existing.equipment.details || '' }
+        })
+      }
+      setSelectedEmployee(employeeId)
+    } else {
+      setEditingBenefit(null)
+      setSelectedEmployee('')
+      setBenefitForm({
+        hmo: { status: 'inactive', cost: 0, usage: 0, details: '' },
+        lifeInsurance: { status: 'inactive', cost: 0, usage: 0, details: '' },
+        internet: { status: 'inactive', cost: 0, usage: 0, details: '' },
+        equipment: { status: 'inactive', cost: 0, usage: 0, details: '' }
+      })
+    }
+    setShowManageBenefitDialog(true)
+  }
+
+  const handleSaveBenefit = () => {
+    if (!selectedEmployee) {
       toast({
         title: "Missing information",
         description: "Please select an employee.",
@@ -116,32 +150,38 @@ export default function Benefits() {
       return
     }
 
-    const benefit: EmployeeBenefit = {
-      id: (benefits.length + 1).toString(),
-      employeeId: newBenefit.employeeId,
-      employeeName: newBenefit.employeeName,
-      hmo: newBenefit.hmo,
-      lifeInsurance: newBenefit.lifeInsurance,
-      internet: newBenefit.internet,
-      computer: newBenefit.computer,
-      lastUpdated: new Date().toISOString().split('T')[0]
+    const employee = employees.find(e => e.id?.toString() === selectedEmployee)
+    const employeeName = employee ? `${employee.first_name} ${employee.last_name}` : ''
+
+    if (editingBenefit) {
+      // Update existing
+      setBenefits(benefits.map(b => 
+        b.id === editingBenefit.id 
+          ? { ...b, ...benefitForm, lastUpdated: new Date().toISOString().split('T')[0] }
+          : b
+      ))
+      toast({
+        title: "Benefits updated",
+        description: `Benefits updated for ${employeeName}.`
+      })
+    } else {
+      // Create new
+      const newBenefit: EmployeeBenefit = {
+        id: (benefits.length + 1).toString(),
+        employeeId: selectedEmployee,
+        employeeName,
+        ...benefitForm,
+        lastUpdated: new Date().toISOString().split('T')[0]
+      }
+      setBenefits([newBenefit, ...benefits])
+      toast({
+        title: "Benefits assigned",
+        description: `Benefits assigned to ${employeeName}.`
+      })
     }
 
-    setBenefits([benefit, ...benefits])
-    setNewBenefit({
-      employeeId: '',
-      employeeName: '',
-      hmo: false,
-      lifeInsurance: false,
-      internet: false,
-      computer: false
-    })
-    setIsDialogOpen(false)
-    
-    toast({
-      title: "Benefits updated",
-      description: `Benefits have been configured for ${benefit.employeeName}.`
-    })
+    setShowManageBenefitDialog(false)
+    setEditingBenefit(null)
   }
   
   const handleAddCustomBenefit = () => {
@@ -200,14 +240,18 @@ export default function Benefits() {
     })
   }
 
-  const handleEmployeeChange = (employeeId: string) => {
-    const employee = employees.find(emp => emp.id?.toString() === employeeId)
-    setNewBenefit({
-      ...newBenefit,
-      employeeId,
-      employeeName: employee ? `${employee.first_name} ${employee.last_name}` : ''
-    })
+  const updateBenefitField = (type: 'hmo' | 'lifeInsurance' | 'internet' | 'equipment', field: string, value: any) => {
+    setBenefitForm(prev => ({
+      ...prev,
+      [type]: {
+        ...prev[type],
+        [field]: value
+      }
+    }))
   }
+  
+  // Get current user's benefits
+  const myBenefits = benefits.find(b => b.employeeId === user?.id)
 
   const handleCSVUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -227,22 +271,186 @@ export default function Benefits() {
     }
   }
 
-  const getBenefitBadge = (benefit: boolean, type: string, icon: React.ReactNode) => {
+  const totalWithHMO = benefits.filter(b => b.hmo.status === 'active').length
+  const totalWithInsurance = benefits.filter(b => b.lifeInsurance.status === 'active').length
+  const totalWithInternet = benefits.filter(b => b.internet.status === 'active').length
+  const totalWithEquipment = benefits.filter(b => b.equipment.status === 'active').length
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-NG', {
+      style: 'currency',
+      currency: 'NGN',
+      minimumFractionDigits: 0
+    }).format(amount)
+  }
+
+  // Employee View (My Benefits)
+  if (!canManageBenefits) {
     return (
-      <div className="flex items-center space-x-1">
-        {icon}
-        <Badge variant={benefit ? "default" : "secondary"} className="text-xs">
-          {benefit ? "Active" : "Inactive"}
-        </Badge>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">My Benefits</h1>
+          <p className="text-muted-foreground">Manage My Benefits</p>
+        </div>
+
+        {myBenefits ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* HMO Coverage */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <Heart className="h-5 w-5 text-red-500" />
+                    HMO Coverage
+                  </CardTitle>
+                  <Badge variant={myBenefits.hmo.status === 'active' ? 'default' : 'secondary'}>
+                    {myBenefits.hmo.status === 'active' ? 'Active' : 'Inactive'}
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {myBenefits.hmo.status === 'active' ? (
+                  <>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">Annual Cost</span>
+                      <span className="font-semibold">{formatCurrency(myBenefits.hmo.cost)}</span>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-muted-foreground">Usage</span>
+                        <span className="font-semibold">{myBenefits.hmo.usage}%</span>
+                      </div>
+                      <div className="w-full bg-secondary rounded-full h-2">
+                        <div 
+                          className="bg-red-500 h-2 rounded-full transition-all"
+                          style={{ width: `${myBenefits.hmo.usage}%` }}
+                        />
+                      </div>
+                    </div>
+                    {myBenefits.hmo.details && (
+                      <p className="text-sm text-muted-foreground">{myBenefits.hmo.details}</p>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Not enrolled in HMO coverage</p>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Life Insurance */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <Shield className="h-5 w-5 text-blue-500" />
+                    Life Insurance
+                  </CardTitle>
+                  <Badge variant={myBenefits.lifeInsurance.status === 'active' ? 'default' : 'secondary'}>
+                    {myBenefits.lifeInsurance.status === 'active' ? 'Active' : 'Inactive'}
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {myBenefits.lifeInsurance.status === 'active' ? (
+                  <>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">Annual Premium</span>
+                      <span className="font-semibold">{formatCurrency(myBenefits.lifeInsurance.cost)}</span>
+                    </div>
+                    {myBenefits.lifeInsurance.details && (
+                      <p className="text-sm text-muted-foreground">{myBenefits.lifeInsurance.details}</p>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Not enrolled in life insurance</p>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Internet Allowance */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <Wifi className="h-5 w-5 text-green-500" />
+                    Internet Allowance
+                  </CardTitle>
+                  <Badge variant={myBenefits.internet.status === 'active' ? 'default' : 'secondary'}>
+                    {myBenefits.internet.status === 'active' ? 'Active' : 'Inactive'}
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {myBenefits.internet.status === 'active' ? (
+                  <>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">Monthly Allowance</span>
+                      <span className="font-semibold">{formatCurrency(myBenefits.internet.cost)}</span>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-muted-foreground">Usage This Month</span>
+                        <span className="font-semibold">{myBenefits.internet.usage}%</span>
+                      </div>
+                      <div className="w-full bg-secondary rounded-full h-2">
+                        <div 
+                          className="bg-green-500 h-2 rounded-full transition-all"
+                          style={{ width: `${myBenefits.internet.usage}%` }}
+                        />
+                      </div>
+                    </div>
+                    {myBenefits.internet.details && (
+                      <p className="text-sm text-muted-foreground">{myBenefits.internet.details}</p>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No internet allowance assigned</p>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Equipment */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <Monitor className="h-5 w-5 text-purple-500" />
+                    Equipment
+                  </CardTitle>
+                  <Badge variant={myBenefits.equipment.status === 'active' ? 'default' : 'secondary'}>
+                    {myBenefits.equipment.status === 'active' ? 'Active' : 'Inactive'}
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {myBenefits.equipment.status === 'active' ? (
+                  <>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">Equipment Value</span>
+                      <span className="font-semibold">{formatCurrency(myBenefits.equipment.cost)}</span>
+                    </div>
+                    {myBenefits.equipment.details && (
+                      <p className="text-sm text-muted-foreground">{myBenefits.equipment.details}</p>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No equipment assigned</p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        ) : (
+          <Card>
+            <CardContent className="py-12">
+              <p className="text-center text-muted-foreground">No benefits information available. Please contact HR.</p>
+            </CardContent>
+          </Card>
+        )}
       </div>
     )
   }
 
-  const totalWithHMO = benefits.filter(b => b.hmo).length
-  const totalWithInsurance = benefits.filter(b => b.lifeInsurance).length
-  const totalWithInternet = benefits.filter(b => b.internet).length
-  const totalWithComputer = benefits.filter(b => b.computer).length
-
+  // HR Manager View
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -251,191 +459,13 @@ export default function Benefits() {
           <p className="text-muted-foreground">Manage employee benefits and enrollments</p>
         </div>
         
-        {canManageBenefits && (
-          <div className="flex flex-col sm:flex-row gap-2">
-            <div className="relative">
-              <Input
-                type="file"
-                accept=".csv"
-                onChange={handleCSVUpload}
-                className="hidden"
-                id="csv-upload"
-              />
-              <Button variant="outline" asChild>
-                <label htmlFor="csv-upload" className="cursor-pointer">
-                  <Upload className="mr-2 h-4 w-4" />
-                  Import CSV
-                </label>
-              </Button>
-            </div>
-            
-            <Dialog open={isAddingCustomBenefit} onOpenChange={setIsAddingCustomBenefit}>
-              <DialogTrigger asChild>
-                <Button variant="outline" className="gap-2">
-                  <Plus className="h-4 w-4" />
-                  Create Custom Benefit
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Create Custom Benefit</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div className="space-y-2">
-                    <Label>Benefit Name</Label>
-                    <Input
-                      placeholder="e.g., Gym Membership, Phone Allowance"
-                      value={newCustomBenefitName}
-                      onChange={(e) => setNewCustomBenefitName(e.target.value)}
-                    />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsAddingCustomBenefit(false)}>Cancel</Button>
-                  <Button onClick={handleAddCustomBenefit}>Create Benefit</Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-            
-            <Dialog open={showAssignBenefitDialog} onOpenChange={setShowAssignBenefitDialog}>
-              <DialogTrigger asChild>
-                <Button variant="outline" className="gap-2">
-                  <Award className="h-4 w-4" />
-                  Assign Custom Benefit
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Assign Custom Benefit</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div className="space-y-2">
-                    <Label>Select Employee</Label>
-                    <Select value={selectedEmployeeForBenefit} onValueChange={setSelectedEmployeeForBenefit}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Choose employee" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {employees.map((emp) => (
-                          <SelectItem key={emp.id} value={emp.id?.toString() || ''}>
-                            {emp.first_name} {emp.last_name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Select Benefit</Label>
-                    <Select value={selectedCustomBenefit} onValueChange={setSelectedCustomBenefit}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Choose benefit" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {customBenefits.map((benefit) => (
-                          <SelectItem key={benefit.id} value={benefit.id}>
-                            {benefit.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setShowAssignBenefitDialog(false)}>Cancel</Button>
-                  <Button onClick={handleAssignCustomBenefit}>Assign Benefit</Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-            
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="bg-emerald-600 hover:bg-emerald-700 text-white">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Configure Benefits
-                </Button>
-              </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px]">
-              <DialogHeader>
-                <DialogTitle>Configure Employee Benefits</DialogTitle>
-                <DialogDescription>
-                  Set up benefits package for an employee.
-                </DialogDescription>
-              </DialogHeader>
-              
-              <div className="grid gap-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="employee">Employee *</Label>
-                  <Select onValueChange={handleEmployeeChange}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select employee" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {employees.map((employee) => (
-                        <SelectItem key={employee.id} value={employee.id?.toString() || ''}>
-                          {employee.first_name} {employee.last_name} - {employee.department}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="space-y-4">
-                  <Label>Benefits Package</Label>
-                  
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="hmo"
-                      checked={newBenefit.hmo}
-                      onCheckedChange={(checked) => setNewBenefit({...newBenefit, hmo: checked as boolean})}
-                    />
-                    <Heart className="h-4 w-4 text-red-500" />
-                    <Label htmlFor="hmo">Health Maintenance Organization (HMO)</Label>
-                  </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="lifeInsurance"
-                      checked={newBenefit.lifeInsurance}
-                      onCheckedChange={(checked) => setNewBenefit({...newBenefit, lifeInsurance: checked as boolean})}
-                    />
-                    <Shield className="h-4 w-4 text-blue-500" />
-                    <Label htmlFor="lifeInsurance">Life Insurance</Label>
-                  </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="internet"
-                      checked={newBenefit.internet}
-                      onCheckedChange={(checked) => setNewBenefit({...newBenefit, internet: checked as boolean})}
-                    />
-                    <Wifi className="h-4 w-4 text-green-500" />
-                    <Label htmlFor="internet">Internet Allowance</Label>
-                  </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="computer"
-                      checked={newBenefit.computer}
-                      onCheckedChange={(checked) => setNewBenefit({...newBenefit, computer: checked as boolean})}
-                    />
-                    <Monitor className="h-4 w-4 text-purple-500" />
-                    <Label htmlFor="computer">Computer/Equipment</Label>
-                  </div>
-                </div>
-              </div>
-              
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleAddBenefit} className="bg-emerald-600 hover:bg-emerald-700 text-white">
-                  Save Benefits
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-            </div>
-        )}
+        <Button 
+          className="bg-emerald-600 hover:bg-emerald-700 text-white"
+          onClick={() => handleOpenManageBenefit()}
+        >
+          <Plus className="mr-2 h-4 w-4" />
+          Assign/Edit Benefits
+        </Button>
       </div>
 
       {/* Statistics Cards */}
@@ -476,58 +506,305 @@ export default function Benefits() {
             <Monitor className="h-4 w-4 text-purple-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-purple-600">{totalWithComputer}/{benefits.length}</div>
+            <div className="text-2xl font-bold text-purple-600">{totalWithEquipment}/{benefits.length}</div>
           </CardContent>
         </Card>
       </div>
 
       {/* Benefits Table */}
-      <RoleBasedComponent allowedRoles={['hr_manager', 'executive']}>
-        <Card>
-          <CardHeader>
-            <CardTitle>Employee Benefits</CardTitle>
-            <CardDescription>
-              Track and manage employee benefit enrollments
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Employee</TableHead>
-                    <TableHead>HMO</TableHead>
-                    <TableHead>Life Insurance</TableHead>
-                    <TableHead className="hidden sm:table-cell">Internet</TableHead>
-                    <TableHead className="hidden md:table-cell">Computer</TableHead>
-                    <TableHead className="hidden lg:table-cell">Last Updated</TableHead>
+      <Card>
+        <CardHeader>
+          <CardTitle>Employee Benefits</CardTitle>
+          <CardDescription>
+            Track and manage employee benefit enrollments
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Employee</TableHead>
+                  <TableHead>HMO</TableHead>
+                  <TableHead>Life Insurance</TableHead>
+                  <TableHead className="hidden sm:table-cell">Internet</TableHead>
+                  <TableHead className="hidden md:table-cell">Equipment</TableHead>
+                  <TableHead className="hidden lg:table-cell">Last Updated</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {benefits.map((benefit) => (
+                  <TableRow key={benefit.id}>
+                    <TableCell className="font-medium">{benefit.employeeName}</TableCell>
+                    <TableCell>
+                      <Badge variant={benefit.hmo.status === 'active' ? 'default' : 'secondary'}>
+                        {benefit.hmo.status === 'active' ? 'Active' : 'Inactive'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={benefit.lifeInsurance.status === 'active' ? 'default' : 'secondary'}>
+                        {benefit.lifeInsurance.status === 'active' ? 'Active' : 'Inactive'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="hidden sm:table-cell">
+                      <Badge variant={benefit.internet.status === 'active' ? 'default' : 'secondary'}>
+                        {benefit.internet.status === 'active' ? 'Active' : 'Inactive'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell">
+                      <Badge variant={benefit.equipment.status === 'active' ? 'default' : 'secondary'}>
+                        {benefit.equipment.status === 'active' ? 'Active' : 'Inactive'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="hidden lg:table-cell">{benefit.lastUpdated}</TableCell>
+                    <TableCell>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleOpenManageBenefit(benefit.employeeId)}
+                      >
+                        Edit
+                      </Button>
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {benefits.map((benefit) => (
-                    <TableRow key={benefit.id}>
-                      <TableCell className="font-medium">{benefit.employeeName}</TableCell>
-                      <TableCell>
-                        {getBenefitBadge(benefit.hmo, "HMO", <Heart className="h-3 w-3 text-red-500" />)}
-                      </TableCell>
-                      <TableCell>
-                        {getBenefitBadge(benefit.lifeInsurance, "Insurance", <Shield className="h-3 w-3 text-blue-500" />)}
-                      </TableCell>
-                      <TableCell className="hidden sm:table-cell">
-                        {getBenefitBadge(benefit.internet, "Internet", <Wifi className="h-3 w-3 text-green-500" />)}
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell">
-                        {getBenefitBadge(benefit.computer, "Computer", <Monitor className="h-3 w-3 text-purple-500" />)}
-                      </TableCell>
-                      <TableCell className="hidden lg:table-cell">{benefit.lastUpdated}</TableCell>
-                    </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Manage Benefits Dialog */}
+      <Dialog open={showManageBenefitDialog} onOpenChange={setShowManageBenefitDialog}>
+        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{editingBenefit ? 'Edit' : 'Assign'} Employee Benefits</DialogTitle>
+            <DialogDescription>
+              Configure benefits package with cost and usage details.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-6 py-4">
+            <div className="space-y-2">
+              <Label>Employee *</Label>
+              <Select 
+                value={selectedEmployee} 
+                onValueChange={setSelectedEmployee}
+                disabled={!!editingBenefit}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select employee" />
+                </SelectTrigger>
+                <SelectContent>
+                  {employees.map((employee) => (
+                    <SelectItem key={employee.id} value={employee.id?.toString() || ''}>
+                      {employee.first_name} {employee.last_name} - {employee.department}
+                    </SelectItem>
                   ))}
-                </TableBody>
-              </Table>
+                </SelectContent>
+              </Select>
             </div>
-          </CardContent>
-        </Card>
-      </RoleBasedComponent>
+            
+            {/* HMO */}
+            <div className="space-y-3 p-4 border rounded-lg">
+              <div className="flex items-center justify-between">
+                <Label className="flex items-center gap-2">
+                  <Heart className="h-4 w-4 text-red-500" />
+                  HMO Coverage
+                </Label>
+                <Select 
+                  value={benefitForm.hmo.status}
+                  onValueChange={(val) => updateBenefitField('hmo', 'status', val)}
+                >
+                  <SelectTrigger className="w-32">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {benefitForm.hmo.status === 'active' && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Annual Cost (₦)</Label>
+                    <Input 
+                      type="number"
+                      value={benefitForm.hmo.cost}
+                      onChange={(e) => updateBenefitField('hmo', 'cost', Number(e.target.value))}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Usage (%)</Label>
+                    <Input 
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={benefitForm.hmo.usage}
+                      onChange={(e) => updateBenefitField('hmo', 'usage', Number(e.target.value))}
+                    />
+                  </div>
+                  <div className="space-y-1 col-span-2">
+                    <Label className="text-xs">Details</Label>
+                    <Input 
+                      placeholder="e.g., Family plan"
+                      value={benefitForm.hmo.details}
+                      onChange={(e) => updateBenefitField('hmo', 'details', e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Life Insurance */}
+            <div className="space-y-3 p-4 border rounded-lg">
+              <div className="flex items-center justify-between">
+                <Label className="flex items-center gap-2">
+                  <Shield className="h-4 w-4 text-blue-500" />
+                  Life Insurance
+                </Label>
+                <Select 
+                  value={benefitForm.lifeInsurance.status}
+                  onValueChange={(val) => updateBenefitField('lifeInsurance', 'status', val)}
+                >
+                  <SelectTrigger className="w-32">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {benefitForm.lifeInsurance.status === 'active' && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Annual Premium (₦)</Label>
+                    <Input 
+                      type="number"
+                      value={benefitForm.lifeInsurance.cost}
+                      onChange={(e) => updateBenefitField('lifeInsurance', 'cost', Number(e.target.value))}
+                    />
+                  </div>
+                  <div className="space-y-1 col-span-2">
+                    <Label className="text-xs">Coverage Details</Label>
+                    <Input 
+                      placeholder="e.g., ₦5M coverage"
+                      value={benefitForm.lifeInsurance.details}
+                      onChange={(e) => updateBenefitField('lifeInsurance', 'details', e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Internet */}
+            <div className="space-y-3 p-4 border rounded-lg">
+              <div className="flex items-center justify-between">
+                <Label className="flex items-center gap-2">
+                  <Wifi className="h-4 w-4 text-green-500" />
+                  Internet Allowance
+                </Label>
+                <Select 
+                  value={benefitForm.internet.status}
+                  onValueChange={(val) => updateBenefitField('internet', 'status', val)}
+                >
+                  <SelectTrigger className="w-32">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {benefitForm.internet.status === 'active' && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Monthly Cost (₦)</Label>
+                    <Input 
+                      type="number"
+                      value={benefitForm.internet.cost}
+                      onChange={(e) => updateBenefitField('internet', 'cost', Number(e.target.value))}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Usage This Month (%)</Label>
+                    <Input 
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={benefitForm.internet.usage}
+                      onChange={(e) => updateBenefitField('internet', 'usage', Number(e.target.value))}
+                    />
+                  </div>
+                  <div className="space-y-1 col-span-2">
+                    <Label className="text-xs">Details</Label>
+                    <Input 
+                      placeholder="e.g., ₦15k/month"
+                      value={benefitForm.internet.details}
+                      onChange={(e) => updateBenefitField('internet', 'details', e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Equipment */}
+            <div className="space-y-3 p-4 border rounded-lg">
+              <div className="flex items-center justify-between">
+                <Label className="flex items-center gap-2">
+                  <Monitor className="h-4 w-4 text-purple-500" />
+                  Equipment
+                </Label>
+                <Select 
+                  value={benefitForm.equipment.status}
+                  onValueChange={(val) => updateBenefitField('equipment', 'status', val)}
+                >
+                  <SelectTrigger className="w-32">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {benefitForm.equipment.status === 'active' && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Equipment Value (₦)</Label>
+                    <Input 
+                      type="number"
+                      value={benefitForm.equipment.cost}
+                      onChange={(e) => updateBenefitField('equipment', 'cost', Number(e.target.value))}
+                    />
+                  </div>
+                  <div className="space-y-1 col-span-2">
+                    <Label className="text-xs">Equipment Details</Label>
+                    <Input 
+                      placeholder="e.g., MacBook Pro 2023"
+                      value={benefitForm.equipment.details}
+                      onChange={(e) => updateBenefitField('equipment', 'details', e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowManageBenefitDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveBenefit} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+              Save Benefits
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

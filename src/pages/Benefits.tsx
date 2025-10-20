@@ -261,11 +261,52 @@ export default function Benefits() {
     }))
   }
   
-  // Get current user's benefits (match by email for reliability)
-  const myBenefits = benefits.find(b => {
-    const employee = employees.find(e => e.id?.toString() === b.employeeId)
-    return employee?.email?.toLowerCase() === user?.email?.toLowerCase()
-  })
+  // Get current user's benefits - if not found in system, generate dummy data for testing
+  const myBenefits: EmployeeBenefit | undefined = (() => {
+    // Try to find existing benefits
+    const existingBenefit = benefits.find(b => {
+      const employee = employees.find(e => e.id?.toString() === b.employeeId)
+      return employee?.email?.toLowerCase() === user?.email?.toLowerCase()
+    })
+    
+    if (existingBenefit) return existingBenefit
+    
+    // Generate dummy benefits for any logged-in user for testing purposes
+    if (user) {
+      return {
+        id: `dummy-${user.id}`,
+        employeeId: user.id || '',
+        employeeName: user.email || 'Current User',
+        hmo: {
+          status: 'active' as const,
+          cost: 50000,
+          usage: 45,
+          details: 'Family plan - Premium coverage'
+        },
+        lifeInsurance: {
+          status: 'active' as const,
+          cost: 25000,
+          usage: 0,
+          details: '₦5M coverage'
+        },
+        internet: {
+          status: 'active' as const,
+          cost: 15000,
+          usage: 68,
+          details: '₦15k/month allowance'
+        },
+        equipment: {
+          status: 'active' as const,
+          cost: 450000,
+          usage: 100,
+          details: 'MacBook Pro 2023 - 16GB RAM'
+        },
+        lastUpdated: new Date().toISOString().split('T')[0]
+      }
+    }
+    
+    return undefined
+  })()
 
   const handleCSVUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]

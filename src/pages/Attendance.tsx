@@ -943,35 +943,179 @@ export default function Attendance() {
         )}
       </Card>
 
-      {/* Today's Attendance Section */}
+      {/* Weekly Attendance View - For All Users */}
+      <Card className="border-border/50 shadow-sm mb-6">
+        <CardHeader>
+          <CardTitle className="text-primary flex items-center">
+            <CalendarDays className="mr-2 h-5 w-5" />
+            My Weekly Attendance (Mon - Fri)
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {(() => {
+            const today = new Date()
+            const currentDay = today.getDay()
+            const monday = new Date(today)
+            monday.setDate(today.getDate() - ((currentDay === 0 ? 7 : currentDay) - 1))
+            
+            const weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+            const attendanceRecords = JSON.parse(localStorage.getItem('attendanceRecords') || '[]')
+            
+            return (
+              <div className="space-y-3">
+                {weekDays.map((dayName, index) => {
+                  const dayDate = new Date(monday)
+                  dayDate.setDate(monday.getDate() + index)
+                  const dateStr = format(dayDate, 'yyyy-MM-dd')
+                  const dayRecord = attendanceRecords.find(
+                    (record: any) => record.employee_id === user?.id && record.date === dateStr
+                  )
+                  const isToday = format(new Date(), 'yyyy-MM-dd') === dateStr
+                  const isPast = dayDate < new Date(format(new Date(), 'yyyy-MM-dd'))
+                  const isFuture = dayDate > new Date(format(new Date(), 'yyyy-MM-dd'))
+                  
+                  return (
+                    <div 
+                      key={dayName} 
+                      className={`flex items-center justify-between p-4 rounded-lg border ${
+                        isToday ? 'bg-primary/5 border-primary/30' : 'bg-card'
+                      }`}
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                          dayRecord?.clock_in_time && dayRecord?.clock_out_time 
+                            ? 'bg-success/20 border-2 border-success' 
+                            : dayRecord?.is_clocked_in 
+                            ? 'bg-warning/20 border-2 border-warning'
+                            : isPast
+                            ? 'bg-muted/20 border-2 border-muted'
+                            : 'bg-muted/10 border-2 border-muted/30'
+                        }`}>
+                          {dayRecord?.clock_in_time && dayRecord?.clock_out_time ? (
+                            <svg className="w-6 h-6 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                            </svg>
+                          ) : dayRecord?.is_clocked_in ? (
+                            <Clock className="w-5 h-5 text-warning" />
+                          ) : (
+                            <span className="text-xs font-medium text-muted-foreground">
+                              {dayDate.getDate()}
+                            </span>
+                          )}
+                        </div>
+                        
+                        <div>
+                          <div className="font-semibold text-sm flex items-center gap-2">
+                            {dayName}
+                            {isToday && <Badge variant="default" className="text-xs">Today</Badge>}
+                          </div>
+                          <div className="text-xs text-muted-foreground">{format(dayDate, 'MMM dd, yyyy')}</div>
+                          
+                          {dayRecord && (
+                            <div className="mt-1 space-y-0.5">
+                              <div className="text-xs flex items-center gap-1">
+                                <LogIn className="w-3 h-3 text-success" />
+                                <span className="font-medium">In:</span> {dayRecord.clock_in_time}
+                              </div>
+                              {dayRecord.clock_out_time && (
+                                <div className="text-xs flex items-center gap-1">
+                                  <LogOut className="w-3 h-3 text-destructive" />
+                                  <span className="font-medium">Out:</span> {dayRecord.clock_out_time}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          
+                          {!dayRecord && isPast && (
+                            <div className="text-xs text-muted-foreground mt-1">No record</div>
+                          )}
+                          {!dayRecord && isFuture && (
+                            <div className="text-xs text-muted-foreground mt-1">Upcoming</div>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div>
+                        {dayRecord?.clock_in_time && dayRecord?.clock_out_time && (
+                          <Badge className="bg-success/10 text-success border-success/20">
+                            Completed
+                          </Badge>
+                        )}
+                        {dayRecord?.is_clocked_in && !dayRecord?.clock_out_time && (
+                          <Badge className="bg-warning/10 text-warning border-warning/20">
+                            Active
+                          </Badge>
+                        )}
+                        {!dayRecord && isPast && (
+                          <Badge variant="outline" className="text-muted-foreground">
+                            Absent
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )
+          })()}
+        </CardContent>
+      </Card>
+
+      {/* Today's Attendance Section - HR Manager View */}
       <RoleBasedComponent allowedRoles={['hr_manager', 'corporate_hr', 'executive']}>
         <Card className="border-border/50 shadow-sm mb-6">
           <CardHeader>
             <CardTitle className="text-primary flex items-center">
               <Clock className="mr-2 h-5 w-5" />
-              Today's Attendance
+              Today's Attendance - All Staff
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
               {todayAttendance.length > 0 ? (
                 todayAttendance.map((record) => (
-                  <div key={record.id} className="flex justify-between items-center p-2 bg-accent/50 rounded-lg">
-                    <div>
-                      <div className="font-medium text-sm">{record.employee_name}</div>
-                      <div className="text-xs text-muted-foreground">
-                        In: {record.clock_in_time} {record.clock_out_time && `• Out: ${record.clock_out_time}`}
+                  <div key={record.id} className="p-3 bg-accent/50 rounded-lg border">
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <div className="font-medium text-sm">{record.employee_name}</div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          <div className="flex items-center gap-1">
+                            <LogIn className="w-3 h-3" />
+                            Clock In: {record.clock_in_time}
+                          </div>
+                          {record.clock_out_time && (
+                            <div className="flex items-center gap-1 mt-0.5">
+                              <LogOut className="w-3 h-3" />
+                              Clock Out: {record.clock_out_time}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end gap-1">
+                        {record.is_clocked_in && !record.clock_out_time && (
+                          <Badge variant="default" className="text-xs">
+                            Active
+                          </Badge>
+                        )}
+                        {record.clock_out_time && (
+                          <Badge variant="outline" className="text-xs">
+                            Completed
+                          </Badge>
+                        )}
                       </div>
                     </div>
-                    {record.is_clocked_in && (
-                      <Badge variant="default" className="text-xs">
-                        Active
-                      </Badge>
-                    )}
-                    {record.clock_out_time && (
-                      <Badge variant="outline" className="text-xs">
-                        Completed
-                      </Badge>
+                    
+                    {/* Show early departure reason if exists */}
+                    {record.early_departure_reason && (
+                      <div className="mt-2 pt-2 border-t border-border/50">
+                        <div className="text-xs font-medium text-destructive flex items-center gap-1">
+                          <Bell className="w-3 h-3" />
+                          Early Departure:
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-1 pl-4">
+                          {record.early_departure_reason}
+                        </div>
+                      </div>
                     )}
                   </div>
                 ))

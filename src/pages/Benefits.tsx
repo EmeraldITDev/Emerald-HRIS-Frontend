@@ -34,48 +34,7 @@ interface EmployeeBenefit {
 
 export default function Benefits() {
   const [employees, setEmployees] = useState<Employee[]>([])
-  const [benefits, setBenefits] = useState<EmployeeBenefit[]>([
-    {
-      id: '1',
-      employeeId: 'EMP001',
-      employeeName: 'Adebayo Johnson',
-      hmo: { status: 'active', cost: 50000, usage: 60, details: 'Family plan' },
-      lifeInsurance: { status: 'active', cost: 25000, usage: 0, details: '₦5M coverage' },
-      internet: { status: 'inactive', cost: 0, usage: 0 },
-      equipment: { status: 'active', cost: 450000, usage: 100, details: 'MacBook Pro 2023' },
-      lastUpdated: '2024-01-15'
-    },
-    {
-      id: '2',
-      employeeId: 'EMP002',
-      employeeName: 'Fatima Abdul',
-      hmo: { status: 'active', cost: 50000, usage: 45, details: 'Individual plan' },
-      lifeInsurance: { status: 'inactive', cost: 0, usage: 0 },
-      internet: { status: 'active', cost: 15000, usage: 70, details: '₦15k/month' },
-      equipment: { status: 'active', cost: 350000, usage: 100, details: 'Dell Latitude' },
-      lastUpdated: '2024-01-10'
-    },
-    {
-      id: '3',
-      employeeId: 'EMP003',
-      employeeName: 'Chinedu Okafor',
-      hmo: { status: 'inactive', cost: 0, usage: 0 },
-      lifeInsurance: { status: 'active', cost: 25000, usage: 0, details: '₦3M coverage' },
-      internet: { status: 'active', cost: 15000, usage: 85, details: '₦15k/month' },
-      equipment: { status: 'inactive', cost: 0, usage: 0 },
-      lastUpdated: '2024-01-20'
-    },
-    {
-      id: '4',
-      employeeId: 'EMP004',
-      employeeName: 'Kemi Adeleke',
-      hmo: { status: 'active', cost: 50000, usage: 30, details: 'Family plan' },
-      lifeInsurance: { status: 'active', cost: 25000, usage: 0, details: '₦5M coverage' },
-      internet: { status: 'active', cost: 15000, usage: 50, details: '₦15k/month' },
-      equipment: { status: 'active', cost: 400000, usage: 100, details: 'HP EliteBook' },
-      lastUpdated: '2024-01-18'
-    }
-  ])
+  const [benefits, setBenefits] = useState<EmployeeBenefit[]>([])
 
   const [selectedEmployee, setSelectedEmployee] = useState('')
   const [editingBenefit, setEditingBenefit] = useState<EmployeeBenefit | null>(null)
@@ -109,6 +68,58 @@ export default function Benefits() {
     try {
       const data = await apiService.getEmployees()
       setEmployees(data)
+      
+      // Generate dummy benefits for all employees except HR Manager
+      const generatedBenefits: EmployeeBenefit[] = data
+        .filter(emp => emp.job_title?.toLowerCase() !== 'hr manager')
+        .map((emp, index) => {
+          // Randomize benefits for variety
+          const hasHMO = Math.random() > 0.3
+          const hasInsurance = Math.random() > 0.1
+          const hasInternet = Math.random() > 0.2
+          const hasEquipment = Math.random() > 0.15
+          
+          return {
+            id: emp.id?.toString() || `gen-${index}`,
+            employeeId: emp.id?.toString() || '',
+            employeeName: `${emp.first_name} ${emp.last_name}`,
+            hmo: hasHMO 
+              ? { 
+                  status: 'active' as const, 
+                  cost: Math.random() > 0.5 ? 50000 : 40000, 
+                  usage: Math.floor(Math.random() * 80) + 10,
+                  details: Math.random() > 0.5 ? 'Family plan' : 'Individual plan'
+                } 
+              : { status: 'inactive' as const, cost: 0, usage: 0 },
+            lifeInsurance: hasInsurance
+              ? {
+                  status: 'active' as const,
+                  cost: 25000,
+                  usage: 0,
+                  details: Math.random() > 0.5 ? '₦5M coverage' : '₦3M coverage'
+                }
+              : { status: 'inactive' as const, cost: 0, usage: 0 },
+            internet: hasInternet
+              ? {
+                  status: 'active' as const,
+                  cost: 15000,
+                  usage: Math.floor(Math.random() * 90) + 10,
+                  details: '₦15k/month'
+                }
+              : { status: 'inactive' as const, cost: 0, usage: 0 },
+            equipment: hasEquipment
+              ? {
+                  status: 'active' as const,
+                  cost: Math.floor(Math.random() * 200000) + 300000,
+                  usage: 100,
+                  details: ['MacBook Pro 2023', 'Dell Latitude', 'HP EliteBook', 'Lenovo ThinkPad'][Math.floor(Math.random() * 4)]
+                }
+              : { status: 'inactive' as const, cost: 0, usage: 0 },
+            lastUpdated: new Date(Date.now() - Math.floor(Math.random() * 30) * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+          }
+        })
+      
+      setBenefits(generatedBenefits)
     } catch (error) {
       console.error('Failed to fetch employees:', error)
     }
@@ -275,6 +286,11 @@ export default function Benefits() {
   const totalWithInsurance = benefits.filter(b => b.lifeInsurance.status === 'active').length
   const totalWithInternet = benefits.filter(b => b.internet.status === 'active').length
   const totalWithEquipment = benefits.filter(b => b.equipment.status === 'active').length
+  
+  const hmoPercentage = benefits.length > 0 ? Math.round((totalWithHMO / benefits.length) * 100) : 0
+  const insurancePercentage = benefits.length > 0 ? Math.round((totalWithInsurance / benefits.length) * 100) : 0
+  const internetPercentage = benefits.length > 0 ? Math.round((totalWithInternet / benefits.length) * 100) : 0
+  const equipmentPercentage = benefits.length > 0 ? Math.round((totalWithEquipment / benefits.length) * 100) : 0
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-NG', {
@@ -476,7 +492,8 @@ export default function Benefits() {
             <Heart className="h-4 w-4 text-red-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">{totalWithHMO}/{benefits.length}</div>
+            <div className="text-2xl font-bold text-red-600">{hmoPercentage}%</div>
+            <p className="text-xs text-muted-foreground mt-1">of staff HMO active</p>
           </CardContent>
         </Card>
         
@@ -486,7 +503,8 @@ export default function Benefits() {
             <Shield className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{totalWithInsurance}/{benefits.length}</div>
+            <div className="text-2xl font-bold text-blue-600">{insurancePercentage}%</div>
+            <p className="text-xs text-muted-foreground mt-1">of staff Life Insurance active</p>
           </CardContent>
         </Card>
         
@@ -496,7 +514,8 @@ export default function Benefits() {
             <Wifi className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{totalWithInternet}/{benefits.length}</div>
+            <div className="text-2xl font-bold text-green-600">{internetPercentage}%</div>
+            <p className="text-xs text-muted-foreground mt-1">of staff Internet active</p>
           </CardContent>
         </Card>
         
@@ -506,7 +525,8 @@ export default function Benefits() {
             <Monitor className="h-4 w-4 text-purple-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-purple-600">{totalWithEquipment}/{benefits.length}</div>
+            <div className="text-2xl font-bold text-purple-600">{equipmentPercentage}%</div>
+            <p className="text-xs text-muted-foreground mt-1">of staff Equipment active</p>
           </CardContent>
         </Card>
       </div>

@@ -229,29 +229,9 @@ export default function Performance() {
       managerReviewComments: 'Outstanding contribution to HR transformation.',
       managerReviewDate: '2024-12-10'
     },
+    // Chidi Okonkwo (Technical Operations Employee) - employeeId '6' from AuthContext
     {
       id: '10',
-      employeeId: '6',
-      employeeName: 'David Kim',
-      department: 'Operations',
-      reviewPeriod: 'Q4 2024',
-      reviewDate: '2024-12-16',
-      rating: 4,
-      status: 'Completed',
-      reviewer: 'Sarah Johnson (Executive)',
-      goals: 'Lead operations team, optimize workflows, reduce costs',
-      achievements: 'Reduced operational costs by 18%, improved team efficiency, mentored 4 team members',
-      areasForImprovement: 'Cross-functional collaboration and strategic vision',
-      comments: 'David demonstrates strong leadership in operations. His process improvements have delivered significant value.',
-      selfAssessment: 'I led cost optimization initiatives that exceeded targets. My team has become more efficient through the new workflows I implemented. I continue to focus on developing my team members.',
-      selfAssessmentDate: '2024-12-01',
-      selfAssessmentStatus: 'Reviewed by Line Manager',
-      managerReviewComments: 'Strong leadership and operational excellence.',
-      managerReviewDate: '2024-12-12'
-    },
-    // Chidi Okonkwo (Technical Operations Employee) - id from AuthContext is '6' but we need unique id
-    {
-      id: '11',
       employeeId: '6',
       employeeName: 'Chidi Okonkwo',
       department: 'Technical Operations',
@@ -269,6 +249,26 @@ export default function Performance() {
       selfAssessmentStatus: 'Reviewed by Line Manager',
       managerReviewComments: 'Excellent technical execution and team collaboration.',
       managerReviewDate: '2024-12-15'
+    },
+    {
+      id: '11',
+      employeeId: '6',
+      employeeName: 'Chidi Okonkwo',
+      department: 'Technical Operations',
+      reviewPeriod: 'Q3 2024',
+      reviewDate: '2024-09-18',
+      rating: 5,
+      status: 'Completed',
+      reviewer: 'Henry Marcus (Line Manager - Technical Operations)',
+      goals: 'Enhance system reliability, participate in team training, improve response time',
+      achievements: 'Reduced system downtime by 25%, completed advanced technical training, improved incident response time by 40%',
+      areasForImprovement: 'Leadership skills and mentoring junior team members',
+      comments: 'Outstanding performance this quarter. Chidi consistently delivers high-quality work and shows great initiative.',
+      selfAssessment: 'I focused on system reliability improvements and completed my technical certifications. I contributed to several critical projects and helped resolve complex technical issues.',
+      selfAssessmentDate: '2024-09-05',
+      selfAssessmentStatus: 'Reviewed by Line Manager',
+      managerReviewComments: 'Exceptional technical skills and dedication to continuous improvement.',
+      managerReviewDate: '2024-09-15'
     }
   ])
   

@@ -248,6 +248,27 @@ export default function Performance() {
       selfAssessmentStatus: 'Reviewed by Line Manager',
       managerReviewComments: 'Strong leadership and operational excellence.',
       managerReviewDate: '2024-12-12'
+    },
+    // Chidi Okonkwo (Technical Operations Employee) - id from AuthContext is '6' but we need unique id
+    {
+      id: '11',
+      employeeId: '6',
+      employeeName: 'Chidi Okonkwo',
+      department: 'Technical Operations',
+      reviewPeriod: 'Q4 2024',
+      reviewDate: '2024-12-18',
+      rating: 4,
+      status: 'Completed',
+      reviewer: 'Henry Marcus (Line Manager - Technical Operations)',
+      goals: 'Complete system integration projects, improve code quality, enhance testing procedures',
+      achievements: 'Successfully integrated 3 major systems, improved code coverage to 85%, reduced bugs by 30%',
+      areasForImprovement: 'Documentation practices and stakeholder communication',
+      comments: 'Chidi has shown strong technical capabilities and attention to detail. His work on system integration has been exemplary.',
+      selfAssessment: 'I successfully completed the system integration projects on schedule. I focused on writing clean, maintainable code and improving our test coverage. I worked closely with the team to ensure smooth deployments.',
+      selfAssessmentDate: '2024-12-05',
+      selfAssessmentStatus: 'Reviewed by Line Manager',
+      managerReviewComments: 'Excellent technical execution and team collaboration.',
+      managerReviewDate: '2024-12-15'
     }
   ])
   

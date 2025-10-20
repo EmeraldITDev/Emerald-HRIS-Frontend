@@ -463,14 +463,60 @@ export default function Performance() {
           </p>
         </div>
         
-        {canManageReviews && (
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="bg-emerald-600 hover:bg-emerald-700 text-white w-full sm:w-auto">
-                <Plus className="mr-2 h-4 w-4" />
-                <span className="text-sm md:text-base">New Review</span>
-              </Button>
-            </DialogTrigger>
+        <div className="flex gap-2 w-full sm:w-auto">
+          {/* Self-Assessment button for all employees except executives */}
+          {user?.role !== 'executive' && (
+            <Dialog open={selfAssessmentDialogOpen} onOpenChange={setSelfAssessmentDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="bg-blue-600 hover:bg-blue-700 text-white w-full sm:w-auto">
+                  <FileEdit className="mr-2 h-4 w-4" />
+                  <span className="text-sm md:text-base">Self-Assessment</span>
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-[600px] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
+                <DialogHeader>
+                  <DialogTitle>Submit Self-Assessment</DialogTitle>
+                  <DialogDescription>
+                    Complete your self-assessment. This will be sent to your line manager for review.
+                  </DialogDescription>
+                </DialogHeader>
+                
+                <div className="grid gap-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="selfAssessmentNew">Self-Assessment *</Label>
+                    <Textarea
+                      id="selfAssessmentNew"
+                      placeholder="Describe your achievements, challenges, and goals..."
+                      value={selfAssessment}
+                      onChange={(e) => setSelfAssessment(e.target.value)}
+                      rows={8}
+                    />
+                  </div>
+                </div>
+                
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => {
+                    setSelfAssessmentDialogOpen(false)
+                    setSelfAssessment("")
+                  }}>
+                    Cancel
+                  </Button>
+                  <Button onClick={handleSubmitSelfAssessment} className="bg-blue-600 hover:bg-blue-700 text-white">
+                    Submit Assessment
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          )}
+          
+          {canManageReviews && (
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="bg-emerald-600 hover:bg-emerald-700 text-white w-full sm:w-auto">
+                  <Plus className="mr-2 h-4 w-4" />
+                  <span className="text-sm md:text-base">New Review</span>
+                </Button>
+              </DialogTrigger>
             <DialogContent className="max-w-[600px] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
               <DialogHeader>
                 <DialogTitle>Create Performance Review</DialogTitle>
@@ -573,7 +619,8 @@ export default function Performance() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Performance Reviews Table */}

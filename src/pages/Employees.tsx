@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { DateInput } from "@/components/ui/date-input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
@@ -1018,76 +1019,17 @@ export default function Employees() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label>Date of Birth *</Label>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !newEmployee.dateOfBirth && "text-muted-foreground", formErrors.dateOfBirth ? "border-destructive" : "")}>
-                              <CalendarIcon className="mr-2 h-4 w-4" />
-                              {newEmployee.dateOfBirth ? format(newEmployee.dateOfBirth, "PPP") : "Pick a date"}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0">
-                            <div className="flex items-center justify-between px-3 pt-3 pb-2 border-b">
-                              <div className="flex items-center gap-2">
-                                <Select 
-                                  value={newEmployee.dateOfBirth ? newEmployee.dateOfBirth.getFullYear().toString() : ""} 
-                                  onValueChange={(year) => {
-                                    const currentDate = newEmployee.dateOfBirth || new Date();
-                                    const newDate = new Date(parseInt(year), currentDate.getMonth(), currentDate.getDate());
-                                    setNewEmployee({
-                                      ...newEmployee,
-                                      dateOfBirth: newDate
-                                    });
-                                  }}
-                                >
-                                  <SelectTrigger className="w-20 h-8">
-                                    <SelectValue placeholder="Year" />
-                                  </SelectTrigger>
-                                  <SelectContent className="bg-popover border shadow-lg max-h-48">
-                                    {Array.from({ length: 80 }, (_, i) => new Date().getFullYear() - i).map(year => (
-                                      <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                                <Select 
-                                  value={newEmployee.dateOfBirth ? newEmployee.dateOfBirth.getMonth().toString() : ""} 
-                                  onValueChange={(month) => {
-                                    const currentDate = newEmployee.dateOfBirth || new Date();
-                                    const newDate = new Date(currentDate.getFullYear(), parseInt(month), currentDate.getDate());
-                                    setNewEmployee({
-                                      ...newEmployee,
-                                      dateOfBirth: newDate
-                                    });
-                                  }}
-                                >
-                                  <SelectTrigger className="w-24 h-8">
-                                    <SelectValue placeholder="Month" />
-                                  </SelectTrigger>
-                                  <SelectContent className="bg-popover border shadow-lg">
-                                    {[
-                                      "January", "February", "March", "April", "May", "June",
-                                      "July", "August", "September", "October", "November", "December"
-                                    ].map((month, index) => (
-                                      <SelectItem key={index} value={index.toString()}>{month}</SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                            </div>
-                            <Calendar
-                              mode="single"
-                              selected={newEmployee.dateOfBirth}
-                              onSelect={date => setNewEmployee({
-                                ...newEmployee,
-                                dateOfBirth: date
-                              })} 
-                              disabled={(date) =>
-                                date > new Date() || date < new Date("1900-01-01")
-                              }
-                              initialFocus
-                              className="p-3 pointer-events-auto"
-                            />
-                          </PopoverContent>
-                        </Popover>
+                        <DateInput
+                          value={newEmployee.dateOfBirth}
+                          onChange={(date) => setNewEmployee({
+                            ...newEmployee,
+                            dateOfBirth: date
+                          })}
+                          placeholder="MM/DD/YY"
+                          className={formErrors.dateOfBirth ? "border-destructive" : ""}
+                          maxDate={new Date()}
+                          minDate={new Date("1900-01-01")}
+                        />
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="gender">Gender *</Label>
@@ -1304,26 +1246,15 @@ export default function Employees() {
                     <div className="grid grid-cols-3 gap-4">
                       <div className="space-y-2">
                         <Label>Hire Date *</Label>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !newEmployee.hireDate && "text-muted-foreground", formErrors.hireDate ? "border-destructive" : "")}>
-                              <CalendarIcon className="mr-2 h-4 w-4" />
-                              {newEmployee.hireDate ? format(newEmployee.hireDate, "PPP") : "Pick a date"}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0">
-                            <Calendar 
-                              mode="single" 
-                              selected={newEmployee.hireDate} 
-                              onSelect={date => setNewEmployee({
-                                ...newEmployee,
-                                hireDate: date
-                              })} 
-                              initialFocus 
-                              className="p-3 pointer-events-auto" 
-                            />
-                          </PopoverContent>
-                        </Popover>
+                        <DateInput
+                          value={newEmployee.hireDate}
+                          onChange={(date) => setNewEmployee({
+                            ...newEmployee,
+                            hireDate: date
+                          })}
+                          placeholder="MM/DD/YY"
+                          className={formErrors.hireDate ? "border-destructive" : ""}
+                        />
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="probationPeriod">Probation Period *</Label>
@@ -2237,26 +2168,16 @@ export default function Employees() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Date of Birth</Label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !editEmployee.dateOfBirth && "text-muted-foreground")}>
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {editEmployee.dateOfBirth ? format(new Date(editEmployee.dateOfBirth), "PPP") : "Pick a date"}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
-                          <Calendar 
-                            mode="single" 
-                            selected={editEmployee.dateOfBirth ? new Date(editEmployee.dateOfBirth) : undefined} 
-                            onSelect={(date) => setEditEmployee({
-                              ...editEmployee,
-                              dateOfBirth: date ? date.toISOString().split('T')[0] : undefined
-                            })} 
-                            initialFocus 
-                            className="p-3 pointer-events-auto" 
-                          />
-                        </PopoverContent>
-                      </Popover>
+                      <DateInput
+                        value={editEmployee.dateOfBirth ? new Date(editEmployee.dateOfBirth) : undefined}
+                        onChange={(date) => setEditEmployee({
+                          ...editEmployee,
+                          dateOfBirth: date ? date.toISOString().split('T')[0] : undefined
+                        })}
+                        placeholder="MM/DD/YY"
+                        maxDate={new Date()}
+                        minDate={new Date("1900-01-01")}
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="editGender">Gender *</Label>
@@ -2460,27 +2381,15 @@ export default function Employees() {
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <Label htmlFor="editHireDate">Hire Date *</Label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button variant="outline" className="w-full justify-start text-left font-normal">
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {editEmployee.hire_date ? format(new Date(editEmployee.hire_date), "PPP") : "Pick a date"}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
-                          <Calendar 
-                            mode="single" 
-                            selected={editEmployee.hire_date ? new Date(editEmployee.hire_date) : editEmployee.joinDate ? new Date(editEmployee.joinDate) : undefined} 
-                            onSelect={date => setEditEmployee({
-                              ...editEmployee,
-                              hireDate: date,
-                              joinDate: date ? format(date, 'yyyy-MM-dd') : undefined
-                            })} 
-                            initialFocus 
-                            className="p-3 pointer-events-auto" 
-                          />
-                        </PopoverContent>
-                      </Popover>
+                      <DateInput
+                        value={editEmployee.hire_date ? new Date(editEmployee.hire_date) : editEmployee.joinDate ? new Date(editEmployee.joinDate) : undefined}
+                        onChange={(date) => setEditEmployee({
+                          ...editEmployee,
+                          hireDate: date,
+                          joinDate: date ? format(date, 'yyyy-MM-dd') : undefined
+                        })}
+                        placeholder="MM/DD/YY"
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="editProbationPeriod">Probation Period</Label>
@@ -2499,26 +2408,14 @@ export default function Employees() {
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <Label>Confirmation Date</Label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !editEmployee.confirmationDate && "text-muted-foreground")}>
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {editEmployee.confirmationDate ? format(new Date(editEmployee.confirmationDate), "PPP") : "Pick a date"}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
-                          <Calendar 
-                            mode="single" 
-                            selected={editEmployee.confirmationDate ? new Date(editEmployee.confirmationDate) : undefined} 
-                            onSelect={date => setEditEmployee({
-                              ...editEmployee,
-                              confirmationDate: date
-                            })} 
-                            initialFocus 
-                            className="p-3 pointer-events-auto" 
-                          />
-                        </PopoverContent>
-                      </Popover>
+                      <DateInput
+                        value={editEmployee.confirmationDate ? new Date(editEmployee.confirmationDate) : undefined}
+                        onChange={(date) => setEditEmployee({
+                          ...editEmployee,
+                          confirmationDate: date
+                        })}
+                        placeholder="MM/DD/YY"
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="editEmploymentStatus">Employment Status *</Label>

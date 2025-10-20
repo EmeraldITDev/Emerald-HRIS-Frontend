@@ -175,6 +175,24 @@ export default function Performance() {
   const [hrReviewDialogOpen, setHrReviewDialogOpen] = useState(false)
   const [selectedReview, setSelectedReview] = useState<Review | null>(null)
   const [employeeComment, setEmployeeComment] = useState("")
+  const [selfAssessmentForm, setSelfAssessmentForm] = useState({
+    responsibilities: "",
+    achievements: "",
+    goalsCompleted: "",
+    goalsNotAchieved: "",
+    workQuality: "3",
+    timeManagement: "",
+    teamCommunication: "",
+    feedbackResponse: "",
+    professionalism: "",
+    challenges: "",
+    resourcesNeeded: "",
+    skillsToLearn: "",
+    futureGoals: "",
+    teamContribution: "",
+    suggestions: "",
+    overallRating: "3"
+  });
   const [selfAssessment, setSelfAssessment] = useState("")
   const [managerNotes, setManagerNotes] = useState("")
   const [meetingDate, setMeetingDate] = useState("")
@@ -330,6 +348,43 @@ export default function Performance() {
     })
   }
   
+  const handleSubmitSelfAssessmentForm = () => {
+    // Validate required fields
+    if (!selfAssessmentForm.responsibilities || !selfAssessmentForm.achievements) {
+      toast({
+        title: "Required Fields Missing",
+        description: "Please fill in all required fields before submitting.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    toast({
+      title: "Self-Assessment Submitted",
+      description: "Your self-assessment has been sent to your line manager for review.",
+    });
+    setSelfAssessmentDialogOpen(false);
+    setSelfAssessmentForm({
+      responsibilities: "",
+      achievements: "",
+      goalsCompleted: "",
+      goalsNotAchieved: "",
+      workQuality: "3",
+      timeManagement: "",
+      teamCommunication: "",
+      feedbackResponse: "",
+      professionalism: "",
+      challenges: "",
+      resourcesNeeded: "",
+      skillsToLearn: "",
+      futureGoals: "",
+      teamContribution: "",
+      suggestions: "",
+      overallRating: "3"
+    });
+  }
+
+  
   const handleManagerReview = () => {
     if (!selectedReview || !managerNotes.trim() || !meetingDate) {
       toast({
@@ -473,35 +528,234 @@ export default function Performance() {
                   <span className="text-sm md:text-base">Self-Assessment</span>
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-[600px] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
+              <DialogContent className="max-w-[800px] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
                 <DialogHeader>
-                  <DialogTitle>Submit Self-Assessment</DialogTitle>
+                  <DialogTitle>Employee Performance Assessment Form</DialogTitle>
                   <DialogDescription>
                     Complete your self-assessment. This will be sent to your line manager for review.
                   </DialogDescription>
                 </DialogHeader>
                 
-                <div className="grid gap-4 py-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="selfAssessmentNew">Self-Assessment *</Label>
-                    <Textarea
-                      id="selfAssessmentNew"
-                      placeholder="Describe your achievements, challenges, and goals..."
-                      value={selfAssessment}
-                      onChange={(e) => setSelfAssessment(e.target.value)}
-                      rows={8}
-                    />
+                <div className="space-y-6 py-4">
+                  {/* Section A: Job Performance */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-foreground">Section A: Job Performance</h3>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="responsibilities">1. What are your main responsibilities in your current position? *</Label>
+                      <Textarea
+                        id="responsibilities"
+                        placeholder="List your key responsibilities..."
+                        value={selfAssessmentForm.responsibilities}
+                        onChange={(e) => setSelfAssessmentForm({...selfAssessmentForm, responsibilities: e.target.value})}
+                        rows={3}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="achievements">2. What achievements are you most proud of during this review period? *</Label>
+                      <Textarea
+                        id="achievements"
+                        placeholder="Describe your key achievements..."
+                        value={selfAssessmentForm.achievements}
+                        onChange={(e) => setSelfAssessmentForm({...selfAssessmentForm, achievements: e.target.value})}
+                        rows={3}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="goalsCompleted">3. Which goals or tasks did you complete successfully?</Label>
+                      <Textarea
+                        id="goalsCompleted"
+                        placeholder="List completed goals and tasks..."
+                        value={selfAssessmentForm.goalsCompleted}
+                        onChange={(e) => setSelfAssessmentForm({...selfAssessmentForm, goalsCompleted: e.target.value})}
+                        rows={3}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="goalsNotAchieved">4. Were there any goals you did not achieve? If yes, please explain.</Label>
+                      <Textarea
+                        id="goalsNotAchieved"
+                        placeholder="Explain any unachieved goals..."
+                        value={selfAssessmentForm.goalsNotAchieved}
+                        onChange={(e) => setSelfAssessmentForm({...selfAssessmentForm, goalsNotAchieved: e.target.value})}
+                        rows={3}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="workQuality">5. How would you rate the quality and accuracy of your work?</Label>
+                      <Select value={selfAssessmentForm.workQuality} onValueChange={(value) => setSelfAssessmentForm({...selfAssessmentForm, workQuality: value})}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1">1 - Poor</SelectItem>
+                          <SelectItem value="2">2 - Fair</SelectItem>
+                          <SelectItem value="3">3 - Good</SelectItem>
+                          <SelectItem value="4">4 - Very Good</SelectItem>
+                          <SelectItem value="5">5 - Excellent</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  {/* Section B: Work Attitude & Behavior */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-foreground">Section B: Work Attitude & Behavior</h3>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="timeManagement">6. How do you manage your time and meet deadlines?</Label>
+                      <Textarea
+                        id="timeManagement"
+                        placeholder="Describe your time management approach..."
+                        value={selfAssessmentForm.timeManagement}
+                        onChange={(e) => setSelfAssessmentForm({...selfAssessmentForm, timeManagement: e.target.value})}
+                        rows={3}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="teamCommunication">7. How well do you work and communicate with your team and supervisor?</Label>
+                      <Textarea
+                        id="teamCommunication"
+                        placeholder="Describe your team collaboration..."
+                        value={selfAssessmentForm.teamCommunication}
+                        onChange={(e) => setSelfAssessmentForm({...selfAssessmentForm, teamCommunication: e.target.value})}
+                        rows={3}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="feedbackResponse">8. How do you respond to feedback or constructive criticism?</Label>
+                      <Textarea
+                        id="feedbackResponse"
+                        placeholder="Describe how you handle feedback..."
+                        value={selfAssessmentForm.feedbackResponse}
+                        onChange={(e) => setSelfAssessmentForm({...selfAssessmentForm, feedbackResponse: e.target.value})}
+                        rows={3}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="professionalism">9. How do you demonstrate professionalism and a positive attitude at work?</Label>
+                      <Textarea
+                        id="professionalism"
+                        placeholder="Describe your professional approach..."
+                        value={selfAssessmentForm.professionalism}
+                        onChange={(e) => setSelfAssessmentForm({...selfAssessmentForm, professionalism: e.target.value})}
+                        rows={3}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Section C: Development & Improvement */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-foreground">Section C: Development & Improvement</h3>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="challenges">10. What challenges affected your performance during this period?</Label>
+                      <Textarea
+                        id="challenges"
+                        placeholder="Describe any challenges faced..."
+                        value={selfAssessmentForm.challenges}
+                        onChange={(e) => setSelfAssessmentForm({...selfAssessmentForm, challenges: e.target.value})}
+                        rows={3}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="resourcesNeeded">11. What resources or support do you need to do your job better?</Label>
+                      <Textarea
+                        id="resourcesNeeded"
+                        placeholder="List needed resources or support..."
+                        value={selfAssessmentForm.resourcesNeeded}
+                        onChange={(e) => setSelfAssessmentForm({...selfAssessmentForm, resourcesNeeded: e.target.value})}
+                        rows={3}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="skillsToLearn">12. What new skills would you like to learn or improve on?</Label>
+                      <Textarea
+                        id="skillsToLearn"
+                        placeholder="List skills you want to develop..."
+                        value={selfAssessmentForm.skillsToLearn}
+                        onChange={(e) => setSelfAssessmentForm({...selfAssessmentForm, skillsToLearn: e.target.value})}
+                        rows={3}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Section D: Future Goals */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-foreground">Section D: Future Goals</h3>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="futureGoals">13. What are your key goals for the next review period?</Label>
+                      <Textarea
+                        id="futureGoals"
+                        placeholder="List your future goals..."
+                        value={selfAssessmentForm.futureGoals}
+                        onChange={(e) => setSelfAssessmentForm({...selfAssessmentForm, futureGoals: e.target.value})}
+                        rows={3}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="teamContribution">14. How do you plan to contribute to your team or department's success?</Label>
+                      <Textarea
+                        id="teamContribution"
+                        placeholder="Describe your planned contributions..."
+                        value={selfAssessmentForm.teamContribution}
+                        onChange={(e) => setSelfAssessmentForm({...selfAssessmentForm, teamContribution: e.target.value})}
+                        rows={3}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="suggestions">15. Do you have any suggestions for improving workplace processes or communication?</Label>
+                      <Textarea
+                        id="suggestions"
+                        placeholder="Share your suggestions..."
+                        value={selfAssessmentForm.suggestions}
+                        onChange={(e) => setSelfAssessmentForm({...selfAssessmentForm, suggestions: e.target.value})}
+                        rows={3}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Section E: Self-Rating */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-foreground">Section E: Self-Rating</h3>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="overallRating">16. How would you rate your overall performance on a scale of 1–5?</Label>
+                      <Select value={selfAssessmentForm.overallRating} onValueChange={(value) => setSelfAssessmentForm({...selfAssessmentForm, overallRating: value})}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1">1 - Poor</SelectItem>
+                          <SelectItem value="2">2 - Fair</SelectItem>
+                          <SelectItem value="3">3 - Good</SelectItem>
+                          <SelectItem value="4">4 - Very Good</SelectItem>
+                          <SelectItem value="5">5 - Excellent</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 </div>
                 
                 <DialogFooter>
                   <Button variant="outline" onClick={() => {
-                    setSelfAssessmentDialogOpen(false)
-                    setSelfAssessment("")
+                    setSelfAssessmentDialogOpen(false);
                   }}>
                     Cancel
                   </Button>
-                  <Button onClick={handleSubmitSelfAssessment} className="bg-blue-600 hover:bg-blue-700 text-white">
+                  <Button onClick={handleSubmitSelfAssessmentForm} className="bg-blue-600 hover:bg-blue-700 text-white">
                     Submit Assessment
                   </Button>
                 </DialogFooter>

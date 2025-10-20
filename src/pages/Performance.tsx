@@ -33,51 +33,119 @@ interface Review {
 export default function Performance() {
   const [employees, setEmployees] = useState<Employee[]>([])
   const [reviews, setReviews] = useState<Review[]>([
+    // Henry Marcus (Line Manager) - Reviews for his IT team
     {
       id: '1',
-      employeeId: '101',
+      employeeId: '5',
       employeeName: 'Henry Marcus',
       department: 'IT',
       reviewPeriod: 'Q4 2024',
       reviewDate: '2024-12-15',
       rating: 4,
       status: 'Completed',
-      reviewer: 'Austin Nwachwukwu',
-      goals: 'Complete system integration projects and improve database performance',
-      achievements: 'Successfully delivered 4 major projects on time, improved database query performance by 35%',
-      areasForImprovement: 'Enhanced communication with cross-functional teams',
-      comments: 'Excellent technical performance. Henry has shown strong dedication and problem-solving skills throughout the quarter.'
+      reviewer: 'Sarah Johnson (Executive)',
+      goals: 'Lead team effectively, complete infrastructure upgrades, mentor junior staff',
+      achievements: 'Successfully managed 5-person IT team, completed cloud migration ahead of schedule, mentored 3 junior developers',
+      areasForImprovement: 'Strategic planning and cross-department collaboration',
+      comments: 'Henry has demonstrated excellent leadership as a Line Manager. His team consistently delivers high-quality work.'
     },
     {
       id: '2',
-      employeeId: '101',
+      employeeId: '5',
       employeeName: 'Henry Marcus',
       department: 'IT',
       reviewPeriod: 'Q3 2024',
       reviewDate: '2024-09-15',
       rating: 5,
       status: 'Completed',
-      reviewer: 'Austin Nwachwukwu',
-      goals: 'Lead migration to new infrastructure and mentor junior developers',
-      achievements: 'Successfully led cloud migration project, mentored 2 junior developers, reduced system downtime by 40%',
-      areasForImprovement: 'Continue developing leadership skills',
-      comments: 'Outstanding performance this quarter. Henry exceeded all expectations and demonstrated excellent leadership qualities.',
-      employeeComments: 'Thank you for the feedback. I really enjoyed leading the migration project and will continue to focus on my leadership development.'
+      reviewer: 'Sarah Johnson (Executive)',
+      goals: 'Improve team productivity, implement new security protocols',
+      achievements: 'Increased team productivity by 30%, successfully implemented zero-trust security framework',
+      areasForImprovement: 'Continue developing executive-level communication skills',
+      comments: 'Outstanding performance. Henry has proven himself as a strong leader and technical expert.',
+      employeeComments: 'Thank you for the recognition. I am committed to continuing to grow as a leader and supporting my team.'
     },
+    // Sarah Chen (HR Manager) - Employee in Marketing
     {
       id: '3',
-      employeeId: '101',
-      employeeName: 'Henry Marcus',
-      department: 'IT',
-      reviewPeriod: 'Q2 2024',
-      reviewDate: '2024-06-15',
+      employeeId: '2',
+      employeeName: 'Sarah Chen',
+      department: 'Marketing',
+      reviewPeriod: 'Q4 2024',
+      reviewDate: '2024-12-10',
+      rating: 5,
+      status: 'Completed',
+      reviewer: 'Austin Nwachwukwu (HR Manager)',
+      goals: 'Launch new marketing campaigns, improve brand visibility, manage team of 8',
+      achievements: 'Launched 3 successful campaigns with 45% engagement increase, expanded social media following by 60%, excellent team management',
+      areasForImprovement: 'Budget management and ROI tracking',
+      comments: 'Sarah continues to excel in her role. Her creative campaigns have significantly boosted our brand presence.'
+    },
+    // John Smith (Corporate HR) - Employee in Finance
+    {
+      id: '4',
+      employeeId: '3',
+      employeeName: 'John Smith',
+      department: 'Finance',
+      reviewPeriod: 'Q4 2024',
+      reviewDate: '2024-12-08',
       rating: 4,
       status: 'Completed',
-      reviewer: 'Austin Nwachwukwu',
-      goals: 'Implement new security protocols and complete certifications',
-      achievements: 'Implemented enhanced security measures, completed AWS certification, improved system security score by 25%',
-      areasForImprovement: 'Time management on concurrent projects',
-      comments: 'Strong performance with notable achievements in security improvements. Keep up the excellent work.'
+      reviewer: 'Michael Brown (Line Manager - Finance)',
+      goals: 'Streamline financial reporting processes, ensure compliance with new regulations',
+      achievements: 'Reduced report generation time by 40%, successfully implemented new compliance framework, trained 5 team members',
+      areasForImprovement: 'Proactive communication with stakeholders',
+      comments: 'John has made significant improvements to our financial processes. His attention to detail is commendable.'
+    },
+    // Emily Davis (IT Power User) - General employee
+    {
+      id: '5',
+      employeeId: '7',
+      employeeName: 'Emily Davis',
+      department: 'IT',
+      reviewPeriod: 'Q4 2024',
+      reviewDate: '2024-12-20',
+      rating: 5,
+      status: 'Completed',
+      reviewer: 'Henry Marcus (Line Manager - IT)',
+      goals: 'Complete certification in cloud architecture, lead system optimization project',
+      achievements: 'Obtained AWS Solutions Architect certification, optimized system performance by 35%, automated 10+ manual processes',
+      areasForImprovement: 'Documentation and knowledge sharing',
+      comments: 'Emily has shown exceptional technical skills and initiative. She is a valuable asset to the IT team.',
+      employeeComments: 'Thanks for the feedback! I will work on improving my documentation practices.'
+    },
+    // Michael Wilson (Contract Employee) - Sales
+    {
+      id: '6',
+      employeeId: '8',
+      employeeName: 'Michael Wilson',
+      department: 'Sales',
+      reviewPeriod: 'Q4 2024',
+      reviewDate: '2024-12-18',
+      rating: 4,
+      status: 'Completed',
+      reviewer: 'Jennifer Lee (Line Manager - Sales)',
+      goals: 'Achieve quarterly sales targets, expand client base',
+      achievements: 'Exceeded sales target by 25%, acquired 15 new clients, maintained 95% client retention rate',
+      areasForImprovement: 'CRM system utilization and follow-up consistency',
+      comments: 'Michael has consistently delivered strong sales results. His client relationship skills are excellent.'
+    },
+    // Lisa Anderson (General Employee) - Operations
+    {
+      id: '7',
+      employeeId: '9',
+      employeeName: 'Lisa Anderson',
+      department: 'Operations',
+      reviewPeriod: 'Q4 2024',
+      reviewDate: '2024-12-12',
+      rating: 3,
+      status: 'Completed',
+      reviewer: 'David Kim (Line Manager - Operations)',
+      goals: 'Improve process efficiency, reduce operational errors',
+      achievements: 'Reduced processing errors by 20%, contributed to team projects consistently',
+      areasForImprovement: 'Time management, taking more initiative on projects',
+      comments: 'Lisa meets expectations but has room to grow. Encourage her to take on more challenging tasks and be more proactive.',
+      employeeComments: 'I appreciate the feedback and will work on being more proactive in identifying improvement opportunities.'
     }
   ])
   

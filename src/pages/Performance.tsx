@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Star, Plus, Eye, Download, MessageSquare } from "lucide-react"
+import { Star, Plus, Eye, Download, MessageSquare, FileEdit, Calendar, CheckCircle, ClipboardCheck } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from '@/contexts/AuthContext'
 import { apiService, Employee } from '@/lib/api'
@@ -28,6 +28,14 @@ interface Review {
   areasForImprovement: string
   comments: string
   employeeComments?: string
+  selfAssessment?: string
+  selfAssessmentDate?: string
+  managerReviewDate?: string
+  meetingScheduledDate?: string
+  employeeSignedDate?: string
+  managerSignedDate?: string
+  hrApprovedDate?: string
+  hrComments?: string
 }
 
 export default function Performance() {
@@ -162,8 +170,15 @@ export default function Performance() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [viewDialogOpen, setViewDialogOpen] = useState(false)
   const [commentDialogOpen, setCommentDialogOpen] = useState(false)
+  const [selfAssessmentDialogOpen, setSelfAssessmentDialogOpen] = useState(false)
+  const [manageReviewDialogOpen, setManageReviewDialogOpen] = useState(false)
+  const [hrReviewDialogOpen, setHrReviewDialogOpen] = useState(false)
   const [selectedReview, setSelectedReview] = useState<Review | null>(null)
   const [employeeComment, setEmployeeComment] = useState("")
+  const [selfAssessment, setSelfAssessment] = useState("")
+  const [managerNotes, setManagerNotes] = useState("")
+  const [meetingDate, setMeetingDate] = useState("")
+  const [hrComments, setHrComments] = useState("")
   const { toast } = useToast()
   const { user } = useAuth()
   
@@ -281,6 +296,132 @@ export default function Performance() {
     toast({
       title: "Comment added",
       description: "Your comment has been added to the review."
+    })
+  }
+  
+  const handleSubmitSelfAssessment = () => {
+    if (!selectedReview || !selfAssessment.trim()) {
+      toast({
+        title: "Missing information",
+        description: "Please complete your self-assessment.",
+        variant: "destructive"
+      })
+      return
+    }
+    
+    const updatedReviews = reviews.map(review => 
+      review.id === selectedReview.id 
+        ? { 
+            ...review, 
+            selfAssessment,
+            selfAssessmentDate: new Date().toISOString().split('T')[0],
+            status: 'Self-Assessment Submitted'
+          }
+        : review
+    )
+    
+    setReviews(updatedReviews)
+    setSelfAssessment("")
+    setSelfAssessmentDialogOpen(false)
+    
+    toast({
+      title: "Self-assessment submitted",
+      description: "Your self-assessment has been sent to your line manager."
+    })
+  }
+  
+  const handleManagerReview = () => {
+    if (!selectedReview || !managerNotes.trim() || !meetingDate) {
+      toast({
+        title: "Missing information",
+        description: "Please complete all fields.",
+        variant: "destructive"
+      })
+      return
+    }
+    
+    const updatedReviews = reviews.map(review => 
+      review.id === selectedReview.id 
+        ? { 
+            ...review, 
+            comments: managerNotes,
+            managerReviewDate: new Date().toISOString().split('T')[0],
+            meetingScheduledDate: meetingDate,
+            status: 'Meeting Scheduled'
+          }
+        : review
+    )
+    
+    setReviews(updatedReviews)
+    setManagerNotes("")
+    setMeetingDate("")
+    setManageReviewDialogOpen(false)
+    
+    toast({
+      title: "Review updated",
+      description: "Manager review completed and meeting scheduled."
+    })
+  }
+  
+  const handleEmployeeSignOff = (reviewId: string) => {
+    const updatedReviews = reviews.map(review => 
+      review.id === reviewId 
+        ? { 
+            ...review, 
+            employeeSignedDate: new Date().toISOString().split('T')[0],
+            status: review.managerSignedDate ? 'Awaiting HR Review' : 'Employee Signed'
+          }
+        : review
+    )
+    
+    setReviews(updatedReviews)
+    
+    toast({
+      title: "Review signed",
+      description: "You have signed off on this performance review."
+    })
+  }
+  
+  const handleManagerSignOff = (reviewId: string) => {
+    const updatedReviews = reviews.map(review => 
+      review.id === reviewId 
+        ? { 
+            ...review, 
+            managerSignedDate: new Date().toISOString().split('T')[0],
+            status: review.employeeSignedDate ? 'Awaiting HR Review' : 'Manager Signed'
+          }
+        : review
+    )
+    
+    setReviews(updatedReviews)
+    
+    toast({
+      title: "Review signed",
+      description: "You have signed off on this performance review."
+    })
+  }
+  
+  const handleHRApproval = () => {
+    if (!selectedReview) return
+    
+    const updatedReviews = reviews.map(review => 
+      review.id === selectedReview.id 
+        ? { 
+            ...review, 
+            hrApprovedDate: new Date().toISOString().split('T')[0],
+            hrComments: hrComments,
+            status: 'HR Approved'
+          }
+        : review
+    )
+    
+    setReviews(updatedReviews)
+    setHrComments("")
+    setHrReviewDialogOpen(false)
+    
+    toast({
+      title: "Review approved",
+      description: "Performance review has been approved and filed."
     })
   }
   
@@ -477,27 +618,91 @@ export default function Performance() {
                       </Badge>
                     </TableCell>
                      <TableCell className="text-right">
-                      <div className="flex justify-end gap-1 md:gap-2">
+                      <div className="flex justify-end gap-1 md:gap-2 flex-wrap">
+                        {/* View button - everyone can view */}
                         <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => {
                           setSelectedReview(review)
                           setViewDialogOpen(true)
                         }}>
                           <Eye className="h-3 w-3 md:h-4 md:w-4" />
                         </Button>
+                        
+                        {/* Employee actions */}
                         {isGeneralEmployee && review.employeeId === currentEmployeeId && (
                           <>
+                            {/* Self-Assessment button */}
+                            {!review.selfAssessmentDate && (
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => {
+                                setSelectedReview(review)
+                                setSelfAssessment(review.selfAssessment || "")
+                                setSelfAssessmentDialogOpen(true)
+                              }} title="Submit Self-Assessment">
+                                <FileEdit className="h-3 w-3 md:h-4 md:w-4 text-blue-600" />
+                              </Button>
+                            )}
+                            
+                            {/* Employee Sign-Off button (only after meeting scheduled) */}
+                            {review.meetingScheduledDate && !review.employeeSignedDate && (
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => handleEmployeeSignOff(review.id)} title="Sign Off Review">
+                                <CheckCircle className="h-3 w-3 md:h-4 md:w-4 text-green-600" />
+                              </Button>
+                            )}
+                            
                             <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => {
                               setSelectedReview(review)
                               setEmployeeComment(review.employeeComments || "")
                               setCommentDialogOpen(true)
-                            }}>
+                            }} title="Add Comment">
                               <MessageSquare className="h-3 w-3 md:h-4 md:w-4" />
-                            </Button>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hidden sm:inline-flex" onClick={() => handleExportReview(review)}>
-                              <Download className="h-3 w-3 md:h-4 md:w-4" />
                             </Button>
                           </>
                         )}
+                        
+                        {/* Line Manager actions */}
+                        {isLineManager && review.department === userDepartment && (
+                          <>
+                            {/* Manage Review button */}
+                            {review.selfAssessmentDate && !review.managerReviewDate && (
+                              <Button variant="ghost" size="sm" className="h-8 px-2" onClick={() => {
+                                setSelectedReview(review)
+                                setManagerNotes(review.comments || "")
+                                setManageReviewDialogOpen(true)
+                              }}>
+                                <Calendar className="h-3 w-3 md:h-4 md:w-4 mr-1" />
+                                <span className="text-xs hidden lg:inline">Manage</span>
+                              </Button>
+                            )}
+                            
+                            {/* Manager Sign-Off button (only after meeting scheduled) */}
+                            {review.meetingScheduledDate && !review.managerSignedDate && (
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => handleManagerSignOff(review.id)} title="Sign Off Review">
+                                <CheckCircle className="h-3 w-3 md:h-4 md:w-4 text-green-600" />
+                              </Button>
+                            )}
+                          </>
+                        )}
+                        
+                        {/* HR actions */}
+                        {(user?.role === 'hr_manager' || user?.role === 'executive') && (
+                          <>
+                            {/* HR Review/Approve button (only after both signed) */}
+                            {review.employeeSignedDate && review.managerSignedDate && !review.hrApprovedDate && (
+                              <Button variant="ghost" size="sm" className="h-8 px-2" onClick={() => {
+                                setSelectedReview(review)
+                                setHrComments("")
+                                setHrReviewDialogOpen(true)
+                              }}>
+                                <ClipboardCheck className="h-3 w-3 md:h-4 md:w-4 mr-1" />
+                                <span className="text-xs hidden lg:inline">Approve</span>
+                              </Button>
+                            )}
+                          </>
+                        )}
+                        
+                        {/* Export button */}
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hidden sm:inline-flex" onClick={() => handleExportReview(review)}>
+                          <Download className="h-3 w-3 md:h-4 md:w-4" />
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -608,6 +813,185 @@ export default function Performance() {
             </Button>
             <Button onClick={handleAddEmployeeComment} className="bg-emerald-600 hover:bg-emerald-700 text-white">
               Submit Comment
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Self-Assessment Dialog */}
+      <Dialog open={selfAssessmentDialogOpen} onOpenChange={setSelfAssessmentDialogOpen}>
+        <DialogContent className="max-w-[600px] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
+          <DialogHeader>
+            <DialogTitle>Self-Assessment</DialogTitle>
+            <DialogDescription>
+              Complete your self-evaluation for this review period
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedReview && (
+            <div className="space-y-4">
+              <div className="bg-muted p-4 rounded-lg">
+                <p className="text-sm text-muted-foreground">Review Period</p>
+                <p className="font-medium">{selectedReview.reviewPeriod}</p>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="self-assessment">Your Self-Assessment</Label>
+                <Textarea
+                  id="self-assessment"
+                  value={selfAssessment}
+                  onChange={(e) => setSelfAssessment(e.target.value)}
+                  placeholder="Describe your achievements, challenges, and areas for growth during this period..."
+                  className="min-h-[200px]"
+                />
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSelfAssessmentDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSubmitSelfAssessment} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+              Submit to Manager
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Manager Review Dialog */}
+      <Dialog open={manageReviewDialogOpen} onOpenChange={setManageReviewDialogOpen}>
+        <DialogContent className="max-w-[600px] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
+          <DialogHeader>
+            <DialogTitle>Manage Performance Review</DialogTitle>
+            <DialogDescription>
+              Add your evaluation and schedule a review meeting
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedReview && (
+            <div className="space-y-4">
+              <div className="bg-muted p-4 rounded-lg">
+                <p className="text-sm text-muted-foreground">Employee</p>
+                <p className="font-medium">{selectedReview.employeeName}</p>
+                <p className="text-sm text-muted-foreground mt-2">Review Period</p>
+                <p className="font-medium">{selectedReview.reviewPeriod}</p>
+              </div>
+              
+              {selectedReview.selfAssessment && (
+                <div className="space-y-2">
+                  <Label>Employee Self-Assessment</Label>
+                  <div className="bg-muted p-3 rounded">
+                    <p className="text-sm">{selectedReview.selfAssessment}</p>
+                  </div>
+                </div>
+              )}
+              
+              <div className="space-y-2">
+                <Label htmlFor="manager-notes">Manager Comments & Ratings</Label>
+                <Textarea
+                  id="manager-notes"
+                  value={managerNotes}
+                  onChange={(e) => setManagerNotes(e.target.value)}
+                  placeholder="Add your evaluation, feedback, and notes..."
+                  className="min-h-[150px]"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="meeting-date">Schedule Review Meeting</Label>
+                <Input
+                  id="meeting-date"
+                  type="date"
+                  value={meetingDate}
+                  onChange={(e) => setMeetingDate(e.target.value)}
+                />
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setManageReviewDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleManagerReview} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+              Schedule Meeting
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* HR Review Dialog */}
+      <Dialog open={hrReviewDialogOpen} onOpenChange={setHrReviewDialogOpen}>
+        <DialogContent className="max-w-[600px] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
+          <DialogHeader>
+            <DialogTitle>HR Review & Approval</DialogTitle>
+            <DialogDescription>
+              Review and approve the completed performance evaluation
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedReview && (
+            <div className="space-y-4">
+              <div className="bg-muted p-4 rounded-lg space-y-2">
+                <div>
+                  <p className="text-sm text-muted-foreground">Employee</p>
+                  <p className="font-medium">{selectedReview.employeeName}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Review Period</p>
+                  <p className="font-medium">{selectedReview.reviewPeriod}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Rating</p>
+                  {renderStars(selectedReview.rating)}
+                </div>
+              </div>
+              
+              <div className="space-y-3">
+                <div>
+                  <Label className="text-sm font-semibold">Status</Label>
+                  <div className="flex gap-2 mt-1">
+                    {selectedReview.employeeSignedDate && (
+                      <Badge className="bg-success/10 text-success border-success/20">
+                        Employee Signed ({selectedReview.employeeSignedDate})
+                      </Badge>
+                    )}
+                    {selectedReview.managerSignedDate && (
+                      <Badge className="bg-success/10 text-success border-success/20">
+                        Manager Signed ({selectedReview.managerSignedDate})
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+                
+                {selectedReview.comments && (
+                  <div>
+                    <Label className="text-sm font-semibold">Manager Comments</Label>
+                    <p className="text-sm mt-1 bg-muted p-3 rounded">{selectedReview.comments}</p>
+                  </div>
+                )}
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="hr-comments">HR Comments (Optional)</Label>
+                <Textarea
+                  id="hr-comments"
+                  value={hrComments}
+                  onChange={(e) => setHrComments(e.target.value)}
+                  placeholder="Add any HR notes or comments..."
+                  className="min-h-[100px]"
+                />
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setHrReviewDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleHRApproval} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+              Approve & File
             </Button>
           </DialogFooter>
         </DialogContent>

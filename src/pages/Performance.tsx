@@ -30,8 +30,6 @@ interface Review {
   employeeComments?: string
   selfAssessment?: string
   selfAssessmentDate?: string
-  selfAssessmentStatus?: 'Draft' | 'Sent to Line Manager' | 'Reviewed by Line Manager' | 'Signed Off'
-  managerReviewComments?: string
   managerReviewDate?: string
   meetingScheduledDate?: string
   employeeSignedDate?: string
@@ -57,12 +55,7 @@ export default function Performance() {
       goals: 'Lead team effectively, complete infrastructure upgrades, mentor junior staff',
       achievements: 'Successfully managed 5-person IT team, completed cloud migration ahead of schedule, mentored 3 junior developers',
       areasForImprovement: 'Strategic planning and cross-department collaboration',
-      comments: 'Henry has demonstrated excellent leadership as a Line Manager. His team consistently delivers high-quality work.',
-      selfAssessment: 'I have focused on building a cohesive team and ensuring timely project delivery. The cloud migration was a major achievement.',
-      selfAssessmentDate: '2024-12-01',
-      selfAssessmentStatus: 'Signed Off',
-      managerReviewComments: 'Excellent self-awareness and leadership skills demonstrated throughout the period.',
-      managerReviewDate: '2024-12-10'
+      comments: 'Henry has demonstrated excellent leadership as a Line Manager. His team consistently delivers high-quality work.'
     },
     {
       id: '2',
@@ -78,14 +71,9 @@ export default function Performance() {
       achievements: 'Increased team productivity by 30%, successfully implemented zero-trust security framework',
       areasForImprovement: 'Continue developing executive-level communication skills',
       comments: 'Outstanding performance. Henry has proven himself as a strong leader and technical expert.',
-      employeeComments: 'Thank you for the recognition. I am committed to continuing to grow as a leader and supporting my team.',
-      selfAssessment: 'I implemented new workflows that increased efficiency. The security framework rollout was completed 2 weeks ahead of schedule.',
-      selfAssessmentDate: '2024-09-01',
-      selfAssessmentStatus: 'Signed Off',
-      managerReviewComments: 'Outstanding initiative and technical expertise.',
-      managerReviewDate: '2024-09-10'
+      employeeComments: 'Thank you for the recognition. I am committed to continuing to grow as a leader and supporting my team.'
     },
-    // Sarah Chen (Marketing) - Employee
+    // Sarah Chen (HR Manager) - Employee in Marketing
     {
       id: '3',
       employeeId: '2',
@@ -95,16 +83,11 @@ export default function Performance() {
       reviewDate: '2024-12-10',
       rating: 5,
       status: 'Completed',
-      reviewer: 'Emily Brown (Line Manager)',
+      reviewer: 'Austin Nwachwukwu (HR Manager)',
       goals: 'Launch new marketing campaigns, improve brand visibility, manage team of 8',
       achievements: 'Launched 3 successful campaigns with 45% engagement increase, expanded social media following by 60%, excellent team management',
       areasForImprovement: 'Budget management and ROI tracking',
-      comments: 'Sarah continues to excel in her role. Her creative campaigns have significantly boosted our brand presence.',
-      selfAssessment: 'I led successful campaigns and focused on data-driven strategies. My team collaboration has improved significantly.',
-      selfAssessmentDate: '2024-11-25',
-      selfAssessmentStatus: 'Reviewed by Line Manager',
-      managerReviewComments: 'Creative and results-driven. Excellent team player.',
-      managerReviewDate: '2024-12-05'
+      comments: 'Sarah continues to excel in her role. Her creative campaigns have significantly boosted our brand presence.'
     },
     // John Smith (Corporate HR) - Employee in Finance
     {
@@ -120,10 +103,7 @@ export default function Performance() {
       goals: 'Streamline financial reporting processes, ensure compliance with new regulations',
       achievements: 'Reduced report generation time by 40%, successfully implemented new compliance framework, trained 5 team members',
       areasForImprovement: 'Proactive communication with stakeholders',
-      comments: 'John has made significant improvements to our financial processes. His attention to detail is commendable.',
-      selfAssessment: 'I streamlined our reporting processes and ensured compliance. I focused on efficiency and accuracy in all deliverables.',
-      selfAssessmentDate: '2024-11-20',
-      selfAssessmentStatus: 'Sent to Line Manager'
+      comments: 'John has made significant improvements to our financial processes. His attention to detail is commendable.'
     },
     // Emily Davis (IT Power User) - General employee
     {
@@ -140,12 +120,7 @@ export default function Performance() {
       achievements: 'Obtained AWS Solutions Architect certification, optimized system performance by 35%, automated 10+ manual processes',
       areasForImprovement: 'Documentation and knowledge sharing',
       comments: 'Emily has shown exceptional technical skills and initiative. She is a valuable asset to the IT team.',
-      employeeComments: 'Thanks for the feedback! I will work on improving my documentation practices.',
-      selfAssessment: 'I achieved my AWS certification and led the system optimization project. I automated many manual processes saving the team significant time.',
-      selfAssessmentDate: '2024-12-05',
-      selfAssessmentStatus: 'Signed Off',
-      managerReviewComments: 'Outstanding technical achievement and initiative.',
-      managerReviewDate: '2024-12-15'
+      employeeComments: 'Thanks for the feedback! I will work on improving my documentation practices.'
     },
     // Michael Wilson (Contract Employee) - Sales
     {
@@ -161,12 +136,7 @@ export default function Performance() {
       goals: 'Achieve quarterly sales targets, expand client base',
       achievements: 'Exceeded sales target by 25%, acquired 15 new clients, maintained 95% client retention rate',
       areasForImprovement: 'CRM system utilization and follow-up consistency',
-      comments: 'Michael has consistently delivered strong sales results. His client relationship skills are excellent.',
-      selfAssessment: 'I exceeded my sales targets and acquired many new clients. I focused on building strong relationships and understanding client needs.',
-      selfAssessmentDate: '2024-12-01',
-      selfAssessmentStatus: 'Reviewed by Line Manager',
-      managerReviewComments: 'Excellent sales performance and client management.',
-      managerReviewDate: '2024-12-12'
+      comments: 'Michael has consistently delivered strong sales results. His client relationship skills are excellent.'
     },
     // Lisa Anderson (General Employee) - Operations
     {
@@ -389,73 +359,11 @@ export default function Performance() {
       return;
     }
     
-    // Use selected review if available, otherwise find the employee's most recent review
-    const targetReview = selectedReview || reviews
-      .filter(r => r.employeeId === currentEmployeeId)
-      .sort((a, b) => new Date(b.reviewDate).getTime() - new Date(a.reviewDate).getTime())[0];
-    
-    if (!targetReview) {
-      toast({
-        title: "No Review Found",
-        description: "No performance review found to attach this self-assessment to.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    const selfAssessmentText = `
-Main Responsibilities: ${selfAssessmentForm.responsibilities}
-
-Achievements: ${selfAssessmentForm.achievements}
-
-Goals Completed: ${selfAssessmentForm.goalsCompleted || 'N/A'}
-
-Goals Not Achieved: ${selfAssessmentForm.goalsNotAchieved || 'N/A'}
-
-Work Quality Rating: ${selfAssessmentForm.workQuality}/5
-
-Time Management: ${selfAssessmentForm.timeManagement}
-
-Team Communication: ${selfAssessmentForm.teamCommunication}
-
-Response to Feedback: ${selfAssessmentForm.feedbackResponse}
-
-Professionalism: ${selfAssessmentForm.professionalism}
-
-Challenges: ${selfAssessmentForm.challenges}
-
-Resources Needed: ${selfAssessmentForm.resourcesNeeded}
-
-Skills to Learn: ${selfAssessmentForm.skillsToLearn}
-
-Future Goals: ${selfAssessmentForm.futureGoals}
-
-Team Contribution: ${selfAssessmentForm.teamContribution}
-
-Suggestions: ${selfAssessmentForm.suggestions}
-
-Overall Self-Rating: ${selfAssessmentForm.overallRating}/5
-    `.trim();
-    
-    const updatedReviews = reviews.map(review => 
-      review.id === targetReview.id 
-        ? { 
-            ...review, 
-            selfAssessment: selfAssessmentText,
-            selfAssessmentDate: new Date().toISOString().split('T')[0],
-            selfAssessmentStatus: 'Sent to Line Manager' as const
-          }
-        : review
-    );
-    
-    setReviews(updatedReviews);
-    
     toast({
       title: "Self-Assessment Submitted",
       description: "Your self-assessment has been sent to your line manager for review.",
     });
     setSelfAssessmentDialogOpen(false);
-    setSelectedReview(null);
     setSelfAssessmentForm({
       responsibilities: "",
       achievements: "",
@@ -491,10 +399,9 @@ Overall Self-Rating: ${selfAssessmentForm.overallRating}/5
       review.id === selectedReview.id 
         ? { 
             ...review, 
-            managerReviewComments: managerNotes,
+            comments: managerNotes,
             managerReviewDate: new Date().toISOString().split('T')[0],
             meetingScheduledDate: meetingDate,
-            selfAssessmentStatus: 'Reviewed by Line Manager' as const,
             status: 'Meeting Scheduled'
           }
         : review
@@ -507,7 +414,7 @@ Overall Self-Rating: ${selfAssessmentForm.overallRating}/5
     
     toast({
       title: "Review updated",
-      description: "Manager review completed and self-assessment marked as reviewed."
+      description: "Manager review completed and meeting scheduled."
     })
   }
   
@@ -989,7 +896,6 @@ Overall Self-Rating: ${selfAssessmentForm.overallRating}/5
                   <TableHead className="text-xs md:text-sm">Employee</TableHead>
                   <TableHead className="hidden md:table-cell text-xs md:text-sm">Department</TableHead>
                   <TableHead className="text-xs md:text-sm">Period</TableHead>
-                  <TableHead className="hidden lg:table-cell text-xs md:text-sm">Reviewer</TableHead>
                   <TableHead className="hidden sm:table-cell text-xs md:text-sm">Rating</TableHead>
                   <TableHead className="hidden lg:table-cell text-xs md:text-sm">Status</TableHead>
                   <TableHead className="text-right text-xs md:text-sm">Actions</TableHead>
@@ -1006,7 +912,6 @@ Overall Self-Rating: ${selfAssessmentForm.overallRating}/5
                     </TableCell>
                     <TableCell className="hidden md:table-cell text-xs md:text-sm">{review.department}</TableCell>
                     <TableCell className="text-xs md:text-sm">{review.reviewPeriod}</TableCell>
-                    <TableCell className="hidden lg:table-cell text-xs md:text-sm">{review.reviewer}</TableCell>
                     <TableCell className="hidden sm:table-cell text-xs md:text-sm">{renderStars(review.rating)}</TableCell>
                     <TableCell className="hidden lg:table-cell">
                       <Badge className={review.status === 'Completed' ? 'bg-success/10 text-success border-success/20 text-xs' : 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400 text-xs'}>
@@ -1026,85 +931,53 @@ Overall Self-Rating: ${selfAssessmentForm.overallRating}/5
                         {/* Employee actions */}
                         {isGeneralEmployee && review.employeeId === currentEmployeeId && (
                           <>
-                            {/* Update Self-Assessment button - only if not yet submitted or still in draft */}
-                            {(!review.selfAssessmentStatus || review.selfAssessmentStatus === 'Draft') && (
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                className="h-8 px-2" 
-                                onClick={() => {
-                                  setSelectedReview(review)
-                                  setSelfAssessmentDialogOpen(true)
-                                }} 
-                                title="Update Self-Assessment"
-                              >
-                                <FileEdit className="h-3 w-3 md:h-4 md:w-4 mr-1 text-blue-600" />
-                                <span className="text-xs hidden lg:inline">Update</span>
+                            {/* Self-Assessment button */}
+                            {!review.selfAssessmentDate && (
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => {
+                                setSelectedReview(review)
+                                setSelfAssessment(review.selfAssessment || "")
+                                setSelfAssessmentDialogOpen(true)
+                              }} title="Submit Self-Assessment">
+                                <FileEdit className="h-3 w-3 md:h-4 md:w-4 text-blue-600" />
                               </Button>
                             )}
                             
-                            {/* Sign Off button - only if reviewed by line manager */}
-                            {review.selfAssessmentStatus === 'Reviewed by Line Manager' && (
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                className="h-8 px-2" 
-                                onClick={() => {
-                                  const updatedReviews = reviews.map(r => 
-                                    r.id === review.id 
-                                      ? { ...r, selfAssessmentStatus: 'Signed Off' as const, employeeSignedDate: new Date().toISOString().split('T')[0] }
-                                      : r
-                                  )
-                                  setReviews(updatedReviews)
-                                  toast({
-                                    title: "Assessment Signed Off",
-                                    description: "You have successfully signed off on your self-assessment."
-                                  })
-                                }} 
-                                title="Sign Off Self-Assessment"
-                              >
-                                <CheckCircle className="h-3 w-3 md:h-4 md:w-4 mr-1 text-green-600" />
-                                <span className="text-xs hidden lg:inline">Sign Off</span>
+                            {/* Employee Sign-Off button (only after meeting scheduled) */}
+                            {review.meetingScheduledDate && !review.employeeSignedDate && (
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => handleEmployeeSignOff(review.id)} title="Sign Off Review">
+                                <CheckCircle className="h-3 w-3 md:h-4 md:w-4 text-green-600" />
                               </Button>
                             )}
+                            
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => {
+                              setSelectedReview(review)
+                              setEmployeeComment(review.employeeComments || "")
+                              setCommentDialogOpen(true)
+                            }} title="Add Comment">
+                              <MessageSquare className="h-3 w-3 md:h-4 md:w-4" />
+                            </Button>
                           </>
                         )}
                         
-                        {/* Line Manager and Executive actions */}
-                        {(isLineManager || user?.role === 'executive') && review.employeeId !== currentEmployeeId && (
+                        {/* Line Manager actions */}
+                        {isLineManager && review.department === userDepartment && (
                           <>
-                            {/* View and Comment button for self-assessments */}
-                            {review.selfAssessment && (
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                className="h-8 px-2" 
-                                onClick={() => {
-                                  setSelectedReview(review)
-                                  setViewDialogOpen(true)
-                                }} 
-                                title="View and Comment on Self-Assessment"
-                              >
-                                <MessageSquare className="h-3 w-3 md:h-4 md:w-4 mr-1" />
-                                <span className="text-xs hidden lg:inline">View & Comment</span>
+                            {/* Manage Review button */}
+                            {review.selfAssessmentDate && !review.managerReviewDate && (
+                              <Button variant="ghost" size="sm" className="h-8 px-2" onClick={() => {
+                                setSelectedReview(review)
+                                setManagerNotes(review.comments || "")
+                                setManageReviewDialogOpen(true)
+                              }}>
+                                <Calendar className="h-3 w-3 md:h-4 md:w-4 mr-1" />
+                                <span className="text-xs hidden lg:inline">Manage</span>
                               </Button>
                             )}
                             
-                            {/* Review button - to mark as reviewed */}
-                            {review.selfAssessmentStatus === 'Sent to Line Manager' && isLineManager && (
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                className="h-8 px-2" 
-                                onClick={() => {
-                                  setSelectedReview(review)
-                                  setManagerNotes(review.managerReviewComments || "")
-                                  setManageReviewDialogOpen(true)
-                                }} 
-                                title="Review Self-Assessment"
-                              >
-                                <ClipboardCheck className="h-3 w-3 md:h-4 md:w-4 mr-1 text-orange-600" />
-                                <span className="text-xs hidden lg:inline">Review</span>
+                            {/* Manager Sign-Off button (only after meeting scheduled) */}
+                            {review.meetingScheduledDate && !review.managerSignedDate && (
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => handleManagerSignOff(review.id)} title="Sign Off Review">
+                                <CheckCircle className="h-3 w-3 md:h-4 md:w-4 text-green-600" />
                               </Button>
                             )}
                           </>
@@ -1194,35 +1067,6 @@ Overall Self-Rating: ${selfAssessmentForm.overallRating}/5
                 <p className="mt-1">{selectedReview.comments}</p>
               </div>
               
-              {selectedReview.selfAssessment && (
-                <>
-                  <div className="border-t pt-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <Label className="text-sm text-muted-foreground">Self-Assessment</Label>
-                      {selectedReview.selfAssessmentStatus && (
-                        <Badge className="text-xs">
-                          {selectedReview.selfAssessmentStatus}
-                        </Badge>
-                      )}
-                    </div>
-                    <p className="mt-1 bg-blue-50 dark:bg-blue-950/20 p-3 rounded whitespace-pre-wrap">{selectedReview.selfAssessment}</p>
-                    {selectedReview.selfAssessmentDate && (
-                      <p className="text-xs text-muted-foreground mt-1">Submitted: {selectedReview.selfAssessmentDate}</p>
-                    )}
-                  </div>
-                  
-                  {selectedReview.managerReviewComments && (
-                    <div>
-                      <Label className="text-sm text-muted-foreground">Manager Review Comments</Label>
-                      <p className="mt-1 bg-green-50 dark:bg-green-950/20 p-3 rounded">{selectedReview.managerReviewComments}</p>
-                      {selectedReview.managerReviewDate && (
-                        <p className="text-xs text-muted-foreground mt-1">Reviewed: {selectedReview.managerReviewDate}</p>
-                      )}
-                    </div>
-                  )}
-                </>
-              )}
-              
               {selectedReview.employeeComments && (
                 <div>
                   <Label className="text-sm text-muted-foreground">Employee Comments</Label>
@@ -1275,6 +1119,46 @@ Overall Self-Rating: ${selfAssessmentForm.overallRating}/5
         </DialogContent>
       </Dialog>
       
+      {/* Self-Assessment Dialog */}
+      <Dialog open={selfAssessmentDialogOpen} onOpenChange={setSelfAssessmentDialogOpen}>
+        <DialogContent className="max-w-[600px] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
+          <DialogHeader>
+            <DialogTitle>Self-Assessment</DialogTitle>
+            <DialogDescription>
+              Complete your self-evaluation for this review period
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedReview && (
+            <div className="space-y-4">
+              <div className="bg-muted p-4 rounded-lg">
+                <p className="text-sm text-muted-foreground">Review Period</p>
+                <p className="font-medium">{selectedReview.reviewPeriod}</p>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="self-assessment">Your Self-Assessment</Label>
+                <Textarea
+                  id="self-assessment"
+                  value={selfAssessment}
+                  onChange={(e) => setSelfAssessment(e.target.value)}
+                  placeholder="Describe your achievements, challenges, and areas for growth during this period..."
+                  className="min-h-[200px]"
+                />
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSelfAssessmentDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSubmitSelfAssessment} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+              Submit to Manager
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       
       {/* Manager Review Dialog */}
       <Dialog open={manageReviewDialogOpen} onOpenChange={setManageReviewDialogOpen}>

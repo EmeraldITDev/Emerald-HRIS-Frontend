@@ -41,7 +41,7 @@ interface Review {
 export default function Performance() {
   const [employees, setEmployees] = useState<Employee[]>([])
   const [reviews, setReviews] = useState<Review[]>([
-    // Henry Marcus (Line Manager) - Reviews for his IT team
+    // Henry Marcus (Line Manager - IT) - Q4 2024
     {
       id: '1',
       employeeId: '5',
@@ -50,110 +50,154 @@ export default function Performance() {
       reviewPeriod: 'Q4 2024',
       reviewDate: '2024-12-15',
       rating: 4,
-      status: 'Completed',
+      status: 'Signed Off',
       reviewer: 'Sarah Johnson (Executive)',
       goals: 'Lead team effectively, complete infrastructure upgrades, mentor junior staff',
       achievements: 'Successfully managed 5-person IT team, completed cloud migration ahead of schedule, mentored 3 junior developers',
       areasForImprovement: 'Strategic planning and cross-department collaboration',
-      comments: 'Henry has demonstrated excellent leadership as a Line Manager. His team consistently delivers high-quality work.'
+      comments: 'Henry has demonstrated excellent leadership as a Line Manager. His team consistently delivers high-quality work.',
+      selfAssessment: 'I successfully led our IT team through several major infrastructure upgrades. My key achievements include completing the cloud migration 2 weeks ahead of schedule and mentoring 3 junior developers who have shown significant improvement.',
+      selfAssessmentDate: '2024-12-01',
+      managerReviewDate: '2024-12-10',
+      employeeSignedDate: '2024-12-15',
+      managerSignedDate: '2024-12-15'
     },
+    // Sarah Chen (HR Manager - Marketing) - Q4 2024
     {
       id: '2',
-      employeeId: '5',
-      employeeName: 'Henry Marcus',
-      department: 'IT',
-      reviewPeriod: 'Q3 2024',
-      reviewDate: '2024-09-15',
-      rating: 5,
-      status: 'Completed',
-      reviewer: 'Sarah Johnson (Executive)',
-      goals: 'Improve team productivity, implement new security protocols',
-      achievements: 'Increased team productivity by 30%, successfully implemented zero-trust security framework',
-      areasForImprovement: 'Continue developing executive-level communication skills',
-      comments: 'Outstanding performance. Henry has proven himself as a strong leader and technical expert.',
-      employeeComments: 'Thank you for the recognition. I am committed to continuing to grow as a leader and supporting my team.'
-    },
-    // Sarah Chen (HR Manager) - Employee in Marketing
-    {
-      id: '3',
       employeeId: '2',
       employeeName: 'Sarah Chen',
       department: 'Marketing',
       reviewPeriod: 'Q4 2024',
       reviewDate: '2024-12-10',
       rating: 5,
-      status: 'Completed',
+      status: 'Reviewed by Line Manager',
       reviewer: 'Austin Nwachwukwu (HR Manager)',
       goals: 'Launch new marketing campaigns, improve brand visibility, manage team of 8',
       achievements: 'Launched 3 successful campaigns with 45% engagement increase, expanded social media following by 60%, excellent team management',
       areasForImprovement: 'Budget management and ROI tracking',
-      comments: 'Sarah continues to excel in her role. Her creative campaigns have significantly boosted our brand presence.'
+      comments: 'Sarah continues to excel in her role. Her creative campaigns have significantly boosted our brand presence.',
+      selfAssessment: 'This quarter I successfully launched 3 marketing campaigns that exceeded our engagement targets by 45%. I also grew our social media following by 60% and effectively managed a team of 8 marketing professionals.',
+      selfAssessmentDate: '2024-11-28',
+      managerReviewDate: '2024-12-08'
     },
-    // John Smith (Corporate HR) - Employee in Finance
+    // John Smith (Corporate HR - Finance) - Q4 2024
     {
-      id: '4',
+      id: '3',
       employeeId: '3',
       employeeName: 'John Smith',
       department: 'Finance',
       reviewPeriod: 'Q4 2024',
       reviewDate: '2024-12-08',
       rating: 4,
-      status: 'Completed',
+      status: 'Sent to Line Manager',
       reviewer: 'Michael Brown (Line Manager - Finance)',
       goals: 'Streamline financial reporting processes, ensure compliance with new regulations',
       achievements: 'Reduced report generation time by 40%, successfully implemented new compliance framework, trained 5 team members',
       areasForImprovement: 'Proactive communication with stakeholders',
-      comments: 'John has made significant improvements to our financial processes. His attention to detail is commendable.'
+      comments: 'John has made significant improvements to our financial processes. His attention to detail is commendable.',
+      selfAssessment: 'I focused on improving our financial reporting efficiency this quarter. I reduced report generation time by 40% through process automation and successfully implemented our new compliance framework. I also trained 5 team members on the new systems.',
+      selfAssessmentDate: '2024-12-05'
     },
-    // Emily Davis (IT Power User) - General employee
+    // Emily Davis (IT Power User) - Q4 2024
     {
-      id: '5',
+      id: '4',
       employeeId: '7',
       employeeName: 'Emily Davis',
       department: 'IT',
       reviewPeriod: 'Q4 2024',
       reviewDate: '2024-12-20',
       rating: 5,
-      status: 'Completed',
+      status: 'Signed Off',
       reviewer: 'Henry Marcus (Line Manager - IT)',
       goals: 'Complete certification in cloud architecture, lead system optimization project',
       achievements: 'Obtained AWS Solutions Architect certification, optimized system performance by 35%, automated 10+ manual processes',
       areasForImprovement: 'Documentation and knowledge sharing',
       comments: 'Emily has shown exceptional technical skills and initiative. She is a valuable asset to the IT team.',
-      employeeComments: 'Thanks for the feedback! I will work on improving my documentation practices.'
+      employeeComments: 'Thanks for the feedback! I will work on improving my documentation practices.',
+      selfAssessment: 'I am proud to have completed my AWS Solutions Architect certification this quarter. I also led a system optimization project that improved performance by 35% and automated over 10 manual processes, saving the team significant time.',
+      selfAssessmentDate: '2024-12-10',
+      managerReviewDate: '2024-12-18',
+      employeeSignedDate: '2024-12-20',
+      managerSignedDate: '2024-12-20'
     },
-    // Michael Wilson (Contract Employee) - Sales
+    // Michael Wilson (Contract Employee - Sales) - Q4 2024
     {
-      id: '6',
+      id: '5',
       employeeId: '8',
       employeeName: 'Michael Wilson',
       department: 'Sales',
       reviewPeriod: 'Q4 2024',
       reviewDate: '2024-12-18',
       rating: 4,
-      status: 'Completed',
+      status: 'Reviewed by Line Manager',
       reviewer: 'Jennifer Lee (Line Manager - Sales)',
       goals: 'Achieve quarterly sales targets, expand client base',
       achievements: 'Exceeded sales target by 25%, acquired 15 new clients, maintained 95% client retention rate',
       areasForImprovement: 'CRM system utilization and follow-up consistency',
-      comments: 'Michael has consistently delivered strong sales results. His client relationship skills are excellent.'
+      comments: 'Michael has consistently delivered strong sales results. His client relationship skills are excellent.',
+      selfAssessment: 'I exceeded my quarterly sales target by 25% and successfully acquired 15 new clients while maintaining a 95% retention rate. My focus on relationship building has been key to these achievements.',
+      selfAssessmentDate: '2024-12-12',
+      managerReviewDate: '2024-12-18'
     },
-    // Lisa Anderson (General Employee) - Operations
+    // Lisa Anderson (General Employee - Operations) - Q4 2024
     {
-      id: '7',
+      id: '6',
       employeeId: '9',
       employeeName: 'Lisa Anderson',
       department: 'Operations',
       reviewPeriod: 'Q4 2024',
       reviewDate: '2024-12-12',
       rating: 3,
-      status: 'Completed',
+      status: 'Sent to Line Manager',
       reviewer: 'David Kim (Line Manager - Operations)',
       goals: 'Improve process efficiency, reduce operational errors',
       achievements: 'Reduced processing errors by 20%, contributed to team projects consistently',
       areasForImprovement: 'Time management, taking more initiative on projects',
       comments: 'Lisa meets expectations but has room to grow. Encourage her to take on more challenging tasks and be more proactive.',
-      employeeComments: 'I appreciate the feedback and will work on being more proactive in identifying improvement opportunities.'
+      employeeComments: 'I appreciate the feedback and will work on being more proactive in identifying improvement opportunities.',
+      selfAssessment: 'This quarter I focused on reducing errors in our operations. I managed to reduce processing errors by 20% and contributed consistently to all team projects. I recognize I need to improve my time management and take more initiative.',
+      selfAssessmentDate: '2024-12-08'
+    },
+    // Chidi Okonkwo (General Employee - Technical Operations) - Q4 2024
+    {
+      id: '7',
+      employeeId: '6',
+      employeeName: 'Chidi Okonkwo',
+      department: 'Technical Operations',
+      reviewPeriod: 'Q4 2024',
+      reviewDate: '2024-12-14',
+      rating: 4,
+      status: 'Reviewed by Line Manager',
+      reviewer: 'Henry Marcus (Line Manager - Technical Operations)',
+      goals: 'Enhance system reliability, implement monitoring solutions',
+      achievements: 'Improved system uptime to 99.8%, deployed comprehensive monitoring dashboard, reduced incident response time by 40%',
+      areasForImprovement: 'Cross-team collaboration and documentation',
+      comments: 'Chidi has made excellent progress in improving our technical operations. His monitoring solutions have significantly improved our incident response capabilities.',
+      selfAssessment: 'I successfully improved our system uptime to 99.8% by implementing proactive monitoring and maintenance procedures. I also deployed a comprehensive monitoring dashboard that has reduced our incident response time by 40%. Looking forward to enhancing my cross-team collaboration skills.',
+      selfAssessmentDate: '2024-12-05',
+      managerReviewDate: '2024-12-14'
+    },
+    // Additional Q3 2024 review for Chidi
+    {
+      id: '8',
+      employeeId: '6',
+      employeeName: 'Chidi Okonkwo',
+      department: 'Technical Operations',
+      reviewPeriod: 'Q3 2024',
+      reviewDate: '2024-09-20',
+      rating: 4,
+      status: 'Signed Off',
+      reviewer: 'Henry Marcus (Line Manager - Technical Operations)',
+      goals: 'Optimize server performance, improve backup procedures',
+      achievements: 'Reduced server response time by 30%, implemented automated backup system, achieved 100% backup success rate',
+      areasForImprovement: 'Proactive communication about system issues',
+      comments: 'Chidi consistently delivers high-quality technical work. His backup automation project has significantly improved our data security posture.',
+      selfAssessment: 'In Q3, I focused on server optimization and backup improvements. I reduced server response time by 30% through various optimization techniques and successfully implemented an automated backup system with a 100% success rate.',
+      selfAssessmentDate: '2024-09-10',
+      managerReviewDate: '2024-09-18',
+      employeeSignedDate: '2024-09-20',
+      managerSignedDate: '2024-09-20'
     }
   ])
   
@@ -333,7 +377,7 @@ export default function Performance() {
             ...review, 
             selfAssessment,
             selfAssessmentDate: new Date().toISOString().split('T')[0],
-            status: 'Self-Assessment Submitted'
+            status: 'Sent to Line Manager'
           }
         : review
     )
@@ -402,7 +446,7 @@ export default function Performance() {
             comments: managerNotes,
             managerReviewDate: new Date().toISOString().split('T')[0],
             meetingScheduledDate: meetingDate,
-            status: 'Meeting Scheduled'
+            status: 'Reviewed by Line Manager'
           }
         : review
     )
@@ -424,7 +468,7 @@ export default function Performance() {
         ? { 
             ...review, 
             employeeSignedDate: new Date().toISOString().split('T')[0],
-            status: review.managerSignedDate ? 'Awaiting HR Review' : 'Employee Signed'
+            status: 'Signed Off'
           }
         : review
     )
@@ -465,7 +509,7 @@ export default function Performance() {
             ...review, 
             hrApprovedDate: new Date().toISOString().split('T')[0],
             hrComments: hrComments,
-            status: 'HR Approved'
+            // Status remains 'Reviewed by Line Manager' until employee signs off
           }
         : review
     )
@@ -476,7 +520,7 @@ export default function Performance() {
     
     toast({
       title: "Review approved",
-      description: "Performance review has been approved and filed."
+      description: "Performance review has been approved. Employee can now sign off."
     })
   }
   
@@ -896,8 +940,9 @@ export default function Performance() {
                   <TableHead className="text-xs md:text-sm">Employee</TableHead>
                   <TableHead className="hidden md:table-cell text-xs md:text-sm">Department</TableHead>
                   <TableHead className="text-xs md:text-sm">Period</TableHead>
+                  <TableHead className="hidden lg:table-cell text-xs md:text-sm">Reviewer</TableHead>
                   <TableHead className="hidden sm:table-cell text-xs md:text-sm">Rating</TableHead>
-                  <TableHead className="hidden lg:table-cell text-xs md:text-sm">Status</TableHead>
+                  <TableHead className="hidden xl:table-cell text-xs md:text-sm">Status</TableHead>
                   <TableHead className="text-right text-xs md:text-sm">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -912,9 +957,14 @@ export default function Performance() {
                     </TableCell>
                     <TableCell className="hidden md:table-cell text-xs md:text-sm">{review.department}</TableCell>
                     <TableCell className="text-xs md:text-sm">{review.reviewPeriod}</TableCell>
+                    <TableCell className="hidden lg:table-cell text-xs md:text-sm text-muted-foreground">{review.reviewer}</TableCell>
                     <TableCell className="hidden sm:table-cell text-xs md:text-sm">{renderStars(review.rating)}</TableCell>
-                    <TableCell className="hidden lg:table-cell">
-                      <Badge className={review.status === 'Completed' ? 'bg-success/10 text-success border-success/20 text-xs' : 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400 text-xs'}>
+                    <TableCell className="hidden xl:table-cell">
+                      <Badge className={
+                        review.status === 'Signed Off' ? 'bg-success/10 text-success border-success/20 text-xs' :
+                        review.status === 'Reviewed by Line Manager' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400 text-xs' :
+                        'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400 text-xs'
+                      }>
                         {review.status}
                       </Badge>
                     </TableCell>
@@ -924,31 +974,39 @@ export default function Performance() {
                         <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => {
                           setSelectedReview(review)
                           setViewDialogOpen(true)
-                        }}>
+                        }} title="View Review">
                           <Eye className="h-3 w-3 md:h-4 md:w-4" />
                         </Button>
                         
                         {/* Employee actions */}
-                        {isGeneralEmployee && review.employeeId === currentEmployeeId && (
+                        {!isExecutiveOrHR && !isLineManager && review.employeeId === currentEmployeeId && (
                           <>
-                            {/* Self-Assessment button */}
+                            {/* Update Self-Assessment button - only if NOT submitted */}
                             {!review.selfAssessmentDate && (
-                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => {
+                              <Button variant="ghost" size="sm" className="h-8 px-2" onClick={() => {
                                 setSelectedReview(review)
                                 setSelfAssessment(review.selfAssessment || "")
                                 setSelfAssessmentDialogOpen(true)
-                              }} title="Submit Self-Assessment">
-                                <FileEdit className="h-3 w-3 md:h-4 md:w-4 text-blue-600" />
+                              }} title="Update Self-Assessment">
+                                <FileEdit className="h-3 w-3 md:h-4 md:w-4 mr-1" />
+                                <span className="text-xs hidden lg:inline">Update</span>
                               </Button>
                             )}
                             
-                            {/* Employee Sign-Off button (only after meeting scheduled) */}
-                            {review.meetingScheduledDate && !review.employeeSignedDate && (
-                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => handleEmployeeSignOff(review.id)} title="Sign Off Review">
-                                <CheckCircle className="h-3 w-3 md:h-4 md:w-4 text-green-600" />
+                            {/* Sign-Off button - only after reviewed by both Line Manager and HR Manager */}
+                            {review.managerReviewDate && review.hrApprovedDate && !review.employeeSignedDate && (
+                              <Button variant="ghost" size="sm" className="h-8 px-2" onClick={() => handleEmployeeSignOff(review.id)} title="Sign Off Review">
+                                <CheckCircle className="h-3 w-3 md:h-4 md:w-4 mr-1 text-green-600" />
+                                <span className="text-xs hidden lg:inline">Sign Off</span>
                               </Button>
                             )}
-                            
+                          </>
+                        )}
+                        
+                        {/* Line Manager and Executive actions */}
+                        {(isLineManager || isExecutiveOrHR) && (
+                          <>
+                            {/* Comment button */}
                             <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => {
                               setSelectedReview(review)
                               setEmployeeComment(review.employeeComments || "")
@@ -956,47 +1014,6 @@ export default function Performance() {
                             }} title="Add Comment">
                               <MessageSquare className="h-3 w-3 md:h-4 md:w-4" />
                             </Button>
-                          </>
-                        )}
-                        
-                        {/* Line Manager actions */}
-                        {isLineManager && review.department === userDepartment && (
-                          <>
-                            {/* Manage Review button */}
-                            {review.selfAssessmentDate && !review.managerReviewDate && (
-                              <Button variant="ghost" size="sm" className="h-8 px-2" onClick={() => {
-                                setSelectedReview(review)
-                                setManagerNotes(review.comments || "")
-                                setManageReviewDialogOpen(true)
-                              }}>
-                                <Calendar className="h-3 w-3 md:h-4 md:w-4 mr-1" />
-                                <span className="text-xs hidden lg:inline">Manage</span>
-                              </Button>
-                            )}
-                            
-                            {/* Manager Sign-Off button (only after meeting scheduled) */}
-                            {review.meetingScheduledDate && !review.managerSignedDate && (
-                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => handleManagerSignOff(review.id)} title="Sign Off Review">
-                                <CheckCircle className="h-3 w-3 md:h-4 md:w-4 text-green-600" />
-                              </Button>
-                            )}
-                          </>
-                        )}
-                        
-                        {/* HR actions */}
-                        {(user?.role === 'hr_manager' || user?.role === 'executive') && (
-                          <>
-                            {/* HR Review/Approve button (only after both signed) */}
-                            {review.employeeSignedDate && review.managerSignedDate && !review.hrApprovedDate && (
-                              <Button variant="ghost" size="sm" className="h-8 px-2" onClick={() => {
-                                setSelectedReview(review)
-                                setHrComments("")
-                                setHrReviewDialogOpen(true)
-                              }}>
-                                <ClipboardCheck className="h-3 w-3 md:h-4 md:w-4 mr-1" />
-                                <span className="text-xs hidden lg:inline">Approve</span>
-                              </Button>
-                            )}
                           </>
                         )}
                         

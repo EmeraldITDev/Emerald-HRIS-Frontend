@@ -1119,46 +1119,6 @@ export default function Performance() {
         </DialogContent>
       </Dialog>
       
-      {/* Self-Assessment Dialog */}
-      <Dialog open={selfAssessmentDialogOpen} onOpenChange={setSelfAssessmentDialogOpen}>
-        <DialogContent className="max-w-[600px] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
-          <DialogHeader>
-            <DialogTitle>Self-Assessment</DialogTitle>
-            <DialogDescription>
-              Complete your self-evaluation for this review period
-            </DialogDescription>
-          </DialogHeader>
-          
-          {selectedReview && (
-            <div className="space-y-4">
-              <div className="bg-muted p-4 rounded-lg">
-                <p className="text-sm text-muted-foreground">Review Period</p>
-                <p className="font-medium">{selectedReview.reviewPeriod}</p>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="self-assessment">Your Self-Assessment</Label>
-                <Textarea
-                  id="self-assessment"
-                  value={selfAssessment}
-                  onChange={(e) => setSelfAssessment(e.target.value)}
-                  placeholder="Describe your achievements, challenges, and areas for growth during this period..."
-                  className="min-h-[200px]"
-                />
-              </div>
-            </div>
-          )}
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setSelfAssessmentDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSubmitSelfAssessment} className="bg-emerald-600 hover:bg-emerald-700 text-white">
-              Submit to Manager
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
       
       {/* Manager Review Dialog */}
       <Dialog open={manageReviewDialogOpen} onOpenChange={setManageReviewDialogOpen}>

@@ -273,10 +273,23 @@ export default function Training() {
     }
   }
 
-  // Filter trainings based on department for line managers
-  const filteredTrainings = isLineManager && userDepartment
-    ? trainings.filter(t => t.employeeDepartment === userDepartment)
-    : trainings
+  // Filter trainings based on role and department
+  const currentUserFullName = user ? `${user.firstName} ${user.lastName}` : ''
+  
+  const filteredTrainings = (() => {
+    // HR Managers see all training programs
+    if (isExecutiveOrHR) {
+      return trainings
+    }
+    
+    // Line Managers see trainings for their department
+    if (isLineManager && userDepartment) {
+      return trainings.filter(t => t.employeeDepartment === userDepartment)
+    }
+    
+    // Regular employees see only their own training programs
+    return trainings.filter(t => t.employeeName === currentUserFullName)
+  })()
 
   const totalCost = filteredTrainings.reduce((sum, training) => sum + training.cost, 0)
   const completedTrainings = filteredTrainings.filter(t => t.status === 'Completed').length
@@ -287,9 +300,11 @@ export default function Training() {
         <div>
           <h1 className="text-3xl font-bold text-foreground">Training & Development</h1>
           <p className="text-muted-foreground">
-            {isLineManager && userDepartment 
-              ? `Track training programs for ${userDepartment} department`
-              : 'Track training programs and employee development'
+            {isExecutiveOrHR
+              ? 'Track training programs and employee development'
+              : isLineManager && userDepartment 
+                ? `Track training programs for ${userDepartment} department`
+                : 'View your training programs'
             }
           </p>
         </div>
@@ -442,9 +457,11 @@ export default function Training() {
         <CardHeader>
           <CardTitle>Training Programs</CardTitle>
           <CardDescription>
-            {isLineManager && userDepartment 
-              ? `Training programs for ${userDepartment} department employees`
-              : 'Track all employee training and development programs'
+            {isExecutiveOrHR
+              ? 'Track all employee training and development programs'
+              : isLineManager && userDepartment 
+                ? `Training programs for ${userDepartment} department employees`
+                : 'Your personal training and development programs'
             }
           </CardDescription>
         </CardHeader>

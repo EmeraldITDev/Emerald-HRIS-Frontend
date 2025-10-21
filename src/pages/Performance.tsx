@@ -1112,7 +1112,7 @@ export default function Performance() {
               Cancel
             </Button>
             <Button onClick={handleAddEmployeeComment} className="bg-emerald-600 hover:bg-emerald-700 text-white">
-              Submit Comment
+              Submit to HR Manager
             </Button>
           </DialogFooter>
         </DialogContent>

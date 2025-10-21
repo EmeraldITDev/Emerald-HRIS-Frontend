@@ -1395,7 +1395,7 @@ export default function Performance() {
       
       {/* Self-Assessment Dialog */}
       <Dialog open={selfAssessmentDialogOpen} onOpenChange={setSelfAssessmentDialogOpen}>
-        <DialogContent className="max-w-[600px] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Self-Assessment</DialogTitle>
             <DialogDescription>

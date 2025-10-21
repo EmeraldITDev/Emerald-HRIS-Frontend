@@ -562,15 +562,46 @@ export default function Attendance() {
       return;
     }
 
-    // Check if current time is within allowed clock in window (7:00 AM - 9:30 AM)
+    const today = format(new Date(), 'yyyy-MM-dd');
+    const attendanceRecords = JSON.parse(localStorage.getItem('attendanceRecords') || '[]');
+    
+    // Check if there's an existing record with lunch break (returning from lunch)
+    const existingRecord = attendanceRecords.find(
+      (record: any) => record.employee_id === user.id && record.date === today
+    );
+    
+    // If returning from lunch break, allow clock in without time restriction
+    if (existingRecord && existingRecord.lunch_break_start && !existingRecord.clock_out_time) {
+      try {
+        setIsPunching(true);
+        const now = format(new Date(), 'HH:mm:ss');
+        
+        const updatedRecords = attendanceRecords.map((r: any) => 
+          r.id === existingRecord.id 
+            ? { ...r, lunch_break_end: now, is_clocked_in: true }
+            : r
+        );
+        
+        localStorage.setItem('attendanceRecords', JSON.stringify(updatedRecords));
+        loadTodayStatus();
+        toast({ title: "Success", description: "Welcome back from lunch!" });
+        setIsPunching(false);
+        return;
+      } catch (error) {
+        console.error('Clock in error:', error);
+        toast({ title: "Error", description: "Failed to clock in.", variant: "destructive" });
+        setIsPunching(false);
+        return;
+      }
+    }
+
+    // Regular morning clock in - check time window
     const currentTime = new Date();
     const currentHour = currentTime.getHours();
     const currentMinute = currentTime.getMinutes();
     const currentTimeInMinutes = currentHour * 60 + currentMinute;
     const clockInStartTime = 7 * 60; // 7:00 AM in minutes
     const clockInEndTime = 9 * 60 + 30; // 9:30 AM in minutes
-
-    console.log('Current time:', currentTime.toLocaleTimeString(), 'Minutes:', currentTimeInMinutes, 'Allowed:', clockInStartTime, '-', clockInEndTime);
 
     if (currentTimeInMinutes < clockInStartTime || currentTimeInMinutes > clockInEndTime) {
       toast({ 
@@ -581,22 +612,14 @@ export default function Attendance() {
       return;
     }
 
+    if (existingRecord && existingRecord.clock_in_time) {
+      toast({ title: "Already Clocked In", description: "You have already clocked in today.", variant: "destructive" });
+      return;
+    }
+
     try {
       setIsPunching(true);
-      const today = format(new Date(), 'yyyy-MM-dd');
       const now = format(new Date(), 'HH:mm:ss');
-      const attendanceRecords = JSON.parse(localStorage.getItem('attendanceRecords') || '[]');
-      
-      // Check if already clocked in today
-      const existingRecord = attendanceRecords.find(
-        (record: any) => record.employee_id === user.id && record.date === today
-      );
-      
-      if (existingRecord && existingRecord.clock_in_time) {
-        toast({ title: "Already Clocked In", description: "You have already clocked in today.", variant: "destructive" });
-        setIsPunching(false);
-        return;
-      }
 
       const newRecord = {
         id: Date.now(),
@@ -633,14 +656,14 @@ export default function Attendance() {
     const now = new Date();
     const currentHour = now.getHours();
     
-    // Check if clocking out before 5pm (17:00)
+    // Check if clocking out before 5pm (17:00) - require reason
     if (currentHour < 17) {
       setShowClockOutDialog(true);
       setIsLunchBreak(false);
       return;
     }
     
-    // After 5pm, clock out directly
+    // After 5pm, clock out directly without requiring reason
     performClockOut();
   };
 
@@ -655,8 +678,8 @@ export default function Attendance() {
     
     // Check if it's around lunch time (11am - 2pm)
     if (currentHour >= 11 && currentHour < 14) {
-      setShowClockOutDialog(true);
-      setIsLunchBreak(true);
+      // Lunch break doesn't require reason, proceed directly
+      performClockOut("Lunch break", true);
     } else {
       toast({ 
         title: "Invalid Time", 
@@ -686,13 +709,14 @@ export default function Attendance() {
       }
 
       if (isLunch) {
-        // For lunch break, just record the break time
+        // For lunch break, just record the break time and set is_clocked_in to false
         attendanceRecords[existingRecordIndex] = {
           ...attendanceRecords[existingRecordIndex],
           lunch_break_start: now,
-          lunch_break_reason: reason || "Lunch break"
+          lunch_break_reason: reason || "Lunch break",
+          is_clocked_in: false
         };
-        toast({ title: "Success", description: "Lunch break started. Don't forget to clock back in!" });
+        toast({ title: "Success", description: "Lunch break started. Remember to clock back in!" });
       } else {
         // Regular clock out
         attendanceRecords[existingRecordIndex] = {

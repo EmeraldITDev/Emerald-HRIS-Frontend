@@ -672,7 +672,7 @@ export default function Performance() {
             comments: managerNotes,
             managerReviewDate: new Date().toISOString().split('T')[0],
             meetingScheduledDate: meetingDate,
-            status: 'Reviewed by Line Manager'
+            status: 'Sent to HR Manager'
           }
         : review
     )
@@ -683,8 +683,8 @@ export default function Performance() {
     setManageReviewDialogOpen(false)
     
     toast({
-      title: "Review updated",
-      description: "Manager review completed and meeting scheduled."
+      title: "Review sent to HR",
+      description: "Manager review completed and sent to HR Manager."
     })
   }
   
@@ -955,6 +955,7 @@ export default function Performance() {
                     <TableCell className="hidden xl:table-cell">
                       <Badge className={
                         review.status === 'Signed Off' ? 'bg-success/10 text-success border-success/20 text-xs' :
+                        review.status === 'Sent to HR Manager' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400 text-xs' :
                         review.status === 'Reviewed by Line Manager' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400 text-xs' :
                         'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400 text-xs'
                       }>
@@ -1173,6 +1174,9 @@ export default function Performance() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setManageReviewDialogOpen(false)}>
               Cancel
+            </Button>
+            <Button onClick={handleManagerReview} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+              Save and Send to HR Manager
             </Button>
             <Button onClick={handleManagerReview} className="bg-emerald-600 hover:bg-emerald-700 text-white">
               Schedule Meeting

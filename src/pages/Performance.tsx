@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Star, Plus, Eye, Download, MessageSquare, FileEdit, Calendar, CheckCircle, ClipboardCheck } from "lucide-react"
+import { Star, Plus, Eye, Download, MessageSquare, Calendar, CheckCircle, ClipboardCheck } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from '@/contexts/AuthContext'
 import { apiService, Employee } from '@/lib/api'
@@ -470,30 +470,10 @@ export default function Performance() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [viewDialogOpen, setViewDialogOpen] = useState(false)
   const [commentDialogOpen, setCommentDialogOpen] = useState(false)
-  const [selfAssessmentDialogOpen, setSelfAssessmentDialogOpen] = useState(false)
   const [manageReviewDialogOpen, setManageReviewDialogOpen] = useState(false)
   const [hrReviewDialogOpen, setHrReviewDialogOpen] = useState(false)
   const [selectedReview, setSelectedReview] = useState<Review | null>(null)
   const [employeeComment, setEmployeeComment] = useState("")
-  const [selfAssessmentForm, setSelfAssessmentForm] = useState({
-    responsibilities: "",
-    achievements: "",
-    goalsCompleted: "",
-    goalsNotAchieved: "",
-    workQuality: "3",
-    timeManagement: "",
-    teamCommunication: "",
-    feedbackResponse: "",
-    professionalism: "",
-    challenges: "",
-    resourcesNeeded: "",
-    skillsToLearn: "",
-    futureGoals: "",
-    teamContribution: "",
-    suggestions: "",
-    overallRating: "3"
-  });
-  const [selfAssessment, setSelfAssessment] = useState("")
   const [managerNotes, setManagerNotes] = useState("")
   const [meetingDate, setMeetingDate] = useState("")
   const [hrComments, setHrComments] = useState("")
@@ -617,74 +597,6 @@ export default function Performance() {
       description: "Your comment has been added to the review."
     })
   }
-  
-  const handleSubmitSelfAssessment = () => {
-    if (!selectedReview || !selfAssessment.trim()) {
-      toast({
-        title: "Missing information",
-        description: "Please complete your self-assessment.",
-        variant: "destructive"
-      })
-      return
-    }
-    
-    const updatedReviews = reviews.map(review => 
-      review.id === selectedReview.id 
-        ? { 
-            ...review, 
-            selfAssessment,
-            selfAssessmentDate: new Date().toISOString().split('T')[0],
-            status: 'Sent to Line Manager'
-          }
-        : review
-    )
-    
-    setReviews(updatedReviews)
-    setSelfAssessment("")
-    setSelfAssessmentDialogOpen(false)
-    
-    toast({
-      title: "Self-assessment submitted",
-      description: "Your self-assessment has been sent to your line manager."
-    })
-  }
-  
-  const handleSubmitSelfAssessmentForm = () => {
-    // Validate required fields
-    if (!selfAssessmentForm.responsibilities || !selfAssessmentForm.achievements) {
-      toast({
-        title: "Required Fields Missing",
-        description: "Please fill in all required fields before submitting.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    toast({
-      title: "Self-Assessment Submitted",
-      description: "Your self-assessment has been sent to your line manager for review.",
-    });
-    setSelfAssessmentDialogOpen(false);
-    setSelfAssessmentForm({
-      responsibilities: "",
-      achievements: "",
-      goalsCompleted: "",
-      goalsNotAchieved: "",
-      workQuality: "3",
-      timeManagement: "",
-      teamCommunication: "",
-      feedbackResponse: "",
-      professionalism: "",
-      challenges: "",
-      resourcesNeeded: "",
-      skillsToLearn: "",
-      futureGoals: "",
-      teamContribution: "",
-      suggestions: "",
-      overallRating: "3"
-    });
-  }
-
   
   const handleManagerReview = () => {
     if (!selectedReview || !managerNotes.trim() || !meetingDate) {
@@ -820,14 +732,6 @@ export default function Performance() {
         </div>
         
         <div className="flex gap-2 w-full sm:w-auto">
-          {/* Self-Assessment button for all employees except executives */}
-          {user?.role !== 'executive' && (
-            <Button className="bg-blue-600 hover:bg-blue-700 text-white w-full sm:w-auto" onClick={() => setSelfAssessmentDialogOpen((prev) => !prev)}>
-              <FileEdit className="mr-2 h-4 w-4" />
-              <span className="text-sm md:text-base">Self-Assessment</span>
-            </Button>
-          )}
-          
           {canManageReviews && (
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
@@ -942,44 +846,6 @@ export default function Performance() {
         </div>
       </div>
 
-      {/* Self-Assessment (inline) */}
-      {selfAssessmentDialogOpen && (
-        <Card className="mb-4">
-          <CardHeader>
-            <CardTitle>Self-Assessment</CardTitle>
-            <CardDescription>Complete your self-evaluation for this review period</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {selectedReview ? (
-              <div className="space-y-4">
-                <div className="bg-muted p-4 rounded-lg">
-                  <p className="text-sm text-muted-foreground">Review Period</p>
-                  <p className="font-medium">{selectedReview.reviewPeriod}</p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="self-assessment">Your Self-Assessment</Label>
-                  <Textarea
-                    id="self-assessment"
-                    value={selfAssessment}
-                    onChange={(e) => setSelfAssessment(e.target.value)}
-                    placeholder="Describe your achievements, challenges, and areas for growth during this period..."
-                    className="min-h-[200px]"
-                  />
-                </div>
-                <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4">
-                  <Button variant="outline" onClick={() => setSelfAssessmentDialogOpen(false)}>Cancel</Button>
-                  <Button onClick={handleSubmitSelfAssessment} className="bg-emerald-600 hover:bg-emerald-700 text-white">Submit to Manager</Button>
-                </div>
-              </div>
-            ) : (
-              <div className="bg-muted p-4 rounded-lg text-sm text-muted-foreground">
-                Please select a review from the table below to complete your self-assessment.
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
       {/* Performance Reviews Table */}
       <Card>
         <CardHeader className="p-4 md:p-6">
@@ -1040,18 +906,6 @@ export default function Performance() {
                         {/* Employee actions */}
                         {!isExecutiveOrHR && !isLineManager && review.employeeId === currentEmployeeEmail && (
                           <>
-                            {/* Update Self-Assessment button - only if NOT submitted */}
-                            {!review.selfAssessmentDate && (
-                              <Button variant="ghost" size="sm" className="h-8 px-2" onClick={() => {
-                                setSelectedReview(review)
-                                setSelfAssessment(review.selfAssessment || "")
-                                setSelfAssessmentDialogOpen(true)
-                              }} title="Update Self-Assessment">
-                                <FileEdit className="h-3 w-3 md:h-4 md:w-4 mr-1" />
-                                <span className="text-xs hidden lg:inline">Update</span>
-                              </Button>
-                            )}
-                            
                             {/* Sign-Off button - only after reviewed by both Line Manager and HR Manager */}
                             {review.managerReviewDate && review.hrApprovedDate && !review.employeeSignedDate && (
                               <Button variant="ghost" size="sm" className="h-8 px-2" onClick={() => handleEmployeeSignOff(review.id)} title="Sign Off Review">

@@ -77,7 +77,7 @@ const navigationItems = [
     title: "Training", 
     url: "/training", 
     icon: Award,
-    permission: "training.view"
+    permission: "*"
   },
   { 
     title: "Benefits", 

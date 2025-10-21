@@ -24,15 +24,18 @@ interface User {
 }
 
 const initialUsers: User[] = [
+  // Power Users (IT)
   {
     id: "1",
-    name: "IT Admin",
+    name: "Ibrahim Suleiman",
     email: "it@emeraldcfze.com",
     department: "IT",
     accessLevel: "Power User",
     lastLogin: "2024-01-15 09:30",
     status: "Active"
   },
+  
+  // Leadership (Executives and HR Manager)
   {
     id: "2", 
     name: "Bunmi Babajide",
@@ -44,54 +47,184 @@ const initialUsers: User[] = [
   },
   {
     id: "3",
-    name: "Austin Nwachwukwu",
-    email: "austin.nwachwukwu@emeraldcfze.com",
-    department: "HR",
-    accessLevel: "Leadership",
-    lastLogin: "2024-01-15 10:20",
-    status: "Active"
-  },
-  {
-    id: "4",
-    name: "Temitope Lawal",
-    email: "temitope.lawal@emeraldcfze.com",
-    department: "Finance",
-    accessLevel: "Leadership",
-    lastLogin: "2024-01-15 11:15",
-    status: "Active"
-  },
-  {
-    id: "5",
-    name: "Rachael Daniel",
-    email: "rachael.daniel@emeraldcfze.com",
-    department: "Finance",
-    accessLevel: "Leadership",
-    lastLogin: "2024-01-15 09:50",
-    status: "Active"
-  },
-  {
-    id: "6",
-    name: "Adeniyi Bamigbade",
-    email: "adeniyi.bamigbade@emeraldcfze.com",
-    department: "Finance",
+    name: "LAA",
+    email: "laa@emeraldcfze.com",
+    department: "Executive",
     accessLevel: "Leadership",
     lastLogin: "2024-01-15 08:30",
     status: "Active"
   },
   {
+    id: "4",
+    name: "Austin Nwachwukwu",
+    email: "austin.nwachwukwu@emeraldcfze.com",
+    department: "Human Resources",
+    accessLevel: "Leadership",
+    lastLogin: "2024-01-15 10:20",
+    status: "Active"
+  },
+  
+  // Line Managers
+  {
+    id: "5",
+    name: "Henry Marcus",
+    email: "henry.marcus@emeraldcfze.com",
+    department: "Technical Operations",
+    accessLevel: "Line Manager",
+    lastLogin: "2024-01-15 11:15",
+    status: "Active"
+  },
+  {
+    id: "6",
+    name: "Aisha Bello",
+    email: "aisha.bello@emeraldcfze.com",
+    department: "Business Development",
+    accessLevel: "Line Manager",
+    lastLogin: "2024-01-15 09:50",
+    status: "Active"
+  },
+  {
     id: "7",
-    name: "General Employee",
-    email: "employee@emeraldcfze.com", 
+    name: "Temitope Lawal",
+    email: "temitope.lawal@emeraldcfze.com",
+    department: "Finance",
+    accessLevel: "Line Manager",
+    lastLogin: "2024-01-15 08:30",
+    status: "Active"
+  },
+  {
+    id: "8",
+    name: "Folake Williams",
+    email: "folake.williams@emeraldcfze.com",
     department: "Operations",
+    accessLevel: "Line Manager",
+    lastLogin: "2024-01-15 10:45",
+    status: "Active"
+  },
+  {
+    id: "9",
+    name: "Ngozi Eze",
+    email: "ngozi.eze@emeraldcfze.com",
+    department: "Marketing",
+    accessLevel: "Line Manager",
+    lastLogin: "2024-01-15 09:20",
+    status: "Active"
+  },
+  {
+    id: "10",
+    name: "Amina Yusuf",
+    email: "amina.yusuf@emeraldcfze.com",
+    department: "Sales",
+    accessLevel: "Line Manager",
+    lastLogin: "2024-01-15 08:55",
+    status: "Active"
+  },
+  {
+    id: "11",
+    name: "Blessing Okoro",
+    email: "blessing.okoro@emeraldcfze.com",
+    department: "Customer Service",
+    accessLevel: "Line Manager",
+    lastLogin: "2024-01-15 10:10",
+    status: "Active"
+  },
+  
+  // Staff (Corporate HR and other employees)
+  {
+    id: "12",
+    name: "Oluwapelumi Adeyefa",
+    email: "oluwapelumi.adeyefa@emeraldcfze.com",
+    department: "Human Resources",
+    accessLevel: "Staff",
+    lastLogin: "2024-01-15 09:15",
+    status: "Active"
+  },
+  {
+    id: "13",
+    name: "Chidi Okonkwo",
+    email: "chidi.okonkwo@emeraldcfze.com",
+    department: "Technical Operations",
+    accessLevel: "Staff",
+    lastLogin: "2024-01-15 08:40",
+    status: "Active"
+  },
+  {
+    id: "14",
+    name: "Kunle Adeyemi",
+    email: "kunle.adeyemi@emeraldcfze.com",
+    department: "Business Development",
     accessLevel: "Staff",
     lastLogin: "2024-01-14 17:20",
     status: "Active"
   },
   {
-    id: "8",
-    name: "Contract Staff",
-    email: "contractor@emeraldcfze.com", 
-    department: "Projects",
+    id: "15",
+    name: "Rachael Daniel",
+    email: "rachael.daniel@emeraldcfze.com",
+    department: "Finance",
+    accessLevel: "Staff",
+    lastLogin: "2024-01-15 09:50",
+    status: "Active"
+  },
+  {
+    id: "16",
+    name: "Adeniyi Bamigbade",
+    email: "adeniyi.bamigbade@emeraldcfze.com",
+    department: "Finance",
+    accessLevel: "Staff",
+    lastLogin: "2024-01-15 08:25",
+    status: "Active"
+  },
+  {
+    id: "17",
+    name: "Chioma Nwosu",
+    email: "chioma.nwosu@emeraldcfze.com",
+    department: "IT",
+    accessLevel: "Staff",
+    lastLogin: "2024-01-15 10:30",
+    status: "Active"
+  },
+  {
+    id: "18",
+    name: "Yusuf Mohammed",
+    email: "yusuf.mohammed@emeraldcfze.com",
+    department: "Operations",
+    accessLevel: "Staff",
+    lastLogin: "2024-01-15 09:05",
+    status: "Active"
+  },
+  {
+    id: "19",
+    name: "Segun Oladipo",
+    email: "segun.oladipo@emeraldcfze.com",
+    department: "Marketing",
+    accessLevel: "Staff",
+    lastLogin: "2024-01-15 08:50",
+    status: "Active"
+  },
+  {
+    id: "20",
+    name: "Tunde Akinola",
+    email: "tunde.akinola@emeraldcfze.com",
+    department: "Sales",
+    accessLevel: "Staff",
+    lastLogin: "2024-01-15 10:00",
+    status: "Active"
+  },
+  {
+    id: "21",
+    name: "Zainab Idris",
+    email: "zainab.idris@emeraldcfze.com",
+    department: "Customer Service",
+    accessLevel: "Staff",
+    lastLogin: "2024-01-15 09:35",
+    status: "Active"
+  },
+  {
+    id: "22",
+    name: "Emeka Nwankwo",
+    email: "emeka.nwankwo@emeraldcfze.com",
+    department: "Customer Service",
     accessLevel: "Staff",
     lastLogin: "2024-01-14 16:45",
     status: "Active"
@@ -188,9 +321,9 @@ const Security = () => {
 
   const accessLevelDescriptions = {
     "Power User": "IT administrators with full system access and troubleshooting capabilities",
-    "Leadership": "Executives, HR Managers, and Finance Team with management access",
+    "Leadership": "Executives and HR Manager with full management access",
     "Line Manager": "Department managers with team oversight and approval capabilities", 
-    "Staff": "General employees and contract staff with personal information access"
+    "Staff": "General employees including Corporate HR and contract staff with personal information access"
   };
 
   return (

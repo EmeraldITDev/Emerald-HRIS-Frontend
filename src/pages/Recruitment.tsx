@@ -182,16 +182,17 @@ export default function Recruitment() {
   })
 
   const departments = [
-    'Engineering',
-    'Marketing',
-    'Finance',
+    'Executive',
     'Human Resources',
-    'Sales',
+    'Technical Operations',
+    'Business Development',
+    'Finance',
+    'IT',
     'Operations',
-    'Product',
-    'Design',
+    'Marketing',
+    'Sales',
     'Customer Service',
-    'Legal'
+    'Procurement'
   ]
 
   const hiringManagers = [

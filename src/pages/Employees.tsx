@@ -129,7 +129,8 @@ export default function Employees() {
     lastCompanyAsset: null as File | null
   });
 
-  const departments = ["Executive", "Business Development", "Technical Operations", "Operations", "Legal", "Supply Chain", "Finance", "Human Resource", "IT"];
+  // Import from constants for consistency
+  const departments = ["Executive", "Human Resources", "Technical Operations", "Business Development", "Finance", "IT", "Operations", "Marketing", "Sales", "Customer Service", "Procurement"];
   const gradeLevels = ["Junior", "Middle", "Senior", "Executive"];
   
   const nationalities = [

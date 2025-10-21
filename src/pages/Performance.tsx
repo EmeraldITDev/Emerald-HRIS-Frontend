@@ -1404,7 +1404,7 @@ export default function Performance() {
           </DialogHeader>
           
           {selectedReview && (
-            <div className="space-y-4">
+            <div className="space-y-4 mt-4">
               <div className="bg-muted p-4 rounded-lg">
                 <p className="text-sm text-muted-foreground">Review Period</p>
                 <p className="font-medium">{selectedReview.reviewPeriod}</p>
@@ -1420,17 +1420,17 @@ export default function Performance() {
                   className="min-h-[200px]"
                 />
               </div>
+              
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4">
+                <Button variant="outline" onClick={() => setSelfAssessmentDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleSubmitSelfAssessment} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                  Submit to Manager
+                </Button>
+              </div>
             </div>
           )}
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setSelfAssessmentDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSubmitSelfAssessment} className="bg-emerald-600 hover:bg-emerald-700 text-white">
-              Submit to Manager
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
       

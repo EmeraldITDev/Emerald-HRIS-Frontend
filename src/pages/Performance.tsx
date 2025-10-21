@@ -1108,10 +1108,10 @@ export default function Performance() {
           )}
           
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCommentDialogOpen(false)}>
+            <Button type="button" variant="outline" onClick={() => setCommentDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleAddEmployeeComment} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+            <Button type="button" onClick={handleAddEmployeeComment} className="bg-emerald-600 hover:bg-emerald-700 text-white">
               Submit to HR Manager
             </Button>
           </DialogFooter>

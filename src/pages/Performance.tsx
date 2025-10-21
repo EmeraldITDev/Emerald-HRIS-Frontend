@@ -942,6 +942,44 @@ export default function Performance() {
         </div>
       </div>
 
+      {/* Self-Assessment (inline) */}
+      {selfAssessmentDialogOpen && (
+        <Card className="mb-4">
+          <CardHeader>
+            <CardTitle>Self-Assessment</CardTitle>
+            <CardDescription>Complete your self-evaluation for this review period</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {selectedReview ? (
+              <div className="space-y-4">
+                <div className="bg-muted p-4 rounded-lg">
+                  <p className="text-sm text-muted-foreground">Review Period</p>
+                  <p className="font-medium">{selectedReview.reviewPeriod}</p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="self-assessment">Your Self-Assessment</Label>
+                  <Textarea
+                    id="self-assessment"
+                    value={selfAssessment}
+                    onChange={(e) => setSelfAssessment(e.target.value)}
+                    placeholder="Describe your achievements, challenges, and areas for growth during this period..."
+                    className="min-h-[200px]"
+                  />
+                </div>
+                <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4">
+                  <Button variant="outline" onClick={() => setSelfAssessmentDialogOpen(false)}>Cancel</Button>
+                  <Button onClick={handleSubmitSelfAssessment} className="bg-emerald-600 hover:bg-emerald-700 text-white">Submit to Manager</Button>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-muted p-4 rounded-lg text-sm text-muted-foreground">
+                Please select a review from the table below to complete your self-assessment.
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Performance Reviews Table */}
       <Card>
         <CardHeader className="p-4 md:p-6">
@@ -1157,46 +1195,7 @@ export default function Performance() {
         </DialogContent>
       </Dialog>
       
-      {/* Self-Assessment Dialog */}
-      <Dialog open={selfAssessmentDialogOpen} onOpenChange={setSelfAssessmentDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Self-Assessment</DialogTitle>
-            <DialogDescription>
-              Complete your self-evaluation for this review period
-            </DialogDescription>
-          </DialogHeader>
-          
-          {selectedReview && (
-            <div className="space-y-4 mt-4">
-              <div className="bg-muted p-4 rounded-lg">
-                <p className="text-sm text-muted-foreground">Review Period</p>
-                <p className="font-medium">{selectedReview.reviewPeriod}</p>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="self-assessment">Your Self-Assessment</Label>
-                <Textarea
-                  id="self-assessment"
-                  value={selfAssessment}
-                  onChange={(e) => setSelfAssessment(e.target.value)}
-                  placeholder="Describe your achievements, challenges, and areas for growth during this period..."
-                  className="min-h-[200px]"
-                />
-              </div>
-              
-              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4">
-                <Button variant="outline" onClick={() => setSelfAssessmentDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleSubmitSelfAssessment} className="bg-emerald-600 hover:bg-emerald-700 text-white">
-                  Submit to Manager
-                </Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      {/* Self-Assessment moved inline above */}
       
       {/* Manager Review Dialog */}
       <Dialog open={manageReviewDialogOpen} onOpenChange={setManageReviewDialogOpen}>

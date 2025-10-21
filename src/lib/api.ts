@@ -93,6 +93,43 @@ export interface LeaveRequest {
   updated_at?: string;
 }
 
+export interface PayrollRecord {
+  id?: number;
+  employee_id: number;
+  pay_period: string;
+  pay_date?: string;
+  basic_salary: number;
+  housing_allowance: number;
+  transport_allowance: number;
+  meal_allowance: number;
+  other_allowance: number;
+  overtime: number;
+  bonus: number;
+  commission: number;
+  gross_pay: number;
+  total_allowances: number;
+  taxable_income: number;
+  paye_tax: number;
+  pension_employee: number;
+  pension_employer: number;
+  nhf: number;
+  other_deductions: number;
+  deduction_notes?: string;
+  total_deductions: number;
+  net_pay: number;
+  status: 'pending' | 'processed' | 'paid' | 'cancelled';
+  payment_method?: string;
+  payment_reference?: string;
+  processed_by?: number;
+  processed_at?: string;
+  approved_by?: number;
+  approved_at?: string;
+  notes?: string;
+  employee?: any;
+  created_at?: string;
+  updated_at?: string;
+}
+
 class ApiService {
   private baseUrl: string;
 
@@ -264,6 +301,89 @@ class ApiService {
     return this.request<{ message: string }>('/auth/change-password', {
       method: 'POST',
       body: JSON.stringify(data),
+    });
+  }
+
+  // Payroll methods
+  async getPayrollRecords(filters?: {
+    employee_id?: number;
+    pay_period?: string;
+    status?: string;
+    from_date?: string;
+    to_date?: string;
+  }): Promise<PayrollRecord[]> {
+    const queryParams = new URLSearchParams();
+    if (filters) {
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value) queryParams.append(key, value.toString());
+      });
+    }
+    const query = queryParams.toString();
+    return this.request<PayrollRecord[]>(`/payroll${query ? `?${query}` : ''}`);
+  }
+
+  async generatePayroll(data: {
+    employee_id: number;
+    pay_period: string;
+    overtime?: number;
+    bonus?: number;
+    commission?: number;
+    other_deductions?: number;
+    deduction_notes?: string;
+  }): Promise<{ success: boolean; message: string; payroll?: PayrollRecord }> {
+    return this.request<{ success: boolean; message: string; payroll?: PayrollRecord }>('/payroll/generate', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async bulkGeneratePayroll(data: {
+    pay_period: string;
+    employee_ids?: number[];
+  }): Promise<{ success: boolean; message: string; summary: any; details: any }> {
+    return this.request<{ success: boolean; message: string; summary: any; details: any }>('/payroll/bulk-generate', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updatePayroll(id: number, data: {
+    overtime?: number;
+    bonus?: number;
+    commission?: number;
+    other_deductions?: number;
+    deduction_notes?: string;
+  }): Promise<{ success: boolean; message: string; payroll?: PayrollRecord }> {
+    return this.request<{ success: boolean; message: string; payroll?: PayrollRecord }>(`/payroll/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async approvePayroll(id: number): Promise<{ success: boolean; message: string; payroll?: PayrollRecord }> {
+    return this.request<{ success: boolean; message: string; payroll?: PayrollRecord }>(`/payroll/${id}/approve`, {
+      method: 'POST',
+    });
+  }
+
+  async markPayrollAsPaid(id: number, data: {
+    payment_method: string;
+    payment_reference?: string;
+  }): Promise<{ success: boolean; message: string; payroll?: PayrollRecord }> {
+    return this.request<{ success: boolean; message: string; payroll?: PayrollRecord }>(`/payroll/${id}/mark-paid`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getPayrollStatistics(pay_period?: string): Promise<any> {
+    const query = pay_period ? `?pay_period=${pay_period}` : '';
+    return this.request<any>(`/payroll/statistics${query}`);
+  }
+
+  async deletePayroll(id: number): Promise<{ success: boolean; message: string }> {
+    return this.request<{ success: boolean; message: string }>(`/payroll/${id}`, {
+      method: 'DELETE',
     });
   }
 }

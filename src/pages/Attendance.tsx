@@ -303,13 +303,18 @@ export default function Attendance() {
     try {
       setIsLoadingLeaveRequests(true)
       const leaveData = await apiService.getLeaveRequests()
-      setLeaveRequests(leaveData)
+      // Ensure leaveData is an array
+      const requests = Array.isArray(leaveData) ? leaveData : (leaveData?.data || [])
+      setLeaveRequests(requests)
     } catch (error) {
       console.error('Error fetching leave requests:', error)
       // If API fails, try to get from localStorage as fallback
       const savedRequests = localStorage.getItem('leaveRequests')
       if (savedRequests) {
         setLeaveRequests(JSON.parse(savedRequests))
+      } else {
+        // Ensure it's always an array
+        setLeaveRequests([])
       }
     } finally {
       setIsLoadingLeaveRequests(false)
@@ -1496,10 +1501,13 @@ export default function Attendance() {
           <CardContent>
             <div className="space-y-4">
               {(() => {
+                // Ensure leaveRequests is always an array
+                const safeLeaveRequests = Array.isArray(leaveRequests) ? leaveRequests : []
+                
                 // Filter leave requests based on user role
                 const filteredRequests = user?.role === 'hr_manager'
-                  ? leaveRequests // HR Manager sees all leave requests
-                  : leaveRequests.filter(req => req.employee_id === user?.id) // Others see only their own
+                  ? safeLeaveRequests // HR Manager sees all leave requests
+                  : safeLeaveRequests.filter(req => req.employee_id === user?.id) // Others see only their own
                 
                 return filteredRequests.length > 0 ? (
                   <Table>

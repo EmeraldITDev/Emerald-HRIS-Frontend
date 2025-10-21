@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import apiService, { Employee } from "@/lib/api"
+import apiService, { Employee, PayrollRecord } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -211,8 +211,10 @@ const payrollRecords = [
 export default function Payroll() {
   const [employees, setEmployees] = useState<Employee[]>([])
   const [isLoadingEmployees, setIsLoadingEmployees] = useState(true)
+  const [payrollRecords, setPayrollRecords] = useState<PayrollRecord[]>([])
+  const [isLoadingPayroll, setIsLoadingPayroll] = useState(true)
   const [selectedEmployee, setSelectedEmployee] = useState("")
-  const [selectedPeriod, setSelectedPeriod] = useState("2024-01")
+  const [selectedPeriod, setSelectedPeriod] = useState("2024-10")
   const [isPayrollLocked, setIsPayrollLocked] = useState(false)
   const [payrollData, setPayrollData] = useState({
     basicSalary: "1600000",
@@ -243,6 +245,37 @@ export default function Payroll() {
     fetchEmployees()
   }, [])
 
+  // Fetch payroll records from database
+  useEffect(() => {
+    const fetchPayrollRecords = async () => {
+      try {
+        setIsLoadingPayroll(true)
+        const filters: any = {}
+        
+        // Filter based on user role
+        if (user?.role === 'general_employee' || user?.role === 'finance') {
+          // Employees see only their own payroll
+          const currentEmployee = employees.find(emp => emp.email === user.email)
+          if (currentEmployee?.id) {
+            filters.employee_id = currentEmployee.id
+          }
+        }
+        
+        const data = await apiService.getPayrollRecords(filters)
+        setPayrollRecords(Array.isArray(data) ? data : [])
+      } catch (error) {
+        console.error('Failed to fetch payroll records:', error)
+        setPayrollRecords([])
+      } finally {
+        setIsLoadingPayroll(false)
+      }
+    }
+
+    if (employees.length > 0) {
+      fetchPayrollRecords()
+    }
+  }, [employees, user])
+
   const onboardEmployees = employees.map(emp => ({
     id: emp.id?.toString() || '',
     name: `${emp.first_name} ${emp.last_name}`,
@@ -264,13 +297,15 @@ export default function Payroll() {
     } 
     // Executives see only their department's payroll
     else if (user.role === 'executive' && user.department) {
-      return payrollRecords.filter(record => record.department === user.department)
+      return payrollRecords.filter(record => 
+        record.employee?.department === user.department
+      )
     } 
     // Other users can only see their own payroll
     else {
+      const currentEmployee = employees.find(emp => emp.email === user.email)
       return payrollRecords.filter(record => 
-        record.employeeId === user.email || 
-        record.employeeName.toLowerCase().includes(user.email.split('@')[0].toLowerCase())
+        record.employee_id === currentEmployee?.id
       )
     }
   }
@@ -876,13 +911,15 @@ export default function Payroll() {
   }
 
   const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "Paid":
+    switch (status.toLowerCase()) {
+      case "paid":
         return <Badge className="bg-success/10 text-success border-success/20 text-xs">Paid</Badge>
-      case "Processed":
-        return <Badge className="bg-warning/10 text-warning border-warning/20 text-xs">Processed</Badge>
-      case "Draft":
-        return <Badge className="bg-muted/10 text-muted-foreground border-muted/20 text-xs">Draft</Badge>
+      case "processed":
+        return <Badge className="bg-info/10 text-info border-info/20 text-xs">Processed</Badge>
+      case "pending":
+        return <Badge className="bg-warning/10 text-warning border-warning/20 text-xs">Pending</Badge>
+      case "cancelled":
+        return <Badge className="bg-destructive/10 text-destructive border-destructive/20 text-xs">Cancelled</Badge>
       default:
         return <Badge variant="secondary" className="text-xs">{status}</Badge>
     }
@@ -1373,21 +1410,40 @@ export default function Payroll() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {getVisiblePayrollRecords().map((record) => (
-                    <TableRow key={record.id}>
-                      <TableCell className="font-medium text-xs md:text-sm">{record.employeeName}</TableCell>
-                      <TableCell className="text-xs md:text-sm">{record.period}</TableCell>
-                      <TableCell className="hidden md:table-cell text-xs md:text-sm">
-                        <Badge variant={record.role === "contract_employee" ? "secondary" : "outline"} className="text-xs">
-                          {record.role === "contract_employee" ? "Contract" : "Full-time"}
-                        </Badge>
+                  {isLoadingPayroll ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8">
+                        <div className="flex items-center justify-center space-x-2">
+                          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                          <span>Loading payroll records...</span>
+                        </div>
                       </TableCell>
-                      <TableCell className="hidden lg:table-cell text-xs md:text-sm">{formatCurrency(record.grossPay)}</TableCell>
-                      <TableCell className="text-xs md:text-sm">{formatCurrency(record.paye)}</TableCell>
-                      <TableCell className="font-medium text-xs md:text-sm">{formatCurrency(record.netPay)}</TableCell>
-                      <TableCell>{getStatusBadge(record.status)}</TableCell>
                     </TableRow>
-                  ))}
+                  ) : getVisiblePayrollRecords().length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                        No payroll records found for the selected period
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    getVisiblePayrollRecords().map((record) => (
+                      <TableRow key={record.id}>
+                        <TableCell className="font-medium text-xs md:text-sm">
+                          {record.employee ? `${record.employee.first_name} ${record.employee.last_name}` : 'Unknown'}
+                        </TableCell>
+                        <TableCell className="text-xs md:text-sm">{record.pay_period}</TableCell>
+                        <TableCell className="hidden md:table-cell text-xs md:text-sm">
+                          <Badge variant={record.employee?.employment_type === "Contract" ? "secondary" : "outline"} className="text-xs">
+                            {record.employee?.employment_type || "Full-time"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="hidden lg:table-cell text-xs md:text-sm">{formatCurrency(record.gross_pay)}</TableCell>
+                        <TableCell className="text-xs md:text-sm">{formatCurrency(record.paye_tax)}</TableCell>
+                        <TableCell className="font-medium text-xs md:text-sm">{formatCurrency(record.net_pay)}</TableCell>
+                        <TableCell>{getStatusBadge(record.status)}</TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </div>

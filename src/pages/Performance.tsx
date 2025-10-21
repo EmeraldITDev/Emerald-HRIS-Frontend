@@ -935,7 +935,7 @@ export default function Performance() {
                   <TableHead className="text-xs md:text-sm">Period</TableHead>
                   <TableHead className="hidden lg:table-cell text-xs md:text-sm">Reviewer</TableHead>
                   <TableHead className="hidden sm:table-cell text-xs md:text-sm">Rating</TableHead>
-                  <TableHead className="hidden xl:table-cell text-xs md:text-sm">Status</TableHead>
+                  <TableHead className="text-xs md:text-sm">Status</TableHead>
                   <TableHead className="text-right text-xs md:text-sm">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -952,7 +952,7 @@ export default function Performance() {
                     <TableCell className="text-xs md:text-sm">{review.reviewPeriod}</TableCell>
                     <TableCell className="hidden lg:table-cell text-xs md:text-sm text-muted-foreground">{review.reviewer}</TableCell>
                     <TableCell className="hidden sm:table-cell text-xs md:text-sm">{renderStars(review.rating)}</TableCell>
-                    <TableCell className="hidden xl:table-cell">
+                    <TableCell className="text-xs md:text-sm">
                       <Badge className={
                         review.status === 'Signed Off' ? 'bg-success/10 text-success border-success/20 text-xs' :
                         review.status === 'Sent to HR Manager' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400 text-xs' :

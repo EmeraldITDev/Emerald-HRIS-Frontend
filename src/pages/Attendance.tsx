@@ -237,6 +237,8 @@ export default function Attendance() {
   const [showClockOutDialog, setShowClockOutDialog] = useState(false);
   const [clockOutReason, setClockOutReason] = useState("");
   const [isLunchBreak, setIsLunchBreak] = useState(false);
+  const [showWeeklyAttendance, setShowWeeklyAttendance] = useState(true);
+  const [showTodayAttendance, setShowTodayAttendance] = useState(true);
 
   const loadTodayStatus = () => {
     if (!user) return;
@@ -945,12 +947,19 @@ export default function Attendance() {
 
       {/* Weekly Attendance View - For All Users */}
       <Card className="border-border/50 shadow-sm mb-6">
-        <CardHeader>
-          <CardTitle className="text-primary flex items-center">
-            <CalendarDays className="mr-2 h-5 w-5" />
-            My Weekly Attendance (Mon - Fri)
+        <CardHeader 
+          className="cursor-pointer" 
+          onClick={() => setShowWeeklyAttendance(!showWeeklyAttendance)}
+        >
+          <CardTitle className="text-primary flex items-center justify-between">
+            <div className="flex items-center">
+              <CalendarDays className="mr-2 h-5 w-5" />
+              My Weekly Attendance (Mon - Fri)
+            </div>
+            <ChevronDown className={`h-5 w-5 transition-transform ${showWeeklyAttendance ? 'rotate-180' : ''}`} />
           </CardTitle>
         </CardHeader>
+        {showWeeklyAttendance && (
         <CardContent>
           {(() => {
             const today = new Date()
@@ -1059,17 +1068,25 @@ export default function Attendance() {
             )
           })()}
         </CardContent>
+        )}
       </Card>
 
       {/* Today's Attendance Section - HR Manager View */}
       <RoleBasedComponent allowedRoles={['hr_manager', 'corporate_hr', 'executive']}>
         <Card className="border-border/50 shadow-sm mb-6">
-          <CardHeader>
-            <CardTitle className="text-primary flex items-center">
-              <Clock className="mr-2 h-5 w-5" />
-              Today's Attendance - All Staff
+          <CardHeader 
+            className="cursor-pointer" 
+            onClick={() => setShowTodayAttendance(!showTodayAttendance)}
+          >
+            <CardTitle className="text-primary flex items-center justify-between">
+              <div className="flex items-center">
+                <Clock className="mr-2 h-5 w-5" />
+                Today's Attendance - All Staff
+              </div>
+              <ChevronDown className={`h-5 w-5 transition-transform ${showTodayAttendance ? 'rotate-180' : ''}`} />
             </CardTitle>
           </CardHeader>
+          {showTodayAttendance && (
           <CardContent>
             <div className="space-y-3">
               {todayAttendance.length > 0 ? (
@@ -1124,6 +1141,7 @@ export default function Attendance() {
               )}
             </div>
           </CardContent>
+          )}
         </Card>
       </RoleBasedComponent>
 

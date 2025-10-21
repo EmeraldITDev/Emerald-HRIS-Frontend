@@ -829,7 +829,7 @@ export default function Performance() {
                   <span className="text-sm md:text-base">Self-Assessment</span>
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-[800px] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
+              <DialogContent className="max-w-[95vw] sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Employee Performance Assessment Form</DialogTitle>
                   <DialogDescription>

@@ -309,13 +309,14 @@ export default function Training() {
           </p>
         </div>
         
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-emerald-600 hover:bg-emerald-700 text-white">
-              <Plus className="mr-2 h-4 w-4" />
-              Schedule Training
-            </Button>
-          </DialogTrigger>
+        <RoleBasedComponent allowedRoles={['hr_manager', 'corporate_hr', 'executive', 'line_manager']}>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                <Plus className="mr-2 h-4 w-4" />
+                Schedule Training
+              </Button>
+            </DialogTrigger>
           <DialogContent className="sm:max-w-[600px]">
             <DialogHeader>
               <DialogTitle>Schedule New Training</DialogTitle>
@@ -403,6 +404,7 @@ export default function Training() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        </RoleBasedComponent>
       </div>
 
       {/* Statistics Cards */}

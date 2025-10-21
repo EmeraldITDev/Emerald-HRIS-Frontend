@@ -874,24 +874,31 @@ export default function Payroll() {
     if (!selectedEmp) return
 
     // Create payroll record
-    const newPayrollRecord = {
-      id: `PAY${String(payrollRecords.length + 1).padStart(3, '0')}`,
-      employeeId: selectedEmployee,
-      employeeName: `${selectedEmp.first_name} ${selectedEmp.last_name}`,
-      department: selectedEmp.department || "Unknown",
-      role: "general_employee",
-      basicSalary: calculations.employmentType === "Contract" ? 0 : calculations.basicSalary,
-      allowances: calculations.housing + calculations.transport + calculations.other,
-      grossPay: calculations.annualGross,
-      paye: calculations.annualTax,
-      pension: calculations.pensionEmployee,
+    const newPayrollRecord: PayrollRecord = {
+      employee_id: parseInt(selectedEmployee),
+      pay_period: selectedPeriod,
+      basic_salary: calculations.employmentType === "Contract" ? 0 : calculations.basicSalary,
+      housing_allowance: calculations.housing,
+      transport_allowance: calculations.transport,
+      meal_allowance: 0,
+      other_allowance: calculations.other,
+      overtime: 0,
+      bonus: 0,
+      commission: 0,
+      gross_pay: calculations.annualGross,
+      total_allowances: calculations.housing + calculations.transport + calculations.other,
+      taxable_income: calculations.annualGross,
+      paye_tax: calculations.annualTax,
+      pension_employee: calculations.pensionEmployee,
+      pension_employer: calculations.pensionEmployer,
       nhf: calculations.nhf,
-      netPay: calculations.annualNet,
-      period: selectedPeriod,
-      status: "Processed"
+      other_deductions: 0,
+      total_deductions: calculations.annualTax + calculations.pensionEmployee + calculations.nhf,
+      net_pay: calculations.annualNet,
+      status: "processed"
     }
 
-    payrollRecords.push(newPayrollRecord)
+    payrollRecords.push(newPayrollRecord as any)
 
     toast({
       title: "Payroll Saved",

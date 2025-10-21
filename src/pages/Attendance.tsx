@@ -304,7 +304,7 @@ export default function Attendance() {
       setIsLoadingLeaveRequests(true)
       const leaveData = await apiService.getLeaveRequests()
       // Ensure leaveData is an array
-      const requests = Array.isArray(leaveData) ? leaveData : (leaveData?.data || [])
+      const requests = Array.isArray(leaveData) ? leaveData : []
       setLeaveRequests(requests)
     } catch (error) {
       console.error('Error fetching leave requests:', error)

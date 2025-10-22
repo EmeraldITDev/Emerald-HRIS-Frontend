@@ -196,7 +196,8 @@ export default function Employees() {
 
   // Get unique values for filter dropdowns
   const uniqueLocations = [...new Set(employeeList.map(emp => emp.work_location))].filter(Boolean)
-  const uniqueDepartments = [...new Set(employeeList.map(emp => emp.department))].filter(Boolean)
+  // Use official departments list instead of unique values from employees
+  const uniqueDepartments = departments
   const uniqueEmploymentTypes = [...new Set(employeeList.map(emp => emp.employment_type))].filter(Boolean)
 
   // Calculate confirmation date based on hire date and probation period
@@ -2303,14 +2304,7 @@ export default function Employees() {
                           <SelectValue placeholder="Select department" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="Engineering">Engineering</SelectItem>
-                          <SelectItem value="Marketing">Marketing</SelectItem>
-                          <SelectItem value="Sales">Sales</SelectItem>
-                          <SelectItem value="HR">HR</SelectItem>
-                          <SelectItem value="Finance">Finance</SelectItem>
-                          <SelectItem value="Operations">Operations</SelectItem>
-                          <SelectItem value="Legal">Legal</SelectItem>
-                          <SelectItem value="Customer Support">Customer Support</SelectItem>
+                          {departments.map(dept => <SelectItem key={dept} value={dept}>{dept}</SelectItem>)}
                         </SelectContent>
                       </Select>
                     </div>

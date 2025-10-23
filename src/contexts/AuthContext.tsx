@@ -32,6 +32,7 @@ interface AuthContextType {
   logout: () => void;
   hasPermission: (permission: string) => boolean;
   isAuthenticated: boolean;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -459,12 +460,38 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return userPermissions.includes('*') || userPermissions.includes(permission);
   };
 
+  const refreshUser = async () => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      if (!token) return;
+
+      const response = await apiService.getCurrentUser();
+      if (response.user) {
+        const updatedUser: User = {
+          id: response.user.id.toString(),
+          firstName: response.user.name.split(' ')[0],
+          lastName: response.user.name.split(' ').slice(1).join(' '),
+          email: response.user.email,
+          role: response.user.role as UserRole,
+          department: response.user.department || 'General',
+          mustChangePassword: response.user.must_change_password,
+        };
+        
+        setUser(updatedUser);
+        localStorage.setItem('hris_user', JSON.stringify(updatedUser));
+      }
+    } catch (error) {
+      console.error('Failed to refresh user:', error);
+    }
+  };
+
   const value: AuthContextType = {
     user,
     login,
     logout,
     hasPermission,
-    isAuthenticated: !!user
+    isAuthenticated: !!user,
+    refreshUser
   };
 
   return (

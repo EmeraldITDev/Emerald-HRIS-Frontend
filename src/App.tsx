@@ -7,7 +7,6 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import Layout from "./components/Layout";
 import Login from "./pages/Login";
-import DemoUsers from "./pages/DemoUsers";
 import Dashboard from "./pages/Dashboard";
 import Employees from "./pages/Employees";
 import Attendance from "./pages/Attendance";
@@ -42,7 +41,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 
 // Create a wrapper component that uses useAuth
 const AppContent = () => {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const [showPasswordChange, setShowPasswordChange] = useState(false);
 
   useEffect(() => {
@@ -58,7 +57,6 @@ const AppContent = () => {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
-          <Route path="/demo-users" element={<DemoUsers />} />
           <Route path="/*" element={
             <ProtectedRoute>
               <Layout>
@@ -72,6 +70,15 @@ const AppContent = () => {
                   <Route path="/training" element={<Training />} />
                   <Route path="/benefits" element={<Benefits />} />
                   <Route path="/analytics" element={<Analytics />} />
+                  <Route
+                    path="/time"
+                    element={
+                      <ComingSoon
+                        title="Time Tracking"
+                        description="Advanced time and attendance tracking"
+                      />
+                    }
+                  />
                   <Route path="/reports" element={<Reports />} />
                   <Route path="/announcements" element={<Announcements />} />
                   <Route path="/policies" element={<Policies />} />
@@ -96,8 +103,9 @@ const AppContent = () => {
       
       <PasswordChangeModal 
         isOpen={showPasswordChange} 
-        onPasswordChanged={() => {
-          window.location.reload(); // Reload to get updated user state
+        onPasswordChanged={async () => {
+          await refreshUser(); // Refresh user data from backend
+          setShowPasswordChange(false); // Close the modal
         }}
         onDismiss={() => {
           setShowPasswordChange(false); // Allow user to dismiss

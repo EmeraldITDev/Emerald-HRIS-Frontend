@@ -8,6 +8,7 @@ const API_BASE_URL =
     
 export interface Employee {
   id?: number;
+  user_id?: number;
   first_name: string;
   last_name: string;
   email: string;
@@ -319,6 +320,29 @@ class ApiService {
     return this.request<{ message: string }>('/auth/change-password', {
       method: 'POST',
       body: JSON.stringify(data),
+    });
+  }
+
+  async resetUserPassword(userId: number, employeeId: number): Promise<{
+    message: string;
+    user_credentials: {
+      email: string;
+      temporary_password: string;
+      role: string;
+      must_change_password: boolean;
+    };
+  }> {
+    return this.request<{
+      message: string;
+      user_credentials: {
+        email: string;
+        temporary_password: string;
+        role: string;
+        must_change_password: boolean;
+      };
+    }>(`/auth/reset-user-password/${userId}`, {
+      method: 'POST',
+      body: JSON.stringify({ employee_id: employeeId }),
     });
   }
 

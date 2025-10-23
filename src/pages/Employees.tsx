@@ -14,7 +14,7 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Search, Filter, Download, Upload, Edit, Eye, MoreHorizontal, CalendarIcon, FileText, Trash2 } from "lucide-react";
+import { Plus, Search, Filter, Download, Upload, Edit, Eye, MoreHorizontal, CalendarIcon, FileText, Trash2, KeyRound } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { parseCSVFile, formatDataForPHP, type EmployeeData } from "@/utils/csvImport";
@@ -62,6 +62,7 @@ export default function Employees() {
   const [showCredentialsModal, setShowCredentialsModal] = useState(false);
   const [newEmployeeCredentials, setNewEmployeeCredentials] = useState<any>(null);
   const [newEmployeeName, setNewEmployeeName] = useState<string>('');
+  const [resetPasswordEmployee, setResetPasswordEmployee] = useState<any>(null);
   const [editSystemRole, setEditSystemRole] = useState<string>(''); // Add this line
   const [newEmployee, setNewEmployee] = useState({
     // Personal Information
@@ -767,6 +768,40 @@ export default function Employees() {
         toast({
           title: "Resignation Failed",
           description: "Failed to resign employee. Please try again.",
+          variant: "destructive"
+        });
+      }
+    }
+  };
+
+  const handleResetPassword = async (employee: Employee) => {
+    if (!employee.id || !employee.user_id) {
+      toast({
+        title: "Cannot Reset Password",
+        description: "This employee doesn't have a user account",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (window.confirm(`Reset password for ${employee.first_name} ${employee.last_name}? They will need to change it on next login.`)) {
+      try {
+        const response = await apiService.resetUserPassword(employee.user_id, employee.id);
+        
+        // Show credentials modal with new temp password
+        setNewEmployeeCredentials(response.user_credentials);
+        setNewEmployeeName(`${employee.first_name} ${employee.last_name}`);
+        setShowCredentialsModal(true);
+        
+        toast({
+          title: "Password Reset",
+          description: "New temporary password generated. Please share with employee.",
+        });
+      } catch (error) {
+        console.error('Error resetting password:', error);
+        toast({
+          title: "Reset Failed",
+          description: "Failed to reset password. Please try again.",
           variant: "destructive"
         });
       }
@@ -1782,6 +1817,14 @@ export default function Employees() {
                               <Edit className="mr-2 h-4 w-4" />
                               Edit Employee
                             </DropdownMenuItem>
+                            <RoleBasedComponent allowedRoles={['hr_manager', 'executive']}>
+                              {employee.user_id && (
+                                <DropdownMenuItem onClick={() => handleResetPassword(employee)}>
+                                  <KeyRound className="mr-2 h-4 w-4" />
+                                  Reset Password
+                                </DropdownMenuItem>
+                              )}
+                            </RoleBasedComponent>
                             <DropdownMenuItem onClick={() => handleDownloadProfile(employee)}>
                               <Download className="mr-2 h-4 w-4" />
                               Download Profile

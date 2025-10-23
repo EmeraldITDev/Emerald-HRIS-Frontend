@@ -285,7 +285,19 @@ export default function Attendance() {
     try {
       setIsLoadingEmployees(true)
       const employeeData = await apiService.getEmployees()
-      setEmployees(employeeData)
+      
+      // Department-aware filtering
+      let filteredData = employeeData;
+      if (user?.role === 'line_manager' && user?.department) {
+        // Line managers see only their department
+        filteredData = employeeData.filter(emp => emp.department === user.department);
+      } else if (user?.role === 'general_employee' || user?.role === 'finance') {
+        // Employees see only themselves
+        filteredData = employeeData.filter(emp => emp.email === user.email);
+      }
+      // HR managers and executives see all employees
+      
+      setEmployees(filteredData)
     } catch (error) {
       console.error('Error fetching employees:', error)
       toast({

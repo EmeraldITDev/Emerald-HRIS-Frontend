@@ -29,6 +29,7 @@ import { ROLES } from "@/constants/roles";
 import { PERMISSIONS } from "@/constants/roles";
 import { ROLE_OPTIONS, ROLE_PREFIX } from "@/constants/roles";
 import { EmployeeCredentialsModal } from "@/components/EmployeeCredentialsModal";
+import { useAuth } from "@/contexts/AuthContext";
 
 // Put near top of file
 const VALID_SYSTEM_ROLES = new Set([
@@ -51,6 +52,7 @@ export default function Employees() {
   const [filterStartDate, setFilterStartDate] = useState("")
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const { user } = useAuth();
   const [formErrors, setFormErrors] = useState<{ [key: string]: boolean; }>({});
   const [currentTab, setCurrentTab] = useState("personal");
   const [showAddEmployee, setShowAddEmployee] = useState(false);
@@ -196,7 +198,17 @@ export default function Employees() {
     const matchesEmploymentType = !filterEmploymentType || filterEmploymentType === "all" || (employee.employment_type && employee.employment_type === filterEmploymentType);
     const matchesStartDate = !filterStartDate || (employee.hire_date && employee.hire_date === filterStartDate);
 
-    return matchesSearch && matchesLocation && matchesDepartment && matchesEmploymentType && matchesStartDate;
+    // Department-aware filtering for line managers
+    const matchesDepartmentAccess = 
+      user?.role === 'hr_manager' || user?.role === 'executive' // HR and Execs see all
+        ? true
+        : user?.role === 'line_manager' && user?.department // Line managers see only their department
+        ? employee.department === user.department
+        : user?.role === 'general_employee' || user?.role === 'finance' // Employees see only themselves
+        ? employee.email === user.email
+        : true; // Other roles see all (fallback)
+
+    return matchesSearch && matchesLocation && matchesDepartment && matchesEmploymentType && matchesStartDate && matchesDepartmentAccess;
   });
 
   // Get unique values for filter dropdowns

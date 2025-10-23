@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { apiService } from '@/lib/api';
 import { AlertCircle } from 'lucide-react';
+import { toast } from '@/components/ui/use-toast';
 
 interface PasswordChangeModalProps {
   isOpen: boolean;
@@ -38,10 +39,28 @@ export const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({
       });
 
       if (response.message) {
+        toast({
+          title: "Success",
+          description: "Password changed successfully",
+        });
+        
+        // Reset form fields
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+        setError('');
+        
+        // Call the callback to refresh user and close modal
         onPasswordChanged();
       }
-    } catch (err) {
-      setError('Failed to change password');
+    } catch (err: any) {
+      const errorMessage = err?.response?.data?.message || 'Failed to change password';
+      setError(errorMessage);
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
     }
   };
 

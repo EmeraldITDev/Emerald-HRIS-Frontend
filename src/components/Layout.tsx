@@ -178,8 +178,9 @@ export default function Layout({ children }: LayoutProps) {
 
       <PasswordChangeModal 
         isOpen={showPasswordModal} 
-        onPasswordChanged={() => {
-          window.location.reload();
+        onPasswordChanged={async () => {
+          await refreshUser();
+          setShowPasswordModal(false);
         }}
         onDismiss={() => setShowPasswordModal(false)}
       />

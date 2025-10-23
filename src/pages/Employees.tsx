@@ -28,6 +28,7 @@ import RoleBasedComponent from "@/components/RoleBasedComponent";
 import { ROLES } from "@/constants/roles";
 import { PERMISSIONS } from "@/constants/roles";
 import { ROLE_OPTIONS, ROLE_PREFIX } from "@/constants/roles";
+import { EmployeeCredentialsModal } from "@/components/EmployeeCredentialsModal";
 
 // Put near top of file
 const VALID_SYSTEM_ROLES = new Set([
@@ -58,6 +59,9 @@ export default function Employees() {
   const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
   const [editEmployee, setEditEmployee] = useState<any>(null);
   const [systemRole, setSystemRole] = useState<string>('');
+  const [showCredentialsModal, setShowCredentialsModal] = useState(false);
+  const [newEmployeeCredentials, setNewEmployeeCredentials] = useState<any>(null);
+  const [newEmployeeName, setNewEmployeeName] = useState<string>('');
   const [editSystemRole, setEditSystemRole] = useState<string>(''); // Add this line
   const [newEmployee, setNewEmployee] = useState({
     // Personal Information
@@ -464,10 +468,17 @@ export default function Employees() {
       console.log('Generated employee code:', newEmployee.employeeId); // Debug log
 
       // Call the API to create the employee
-      await apiService.createEmployee(employeeData);
+      const response = await apiService.createEmployee(employeeData);
       
       // Refresh the employee list from the database
       await fetchEmployees();
+      
+      // If user credentials were created, show them to HR
+      if (response.user_credentials) {
+        setNewEmployeeCredentials(response.user_credentials);
+        setNewEmployeeName(`${newEmployee.firstName} ${newEmployee.lastName}`);
+        setShowCredentialsModal(true);
+      }
       
       // Reset the form
       setNewEmployee({
@@ -2572,6 +2583,18 @@ export default function Employees() {
               </Tabs>}
           </DialogContent>
         </Dialog>
+
+        {/* Employee Credentials Modal */}
+        <EmployeeCredentialsModal
+          isOpen={showCredentialsModal}
+          credentials={newEmployeeCredentials}
+          employeeName={newEmployeeName}
+          onClose={() => {
+            setShowCredentialsModal(false);
+            setNewEmployeeCredentials(null);
+            setNewEmployeeName('');
+          }}
+        />
       </div>
     </ProtectedRoute>
   );

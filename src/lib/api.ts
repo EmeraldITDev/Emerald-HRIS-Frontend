@@ -209,8 +209,26 @@ class ApiService {
   }
 
   // Create a new employee
-  async createEmployee(employeeData: Employee): Promise<{ message: string }> {
-    return this.request<{ message: string }>('/employees-full', {
+  async createEmployee(employeeData: Employee): Promise<{ 
+    message: string; 
+    employee?: any;
+    user_credentials?: {
+      email: string;
+      temporary_password: string;
+      role: string;
+      must_change_password: boolean;
+    };
+  }> {
+    return this.request<{ 
+      message: string; 
+      employee?: any;
+      user_credentials?: {
+        email: string;
+        temporary_password: string;
+        role: string;
+        must_change_password: boolean;
+      };
+    }>('/employees-full', {
       method: 'POST',
       body: JSON.stringify(employeeData),
     });

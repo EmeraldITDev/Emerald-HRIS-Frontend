@@ -76,10 +76,40 @@ export default function Analytics() {
       ])
 
       if (dashboard) setDashboardStats(dashboard)
-      if (hiring) setHiringTrendsData(hiring)
-      if (attendance) setAttendanceMetricsData(attendance)
-      if (employmentTypes) setEmploymentTypesData(employmentTypes)
-      if (salary) setSalaryTrendsData(salary)
+      
+      // Map hiring data: backend returns 'hired', frontend expects 'hires'
+      if (hiring && Array.isArray(hiring)) {
+        setHiringTrendsData(hiring.map(item => ({
+          month: item.month,
+          hires: item.hired
+        })))
+      }
+      
+      // Map attendance data: backend returns 'attendance_rate', frontend expects 'present' and 'absent'
+      if (attendance && Array.isArray(attendance)) {
+        setAttendanceMetricsData(attendance.map(item => ({
+          month: item.month,
+          present: item.attendance_rate,
+          absent: 100 - item.attendance_rate
+        })))
+      }
+      
+      // Map employment types: backend returns 'type' and 'count', frontend expects 'name', 'value', 'color'
+      if (employmentTypes && Array.isArray(employmentTypes)) {
+        setEmploymentTypesData(employmentTypes.map((item, index) => ({
+          name: item.type,
+          value: item.count,
+          color: COLORS[index % COLORS.length]
+        })))
+      }
+      
+      // Map salary data: backend returns 'total_salary', frontend expects 'totalSalary'
+      if (salary && Array.isArray(salary)) {
+        setSalaryTrendsData(salary.map(item => ({
+          month: item.month,
+          totalSalary: item.total_salary
+        })))
+      }
     } catch (error) {
       console.error('Failed to fetch analytics:', error)
       // Keep static data as fallback
@@ -88,14 +118,14 @@ export default function Analytics() {
     }
   }
 
-  const totalEmployees = dashboardStats?.total_employees || 4
+  const totalEmployees = dashboardStats?.total_employees || 0
   const totalVacationAssigned = vacationData.reduce((sum, emp) => sum + emp.assigned, 0)
   const totalVacationTaken = vacationData.reduce((sum, emp) => sum + emp.taken, 0)
-  const vacationUtilization = (totalVacationTaken / totalVacationAssigned) * 100
+  const vacationUtilization = totalVacationAssigned > 0 ? (totalVacationTaken / totalVacationAssigned) * 100 : 0
 
-  const totalHires = dashboardStats?.total_new_hires || hiringData.reduce((sum, month) => sum + month.hires, 0)
-  const avgAttendance = dashboardStats?.average_attendance || (attendanceData.reduce((sum, month) => sum + month.present, 0) / attendanceData.length)
-  const totalSalaryExpense = dashboardStats?.total_salary_expense || salaryData[salaryData.length - 1].totalSalary
+  const totalHires = dashboardStats?.new_hires_this_month || 0
+  const avgAttendance = dashboardStats?.attendance_rate_today || 0
+  const totalSalaryExpense = dashboardStats?.total_payroll_expense || 0
 
   return (
     <div className="space-y-6">

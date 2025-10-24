@@ -1,4 +1,4 @@
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -7,6 +7,7 @@ import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/contexts/AuthContext"
+import apiService, { type Announcement as APIAnnouncement } from "@/lib/api"
 import { 
   Plus, 
   Save, 
@@ -54,11 +55,40 @@ export default function Announcements() {
     status: 'draft'
   })
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { toast } = useToast()
   const { user } = useAuth()
   
-  const canCreateAnnouncements = user?.role === 'hr_manager'
+  const canCreateAnnouncements = user?.role === 'hr_manager' || user?.role === 'executive'
+  
+  // Fetch announcements from API
+  useEffect(() => {
+    fetchAnnouncements()
+  }, [])
+  
+  const fetchAnnouncements = async () => {
+    try {
+      setIsLoading(true)
+      const data = await apiService.getAnnouncements()
+      // Map API data to local format
+      const mappedAnnouncements: Announcement[] = data.map(ann => ({
+        id: ann.id?.toString() || '',
+        title: ann.title,
+        content: ann.content,
+        author: user?.firstName ? `${user.firstName} ${user.lastName}` : 'HR Department',
+        createdAt: ann.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
+        status: 'published',
+        recipients: ann.target_audience ? [ann.target_audience] : ['all_employees']
+      }))
+      setAnnouncements(mappedAnnouncements)
+    } catch (error) {
+      console.error('Failed to fetch announcements:', error)
+      // Keep static data on error
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   const modules = {
     toolbar: [
@@ -89,7 +119,7 @@ export default function Announcements() {
     'blockquote', 'code-block'
   ]
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!currentAnnouncement.title || !currentAnnouncement.content) {
       toast({
         title: "Error",
@@ -99,26 +129,35 @@ export default function Announcements() {
       return
     }
 
-    const newAnnouncement: Announcement = {
-      id: Date.now().toString(),
-      title: currentAnnouncement.title!,
-      content: currentAnnouncement.content!,
-      author: currentAnnouncement.author || 'HR Department',
-      createdAt: new Date().toISOString().split('T')[0],
-      status: 'draft'
+    try {
+      const announcementData = {
+        title: currentAnnouncement.title!,
+        content: currentAnnouncement.content!,
+        priority: 'medium' as const,
+        target_audience: 'all_employees'
+      }
+      
+      await apiService.createAnnouncement(announcementData)
+      await fetchAnnouncements()
+      
+      setCurrentAnnouncement({ title: '', content: '', author: 'HR Department', status: 'draft' })
+      setIsCreating(false)
+      
+      toast({
+        title: "Success",
+        description: "Announcement saved as draft"
+      })
+    } catch (error) {
+      console.error('Failed to save announcement:', error)
+      toast({
+        title: "Error",
+        description: "Failed to save announcement. Please try again.",
+        variant: "destructive"
+      })
     }
-
-    setAnnouncements(prev => [newAnnouncement, ...prev])
-    setCurrentAnnouncement({ title: '', content: '', author: 'HR Department', status: 'draft' })
-    setIsCreating(false)
-    
-    toast({
-      title: "Success",
-      description: "Announcement saved as draft"
-    })
   }
 
-  const handleShare = () => {
+  const handleShare = async () => {
     if (!currentAnnouncement.title || !currentAnnouncement.content) {
       toast({
         title: "Error",
@@ -128,25 +167,33 @@ export default function Announcements() {
       return
     }
 
-    const newAnnouncement: Announcement = {
-      id: Date.now().toString(),
-      title: currentAnnouncement.title!,
-      content: currentAnnouncement.content!,
-      author: currentAnnouncement.author || 'HR Department',
-      createdAt: new Date().toISOString().split('T')[0],
-      status: 'published',
-      recipients: ['all_employees']
+    try {
+      const announcementData = {
+        title: currentAnnouncement.title!,
+        content: currentAnnouncement.content!,
+        priority: 'high' as const,
+        target_audience: 'all_employees'
+      }
+      
+      await apiService.createAnnouncement(announcementData)
+      await fetchAnnouncements()
+      
+      setCurrentAnnouncement({ title: '', content: '', author: 'HR Department', status: 'draft' })
+      setIsCreating(false)
+
+      // Simulate sending newsletter to all employees
+      toast({
+        title: "Newsletter Sent!",
+        description: "Announcement has been shared with all employees via email"
+      })
+    } catch (error) {
+      console.error('Failed to publish announcement:', error)
+      toast({
+        title: "Error",
+        description: "Failed to publish announcement. Please try again.",
+        variant: "destructive"
+      })
     }
-
-    setAnnouncements(prev => [newAnnouncement, ...prev])
-    setCurrentAnnouncement({ title: '', content: '', author: 'HR Department', status: 'draft' })
-    setIsCreating(false)
-
-    // Simulate sending newsletter to all employees
-    toast({
-      title: "Newsletter Sent!",
-      description: "Announcement has been shared with all employees via email"
-    })
   }
 
   const handleImageUpload = () => {

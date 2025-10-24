@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
@@ -15,6 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
+import apiService, { type JobPosting, type Candidate as APICandidate, type Application } from "@/lib/api"
 
 interface Candidate {
   id: string
@@ -137,6 +138,63 @@ export default function Recruitment() {
   const [editingCandidate, setEditingCandidate] = useState<Candidate | null>(null)
   const [editingJobRequisition, setEditingJobRequisition] = useState<JobRequisition | null>(null)
   const [isEditCandidateDialogOpen, setIsEditCandidateDialogOpen] = useState(false)
+  
+  // API integration states
+  const [isLoadingJobPostings, setIsLoadingJobPostings] = useState(false)
+  const [isLoadingCandidates, setIsLoadingCandidates] = useState(false)
+  const [jobPostingsFromAPI, setJobPostingsFromAPI] = useState<JobPosting[]>([])
+  const [candidatesFromAPI, setCandidatesFromAPI] = useState<APICandidate[]>([])
+  const [applicationsFromAPI, setApplicationsFromAPI] = useState<Application[]>([])
+
+  // Fetch data from API on component mount
+  useEffect(() => {
+    fetchJobPostings()
+    fetchCandidates()
+    fetchApplications()
+  }, [])
+
+  const fetchJobPostings = async () => {
+    try {
+      setIsLoadingJobPostings(true)
+      const data = await apiService.getJobPostings()
+      setJobPostingsFromAPI(data)
+    } catch (error) {
+      console.error('Failed to fetch job postings:', error)
+      toast({
+        title: "Error",
+        description: "Failed to load job postings",
+        variant: "destructive"
+      })
+    } finally {
+      setIsLoadingJobPostings(false)
+    }
+  }
+
+  const fetchCandidates = async () => {
+    try {
+      setIsLoadingCandidates(true)
+      const data = await apiService.getCandidates()
+      setCandidatesFromAPI(data)
+    } catch (error) {
+      console.error('Failed to fetch candidates:', error)
+      toast({
+        title: "Error",
+        description: "Failed to load candidates",
+        variant: "destructive"
+      })
+    } finally {
+      setIsLoadingCandidates(false)
+    }
+  }
+
+  const fetchApplications = async () => {
+    try {
+      const data = await apiService.getApplications()
+      setApplicationsFromAPI(data)
+    } catch (error) {
+      console.error('Failed to fetch applications:', error)
+    }
+  }
   const [isEditJobRequisitionDialogOpen, setIsEditJobRequisitionDialogOpen] = useState(false)
   const [activeTab, setActiveTab] = useState('candidates')
   const { toast } = useToast()
@@ -219,7 +277,7 @@ export default function Recruitment() {
     }
   }
 
-  const handleAddCandidate = () => {
+  const handleAddCandidate = async () => {
     if (!newCandidate.name || !newCandidate.phone || !newCandidate.email || !newCandidate.department || !newCandidate.roleApplied) {
       toast({
         title: "Missing information",
@@ -229,36 +287,61 @@ export default function Recruitment() {
       return
     }
 
-    const candidate: Candidate = {
-      id: (candidates.length + 1).toString(),
-      name: newCandidate.name,
-      phone: newCandidate.phone,
-      email: newCandidate.email,
-      position: newCandidate.roleApplied,
-      resumeFile: newCandidate.resumeFile || undefined,
-      status: 'New',
-      appliedDate: new Date().toISOString().split('T')[0],
-      requisitionId: newCandidate.requisitionId
-    }
+    try {
+      // Create candidate via API
+      const nameParts = newCandidate.name.split(' ')
+      const candidateData = {
+        first_name: nameParts[0],
+        last_name: nameParts.slice(1).join(' ') || nameParts[0],
+        email: newCandidate.email,
+        phone: newCandidate.phone,
+        status: 'new' as const
+      }
+      
+      const apiCandidate = await apiService.createCandidate(candidateData)
+      
+      // Also update local state for immediate UI feedback
+      const candidate: Candidate = {
+        id: (candidates.length + 1).toString(),
+        name: newCandidate.name,
+        phone: newCandidate.phone,
+        email: newCandidate.email,
+        position: newCandidate.roleApplied,
+        resumeFile: newCandidate.resumeFile || undefined,
+        status: 'New',
+        appliedDate: new Date().toISOString().split('T')[0],
+        requisitionId: newCandidate.requisitionId
+      }
 
-    setCandidates([candidate, ...candidates])
-    
-    // Update linked candidates for the requisition
-    if (newCandidate.requisitionId) {
-      setJobRequisitions(prev => prev.map(req => 
-        req.id === newCandidate.requisitionId 
-          ? { ...req, linkedCandidates: [...req.linkedCandidates, candidate.id] }
-          : req
-      ))
+      setCandidates([candidate, ...candidates])
+      
+      // Update linked candidates for the requisition
+      if (newCandidate.requisitionId) {
+        setJobRequisitions(prev => prev.map(req => 
+          req.id === newCandidate.requisitionId 
+            ? { ...req, linkedCandidates: [...req.linkedCandidates, candidate.id] }
+            : req
+        ))
+      }
+      
+      // Refresh data from API
+      await fetchCandidates()
+      
+      setNewCandidate({ name: '', phone: '', email: '', department: '', roleApplied: '', resumeFile: null, certificationsFile: null, otherDocumentsFile: null, requisitionId: '' })
+      setIsDialogOpen(false)
+      
+      toast({
+        title: "Candidate added",
+        description: `${candidate.name} has been added to the recruitment pipeline.`
+      })
+    } catch (error) {
+      console.error('Failed to add candidate:', error)
+      toast({
+        title: "Error",
+        description: "Failed to add candidate. Please try again.",
+        variant: "destructive"
+      })
     }
-    
-    setNewCandidate({ name: '', phone: '', email: '', department: '', roleApplied: '', resumeFile: null, certificationsFile: null, otherDocumentsFile: null, requisitionId: '' })
-    setIsDialogOpen(false)
-    
-    toast({
-      title: "Candidate added",
-      description: `${candidate.name} has been added to the recruitment pipeline.`
-    })
   }
 
   const handleEditStatus = (candidate: Candidate, newStatus: Candidate['status']) => {
@@ -271,13 +354,34 @@ export default function Recruitment() {
     })
   }
 
-  const handleDeleteCandidate = (candidateId: string) => {
+  const handleDeleteCandidate = async (candidateId: string) => {
     const candidate = candidates.find(c => c.id === candidateId)
-    setCandidates(candidates.filter(c => c.id !== candidateId))
-    toast({
-      title: "Candidate deleted",
-      description: `${candidate?.name} has been removed from the recruitment pipeline.`
-    })
+    
+    try {
+      // Delete from API if it's a numeric ID (from database)
+      const numericId = parseInt(candidateId)
+      if (!isNaN(numericId)) {
+        await apiService.deleteCandidate(numericId)
+      }
+      
+      // Update local state
+      setCandidates(candidates.filter(c => c.id !== candidateId))
+      
+      // Refresh from API
+      await fetchCandidates()
+      
+      toast({
+        title: "Candidate deleted",
+        description: `${candidate?.name} has been removed from the recruitment pipeline.`
+      })
+    } catch (error) {
+      console.error('Failed to delete candidate:', error)
+      toast({
+        title: "Error",
+        description: "Failed to delete candidate. Please try again.",
+        variant: "destructive"
+      })
+    }
   }
 
   const handleEditCandidate = (candidate: Candidate) => {

@@ -618,6 +618,10 @@ class ApiService {
   async getDashboardStats(): Promise<any> {
     return this.request<any>('/analytics/dashboard-stats');
   }
+
+  async getVacationDetails(): Promise<any> {
+    return this.request<any>('/analytics/vacation-details');
+  }
 }
 
 export const apiService = new ApiService();

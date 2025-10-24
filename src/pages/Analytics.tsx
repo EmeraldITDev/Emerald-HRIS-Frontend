@@ -57,6 +57,7 @@ export default function Analytics() {
   const [attendanceMetricsData, setAttendanceMetricsData] = useState<any[]>(attendanceData)
   const [employmentTypesData, setEmploymentTypesData] = useState<any[]>(employmentTypeData)
   const [salaryTrendsData, setSalaryTrendsData] = useState<any[]>(salaryData)
+  const [vacationDetailsData, setVacationDetailsData] = useState<any[]>(vacationData)
 
   useEffect(() => {
     fetchAnalyticsData()
@@ -67,12 +68,13 @@ export default function Analytics() {
       setIsLoading(true)
       
       // Fetch all analytics data in parallel
-      const [dashboard, hiring, attendance, employmentTypes, salary] = await Promise.all([
+      const [dashboard, hiring, attendance, employmentTypes, salary, vacation] = await Promise.all([
         apiService.getDashboardStats().catch(() => null),
         apiService.getHiringTrends().catch(() => null),
         apiService.getAttendanceMetrics().catch(() => null),
         apiService.getEmploymentTypeDistribution().catch(() => null),
-        apiService.getSalaryTrends().catch(() => null)
+        apiService.getSalaryTrends().catch(() => null),
+        apiService.getVacationDetails().catch(() => null)
       ])
 
       if (dashboard) setDashboardStats(dashboard)
@@ -110,6 +112,11 @@ export default function Analytics() {
           totalSalary: item.total_salary
         })))
       }
+      
+      // Set vacation details directly (already in correct format)
+      if (vacation && Array.isArray(vacation)) {
+        setVacationDetailsData(vacation)
+      }
     } catch (error) {
       console.error('Failed to fetch analytics:', error)
       // Keep static data as fallback
@@ -119,8 +126,8 @@ export default function Analytics() {
   }
 
   const totalEmployees = dashboardStats?.total_employees || 0
-  const totalVacationAssigned = vacationData.reduce((sum, emp) => sum + emp.assigned, 0)
-  const totalVacationTaken = vacationData.reduce((sum, emp) => sum + emp.taken, 0)
+  const totalVacationAssigned = vacationDetailsData.reduce((sum, emp) => sum + emp.assigned, 0)
+  const totalVacationTaken = vacationDetailsData.reduce((sum, emp) => sum + emp.taken, 0)
   const vacationUtilization = totalVacationAssigned > 0 ? (totalVacationTaken / totalVacationAssigned) * 100 : 0
 
   const totalHires = dashboardStats?.new_hires_this_month || 0
@@ -337,8 +344,8 @@ export default function Analytics() {
           <CardDescription>Individual vacation day allocation and usage</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {vacationData.map((employee, index) => (
+          <div className="space-y-4 max-h-96 overflow-y-auto">
+            {vacationDetailsData.map((employee, index) => (
               <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
                 <div className="flex-1">
                   <div className="flex items-center justify-between mb-2">

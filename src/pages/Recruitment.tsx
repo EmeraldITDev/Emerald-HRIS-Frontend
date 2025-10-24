@@ -216,24 +216,21 @@ export default function Recruitment() {
     })
   }
   
-  // Merge API candidates with static candidates (prioritize API data)
-  const allCandidates = [
-    ...candidatesFromAPI.map(apiCand => ({
-      id: apiCand.id?.toString() || '',
-      name: `${apiCand.first_name} ${apiCand.last_name}`,
-      phone: apiCand.phone || '',
-      email: apiCand.email,
-      position: 'N/A', // Position not in API model yet
-      status: apiCand.status === 'new' ? 'New' : 
-              apiCand.status === 'screening' ? 'Reviewing' :
-              apiCand.status === 'interview' ? 'Interview Scheduled' :
-              apiCand.status === 'offer' ? 'Offered' :
-              apiCand.status === 'hired' ? 'Hired' : 'Rejected' as Candidate['status'],
-      appliedDate: apiCand.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
-      requisitionId: undefined
-    })),
-    ...candidates // Keep static candidates as fallback
-  ]
+  // Use ONLY API candidates (no static data)
+  const allCandidates = candidatesFromAPI.map(apiCand => ({
+    id: apiCand.id?.toString() || '',
+    name: `${apiCand.first_name} ${apiCand.last_name}`,
+    phone: apiCand.phone || '',
+    email: apiCand.email,
+    position: 'N/A', // Position not in API model yet
+    status: apiCand.status === 'new' ? 'New' : 
+            apiCand.status === 'screening' ? 'Reviewing' :
+            apiCand.status === 'interview' ? 'Interview Scheduled' :
+            apiCand.status === 'offer' ? 'Offered' :
+            apiCand.status === 'hired' ? 'Hired' : 'Rejected' as Candidate['status'],
+    appliedDate: apiCand.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
+    requisitionId: undefined
+  }))
 
   const filteredCandidates = allCandidates.filter(candidate => {
     const matchesEmail = !filters.email || candidate.email.toLowerCase().includes(filters.email.toLowerCase())
@@ -245,21 +242,18 @@ export default function Recruitment() {
     return matchesEmail && matchesPosition && matchesStatus && matchesDateFrom && matchesDateTo
   })
   
-  // Merge API job postings with static job requisitions
-  const allJobRequisitions = [
-    ...jobPostingsFromAPI.map(apiJob => ({
-      id: `REQ-${apiJob.id}`,
-      jobTitle: apiJob.title,
-      department: apiJob.department,
-      hiringManager: 'N/A', // Not in API model yet
-      dateCreated: apiJob.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
-      status: apiJob.status === 'open' ? 'Open' : apiJob.status === 'closed' ? 'Closed' : 'Approved' as 'Open' | 'Approved' | 'Closed',
-      targetHireDate: apiJob.deadline || new Date().toISOString().split('T')[0],
-      numberOfPositions: 1,
-      linkedCandidates: []
-    })),
-    ...jobRequisitions // Keep static data as fallback
-  ]
+  // Use ONLY API job postings (no static data)
+  const allJobRequisitions = jobPostingsFromAPI.map(apiJob => ({
+    id: `REQ-${apiJob.id}`,
+    jobTitle: apiJob.title,
+    department: apiJob.department,
+    hiringManager: 'N/A', // Not in API model yet
+    dateCreated: apiJob.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
+    status: apiJob.status === 'open' ? 'Open' : apiJob.status === 'closed' ? 'Closed' : 'Approved' as 'Open' | 'Approved' | 'Closed',
+    targetHireDate: apiJob.deadline || new Date().toISOString().split('T')[0],
+    numberOfPositions: 1,
+    linkedCandidates: []
+  }))
 
   const filteredJobRequisitions = allJobRequisitions.filter(requisition => {
     const matchesSearch = !requisitionFilters.searchTerm || 

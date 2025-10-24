@@ -131,6 +131,67 @@ export interface PayrollRecord {
   updated_at?: string;
 }
 
+export interface JobPosting {
+  id?: number;
+  title: string;
+  department: string;
+  description?: string;
+  requirements?: string;
+  salary_range?: string;
+  location?: string;
+  employment_type?: string;
+  deadline?: string;
+  status?: 'draft' | 'open' | 'closed';
+  posted_by?: number;
+  hiring_manager_id?: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface Candidate {
+  id?: number;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone?: string;
+  resume_path?: string;
+  cover_letter?: string;
+  linkedin_url?: string;
+  portfolio_url?: string;
+  status?: 'new' | 'screening' | 'interview' | 'offer' | 'hired' | 'rejected';
+  notes?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface Application {
+  id?: number;
+  job_posting_id: number;
+  candidate_id: number;
+  status?: 'pending' | 'screening' | 'interview' | 'offered' | 'rejected' | 'hired';
+  interview_date?: string;
+  interview_notes?: string;
+  reviewed_by?: number;
+  reviewed_at?: string;
+  notes?: string;
+  jobPosting?: JobPosting;
+  candidate?: Candidate;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface Announcement {
+  id?: number;
+  title: string;
+  content: string;
+  priority?: 'low' | 'medium' | 'high';
+  target_audience?: string;
+  expires_at?: string;
+  created_by?: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
 class ApiService {
   private baseUrl: string;
 
@@ -425,6 +486,106 @@ class ApiService {
 
   async deletePayroll(id: number): Promise<{ success: boolean; message: string }> {
     return this.request<{ success: boolean; message: string }>(`/payroll/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Recruitment - Job Postings
+  async getJobPostings(): Promise<JobPosting[]> {
+    return this.request<JobPosting[]>('/recruitment/job-postings');
+  }
+
+  async createJobPosting(data: Partial<JobPosting>): Promise<JobPosting> {
+    return this.request<JobPosting>('/recruitment/job-postings', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateJobPosting(id: number, data: Partial<JobPosting>): Promise<JobPosting> {
+    return this.request<JobPosting>(`/recruitment/job-postings/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteJobPosting(id: number): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/recruitment/job-postings/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Recruitment - Candidates
+  async getCandidates(): Promise<Candidate[]> {
+    return this.request<Candidate[]>('/recruitment/candidates');
+  }
+
+  async createCandidate(data: Partial<Candidate>): Promise<Candidate> {
+    return this.request<Candidate>('/recruitment/candidates', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateCandidate(id: number, data: Partial<Candidate>): Promise<Candidate> {
+    return this.request<Candidate>(`/recruitment/candidates/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteCandidate(id: number): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/recruitment/candidates/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Recruitment - Applications
+  async getApplications(): Promise<Application[]> {
+    return this.request<Application[]>('/recruitment/applications');
+  }
+
+  async createApplication(data: Partial<Application>): Promise<Application> {
+    return this.request<Application>('/recruitment/applications', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateApplication(id: number, data: Partial<Application>): Promise<Application> {
+    return this.request<Application>(`/recruitment/applications/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteApplication(id: number): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/recruitment/applications/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Announcements
+  async getAnnouncements(): Promise<Announcement[]> {
+    return this.request<Announcement[]>('/announcements');
+  }
+
+  async createAnnouncement(data: Partial<Announcement>): Promise<Announcement> {
+    return this.request<Announcement>('/announcements', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateAnnouncement(id: number, data: Partial<Announcement>): Promise<Announcement> {
+    return this.request<Announcement>(`/announcements/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteAnnouncement(id: number): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/announcements/${id}`, {
       method: 'DELETE',
     });
   }

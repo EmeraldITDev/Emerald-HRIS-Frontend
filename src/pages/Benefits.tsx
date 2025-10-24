@@ -59,6 +59,9 @@ export default function Benefits() {
   const { user } = useAuth()
   
   const canManageBenefits = user?.role === 'executive' || user?.role === 'hr_manager'
+  const isLineManager = user?.role === 'line_manager'
+  const isGeneralEmployee = !canManageBenefits && !isLineManager
+  const userDepartment = user?.department
   
   useEffect(() => {
     fetchEmployees()
@@ -326,15 +329,36 @@ export default function Benefits() {
     }
   }
 
-  const totalWithHMO = benefits.filter(b => b.hmo.status === 'active').length
-  const totalWithInsurance = benefits.filter(b => b.lifeInsurance.status === 'active').length
-  const totalWithInternet = benefits.filter(b => b.internet.status === 'active').length
-  const totalWithEquipment = benefits.filter(b => b.equipment.status === 'active').length
+  // Filter benefits based on role and department
+  const currentUserFullName = user ? `${user.firstName} ${user.lastName}` : ''
   
-  const hmoPercentage = benefits.length > 0 ? Math.round((totalWithHMO / benefits.length) * 100) : 0
-  const insurancePercentage = benefits.length > 0 ? Math.round((totalWithInsurance / benefits.length) * 100) : 0
-  const internetPercentage = benefits.length > 0 ? Math.round((totalWithInternet / benefits.length) * 100) : 0
-  const equipmentPercentage = benefits.length > 0 ? Math.round((totalWithEquipment / benefits.length) * 100) : 0
+  const filteredBenefits = (() => {
+    // Executives and HR Managers see all benefits
+    if (canManageBenefits) {
+      return benefits
+    }
+    
+    // Line Managers see benefits for their department only
+    if (isLineManager && userDepartment) {
+      return benefits.filter(b => {
+        const employee = employees.find(e => `${e.first_name} ${e.last_name}` === b.employeeName)
+        return employee?.department === userDepartment
+      })
+    }
+    
+    // General employees see only their own benefits
+    return benefits.filter(b => b.employeeName === currentUserFullName)
+  })()
+  
+  const totalWithHMO = filteredBenefits.filter(b => b.hmo.status === 'active').length
+  const totalWithInsurance = filteredBenefits.filter(b => b.lifeInsurance.status === 'active').length
+  const totalWithInternet = filteredBenefits.filter(b => b.internet.status === 'active').length
+  const totalWithEquipment = filteredBenefits.filter(b => b.equipment.status === 'active').length
+  
+  const hmoPercentage = filteredBenefits.length > 0 ? Math.round((totalWithHMO / filteredBenefits.length) * 100) : 0
+  const insurancePercentage = filteredBenefits.length > 0 ? Math.round((totalWithInsurance / filteredBenefits.length) * 100) : 0
+  const internetPercentage = filteredBenefits.length > 0 ? Math.round((totalWithInternet / filteredBenefits.length) * 100) : 0
+  const equipmentPercentage = filteredBenefits.length > 0 ? Math.round((totalWithEquipment / filteredBenefits.length) * 100) : 0
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-NG', {
@@ -598,7 +622,7 @@ export default function Benefits() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {benefits.map((benefit) => (
+                {filteredBenefits.map((benefit) => (
                   <TableRow key={benefit.id}>
                     <TableCell className="font-medium">{benefit.employeeName}</TableCell>
                     <TableCell>

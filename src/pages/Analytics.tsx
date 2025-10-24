@@ -1,8 +1,11 @@
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { CalendarDays, Users, TrendingUp, Briefcase, Award, Clock } from "lucide-react"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from "recharts"
+import apiService from "@/lib/api"
+import { useToast } from "@/hooks/use-toast"
 
 // Sample data for analytics
 const vacationData = [
@@ -47,14 +50,52 @@ const salaryData = [
 const COLORS = ['#10b981', '#f59e0b', '#3b82f6', '#ef4444']
 
 export default function Analytics() {
-  const totalEmployees = 4
+  const { toast } = useToast()
+  const [isLoading, setIsLoading] = useState(false)
+  const [dashboardStats, setDashboardStats] = useState<any>(null)
+  const [hiringTrendsData, setHiringTrendsData] = useState<any[]>(hiringData)
+  const [attendanceMetricsData, setAttendanceMetricsData] = useState<any[]>(attendanceData)
+  const [employmentTypesData, setEmploymentTypesData] = useState<any[]>(employmentTypeData)
+  const [salaryTrendsData, setSalaryTrendsData] = useState<any[]>(salaryData)
+
+  useEffect(() => {
+    fetchAnalyticsData()
+  }, [])
+
+  const fetchAnalyticsData = async () => {
+    try {
+      setIsLoading(true)
+      
+      // Fetch all analytics data in parallel
+      const [dashboard, hiring, attendance, employmentTypes, salary] = await Promise.all([
+        apiService.getDashboardStats().catch(() => null),
+        apiService.getHiringTrends().catch(() => null),
+        apiService.getAttendanceMetrics().catch(() => null),
+        apiService.getEmploymentTypeDistribution().catch(() => null),
+        apiService.getSalaryTrends().catch(() => null)
+      ])
+
+      if (dashboard) setDashboardStats(dashboard)
+      if (hiring) setHiringTrendsData(hiring)
+      if (attendance) setAttendanceMetricsData(attendance)
+      if (employmentTypes) setEmploymentTypesData(employmentTypes)
+      if (salary) setSalaryTrendsData(salary)
+    } catch (error) {
+      console.error('Failed to fetch analytics:', error)
+      // Keep static data as fallback
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const totalEmployees = dashboardStats?.total_employees || 4
   const totalVacationAssigned = vacationData.reduce((sum, emp) => sum + emp.assigned, 0)
   const totalVacationTaken = vacationData.reduce((sum, emp) => sum + emp.taken, 0)
   const vacationUtilization = (totalVacationTaken / totalVacationAssigned) * 100
 
-  const totalHires = hiringData.reduce((sum, month) => sum + month.hires, 0)
-  const avgAttendance = attendanceData.reduce((sum, month) => sum + month.present, 0) / attendanceData.length
-  const totalSalaryExpense = salaryData[salaryData.length - 1].totalSalary
+  const totalHires = dashboardStats?.total_new_hires || hiringData.reduce((sum, month) => sum + month.hires, 0)
+  const avgAttendance = dashboardStats?.average_attendance || (attendanceData.reduce((sum, month) => sum + month.present, 0) / attendanceData.length)
+  const totalSalaryExpense = dashboardStats?.total_salary_expense || salaryData[salaryData.length - 1].totalSalary
 
   return (
     <div className="space-y-6">
@@ -161,7 +202,7 @@ export default function Analytics() {
               <ResponsiveContainer width="100%" height={200}>
                 <PieChart>
                   <Pie
-                    data={employmentTypeData}
+                    data={employmentTypesData}
                     cx="50%"
                     cy="50%"
                     innerRadius={40}
@@ -202,7 +243,7 @@ export default function Analytics() {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={hiringData}>
+              <LineChart data={hiringTrendsData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="month" />
                 <YAxis />
@@ -227,7 +268,7 @@ export default function Analytics() {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={attendanceData}>
+              <BarChart data={attendanceMetricsData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="month" />
                 <YAxis />
@@ -247,7 +288,7 @@ export default function Analytics() {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={salaryData}>
+              <BarChart data={salaryTrendsData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="month" />
                 <YAxis tickFormatter={(value) => `₦${(value / 1000000).toFixed(1)}M`} />

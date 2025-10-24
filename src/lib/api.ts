@@ -589,6 +589,35 @@ class ApiService {
       method: 'DELETE',
     });
   }
+
+  // Analytics
+  async getHeadcountTrends(): Promise<any> {
+    return this.request<any>('/analytics/headcount-trends');
+  }
+
+  async getHiringTrends(): Promise<any> {
+    return this.request<any>('/analytics/hiring-trends');
+  }
+
+  async getAttendanceMetrics(): Promise<any> {
+    return this.request<any>('/analytics/attendance-metrics');
+  }
+
+  async getEmploymentTypeDistribution(): Promise<any> {
+    return this.request<any>('/analytics/employment-types');
+  }
+
+  async getSalaryTrends(): Promise<any> {
+    return this.request<any>('/analytics/salary-trends');
+  }
+
+  async getDepartmentStats(): Promise<any> {
+    return this.request<any>('/analytics/department-stats');
+  }
+
+  async getDashboardStats(): Promise<any> {
+    return this.request<any>('/analytics/dashboard-stats');
+  }
 }
 
 export const apiService = new ApiService();

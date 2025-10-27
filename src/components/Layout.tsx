@@ -22,7 +22,7 @@ interface LayoutProps {
 
 export default function Layout({ children }: LayoutProps) {
   const isMobile = useIsMobile()
-  const { user, logout } = useAuth()
+  const { user, logout, refreshUser } = useAuth()
   const [showPasswordModal, setShowPasswordModal] = useState(false)
   const [bannerDismissed, setBannerDismissed] = useState(false)
 

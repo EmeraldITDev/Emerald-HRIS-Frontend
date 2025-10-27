@@ -695,8 +695,8 @@ export default function Attendance() {
     
     // Check if it's around lunch time (11am - 2pm)
     if (currentHour >= 11 && currentHour < 14) {
-      // Lunch break doesn't require reason, proceed directly
-      performClockOut("Lunch break", true);
+      // Lunch break doesn't require reason, proceed directly without dialog
+      performClockOut("", true);
     } else {
       toast({ 
         title: "Invalid Time", 
@@ -726,11 +726,10 @@ export default function Attendance() {
       }
 
       if (isLunch) {
-        // For lunch break, just record the break time and set is_clocked_in to false
+        // For lunch break, just record the break time and set is_clocked_in to false (no reason needed)
         attendanceRecords[existingRecordIndex] = {
           ...attendanceRecords[existingRecordIndex],
           lunch_break_start: now,
-          lunch_break_reason: reason || "Lunch break",
           is_clocked_in: false
         };
         toast({ title: "Success", description: "Lunch break started. Remember to clock back in!" });

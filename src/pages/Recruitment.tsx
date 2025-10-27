@@ -1011,14 +1011,7 @@ export default function Recruitment() {
                     </TableCell>
                     <TableCell className="hidden lg:table-cell">{candidate.appliedDate}</TableCell>
                     <TableCell className="hidden md:table-cell">
-                      {candidate.resumeFile ? (
-                        <Button variant="outline" size="sm">
-                          <Upload className="h-3 w-3 mr-1" />
-                          View
-                        </Button>
-                      ) : (
-                        <span className="text-muted-foreground text-sm">No file</span>
-                      )}
+                      <span className="text-muted-foreground text-sm">No file</span>
                     </TableCell>
                     <TableCell>
                       <DropdownMenu>

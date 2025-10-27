@@ -192,6 +192,29 @@ export interface Announcement {
   updated_at?: string;
 }
 
+export interface Policy {
+  id?: number;
+  title: string;
+  category?: string;
+  content: string;
+  version?: string;
+  effective_date: string;
+  status?: 'draft' | 'active' | 'archived';
+  created_by?: number;
+  approved_by?: number;
+  approved_at?: string;
+  createdBy?: {
+    id: number;
+    name: string;
+  };
+  approvedBy?: {
+    id: number;
+    name: string;
+  };
+  created_at?: string;
+  updated_at?: string;
+}
+
 class ApiService {
   private baseUrl: string;
 
@@ -621,6 +644,56 @@ class ApiService {
 
   async getVacationDetails(): Promise<any> {
     return this.request<any>('/analytics/vacation-details');
+  }
+
+  // Policies
+  async getPolicies(params?: { status?: string; category?: string }): Promise<Policy[]> {
+    const queryParams = new URLSearchParams();
+    if (params?.status) queryParams.append('status', params.status);
+    if (params?.category) queryParams.append('category', params.category);
+    
+    const url = `/policies${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    return this.request<Policy[]>(url);
+  }
+
+  async getPolicy(id: number): Promise<Policy> {
+    return this.request<Policy>(`/policies/${id}`);
+  }
+
+  async createPolicy(data: Partial<Policy>): Promise<{ success: boolean; message: string; data: Policy }> {
+    return this.request<{ success: boolean; message: string; data: Policy }>('/policies', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updatePolicy(id: number, data: Partial<Policy>): Promise<{ success: boolean; message: string; data: Policy }> {
+    return this.request<{ success: boolean; message: string; data: Policy }>(`/policies/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async approvePolicy(id: number): Promise<{ success: boolean; message: string; data: Policy }> {
+    return this.request<{ success: boolean; message: string; data: Policy }>(`/policies/${id}/approve`, {
+      method: 'POST',
+    });
+  }
+
+  async archivePolicy(id: number): Promise<{ success: boolean; message: string; data: Policy }> {
+    return this.request<{ success: boolean; message: string; data: Policy }>(`/policies/${id}/archive`, {
+      method: 'POST',
+    });
+  }
+
+  async deletePolicy(id: number): Promise<{ success: boolean; message: string }> {
+    return this.request<{ success: boolean; message: string }>(`/policies/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getPolicyCategories(): Promise<string[]> {
+    return this.request<string[]>('/policies/categories');
   }
 }
 

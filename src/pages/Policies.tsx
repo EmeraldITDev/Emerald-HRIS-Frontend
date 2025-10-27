@@ -1,10 +1,10 @@
-import { useState, useRef } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { useState, useEffect } from "react"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
 import { 
   Table, 
@@ -16,11 +16,13 @@ import {
 } from "@/components/ui/table"
 import { 
   Plus, 
-  Upload, 
-  Download, 
   Eye, 
   Trash2,
-  FileText
+  FileText,
+  Edit,
+  CheckCircle,
+  Archive,
+  AlertCircle
 } from "lucide-react"
 import {
   DropdownMenu,
@@ -30,203 +32,221 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from '@/contexts/AuthContext'
-
-interface Policy {
-  id: string
-  title: string
-  description: string
-  category: string
-  version: string
-  dateUploaded: string
-  fileType: string
-  fileName: string
-  fileSize: string
-  uploadedBy: string
-  fileUrl?: string
-  fileData?: File
-}
-
-const policies: Policy[] = [
-  {
-    id: "POL001",
-    title: "Employee Handbook",
-    description: "Comprehensive guide for all employees covering company policies and procedures",
-    category: "General",
-    version: "v2.1",
-    dateUploaded: "2024-01-15",
-    fileType: "PDF",
-    fileName: "employee_handbook_v2.1.pdf",
-    fileSize: "2.5 MB",
-    uploadedBy: "HR Department"
-  },
-  {
-    id: "POL002",
-    title: "Code of Conduct",
-    description: "Ethical guidelines and behavioral expectations for all employees",
-    category: "Ethics",
-    version: "v1.3",
-    dateUploaded: "2024-01-10",
-    fileType: "PDF",
-    fileName: "code_of_conduct_v1.3.pdf",
-    fileSize: "1.8 MB",
-    uploadedBy: "Legal Department"
-  },
-  {
-    id: "POL003",
-    title: "Data Protection Policy",
-    description: "Guidelines for handling and protecting sensitive company and customer data",
-    category: "Security",
-    version: "v1.0",
-    dateUploaded: "2024-01-05",
-    fileType: "DOCX",
-    fileName: "data_protection_policy.docx",
-    fileSize: "986 KB",
-    uploadedBy: "IT Department"
-  }
-]
+import apiService, { Policy } from '@/lib/api'
+import { format } from 'date-fns'
 
 export default function Policies() {
-  const [policyList, setPolicyList] = useState<Policy[]>(policies)
+  const [policyList, setPolicyList] = useState<Policy[]>([])
+  const [isLoading, setIsLoading] = useState(true)
   const [showAddPolicy, setShowAddPolicy] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [showViewPolicy, setShowViewPolicy] = useState(false)
+  const [showEditPolicy, setShowEditPolicy] = useState(false)
+  const [selectedPolicy, setSelectedPolicy] = useState<Policy | null>(null)
+  const [categories, setCategories] = useState<string[]>([
+    "General", "Ethics", "Security", "HR", "Finance", "Legal", "Operations", "IT"
+  ])
   const { toast } = useToast()
   const { user } = useAuth()
   
-  const canUploadPolicy = user?.role === 'hr_manager' || user?.role === 'executive'
+  const canManagePolicy = user?.role === 'hr_manager' || user?.role === 'executive'
 
   const [newPolicy, setNewPolicy] = useState({
     title: "",
-    description: "",
+    content: "",
     category: "",
-    version: "",
-    file: null as File | null
+    version: "1.0",
+    effective_date: new Date().toISOString().split('T')[0],
+    status: "draft" as "draft" | "active" | "archived"
   })
 
-  const categories = ["General", "Ethics", "Security", "HR", "Finance", "Legal", "Operations", "IT"]
+  const [editPolicy, setEditPolicy] = useState({
+    title: "",
+    content: "",
+    category: "",
+    version: "",
+    effective_date: "",
+    status: "draft" as "draft" | "active" | "archived"
+  })
 
-  const handleFileUpload = () => {
-    fileInputRef.current?.click()
-  }
+  useEffect(() => {
+    fetchPolicies()
+    fetchCategories()
+  }, [])
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
-
-    // Validate file type
-    const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
-    if (!allowedTypes.includes(file.type)) {
+  const fetchPolicies = async () => {
+    try {
+      setIsLoading(true)
+      const policies = await apiService.getPolicies()
+      setPolicyList(policies)
+    } catch (error) {
+      console.error('Failed to fetch policies:', error)
       toast({
-        title: "Invalid File Type",
-        description: "Please select a PDF, DOC, or DOCX file",
+        title: "Error",
+        description: "Failed to load policies",
         variant: "destructive"
       })
-      return
+    } finally {
+      setIsLoading(false)
     }
-
-    // Validate file size (max 10MB)
-    if (file.size > 10 * 1024 * 1024) {
-      toast({
-        title: "File Too Large",
-        description: "Please select a file smaller than 10MB",
-        variant: "destructive"
-      })
-      return
-    }
-
-    setNewPolicy({...newPolicy, file})
   }
 
-  const handleAddPolicy = () => {
-    if (!newPolicy.title || !newPolicy.description || !newPolicy.category || !newPolicy.version || !newPolicy.file) {
+  const fetchCategories = async () => {
+    try {
+      const cats = await apiService.getPolicyCategories()
+      if (cats.length > 0) {
+        setCategories(cats)
+      }
+    } catch (error) {
+      console.error('Failed to fetch categories:', error)
+    }
+  }
+
+  const handleAddPolicy = async () => {
+    if (!newPolicy.title || !newPolicy.content || !newPolicy.category || !newPolicy.effective_date) {
       toast({
         title: "Required Fields Missing",
-        description: "Please fill all required fields and select a file",
+        description: "Please fill all required fields",
         variant: "destructive"
       })
       return
     }
 
-    const fileSize = newPolicy.file.size < 1024 * 1024 
-      ? `${(newPolicy.file.size / 1024).toFixed(0)} KB`
-      : `${(newPolicy.file.size / (1024 * 1024)).toFixed(1)} MB`
-
-    const fileType = newPolicy.file.type.includes('pdf') ? 'PDF' 
-      : newPolicy.file.type.includes('wordprocessingml') ? 'DOCX' 
-      : 'DOC'
-
-    const policy: Policy = {
-      id: `POL${String(policyList.length + 1).padStart(3, '0')}`,
-      title: newPolicy.title,
-      description: newPolicy.description,
-      category: newPolicy.category,
-      version: newPolicy.version,
-      dateUploaded: new Date().toISOString().split('T')[0],
-      fileType,
-      fileName: newPolicy.file.name,
-      fileSize,
-      uploadedBy: "Current User", // This would come from auth context in real app
-      fileUrl: URL.createObjectURL(newPolicy.file),
-      fileData: newPolicy.file
+    try {
+      const response = await apiService.createPolicy(newPolicy)
+      setPolicyList(prev => [...prev, response.data])
+      setNewPolicy({
+        title: "",
+        content: "",
+        category: "",
+        version: "1.0",
+        effective_date: new Date().toISOString().split('T')[0],
+        status: "draft"
+      })
+      setShowAddPolicy(false)
+      
+      toast({
+        title: "Policy Created",
+        description: response.message || "Policy has been successfully created.",
+      })
+      
+      fetchPolicies()
+    } catch (error: any) {
+      console.error('Failed to create policy:', error)
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create policy",
+        variant: "destructive"
+      })
     }
-
-    setPolicyList(prev => [...prev, policy])
-    setNewPolicy({
-      title: "",
-      description: "",
-      category: "",
-      version: "",
-      file: null
-    })
-    setShowAddPolicy(false)
-    
-    // Reset file input
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ''
-    }
-
-    toast({
-      title: "Policy Added",
-      description: `${policy.title} has been successfully uploaded.`,
-    })
   }
 
-  const handleDeletePolicy = (policy: Policy) => {
-    setPolicyList(prev => prev.filter(p => p.id !== policy.id))
-    toast({
-      title: "Policy Deleted",
-      description: `${policy.title} has been removed.`,
-    })
+  const handleUpdatePolicy = async () => {
+    if (!selectedPolicy?.id) return
+
+    try {
+      const response = await apiService.updatePolicy(selectedPolicy.id, editPolicy)
+      setPolicyList(prev => prev.map(p => p.id === selectedPolicy.id ? response.data : p))
+      setShowEditPolicy(false)
+      
+      toast({
+        title: "Policy Updated",
+        description: response.message || "Policy has been successfully updated.",
+      })
+      
+      fetchPolicies()
+    } catch (error: any) {
+      console.error('Failed to update policy:', error)
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update policy",
+        variant: "destructive"
+      })
+    }
+  }
+
+  const handleApprovePolicy = async (policy: Policy) => {
+    if (!policy.id) return
+
+    try {
+      const response = await apiService.approvePolicy(policy.id)
+      setPolicyList(prev => prev.map(p => p.id === policy.id ? response.data : p))
+      
+      toast({
+        title: "Policy Approved",
+        description: `${policy.title} has been approved and is now active.`,
+      })
+      
+      fetchPolicies()
+    } catch (error: any) {
+      console.error('Failed to approve policy:', error)
+      toast({
+        title: "Error",
+        description: error.message || "Failed to approve policy",
+        variant: "destructive"
+      })
+    }
+  }
+
+  const handleArchivePolicy = async (policy: Policy) => {
+    if (!policy.id) return
+
+    try {
+      const response = await apiService.archivePolicy(policy.id)
+      setPolicyList(prev => prev.map(p => p.id === policy.id ? response.data : p))
+      
+      toast({
+        title: "Policy Archived",
+        description: `${policy.title} has been archived.`,
+      })
+      
+      fetchPolicies()
+    } catch (error: any) {
+      console.error('Failed to archive policy:', error)
+      toast({
+        title: "Error",
+        description: error.message || "Failed to archive policy",
+        variant: "destructive"
+      })
+    }
+  }
+
+  const handleDeletePolicy = async (policy: Policy) => {
+    if (!policy.id) return
+
+    try {
+      await apiService.deletePolicy(policy.id)
+      setPolicyList(prev => prev.filter(p => p.id !== policy.id))
+      
+      toast({
+        title: "Policy Deleted",
+        description: `${policy.title} has been removed.`,
+      })
+    } catch (error: any) {
+      console.error('Failed to delete policy:', error)
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete policy",
+        variant: "destructive"
+      })
+    }
   }
   
   const handleViewPolicy = (policy: Policy) => {
-    if (policy.fileUrl) {
-      window.open(policy.fileUrl, '_blank')
-    } else {
-      toast({
-        title: "File Not Available",
-        description: "This is a sample policy. Upload a new policy to view documents.",
-        variant: "destructive"
-      })
-    }
+    setSelectedPolicy(policy)
+    setShowViewPolicy(true)
   }
-  
-  const handleDownloadPolicy = (policy: Policy) => {
-    if (policy.fileData) {
-      const link = document.createElement('a')
-      link.href = URL.createObjectURL(policy.fileData)
-      link.download = policy.fileName
-      link.click()
-      toast({
-        title: "Policy Downloaded",
-        description: `${policy.title} has been downloaded.`,
-      })
-    } else {
-      toast({
-        title: "File Not Available",
-        description: "This is a sample policy. Upload a new policy to download documents.",
-        variant: "destructive"
-      })
-    }
+
+  const handleEditClick = (policy: Policy) => {
+    setSelectedPolicy(policy)
+    setEditPolicy({
+      title: policy.title,
+      content: policy.content,
+      category: policy.category || "",
+      version: policy.version || "1.0",
+      effective_date: policy.effective_date,
+      status: policy.status || "draft"
+    })
+    setShowEditPolicy(true)
   }
 
   const getCategoryBadge = (category: string) => {
@@ -246,27 +266,51 @@ export default function Policies() {
     </Badge>
   }
 
+  const getStatusBadge = (status?: string) => {
+    switch (status) {
+      case 'active':
+        return <Badge className="bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400">
+          <CheckCircle className="h-3 w-3 mr-1" />
+          Active
+        </Badge>
+      case 'archived':
+        return <Badge variant="secondary">
+          <Archive className="h-3 w-3 mr-1" />
+          Archived
+        </Badge>
+      case 'draft':
+      default:
+        return <Badge variant="outline">
+          <AlertCircle className="h-3 w-3 mr-1" />
+          Draft
+        </Badge>
+    }
+  }
+
   return (
     <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col space-y-3 md:space-y-0 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-foreground">Company Policies</h1>
           <p className="text-sm md:text-base text-muted-foreground">
-            Manage and store company policy documents
+            Manage and view company policy documents
           </p>
         </div>
-        {canUploadPolicy && (
+        {canManagePolicy && (
           <div className="flex flex-col sm:flex-row gap-2">
             <Dialog open={showAddPolicy} onOpenChange={setShowAddPolicy}>
               <DialogTrigger asChild>
                 <Button size="sm" className="text-xs md:text-sm">
                   <Plus className="mr-2 h-3 w-3 md:h-4 md:w-4" />
-                  Upload Policy
+                  Create Policy
                 </Button>
               </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>Upload New Policy</DialogTitle>
+                <DialogTitle>Create New Policy</DialogTitle>
+                <DialogDescription>
+                  Add a new company policy document
+                </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -294,48 +338,51 @@ export default function Policies() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="version">Version *</Label>
                     <Input
                       id="version"
                       value={newPolicy.version}
                       onChange={(e) => setNewPolicy({...newPolicy, version: e.target.value})}
-                      placeholder="e.g., v1.0"
+                      placeholder="e.g., 1.0"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Policy Document *</Label>
-                    <Button 
-                      variant="outline" 
-                      onClick={handleFileUpload}
-                      className="w-full"
-                    >
-                      <Upload className="mr-2 h-4 w-4" />
-                      {newPolicy.file ? newPolicy.file.name : "Select File"}
-                    </Button>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept=".pdf,.doc,.docx"
-                      onChange={handleFileChange}
-                      style={{ display: 'none' }}
+                    <Label htmlFor="effective_date">Effective Date *</Label>
+                    <Input
+                      id="effective_date"
+                      type="date"
+                      value={newPolicy.effective_date}
+                      onChange={(e) => setNewPolicy({...newPolicy, effective_date: e.target.value})}
                     />
-                    <p className="text-xs text-muted-foreground">
-                      Supported formats: PDF, DOC, DOCX (Max 10MB)
-                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="status">Status</Label>
+                    <select 
+                      className="w-full px-3 py-2 border border-input bg-background text-sm rounded-md"
+                      value={newPolicy.status}
+                      onChange={(e) => setNewPolicy({...newPolicy, status: e.target.value as "draft" | "active" | "archived"})}
+                    >
+                      <option value="draft">Draft</option>
+                      <option value="active">Active</option>
+                      <option value="archived">Archived</option>
+                    </select>
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="description">Description *</Label>
+                  <Label htmlFor="content">Policy Content *</Label>
                   <Textarea
-                    id="description"
-                    value={newPolicy.description}
-                    onChange={(e) => setNewPolicy({...newPolicy, description: e.target.value})}
-                    placeholder="Brief description of the policy document..."
-                    className="min-h-[80px]"
+                    id="content"
+                    value={newPolicy.content}
+                    onChange={(e) => setNewPolicy({...newPolicy, content: e.target.value})}
+                    placeholder="Enter the full policy content here..."
+                    className="min-h-[200px]"
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Enter the complete policy text. Support for file uploads coming soon.
+                  </p>
                 </div>
 
                 <div className="flex justify-end gap-2">
@@ -343,7 +390,7 @@ export default function Policies() {
                     Cancel
                   </Button>
                   <Button onClick={handleAddPolicy}>
-                    Upload Policy
+                    Create Policy
                   </Button>
                 </div>
               </div>
@@ -357,81 +404,232 @@ export default function Policies() {
       <Card className="border-border/50 shadow-sm">
         <CardHeader>
           <CardTitle className="text-primary">Policy Documents</CardTitle>
+          <CardDescription>
+            {isLoading ? "Loading policies..." : `${policyList.length} policies available`}
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Policy Title</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Version</TableHead>
-                  <TableHead>File Type</TableHead>
-                  <TableHead>Size</TableHead>
-                  <TableHead>Date Uploaded</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {policyList.map((policy) => (
-                  <TableRow key={policy.id}>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{policy.title}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {policy.description}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>{getCategoryBadge(policy.category)}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="text-xs">
-                        {policy.version}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary" className="text-xs">
-                        {policy.fileType}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-sm">{policy.fileSize}</TableCell>
-                    <TableCell className="text-sm">{policy.dateUploaded}</TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm">
-                            <FileText className="h-3 w-3 mr-1" />
-                            Actions
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent className="bg-popover border shadow-lg">
-                          <DropdownMenuItem onClick={() => handleViewPolicy(policy)}>
-                            <Eye className="h-3 w-3 mr-2" />
-                            View
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleDownloadPolicy(policy)}>
-                            <Download className="h-3 w-3 mr-2" />
-                            Download
-                          </DropdownMenuItem>
-                          {canUploadPolicy && (
-                            <DropdownMenuItem 
-                              className="text-destructive"
-                              onClick={() => handleDeletePolicy(policy)}
-                            >
-                              <Trash2 className="h-3 w-3 mr-2" />
-                              Delete
-                            </DropdownMenuItem>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
+          {isLoading ? (
+            <div className="text-center py-8 text-muted-foreground">
+              Loading policies...
+            </div>
+          ) : policyList.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              No policies found. {canManagePolicy && "Create your first policy to get started."}
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Policy Title</TableHead>
+                    <TableHead>Category</TableHead>
+                    <TableHead>Version</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Effective Date</TableHead>
+                    <TableHead>Created By</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                </TableHeader>
+                <TableBody>
+                  {policyList.map((policy) => (
+                    <TableRow key={policy.id}>
+                      <TableCell>
+                        <div className="font-medium">{policy.title}</div>
+                      </TableCell>
+                      <TableCell>{policy.category && getCategoryBadge(policy.category)}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="text-xs">
+                          {policy.version || "1.0"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{getStatusBadge(policy.status)}</TableCell>
+                      <TableCell className="text-sm">
+                        {policy.effective_date ? format(new Date(policy.effective_date), 'MMM dd, yyyy') : '-'}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {policy.createdBy?.name || '-'}
+                      </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <FileText className="h-3 w-3 mr-1" />
+                              Actions
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent className="bg-popover border shadow-lg">
+                            <DropdownMenuItem onClick={() => handleViewPolicy(policy)}>
+                              <Eye className="h-3 w-3 mr-2" />
+                              View
+                            </DropdownMenuItem>
+                            {canManagePolicy && (
+                              <>
+                                <DropdownMenuItem onClick={() => handleEditClick(policy)}>
+                                  <Edit className="h-3 w-3 mr-2" />
+                                  Edit
+                                </DropdownMenuItem>
+                                {policy.status === 'draft' && (
+                                  <DropdownMenuItem onClick={() => handleApprovePolicy(policy)}>
+                                    <CheckCircle className="h-3 w-3 mr-2" />
+                                    Approve
+                                  </DropdownMenuItem>
+                                )}
+                                {policy.status === 'active' && (
+                                  <DropdownMenuItem onClick={() => handleArchivePolicy(policy)}>
+                                    <Archive className="h-3 w-3 mr-2" />
+                                    Archive
+                                  </DropdownMenuItem>
+                                )}
+                                <DropdownMenuItem 
+                                  className="text-destructive"
+                                  onClick={() => handleDeletePolicy(policy)}
+                                >
+                                  <Trash2 className="h-3 w-3 mr-2" />
+                                  Delete
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
+
+      {/* View Policy Dialog */}
+      <Dialog open={showViewPolicy} onOpenChange={setShowViewPolicy}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{selectedPolicy?.title}</DialogTitle>
+            <DialogDescription>
+              Version {selectedPolicy?.version} | {selectedPolicy?.category} | 
+              Effective: {selectedPolicy?.effective_date ? format(new Date(selectedPolicy.effective_date), 'MMMM dd, yyyy') : '-'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="flex gap-2">
+              {selectedPolicy?.category && getCategoryBadge(selectedPolicy.category)}
+              {getStatusBadge(selectedPolicy?.status)}
+            </div>
+            
+            <div className="border-t pt-4">
+              <h3 className="font-semibold mb-2">Policy Content</h3>
+              <div className="whitespace-pre-wrap text-sm">
+                {selectedPolicy?.content}
+              </div>
+            </div>
+
+            {selectedPolicy?.approved_at && (
+              <div className="border-t pt-4 text-sm text-muted-foreground">
+                <p>
+                  <strong>Approved by:</strong> {selectedPolicy.approvedBy?.name || 'Unknown'} on{' '}
+                  {format(new Date(selectedPolicy.approved_at), 'MMMM dd, yyyy')}
+                </p>
+              </div>
+            )}
+
+            <div className="flex justify-end">
+              <Button onClick={() => setShowViewPolicy(false)}>
+                Close
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Policy Dialog */}
+      <Dialog open={showEditPolicy} onOpenChange={setShowEditPolicy}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Policy</DialogTitle>
+            <DialogDescription>
+              Update policy information
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-title">Policy Title *</Label>
+                <Input
+                  id="edit-title"
+                  value={editPolicy.title}
+                  onChange={(e) => setEditPolicy({...editPolicy, title: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-category">Category *</Label>
+                <select 
+                  className="w-full px-3 py-2 border border-input bg-background text-sm rounded-md"
+                  value={editPolicy.category}
+                  onChange={(e) => setEditPolicy({...editPolicy, category: e.target.value})}
+                >
+                  <option value="">Select category</option>
+                  {categories.map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-version">Version *</Label>
+                <Input
+                  id="edit-version"
+                  value={editPolicy.version}
+                  onChange={(e) => setEditPolicy({...editPolicy, version: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-effective_date">Effective Date *</Label>
+                <Input
+                  id="edit-effective_date"
+                  type="date"
+                  value={editPolicy.effective_date}
+                  onChange={(e) => setEditPolicy({...editPolicy, effective_date: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-status">Status</Label>
+                <select 
+                  className="w-full px-3 py-2 border border-input bg-background text-sm rounded-md"
+                  value={editPolicy.status}
+                  onChange={(e) => setEditPolicy({...editPolicy, status: e.target.value as "draft" | "active" | "archived"})}
+                >
+                  <option value="draft">Draft</option>
+                  <option value="active">Active</option>
+                  <option value="archived">Archived</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-content">Policy Content *</Label>
+              <Textarea
+                id="edit-content"
+                value={editPolicy.content}
+                onChange={(e) => setEditPolicy({...editPolicy, content: e.target.value})}
+                className="min-h-[200px]"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowEditPolicy(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleUpdatePolicy}>
+                Update Policy
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

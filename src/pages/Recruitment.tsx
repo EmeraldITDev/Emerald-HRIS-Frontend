@@ -160,11 +160,8 @@ export default function Recruitment() {
       setJobPostingsFromAPI(data)
     } catch (error) {
       console.error('Failed to fetch job postings:', error)
-      toast({
-        title: "Error",
-        description: "Failed to load job postings",
-        variant: "destructive"
-      })
+      // Don't show error toast - silently fail and use local data
+      setJobPostingsFromAPI([])
     } finally {
       setIsLoadingJobPostings(false)
     }

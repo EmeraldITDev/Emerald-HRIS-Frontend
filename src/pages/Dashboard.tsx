@@ -33,7 +33,8 @@ import { useNavigate } from "react-router-dom"
 import { useToast } from "@/hooks/use-toast"
 import { format } from "date-fns"
 import apiService, { Employee } from "@/lib/api"
-import { 
+import { cn } from "@/lib/utils"
+import {
   parseCSVFileForAPI, 
   generateCSVTemplate, 
   type EmployeeData 
@@ -560,15 +561,91 @@ export default function Dashboard() {
     const now = new Date()
     const currentHour = now.getHours()
     
+    // Check if already on lunch break
+    if (todayStatus?.lunch_break_start && !todayStatus?.lunch_break_end) {
+      // Return from lunch break
+      performReturnFromLunch()
+      return
+    }
+    
     if (currentHour >= 11 && currentHour < 14) {
-      setShowClockOutDialog(true)
-      setIsLunchBreak(true)
+      // Start lunch break directly without dialog
+      performLunchBreak()
     } else {
       toast({ 
         title: "Invalid Time", 
         description: "Lunch break is only available between 11:00 AM and 2:00 PM.", 
         variant: "destructive" 
       })
+    }
+  }
+
+  const performLunchBreak = () => {
+    if (!user) return
+    
+    try {
+      setIsPunching(true)
+      const today = format(new Date(), 'yyyy-MM-dd')
+      const now = format(new Date(), 'HH:mm:ss')
+      const attendanceRecords = JSON.parse(localStorage.getItem('attendanceRecords') || '[]')
+      
+      const existingRecordIndex = attendanceRecords.findIndex(
+        (record: any) => record.employee_id === user.id && record.date === today
+      )
+      
+      if (existingRecordIndex > -1) {
+        attendanceRecords[existingRecordIndex] = {
+          ...attendanceRecords[existingRecordIndex],
+          lunch_break_start: now,
+          is_clocked_in: false
+        }
+        localStorage.setItem('attendanceRecords', JSON.stringify(attendanceRecords))
+        loadTodayStatus()
+        toast({
+          title: "Lunch Break Started",
+          description: "Enjoy your lunch! Click the button again to return.",
+          className: "bg-success text-white"
+        })
+      }
+    } catch (error) {
+      console.error('Lunch break error:', error)
+      toast({ title: "Error", description: "Failed to start lunch break.", variant: "destructive" })
+    } finally {
+      setIsPunching(false)
+    }
+  }
+
+  const performReturnFromLunch = () => {
+    if (!user) return
+    
+    try {
+      setIsPunching(true)
+      const today = format(new Date(), 'yyyy-MM-dd')
+      const now = format(new Date(), 'HH:mm:ss')
+      const attendanceRecords = JSON.parse(localStorage.getItem('attendanceRecords') || '[]')
+      
+      const existingRecordIndex = attendanceRecords.findIndex(
+        (record: any) => record.employee_id === user.id && record.date === today
+      )
+      
+      if (existingRecordIndex > -1) {
+        attendanceRecords[existingRecordIndex] = {
+          ...attendanceRecords[existingRecordIndex],
+          lunch_break_end: now,
+          is_clocked_in: true
+        }
+        localStorage.setItem('attendanceRecords', JSON.stringify(attendanceRecords))
+        loadTodayStatus()
+        toast({
+          title: "Welcome Back",
+          description: "You've returned from lunch break."
+        })
+      }
+    } catch (error) {
+      console.error('Return from lunch error:', error)
+      toast({ title: "Error", description: "Failed to return from lunch.", variant: "destructive" })
+    } finally {
+      setIsPunching(false)
     }
   }
 
@@ -595,9 +672,9 @@ export default function Dashboard() {
         attendanceRecords[existingRecordIndex] = {
           ...attendanceRecords[existingRecordIndex],
           lunch_break_start: now,
-          lunch_break_reason: reason || "Lunch break"
+          is_clocked_in: false
         }
-        toast({ title: "Success", description: "Lunch break started. Don't forget to clock back in!" })
+        toast({ title: "Success", description: "Lunch break started. Click Lunch Break button to return!" })
       } else {
         attendanceRecords[existingRecordIndex] = {
           ...attendanceRecords[existingRecordIndex],
@@ -739,11 +816,11 @@ export default function Dashboard() {
                   <Button 
                     onClick={handleLunchBreak}
                     disabled={isPunching || todayStatus?.clock_out_time}
-                    variant="outline"
-                    className="gap-2"
+                    variant={todayStatus?.lunch_break_start && !todayStatus?.lunch_break_end ? "default" : "outline"}
+                    className={cn("gap-2", todayStatus?.lunch_break_start && !todayStatus?.lunch_break_end && "bg-success hover:bg-success/90 text-white")}
                   >
                     <Timer className="h-4 w-4" />
-                    Lunch Break
+                    {todayStatus?.lunch_break_start && !todayStatus?.lunch_break_end ? "On Lunch Break" : "Lunch Break"}
                   </Button>
                   <Button 
                     onClick={handleClockOut}

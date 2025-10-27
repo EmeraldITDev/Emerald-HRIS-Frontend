@@ -463,7 +463,7 @@ export default function Employees() {
         sort_code: newEmployee.sortCode,
         
         // Government ID Information
-        employee_code: newEmployee.employeeId || (systemRole ? getNextEmployeeCode(systemRole) : `EMP${String(employeeList.length + 1).padStart(3,'0')}`),
+        employee_code: newEmployee.employeeId || `EMR${String(employeeList.length + 1).padStart(3,'0')}`,
         national_id: newEmployee.nationalId,
         passport_number: newEmployee.passportNumber,
         bvn: newEmployee.bvn,
@@ -576,13 +576,16 @@ export default function Employees() {
   };
   
   const getNextEmployeeCode = (roleValue: string): string => {
-    const prefix = ROLE_PREFIX[roleValue] || 'EMP';
+    // Always use EMR prefix for standardized employee IDs (EMR001, EMR002, etc.)
+    const prefix = 'EMR';
     const existing = (employeeList || [])
       .map(e => e.employee_code)
       .filter(Boolean)
-      .filter(code => String(code as string).toUpperCase().startsWith(prefix));
+      .filter(code => String(code as string).toUpperCase().startsWith('EM'));
     const maxNum = existing.reduce((max, code) => {
-      const n = parseInt(String(code).slice(prefix.length), 10);
+      const codeStr = String(code).toUpperCase();
+      const numPart = codeStr.replace(/^EM[PR]?/, ''); // Handle EMR, EMP, or EM prefixes
+      const n = parseInt(numPart, 10);
       return isNaN(n) ? max : Math.max(max, n);
     }, 0);
     const next = maxNum + 1;

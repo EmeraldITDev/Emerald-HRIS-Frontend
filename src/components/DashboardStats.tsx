@@ -24,8 +24,8 @@ export function DashboardStats() {
   const totalEmployees = employees.length
   const contractEmployees = employees.filter(emp => emp.employment_type === 'Contract').length
   const fteEmployees = employees.filter(emp => emp.employment_type === 'Full-time').length
-  const totalPayroll = employees.reduce((sum, emp) => sum + (emp.gross_salary || 0) + 
-    (emp.meal_allowance || 0) + (emp.housing_allowance || 0) + (emp.transport_allowance || 0), 0)
+  // Total Salary Budget - Sum of all employees' gross salaries
+  const totalSalaryBudget = employees.reduce((sum, emp) => sum + (emp.gross_salary || 0), 0)
   
   const onboardToday = employees.filter(emp => {
     if (!emp.hire_date) return false
@@ -60,9 +60,9 @@ export function DashboardStats() {
       changeType: "positive" as const,
     },
     {
-      title: "Monthly Payroll",
-      value: isLoading ? "..." : `₦${(totalPayroll / 1000000).toFixed(1)}M`,
-      change: "Total compensation",
+      title: "Total Salary Budget",
+      value: isLoading ? "..." : `₦${(totalSalaryBudget / 1000000).toFixed(1)}M`,
+      change: "Sum of all gross salaries",
       icon: null,
       changeType: "positive" as const,
     },

@@ -35,6 +35,7 @@ import {
 import { format } from "date-fns"
 import apiService, { Employee } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
+import { EmployeeEditDialog } from "@/components/EmployeeEditDialog"
 
 export default function EmployeeProfile() {
   const { id } = useParams<{ id: string }>()
@@ -42,6 +43,7 @@ export default function EmployeeProfile() {
   const { toast } = useToast()
   const [employee, setEmployee] = useState<Employee | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
 
   useEffect(() => {
     const fetchEmployee = async () => {
@@ -75,6 +77,21 @@ export default function EmployeeProfile() {
 
     fetchEmployee()
   }, [id, navigate, toast])
+
+  const refreshEmployee = async () => {
+    if (!id) return
+    
+    try {
+      const employees = await apiService.getEmployees()
+      const foundEmployee = employees.find(emp => emp.id?.toString() === id)
+      
+      if (foundEmployee) {
+        setEmployee(foundEmployee)
+      }
+    } catch (error) {
+      console.error('Failed to refresh employee:', error)
+    }
+  }
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -157,7 +174,7 @@ export default function EmployeeProfile() {
         </div>
         <div className="flex items-center space-x-2">
           {getStatusBadge(employee.employment_status || 'Active')}
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={() => setIsEditDialogOpen(true)}>
             <Edit className="mr-2 h-4 w-4" />
             Edit
           </Button>
@@ -526,6 +543,13 @@ export default function EmployeeProfile() {
           </div>
         </TabsContent>
       </Tabs>
+
+      <EmployeeEditDialog
+        employee={employee}
+        open={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        onSuccess={refreshEmployee}
+      />
     </div>
   )
 }

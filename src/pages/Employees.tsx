@@ -576,21 +576,53 @@ export default function Employees() {
   };
   
   const getNextEmployeeCode = (roleValue: string): string => {
-    // Always use EMR prefix for standardized employee IDs (EMR001, EMR002, etc.)
+    // Always use EMR prefix for standardized employee IDs (EMR001, EMR011, EMR111)
     const prefix = 'EMR';
     const existing = (employeeList || [])
       .map(e => e.employee_code)
       .filter(Boolean)
       .filter(code => String(code as string).toUpperCase().startsWith('EM'));
+    
     const maxNum = existing.reduce((max, code) => {
       const codeStr = String(code).toUpperCase();
-      const numPart = codeStr.replace(/^EM[PR]?/, ''); // Handle EMR, EMP, or EM prefixes
-      const n = parseInt(numPart, 10);
-      return isNaN(n) ? max : Math.max(max, n);
+      const numPart = codeStr.replace(/^EM[PR]?0*/, ''); // Handle EMR, EMP, or EM prefixes and leading zeros
+      const num = parseInt(numPart, 10);
+      return !isNaN(num) && num > max ? num : max;
     }, 0);
-    const next = maxNum + 1;
-    return `${prefix}${String(next).padStart(3, '0')}`;
+    
+    const newNum = maxNum + 1;
+    // Format: EMR0xx (always pad with zeros to 3 digits minimum)
+    return `${prefix}${String(newNum).padStart(3, '0')}`;
   };
+
+  // Migration utility to convert existing IDs to EMR format
+  const migrateEmployeeIdsToEMRFormat = async () => {
+    try {
+      const updates = employeeList
+        .filter(emp => emp.employee_code && !emp.employee_code.startsWith('EMR'))
+        .map((emp, index) => {
+          const newCode = `EMR${String(index + 1).padStart(3, '0')}`;
+          return apiService.updateEmployee(emp.id!, { employee_code: newCode });
+        });
+
+      if (updates.length > 0) {
+        await Promise.all(updates);
+        toast({
+          title: "Migration Complete",
+          description: `Updated ${updates.length} employee IDs to EMR format.`
+        });
+        fetchEmployees();
+      }
+    } catch (error) {
+      console.error('Migration failed:', error);
+      toast({
+        title: "Migration Failed",
+        description: "Failed to update employee IDs.",
+        variant: "destructive"
+      });
+    }
+  };
+  
   const handleEditEmployee = (employee: Employee) => {
     setEditEmployee({
       // Employee ID - Format it properly

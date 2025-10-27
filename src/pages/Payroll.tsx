@@ -13,6 +13,7 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table"
+import { Pencil, Save, X } from "lucide-react"
 import {
   Select,
   SelectContent,
@@ -223,6 +224,8 @@ export default function Payroll() {
     deduction: "25000",
     deductionRemarks: "",
   })
+  const [editingRecordId, setEditingRecordId] = useState<number | null>(null)
+  const [editingValues, setEditingValues] = useState<Partial<PayrollRecord>>({})
   const { toast } = useToast()
   const { user } = useAuth()
 
@@ -932,6 +935,74 @@ export default function Payroll() {
     }
   }
 
+  const startEditing = (record: PayrollRecord) => {
+    setEditingRecordId(record.id || null)
+    setEditingValues({
+      basic_salary: record.basic_salary,
+      housing_allowance: record.housing_allowance,
+      transport_allowance: record.transport_allowance,
+      meal_allowance: record.meal_allowance,
+      other_allowance: record.other_allowance,
+      overtime: record.overtime,
+      bonus: record.bonus,
+      commission: record.commission,
+      other_deductions: record.other_deductions,
+    })
+  }
+
+  const cancelEditing = () => {
+    setEditingRecordId(null)
+    setEditingValues({})
+  }
+
+  const savePayrollUpdate = async (recordId: number) => {
+    try {
+      // Update payroll record in database
+      await apiService.updatePayroll(recordId, {
+        overtime: editingValues.overtime || 0,
+        bonus: editingValues.bonus || 0,
+        commission: editingValues.commission || 0,
+        other_deductions: editingValues.other_deductions || 0,
+      })
+
+      // Also update employee record with new salary data
+      const record = payrollRecords.find(r => r.id === recordId)
+      if (record && record.employee_id) {
+        await apiService.updateEmployee(record.employee_id, {
+          gross_salary: editingValues.basic_salary,
+          housing_allowance: editingValues.housing_allowance,
+          transport_allowance: editingValues.transport_allowance,
+          meal_allowance: editingValues.meal_allowance,
+        })
+      }
+
+      // Refresh payroll records
+      const filters: any = {}
+      if (user?.role === 'general_employee' || user?.role === 'finance') {
+        const currentEmployee = employees.find(emp => emp.email === user.email)
+        if (currentEmployee?.id) {
+          filters.employee_id = currentEmployee.id
+        }
+      }
+      const data = await apiService.getPayrollRecords(filters)
+      setPayrollRecords(Array.isArray(data) ? data : [])
+
+      toast({
+        title: "Payroll Updated",
+        description: "Payroll record and employee data have been updated successfully."
+      })
+
+      cancelEditing()
+    } catch (error) {
+      console.error('Failed to update payroll:', error)
+      toast({
+        title: "Update Failed",
+        description: "Failed to update payroll record.",
+        variant: "destructive"
+      })
+    }
+  }
+
   return (
     <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col space-y-3 md:space-y-0 md:flex-row md:items-center md:justify-between">
@@ -1400,7 +1471,8 @@ export default function Payroll() {
       <RoleBasedComponent allowedRoles={['hr_manager']}>
         <Card className="border-border/50 shadow-sm">
           <CardHeader>
-            <CardTitle className="text-primary">Payroll History</CardTitle>
+            <CardTitle className="text-primary">Payroll History - Edit & Update</CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">Click edit to modify payroll records. Changes sync to employee records.</p>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
@@ -1409,17 +1481,18 @@ export default function Payroll() {
                   <TableRow>
                     <TableHead className="text-xs md:text-sm">Employee</TableHead>
                     <TableHead className="text-xs md:text-sm">Period</TableHead>
-                    <TableHead className="hidden md:table-cell text-xs md:text-sm">Type</TableHead>
-                    <TableHead className="hidden lg:table-cell text-xs md:text-sm">Gross Pay</TableHead>
-                    <TableHead className="text-xs md:text-sm">Tax</TableHead>
+                    <TableHead className="hidden md:table-cell text-xs md:text-sm">Basic Salary</TableHead>
+                    <TableHead className="hidden lg:table-cell text-xs md:text-sm">Bonus</TableHead>
+                    <TableHead className="text-xs md:text-sm">Gross Pay</TableHead>
                     <TableHead className="text-xs md:text-sm">Net Pay</TableHead>
                     <TableHead className="text-xs md:text-sm">Status</TableHead>
+                    <TableHead className="text-xs md:text-sm">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {isLoadingPayroll ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8">
+                      <TableCell colSpan={8} className="text-center py-8">
                         <div className="flex items-center justify-center space-x-2">
                           <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
                           <span>Loading payroll records...</span>
@@ -1428,28 +1501,82 @@ export default function Payroll() {
                     </TableRow>
                   ) : getVisiblePayrollRecords().length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                         No payroll records found for the selected period
                       </TableCell>
                     </TableRow>
                   ) : (
-                    getVisiblePayrollRecords().map((record) => (
-                      <TableRow key={record.id}>
-                        <TableCell className="font-medium text-xs md:text-sm">
-                          {record.employee ? `${record.employee.first_name} ${record.employee.last_name}` : 'Unknown'}
-                        </TableCell>
-                        <TableCell className="text-xs md:text-sm">{record.pay_period}</TableCell>
-                        <TableCell className="hidden md:table-cell text-xs md:text-sm">
-                          <Badge variant={record.employee?.employment_type === "Contract" ? "secondary" : "outline"} className="text-xs">
-                            {record.employee?.employment_type || "Full-time"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="hidden lg:table-cell text-xs md:text-sm">{formatCurrency(record.gross_pay)}</TableCell>
-                        <TableCell className="text-xs md:text-sm">{formatCurrency(record.paye_tax)}</TableCell>
-                        <TableCell className="font-medium text-xs md:text-sm">{formatCurrency(record.net_pay)}</TableCell>
-                        <TableCell>{getStatusBadge(record.status)}</TableCell>
-                      </TableRow>
-                    ))
+                    getVisiblePayrollRecords().map((record) => {
+                      const isEditing = editingRecordId === record.id
+                      return (
+                        <TableRow key={record.id}>
+                          <TableCell className="font-medium text-xs md:text-sm">
+                            {record.employee ? `${record.employee.first_name} ${record.employee.last_name}` : 'Unknown'}
+                          </TableCell>
+                          <TableCell className="text-xs md:text-sm">{record.pay_period}</TableCell>
+                          <TableCell className="hidden md:table-cell text-xs md:text-sm">
+                            {isEditing ? (
+                              <Input
+                                type="number"
+                                value={editingValues.basic_salary || 0}
+                                onChange={(e) => setEditingValues({...editingValues, basic_salary: Number(e.target.value)})}
+                                className="w-24 h-7 text-xs"
+                              />
+                            ) : (
+                              formatCurrency(record.basic_salary)
+                            )}
+                          </TableCell>
+                          <TableCell className="hidden lg:table-cell text-xs md:text-sm">
+                            {isEditing ? (
+                              <Input
+                                type="number"
+                                value={editingValues.bonus || 0}
+                                onChange={(e) => setEditingValues({...editingValues, bonus: Number(e.target.value)})}
+                                className="w-20 h-7 text-xs"
+                              />
+                            ) : (
+                              formatCurrency(record.bonus)
+                            )}
+                          </TableCell>
+                          <TableCell className="text-xs md:text-sm">{formatCurrency(record.gross_pay)}</TableCell>
+                          <TableCell className="font-medium text-xs md:text-sm">{formatCurrency(record.net_pay)}</TableCell>
+                          <TableCell>{getStatusBadge(record.status)}</TableCell>
+                          <TableCell>
+                            {isEditing ? (
+                              <div className="flex items-center gap-1">
+                                <Button 
+                                  size="sm" 
+                                  variant="default"
+                                  className="h-7 px-2"
+                                  onClick={() => savePayrollUpdate(record.id!)}
+                                >
+                                  <Save className="h-3 w-3 mr-1" />
+                                  Save
+                                </Button>
+                                <Button 
+                                  size="sm" 
+                                  variant="ghost"
+                                  className="h-7 px-2"
+                                  onClick={cancelEditing}
+                                >
+                                  <X className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            ) : (
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                className="h-7 px-2"
+                                onClick={() => startEditing(record)}
+                              >
+                                <Pencil className="h-3 w-3 mr-1" />
+                                Edit
+                              </Button>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })
                   )}
                 </TableBody>
               </Table>

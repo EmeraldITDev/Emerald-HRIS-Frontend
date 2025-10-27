@@ -47,7 +47,8 @@ const dummyUsers: Record<string, { user: User; password: string }> = {
       lastName: 'Babajide',
       email: 'bunmi.babajide@emeraldcfze.com',
       role: 'executive',
-      department: 'Executive'
+      department: 'Executive',
+      mustChangePassword: false
     },
     password: 'password123'
   },
@@ -58,7 +59,8 @@ const dummyUsers: Record<string, { user: User; password: string }> = {
       lastName: 'Executive',
       email: 'laa@emeraldcfze.com',
       role: 'executive',
-      department: 'Executive'
+      department: 'Executive',
+      mustChangePassword: false
     },
     password: 'password123'
   },

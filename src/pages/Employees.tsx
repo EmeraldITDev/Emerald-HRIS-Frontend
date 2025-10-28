@@ -463,7 +463,7 @@ export default function Employees() {
         sort_code: newEmployee.sortCode,
         
         // Government ID Information
-        employee_code: newEmployee.employeeId || `EMR${String(employeeList.length + 1).padStart(3,'0')}`,
+        employee_code: newEmployee.employeeId || (systemRole ? getNextEmployeeCode(systemRole) : `EMP${String(employeeList.length + 1).padStart(3,'0')}`),
         national_id: newEmployee.nationalId,
         passport_number: newEmployee.passportNumber,
         bvn: newEmployee.bvn,
@@ -576,53 +576,18 @@ export default function Employees() {
   };
   
   const getNextEmployeeCode = (roleValue: string): string => {
-    // Always use EMR prefix for standardized employee IDs (EMR001, EMR011, EMR111)
-    const prefix = 'EMR';
+    const prefix = ROLE_PREFIX[roleValue] || 'EMP';
     const existing = (employeeList || [])
       .map(e => e.employee_code)
       .filter(Boolean)
-      .filter(code => String(code as string).toUpperCase().startsWith('EM'));
-    
+      .filter(code => String(code as string).toUpperCase().startsWith(prefix));
     const maxNum = existing.reduce((max, code) => {
-      const codeStr = String(code).toUpperCase();
-      const numPart = codeStr.replace(/^EM[PR]?0*/, ''); // Handle EMR, EMP, or EM prefixes and leading zeros
-      const num = parseInt(numPart, 10);
-      return !isNaN(num) && num > max ? num : max;
+      const n = parseInt(String(code).slice(prefix.length), 10);
+      return isNaN(n) ? max : Math.max(max, n);
     }, 0);
-    
-    const newNum = maxNum + 1;
-    // Format: EMR0xx (always pad with zeros to 3 digits minimum)
-    return `${prefix}${String(newNum).padStart(3, '0')}`;
+    const next = maxNum + 1;
+    return `${prefix}${String(next).padStart(3, '0')}`;
   };
-
-  // Migration utility to convert existing IDs to EMR format
-  const migrateEmployeeIdsToEMRFormat = async () => {
-    try {
-      const updates = employeeList
-        .filter(emp => emp.employee_code && !emp.employee_code.startsWith('EMR'))
-        .map((emp, index) => {
-          const newCode = `EMR${String(index + 1).padStart(3, '0')}`;
-          return apiService.updateEmployee(emp.id!, { employee_code: newCode });
-        });
-
-      if (updates.length > 0) {
-        await Promise.all(updates);
-        toast({
-          title: "Migration Complete",
-          description: `Updated ${updates.length} employee IDs to EMR format.`
-        });
-        fetchEmployees();
-      }
-    } catch (error) {
-      console.error('Migration failed:', error);
-      toast({
-        title: "Migration Failed",
-        description: "Failed to update employee IDs.",
-        variant: "destructive"
-      });
-    }
-  };
-  
   const handleEditEmployee = (employee: Employee) => {
     setEditEmployee({
       // Employee ID - Format it properly
@@ -2549,43 +2514,153 @@ export default function Employees() {
                       placeholder="25"
                     />
                   </div>
+                </TabsContent>
 
-                  <div className="space-y-4">
-                    <h3 className="text-base font-medium">Bank Account for Salary Payments</h3>
-                    
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="editBankName">Bank Name</Label>
-                        <Input id="editBankName" value={editEmployee.bankName || ''} onChange={e => setEditEmployee({
+                <TabsContent value="financial" className="space-y-4">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="editGrossSalary">Gross Salary (Monthly)</Label>
+                      <Input
+                        id="editGrossSalary"
+                        type="number"
+                        value={editEmployee.gross_salary || ''}
+                        onChange={e => setEditEmployee({
                           ...editEmployee,
-                          bankName: e.target.value
-                        })} placeholder="Bank name" />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="editAccountNumber">Account Number</Label>
-                        <Input id="editAccountNumber" value={editEmployee.accountNumber || editEmployee.bankAccount || ''} onChange={e => setEditEmployee({
-                          ...editEmployee,
-                          accountNumber: e.target.value,
-                          bankAccount: e.target.value
-                        })} placeholder="Account number" />
-                      </div>
+                          gross_salary: parseFloat(e.target.value) || 0
+                        })}
+                        placeholder="₦0.00"
+                      />
                     </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="editNetSalary">Net Salary (Monthly)</Label>
+                      <Input
+                        id="editNetSalary"
+                        type="number"
+                        value={editEmployee.net_salary || ''}
+                        onChange={e => setEditEmployee({
+                          ...editEmployee,
+                          net_salary: parseFloat(e.target.value) || 0
+                        })}
+                        placeholder="₦0.00"
+                      />
+                    </div>
+                  </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="editNuban">NUBAN</Label>
-                        <Input id="editNuban" value={editEmployee.nuban || ''} onChange={e => setEditEmployee({
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="editHousingAllowance">Housing Allowance</Label>
+                      <Input
+                        id="editHousingAllowance"
+                        type="number"
+                        value={editEmployee.housing_allowance || ''}
+                        onChange={e => setEditEmployee({
+                          ...editEmployee,
+                          housing_allowance: parseFloat(e.target.value) || 0
+                        })}
+                        placeholder="₦0.00"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="editTransportAllowance">Transport Allowance</Label>
+                      <Input
+                        id="editTransportAllowance"
+                        type="number"
+                        value={editEmployee.transport_allowance || ''}
+                        onChange={e => setEditEmployee({
+                          ...editEmployee,
+                          transport_allowance: parseFloat(e.target.value) || 0
+                        })}
+                        placeholder="₦0.00"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="editMealAllowance">Meal Allowance</Label>
+                      <Input
+                        id="editMealAllowance"
+                        type="number"
+                        value={editEmployee.meal_allowance || ''}
+                        onChange={e => setEditEmployee({
+                          ...editEmployee,
+                          meal_allowance: parseFloat(e.target.value) || 0
+                        })}
+                        placeholder="₦0.00"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="editOtherAllowance">Other Allowance</Label>
+                      <Input
+                        id="editOtherAllowance"
+                        type="number"
+                        value={editEmployee.other_allowance || ''}
+                        onChange={e => setEditEmployee({
+                          ...editEmployee,
+                          other_allowance: parseFloat(e.target.value) || 0
+                        })}
+                        placeholder="₦0.00"
+                      />
+                    </div>
+                  </div>
+
+                  <Separator className="my-4" />
+
+                  <h3 className="text-base font-medium">Bank Account Information</h3>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="editFinancialBankName">Bank Name</Label>
+                      <Input
+                        id="editFinancialBankName"
+                        value={editEmployee.bank_name || editEmployee.bankName || ''}
+                        onChange={e => setEditEmployee({
+                          ...editEmployee,
+                          bank_name: e.target.value,
+                          bankName: e.target.value
+                        })}
+                        placeholder="Bank name"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="editFinancialAccountNumber">Account Number</Label>
+                      <Input
+                        id="editFinancialAccountNumber"
+                        value={editEmployee.account_number || editEmployee.accountNumber || ''}
+                        onChange={e => setEditEmployee({
+                          ...editEmployee,
+                          account_number: e.target.value,
+                          accountNumber: e.target.value
+                        })}
+                        placeholder="Account number"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="editFinancialNuban">NUBAN</Label>
+                      <Input
+                        id="editFinancialNuban"
+                        value={editEmployee.nuban || ''}
+                        onChange={e => setEditEmployee({
                           ...editEmployee,
                           nuban: e.target.value
-                        })} placeholder="NUBAN code" />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="editSortCode">Sort Code</Label>
-                        <Input id="editSortCode" value={editEmployee.sortCode || ''} onChange={e => setEditEmployee({
+                        })}
+                        placeholder="NUBAN code"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="editFinancialSortCode">Sort Code</Label>
+                      <Input
+                        id="editFinancialSortCode"
+                        value={editEmployee.sort_code || editEmployee.sortCode || ''}
+                        onChange={e => setEditEmployee({
                           ...editEmployee,
+                          sort_code: e.target.value,
                           sortCode: e.target.value
-                        })} placeholder="Sort code" />
-                      </div>
+                        })}
+                        placeholder="Sort code"
+                      />
                     </div>
                   </div>
                 </TabsContent>

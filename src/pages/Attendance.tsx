@@ -239,27 +239,37 @@ export default function Attendance() {
   const [isLunchBreak, setIsLunchBreak] = useState(false);
   const [showWeeklyAttendance, setShowWeeklyAttendance] = useState(true);
   const [showTodayAttendance, setShowTodayAttendance] = useState(true);
+  const [currentEmployeeId, setCurrentEmployeeId] = useState<number | null>(null);
 
-  const loadTodayStatus = () => {
-    if (!user) return;
-    const today = format(new Date(), 'yyyy-MM-dd');
-    const attendanceRecords = JSON.parse(localStorage.getItem('attendanceRecords') || '[]');
-    const todayRecord = attendanceRecords.find(
-      (record: any) => record.employee_id === user.id && record.date === today
-    );
-    setTodayStatus(todayRecord || null);
+  // Load today's attendance from database
+  const loadTodayStatus = async () => {
+    if (!user || !currentEmployeeId) return;
     
-    // Load all today's attendance for display
-    const allTodayRecords = attendanceRecords.filter(
-      (record: any) => record.date === today
-    );
-    setTodayAttendance(allTodayRecords);
+    try {
+      const attendanceData = await apiService.getAttendance();
+      const today = format(new Date(), 'yyyy-MM-dd');
+      
+      // Find current user's record for today
+      const todayRecord = attendanceData.find(
+        (record: any) => record.employee_id === currentEmployeeId && 
+        format(new Date(record.date), 'yyyy-MM-dd') === today
+      );
+      setTodayStatus(todayRecord || null);
+      
+      // Load all today's attendance for display
+      const allTodayRecords = attendanceData.filter(
+        (record: any) => format(new Date(record.date), 'yyyy-MM-dd') === today
+      );
+      setTodayAttendance(allTodayRecords);
+    } catch (error) {
+      console.error('Failed to load attendance status:', error);
+    }
   };
 
   useEffect(() => {
     loadTodayStatus();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+  }, [user, currentEmployeeId]);
 
   useEffect(() => {
     fetchEmployees()
@@ -269,14 +279,17 @@ export default function Attendance() {
     fetchLeaveRequests()
   }, [])
 
-  // Auto-select current user for non-HR managers
+  // Auto-select current user for non-HR managers and set employee ID
   useEffect(() => {
-    if (user && employees.length > 0 && user.role !== 'hr_manager') {
+    if (user && employees.length > 0) {
       const currentUser = employees.find(emp => 
         emp.email?.toLowerCase() === user.email?.toLowerCase()
       )
-      if (currentUser) {
-        setSelectedEmployee(currentUser.id?.toString() || '')
+      if (currentUser && currentUser.id) {
+        setCurrentEmployeeId(currentUser.id)
+        if (user.role !== 'hr_manager') {
+          setSelectedEmployee(currentUser.id.toString())
+        }
       }
     }
   }, [user, employees])
@@ -573,92 +586,36 @@ export default function Attendance() {
     }
   }
 
-  const handleClockIn = () => {
-    if (!user) {
-      toast({ title: "Error", description: "No user logged in.", variant: "destructive" });
-      return;
-    }
-
-    const today = format(new Date(), 'yyyy-MM-dd');
-    const attendanceRecords = JSON.parse(localStorage.getItem('attendanceRecords') || '[]');
-    
-    // Check if there's an existing record with lunch break (returning from lunch)
-    const existingRecord = attendanceRecords.find(
-      (record: any) => record.employee_id === user.id && record.date === today
-    );
-    
-    // If returning from lunch break, allow clock in without time restriction
-    if (existingRecord && existingRecord.lunch_break_start && !existingRecord.clock_out_time) {
-      try {
-        setIsPunching(true);
-        const now = format(new Date(), 'HH:mm:ss');
-        
-        const updatedRecords = attendanceRecords.map((r: any) => 
-          r.id === existingRecord.id 
-            ? { ...r, lunch_break_end: now, is_clocked_in: true }
-            : r
-        );
-        
-        localStorage.setItem('attendanceRecords', JSON.stringify(updatedRecords));
-        loadTodayStatus();
-        toast({ title: "Success", description: "Welcome back from lunch!" });
-        setIsPunching(false);
-        return;
-      } catch (error) {
-        console.error('Clock in error:', error);
-        toast({ title: "Error", description: "Failed to clock in.", variant: "destructive" });
-        setIsPunching(false);
-        return;
-      }
-    }
-
-    // Regular morning clock in - check time window
-    const currentTime = new Date();
-    const currentHour = currentTime.getHours();
-    const currentMinute = currentTime.getMinutes();
-    const currentTimeInMinutes = currentHour * 60 + currentMinute;
-    const clockInStartTime = 7 * 60; // 7:00 AM in minutes
-    const clockInEndTime = 9 * 60 + 30; // 9:30 AM in minutes
-
-    if (currentTimeInMinutes < clockInStartTime || currentTimeInMinutes > clockInEndTime) {
-      toast({ 
-        title: "Clock In Unavailable", 
-        description: `Clock in is only allowed between 7:00 AM and 9:30 AM. Current time: ${currentTime.toLocaleTimeString()}`, 
-        variant: "destructive" 
-      });
-      return;
-    }
-
-    if (existingRecord && existingRecord.clock_in_time) {
-      toast({ title: "Already Clocked In", description: "You have already clocked in today.", variant: "destructive" });
+  const handleClockIn = async () => {
+    if (!user || !currentEmployeeId) {
+      toast({ title: "Error", description: "No user logged in or employee ID not found.", variant: "destructive" });
       return;
     }
 
     try {
       setIsPunching(true);
-      const now = format(new Date(), 'HH:mm:ss');
-
-      const newRecord = {
-        id: Date.now(),
-        employee_id: user.id,
-        employee_name: `${user.firstName} ${user.lastName}`,
-        date: today,
-        clock_in_time: now,
-        clock_out_time: null,
-        is_clocked_in: true,
-        location: 'office'
-      };
-
-      const updatedRecords = existingRecord 
-        ? attendanceRecords.map((r: any) => r.id === existingRecord.id ? newRecord : r)
-        : [...attendanceRecords, newRecord];
       
-      localStorage.setItem('attendanceRecords', JSON.stringify(updatedRecords));
-      loadTodayStatus();
-      toast({ title: "Success", description: "Clocked in successfully!" });
-    } catch (error) {
+      const response = await apiService.createAttendance({
+        employee_id: currentEmployeeId,
+        location: 'office',
+        notes: ''
+      });
+
+      toast({ 
+        title: "Success", 
+        description: response.message || "Clocked in successfully!" 
+      });
+      
+      // Reload today's status from database
+      await loadTodayStatus();
+    } catch (error: any) {
       console.error('Clock in error:', error);
-      toast({ title: "Error", description: "Failed to clock in.", variant: "destructive" });
+      const errorMessage = error?.response?.data?.message || error?.message || "Failed to clock in.";
+      toast({ 
+        title: "Error", 
+        description: errorMessage, 
+        variant: "destructive" 
+      });
     } finally {
       setIsPunching(false);
     }
@@ -706,51 +663,35 @@ export default function Attendance() {
     }
   };
 
-  const performClockOut = (reason?: string, isLunch?: boolean) => {
-    if (!user) return;
+  const performClockOut = async (reason?: string, isLunch?: boolean) => {
+    if (!user || !currentEmployeeId) return;
     
     try {
       setIsPunching(true);
-      const today = format(new Date(), 'yyyy-MM-dd');
-      const now = format(new Date(), 'HH:mm:ss');
-      const attendanceRecords = JSON.parse(localStorage.getItem('attendanceRecords') || '[]');
       
-      const existingRecordIndex = attendanceRecords.findIndex(
-        (record: any) => record.employee_id === user.id && record.date === today && record.is_clocked_in
-      );
-      
-      if (existingRecordIndex === -1) {
-        toast({ title: "Not Clocked In", description: "You need to clock in first.", variant: "destructive" });
-        setIsPunching(false);
-        return;
-      }
+      const response = await apiService.clockOut({
+        employee_id: currentEmployeeId,
+        notes: reason || (isLunch ? 'Lunch break' : ''),
+        location: 'office'
+      });
 
-      if (isLunch) {
-        // For lunch break, just record the break time and set is_clocked_in to false (no reason needed)
-        attendanceRecords[existingRecordIndex] = {
-          ...attendanceRecords[existingRecordIndex],
-          lunch_break_start: now,
-          is_clocked_in: false
-        };
-        toast({ title: "Success", description: "Lunch break started. Remember to clock back in!" });
-      } else {
-        // Regular clock out
-        attendanceRecords[existingRecordIndex] = {
-          ...attendanceRecords[existingRecordIndex],
-          clock_out_time: now,
-          is_clocked_in: false,
-          early_departure_reason: reason || ""
-        };
-        toast({ title: "Success", description: "Clocked out successfully!" });
-      }
+      toast({ 
+        title: "Success", 
+        description: response.message || (isLunch ? "Lunch break started. Remember to clock back in!" : "Clocked out successfully!")
+      });
       
-      localStorage.setItem('attendanceRecords', JSON.stringify(attendanceRecords));
-      loadTodayStatus();
+      // Reload today's status from database
+      await loadTodayStatus();
       setShowClockOutDialog(false);
       setClockOutReason("");
-    } catch (error) {
+    } catch (error: any) {
       console.error('Clock out error:', error);
-      toast({ title: "Error", description: "Failed to clock out.", variant: "destructive" });
+      const errorMessage = error?.response?.data?.message || error?.message || "Failed to clock out.";
+      toast({ 
+        title: "Error", 
+        description: errorMessage, 
+        variant: "destructive" 
+      });
     } finally {
       setIsPunching(false);
     }
@@ -770,18 +711,18 @@ export default function Attendance() {
 
   // Example helpers (replace your current variants if desired)
   const getButtonText = () => {
-    if (!todayStatus?.is_clocked_in) return "Clock In";
-    if (todayStatus?.is_clocked_in && !todayStatus?.break_start) return "Start Break";
+    if (!todayStatus?.clock_in) return "Clock In";
+    if (todayStatus?.clock_in && !todayStatus?.break_start) return "Start Break";
     if (todayStatus?.break_start && !todayStatus?.break_end) return "End Break";
-    if (todayStatus?.break_end && !todayStatus?.clock_out_time) return "End Shift";
+    if (todayStatus?.break_end && !todayStatus?.clock_out) return "End Shift";
     return "Completed";
   };
 
   const getAttendanceStatusBadge = () => {
-    if (!todayStatus?.is_clocked_in) return <Badge variant="secondary">Not Started</Badge>;
-    if (todayStatus?.is_clocked_in && !todayStatus?.break_start) return <Badge variant="default">Working</Badge>;
+    if (!todayStatus?.clock_in) return <Badge variant="secondary">Not Started</Badge>;
+    if (todayStatus?.clock_in && !todayStatus?.break_start) return <Badge variant="default">Working</Badge>;
     if (todayStatus?.break_start && !todayStatus?.break_end) return <Badge variant="destructive">On Break</Badge>;
-    if (todayStatus?.clock_out_time) return <Badge variant="outline">Completed</Badge>;
+    if (todayStatus?.clock_out) return <Badge variant="outline">Completed</Badge>;
     return <Badge variant="secondary">Unknown</Badge>;
   };
 

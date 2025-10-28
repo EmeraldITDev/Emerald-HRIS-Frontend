@@ -695,6 +695,34 @@ class ApiService {
   async getPolicyCategories(): Promise<string[]> {
     return this.request<string[]>('/policies/categories');
   }
+
+  // Reports
+  async getEmployeeReport(employeeId: number): Promise<any> {
+    return this.request<any>(`/reports/employee/${employeeId}`);
+  }
+
+  async getDepartmentReport(department?: string): Promise<any> {
+    const params = department ? `?department=${department}` : '';
+    return this.request<any>(`/reports/department${params}`);
+  }
+
+  async getPayrollReport(month?: string): Promise<any> {
+    const params = month ? `?month=${month}` : '';
+    return this.request<any>(`/reports/payroll${params}`);
+  }
+
+  async getAttendanceReport(startDate?: string, endDate?: string): Promise<any> {
+    const params = new URLSearchParams();
+    if (startDate) params.append('start_date', startDate);
+    if (endDate) params.append('end_date', endDate);
+    const queryString = params.toString() ? `?${params.toString()}` : '';
+    return this.request<any>(`/reports/attendance${queryString}`);
+  }
+
+  async getLeaveReport(year?: number): Promise<any> {
+    const params = year ? `?year=${year}` : '';
+    return this.request<any>(`/reports/leave${params}`);
+  }
 }
 
 export const apiService = new ApiService();

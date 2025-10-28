@@ -1501,8 +1501,18 @@ export default function Payroll() {
                     </TableRow>
                   ) : getVisiblePayrollRecords().length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                        No payroll records found for the selected period
+                      <TableCell colSpan={8} className="text-center py-12">
+                        <div className="flex flex-col items-center space-y-3">
+                          <div className="text-5xl text-muted-foreground/20">📊</div>
+                          <div className="space-y-1">
+                            <p className="font-medium text-muted-foreground">No Payroll Records Available</p>
+                            <p className="text-sm text-muted-foreground/70">
+                              {user?.role === 'general_employee' || user?.role === 'finance' 
+                                ? "Your payroll information will appear here once it's been processed by HR."
+                                : "No payroll records found for the selected period. Generate payroll to get started."}
+                            </p>
+                          </div>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -1511,9 +1521,9 @@ export default function Payroll() {
                       return (
                         <TableRow key={record.id}>
                           <TableCell className="font-medium text-xs md:text-sm">
-                            {record.employee ? `${record.employee.first_name} ${record.employee.last_name}` : 'Unknown'}
+                            {record.employee ? `${record.employee.first_name} ${record.employee.last_name}` : '-'}
                           </TableCell>
-                          <TableCell className="text-xs md:text-sm">{record.pay_period}</TableCell>
+                          <TableCell className="text-xs md:text-sm">{record.pay_period || '-'}</TableCell>
                           <TableCell className="hidden md:table-cell text-xs md:text-sm">
                             {isEditing ? (
                               <Input
@@ -1523,7 +1533,7 @@ export default function Payroll() {
                                 className="w-24 h-7 text-xs"
                               />
                             ) : (
-                              formatCurrency(record.basic_salary)
+                              record.basic_salary ? formatCurrency(record.basic_salary) : '-'
                             )}
                           </TableCell>
                           <TableCell className="hidden lg:table-cell text-xs md:text-sm">
@@ -1535,12 +1545,16 @@ export default function Payroll() {
                                 className="w-20 h-7 text-xs"
                               />
                             ) : (
-                              formatCurrency(record.bonus)
+                              record.bonus ? formatCurrency(record.bonus) : '-'
                             )}
                           </TableCell>
-                          <TableCell className="text-xs md:text-sm">{formatCurrency(record.gross_pay)}</TableCell>
-                          <TableCell className="font-medium text-xs md:text-sm">{formatCurrency(record.net_pay)}</TableCell>
-                          <TableCell>{getStatusBadge(record.status)}</TableCell>
+                          <TableCell className="text-xs md:text-sm">
+                            {record.gross_pay ? formatCurrency(record.gross_pay) : '-'}
+                          </TableCell>
+                          <TableCell className="font-medium text-xs md:text-sm">
+                            {record.net_pay ? formatCurrency(record.net_pay) : '-'}
+                          </TableCell>
+                          <TableCell>{getStatusBadge(record.status || 'pending')}</TableCell>
                           <TableCell>
                             {isEditing ? (
                               <div className="flex items-center gap-1">

@@ -200,7 +200,7 @@ export default function Employees() {
 
     // Department-aware filtering for line managers
     const matchesDepartmentAccess = 
-      user?.role === 'hr_manager' || user?.role === 'executive' // HR and Execs see all
+      user?.role === 'hr_manager' || user?.role === 'executive' || user?.role === 'corporate_hr' // HR, Execs, and Corporate HR see all
         ? true
         : user?.role === 'line_manager' && user?.department // Line managers see only their department
         ? employee.department === user.department

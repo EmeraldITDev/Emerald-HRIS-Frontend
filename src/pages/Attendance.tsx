@@ -605,6 +605,8 @@ export default function Attendance() {
       
       const response = await apiService.createAttendance({
         employee_id: currentEmployeeId,
+        date: new Date().toISOString().split('T')[0],
+        status: 'present',
         location: 'office',
         notes: ''
       });
@@ -679,6 +681,8 @@ export default function Attendance() {
       
       const response = await apiService.clockOut({
         employee_id: currentEmployeeId,
+        date: new Date().toISOString().split('T')[0],
+        status: 'present',
         notes: reason || (isLunch ? 'Lunch break' : ''),
         location: 'office'
       });

@@ -32,6 +32,13 @@ import {
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/contexts/AuthContext"
 import { RoleBasedComponent } from "@/components/RoleBasedComponent"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 
 
 // Fetch employees from API - defined at component level
@@ -53,6 +60,8 @@ export default function Payroll() {
   })
   const [editingRecordId, setEditingRecordId] = useState<number | null>(null)
   const [editingValues, setEditingValues] = useState<Partial<PayrollRecord>>({})
+  const [showEditDialog, setShowEditDialog] = useState(false)
+  const [selectedRecord, setSelectedRecord] = useState<PayrollRecord | null>(null)
   const { toast } = useToast()
   const { user } = useAuth()
 
@@ -763,7 +772,7 @@ export default function Payroll() {
   }
 
   const startEditing = (record: PayrollRecord) => {
-    setEditingRecordId(record.id || null)
+    setSelectedRecord(record)
     setEditingValues({
       basic_salary: record.basic_salary,
       housing_allowance: record.housing_allowance,
@@ -775,33 +784,31 @@ export default function Payroll() {
       commission: record.commission,
       other_deductions: record.other_deductions,
     })
+    setShowEditDialog(true)
   }
 
   const cancelEditing = () => {
-    setEditingRecordId(null)
+    setShowEditDialog(false)
+    setSelectedRecord(null)
     setEditingValues({})
   }
 
-  const savePayrollUpdate = async (recordId: number) => {
+  const savePayrollUpdate = async () => {
+    if (!selectedRecord?.id) return
+    
     try {
-      // Update payroll record in database
-      await apiService.updatePayroll(recordId, {
+      // Update payroll record in database with all fields
+      await apiService.updatePayroll(selectedRecord.id, {
+        basic_salary: editingValues.basic_salary || 0,
+        housing_allowance: editingValues.housing_allowance || 0,
+        transport_allowance: editingValues.transport_allowance || 0,
+        meal_allowance: editingValues.meal_allowance || 0,
+        other_allowance: editingValues.other_allowance || 0,
         overtime: editingValues.overtime || 0,
         bonus: editingValues.bonus || 0,
         commission: editingValues.commission || 0,
         other_deductions: editingValues.other_deductions || 0,
       })
-
-      // Also update employee record with new salary data
-      const record = payrollRecords.find(r => r.id === recordId)
-      if (record && record.employee_id) {
-        await apiService.updateEmployee(record.employee_id, {
-          gross_salary: editingValues.basic_salary,
-          housing_allowance: editingValues.housing_allowance,
-          transport_allowance: editingValues.transport_allowance,
-          meal_allowance: editingValues.meal_allowance,
-        })
-      }
 
       // Refresh payroll records
       const filters: any = {}
@@ -816,7 +823,7 @@ export default function Payroll() {
 
       toast({
         title: "Payroll Updated",
-        description: "Payroll record and employee data have been updated successfully."
+        description: "Payroll record has been updated successfully."
       })
 
       cancelEditing()
@@ -1343,81 +1350,38 @@ export default function Payroll() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    getVisiblePayrollRecords().map((record) => {
-                      const isEditing = editingRecordId === record.id
-                      return (
-                        <TableRow key={record.id}>
-                          <TableCell className="font-medium text-xs md:text-sm">
-                            {record.employee ? `${record.employee.first_name} ${record.employee.last_name}` : '-'}
-                          </TableCell>
-                          <TableCell className="text-xs md:text-sm">{record.pay_period || '-'}</TableCell>
-                          <TableCell className="hidden md:table-cell text-xs md:text-sm">
-                            {isEditing ? (
-                              <Input
-                                type="number"
-                                value={editingValues.basic_salary || 0}
-                                onChange={(e) => setEditingValues({...editingValues, basic_salary: Number(e.target.value)})}
-                                className="w-24 h-7 text-xs"
-                              />
-                            ) : (
-                              record.basic_salary ? formatCurrency(record.basic_salary) : '-'
-                            )}
-                          </TableCell>
-                          <TableCell className="hidden lg:table-cell text-xs md:text-sm">
-                            {isEditing ? (
-                              <Input
-                                type="number"
-                                value={editingValues.bonus || 0}
-                                onChange={(e) => setEditingValues({...editingValues, bonus: Number(e.target.value)})}
-                                className="w-20 h-7 text-xs"
-                              />
-                            ) : (
-                              record.bonus ? formatCurrency(record.bonus) : '-'
-                            )}
-                          </TableCell>
-                          <TableCell className="text-xs md:text-sm">
-                            {record.gross_pay ? formatCurrency(record.gross_pay) : '-'}
-                          </TableCell>
-                          <TableCell className="font-medium text-xs md:text-sm">
-                            {record.net_pay ? formatCurrency(record.net_pay) : '-'}
-                          </TableCell>
-                          <TableCell>{getStatusBadge(record.status || 'pending')}</TableCell>
-                          <TableCell>
-                            {isEditing ? (
-                              <div className="flex items-center gap-1">
-                                <Button 
-                                  size="sm" 
-                                  variant="default"
-                                  className="h-7 px-2"
-                                  onClick={() => savePayrollUpdate(record.id!)}
-                                >
-                                  <Save className="h-3 w-3 mr-1" />
-                                  Save
-                                </Button>
-                                <Button 
-                                  size="sm" 
-                                  variant="ghost"
-                                  className="h-7 px-2"
-                                  onClick={cancelEditing}
-                                >
-                                  <X className="h-3 w-3" />
-                                </Button>
-                              </div>
-                            ) : (
-                              <Button 
-                                size="sm" 
-                                variant="outline"
-                                className="h-7 px-2"
-                                onClick={() => startEditing(record)}
-                              >
-                                <Pencil className="h-3 w-3 mr-1" />
-                                Edit
-                              </Button>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      )
-                    })
+                    getVisiblePayrollRecords().map((record) => (
+                      <TableRow key={record.id}>
+                        <TableCell className="font-medium text-xs md:text-sm">
+                          {record.employee ? `${record.employee.first_name} ${record.employee.last_name}` : '-'}
+                        </TableCell>
+                        <TableCell className="text-xs md:text-sm">{record.pay_period || '-'}</TableCell>
+                        <TableCell className="hidden md:table-cell text-xs md:text-sm">
+                          {record.basic_salary ? formatCurrency(record.basic_salary) : '-'}
+                        </TableCell>
+                        <TableCell className="hidden lg:table-cell text-xs md:text-sm">
+                          {record.bonus ? formatCurrency(record.bonus) : '-'}
+                        </TableCell>
+                        <TableCell className="text-xs md:text-sm">
+                          {record.gross_pay ? formatCurrency(record.gross_pay) : '-'}
+                        </TableCell>
+                        <TableCell className="font-medium text-xs md:text-sm">
+                          {record.net_pay ? formatCurrency(record.net_pay) : '-'}
+                        </TableCell>
+                        <TableCell>{getStatusBadge(record.status || 'pending')}</TableCell>
+                        <TableCell>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            className="h-7 px-2"
+                            onClick={() => startEditing(record)}
+                          >
+                            <Pencil className="h-3 w-3 mr-1" />
+                            Edit
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
                   )}
                 </TableBody>
               </Table>
@@ -1425,6 +1389,143 @@ export default function Payroll() {
           </CardContent>
         </Card>
       </RoleBasedComponent>
+
+      {/* Edit Payroll Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Payroll Record</DialogTitle>
+            <DialogDescription>
+              Update salary components and earnings for {selectedRecord?.employee ? `${selectedRecord.employee.first_name} ${selectedRecord.employee.last_name}` : 'employee'} - {selectedRecord?.pay_period}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid gap-6 py-4">
+            {/* Salary Components */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-sm">Salary Components</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="basic_salary">Basic Salary</Label>
+                  <Input
+                    id="basic_salary"
+                    type="number"
+                    value={editingValues.basic_salary || 0}
+                    onChange={(e) => setEditingValues({...editingValues, basic_salary: Number(e.target.value)})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="housing_allowance">Housing Allowance</Label>
+                  <Input
+                    id="housing_allowance"
+                    type="number"
+                    value={editingValues.housing_allowance || 0}
+                    onChange={(e) => setEditingValues({...editingValues, housing_allowance: Number(e.target.value)})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="transport_allowance">Transport Allowance</Label>
+                  <Input
+                    id="transport_allowance"
+                    type="number"
+                    value={editingValues.transport_allowance || 0}
+                    onChange={(e) => setEditingValues({...editingValues, transport_allowance: Number(e.target.value)})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="meal_allowance">Meal Allowance</Label>
+                  <Input
+                    id="meal_allowance"
+                    type="number"
+                    value={editingValues.meal_allowance || 0}
+                    onChange={(e) => setEditingValues({...editingValues, meal_allowance: Number(e.target.value)})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="other_allowance">Other Allowance</Label>
+                  <Input
+                    id="other_allowance"
+                    type="number"
+                    value={editingValues.other_allowance || 0}
+                    onChange={(e) => setEditingValues({...editingValues, other_allowance: Number(e.target.value)})}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Additional Earnings */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-sm">Additional Earnings</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="overtime">Overtime</Label>
+                  <Input
+                    id="overtime"
+                    type="number"
+                    value={editingValues.overtime || 0}
+                    onChange={(e) => setEditingValues({...editingValues, overtime: Number(e.target.value)})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="bonus">Bonus</Label>
+                  <Input
+                    id="bonus"
+                    type="number"
+                    value={editingValues.bonus || 0}
+                    onChange={(e) => setEditingValues({...editingValues, bonus: Number(e.target.value)})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="commission">Commission</Label>
+                  <Input
+                    id="commission"
+                    type="number"
+                    value={editingValues.commission || 0}
+                    onChange={(e) => setEditingValues({...editingValues, commission: Number(e.target.value)})}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Deductions */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-sm">Deductions</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="other_deductions">Other Deductions</Label>
+                  <Input
+                    id="other_deductions"
+                    type="number"
+                    value={editingValues.other_deductions || 0}
+                    onChange={(e) => setEditingValues({...editingValues, other_deductions: Number(e.target.value)})}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Summary */}
+            <div className="bg-muted p-4 rounded-lg space-y-2">
+              <h3 className="font-semibold text-sm">Current Values</h3>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div>Gross Pay: <span className="font-medium">{selectedRecord?.gross_pay ? formatCurrency(selectedRecord.gross_pay) : '-'}</span></div>
+                <div>Net Pay: <span className="font-medium">{selectedRecord?.net_pay ? formatCurrency(selectedRecord.net_pay) : '-'}</span></div>
+                <div>PAYE Tax: <span className="font-medium">{selectedRecord?.paye_tax ? formatCurrency(selectedRecord.paye_tax) : '-'}</span></div>
+                <div>Pension: <span className="font-medium">{selectedRecord?.pension_employee ? formatCurrency(selectedRecord.pension_employee) : '-'}</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={cancelEditing}>
+              Cancel
+            </Button>
+            <Button onClick={savePayrollUpdate}>
+              <Save className="h-4 w-4 mr-2" />
+              Save Changes
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

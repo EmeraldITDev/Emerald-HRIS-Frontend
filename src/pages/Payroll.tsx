@@ -115,6 +115,19 @@ export default function Payroll() {
     }
   }, [employees, user])
 
+  // Auto-populate salary when employee is selected
+  useEffect(() => {
+    if (selectedEmployee && employees.length > 0) {
+      const selectedEmp = employees.find(emp => emp.id?.toString() === selectedEmployee)
+      if (selectedEmp && selectedEmp.gross_salary) {
+        setPayrollData(prev => ({
+          ...prev,
+          basicSalary: selectedEmp.gross_salary?.toString() || prev.basicSalary
+        }))
+      }
+    }
+  }, [selectedEmployee, employees])
+
   const onboardEmployees = employees.map(emp => ({
     id: emp.id?.toString() || '',
     name: `${emp.first_name} ${emp.last_name}`,
@@ -732,54 +745,65 @@ export default function Payroll() {
     })
   }
 
-  const savePayroll = () => {
-    if (!selectedEmployee || !selectedPeriod) return
+  const savePayroll = async () => {
+    if (!selectedEmployee || !selectedPeriod) {
+      toast({
+        title: "Missing Information",
+        description: "Please select an employee and pay period.",
+        variant: "destructive"
+      })
+      return
+    }
 
     const selectedEmp = employees.find(emp => emp.id?.toString() === selectedEmployee)
     if (!selectedEmp) return
 
-    // Create payroll record
-    const newPayrollRecord: PayrollRecord = {
-      employee_id: parseInt(selectedEmployee),
-      pay_period: selectedPeriod,
-      basic_salary: calculations.employmentType === "Contract" ? 0 : calculations.basicSalary,
-      housing_allowance: calculations.housing,
-      transport_allowance: calculations.transport,
-      meal_allowance: 0,
-      other_allowance: calculations.other,
-      overtime: 0,
-      bonus: 0,
-      commission: 0,
-      gross_pay: calculations.annualGross,
-      total_allowances: calculations.housing + calculations.transport + calculations.other,
-      taxable_income: calculations.annualGross,
-      paye_tax: calculations.annualTax,
-      pension_employee: calculations.pensionEmployee,
-      pension_employer: calculations.pensionEmployer,
-      nhf: calculations.nhf,
-      other_deductions: 0,
-      total_deductions: calculations.annualTax + calculations.pensionEmployee + calculations.nhf,
-      net_pay: calculations.annualNet,
-      status: "processed"
+    try {
+      console.log('💰 Generating payroll for employee:', selectedEmployee);
+      console.log('💰 Pay period:', selectedPeriod);
+      
+      // Generate payroll record via backend API
+      await apiService.generatePayroll({
+        employee_id: parseInt(selectedEmployee),
+        pay_period: selectedPeriod,
+        // Optional: override with manual values if entered
+        overtime: parseFloat(payrollData.earnings) || 0,
+        other_deductions: parseFloat(payrollData.deduction) || 0,
+      })
+
+      // Refresh payroll records to show the new one
+      const filters: any = {}
+      if (user?.role === 'general_employee' || user?.role === 'finance') {
+        const currentEmployee = employees.find(emp => emp.email === user.email)
+        if (currentEmployee?.id) {
+          filters.employee_id = currentEmployee.id
+        }
+      }
+      const data = await apiService.getPayrollRecords(filters)
+      setPayrollRecords(Array.isArray(data) ? data : [])
+
+      toast({
+        title: "Payroll Generated",
+        description: `Payroll for ${selectedEmp.first_name} ${selectedEmp.last_name} has been generated successfully.`
+      })
+
+      // Reset form
+      setPayrollData({
+        basicSalary: "",
+        earnings: "",
+        earningsRemarks: "",
+        deduction: "",
+        deductionRemarks: "",
+      })
+      setSelectedEmployee("")
+    } catch (error) {
+      console.error('Failed to generate payroll:', error)
+      toast({
+        title: "Generation Failed",
+        description: "Failed to generate payroll record. It may already exist for this period.",
+        variant: "destructive"
+      })
     }
-
-    payrollRecords.push(newPayrollRecord as any)
-
-    toast({
-      title: "Payroll Saved",
-      description: `Payroll for ${selectedEmp.first_name} ${selectedEmp.last_name} has been saved successfully.`
-    })
-
-    // Reset form
-    setPayrollData({
-      basicSalary: "",
-      earnings: "",
-      earningsRemarks: "",
-      deduction: "",
-      deductionRemarks: "",
-    })
-    setSelectedEmployee("")
-    setSelectedPeriod("")
   }
 
   const getStatusBadge = (status: string) => {
@@ -1036,6 +1060,16 @@ export default function Payroll() {
                   </div>
                 </div>
               </div>
+
+              {/* Generate Button */}
+              <Button 
+                onClick={savePayroll} 
+                className="w-full"
+                disabled={!selectedEmployee || !selectedPeriod || !payrollData.basicSalary}
+              >
+                <Calculator className="mr-2 h-4 w-4" />
+                Generate Payroll
+              </Button>
             </CardContent>
           </Card>
         </RoleBasedComponent>

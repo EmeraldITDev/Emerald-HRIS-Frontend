@@ -797,8 +797,7 @@ export default function Payroll() {
     if (!selectedRecord?.id) return
     
     try {
-      // Update payroll record in database with all fields
-      await apiService.updatePayroll(selectedRecord.id, {
+      const updateData = {
         basic_salary: editingValues.basic_salary || 0,
         housing_allowance: editingValues.housing_allowance || 0,
         transport_allowance: editingValues.transport_allowance || 0,
@@ -808,7 +807,14 @@ export default function Payroll() {
         bonus: editingValues.bonus || 0,
         commission: editingValues.commission || 0,
         other_deductions: editingValues.other_deductions || 0,
-      })
+      };
+      
+      console.log('💰 Updating payroll record:', selectedRecord.id);
+      console.log('💰 Update data:', updateData);
+      
+      // Update payroll record in database with all fields
+      const response = await apiService.updatePayroll(selectedRecord.id, updateData);
+      console.log('💰 Update response:', response);
 
       // Refresh payroll records
       const filters: any = {}

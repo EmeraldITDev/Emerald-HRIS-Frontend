@@ -45,25 +45,11 @@ const Login = () => {
     }
   };
 
-  // Featured demo users for quick access
-  const demoUsers = [
-    { email: 'bunmi.babajide@emeraldcfze.com', role: 'Executive', password: 'password123' },
-    { email: 'austin.nwachwukwu@emeraldcfze.com', role: 'HR Manager', password: 'password123' },
-    { email: 'henry.marcus@emeraldcfze.com', role: 'Line Manager - Technical Operations', password: 'password123' },
-    { email: 'aisha.bello@emeraldcfze.com', role: 'Line Manager - Business Development', password: 'password123' },
-    { email: 'chidi.okonkwo@emeraldcfze.com', role: 'Employee - Technical Operations', password: 'password123' }
-  ];
-
-  const fillDemoCredentials = (demoEmail: string) => {
-    setEmail(demoEmail);
-    setPassword('password123');
-  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-secondary/5">
-      <div className="w-full max-w-6xl mx-auto p-6 flex gap-8">
-        {/* Login Form */}
-        <Card className="w-full max-w-md mx-auto lg:mx-0">
+      <div className="w-full max-w-md mx-auto p-6">
+        <Card className="w-full">
           <CardHeader className="space-y-1 text-center">
             <div className="flex items-center justify-center mb-4">
               <Building2 className="h-8 w-8 text-primary mr-2" />
@@ -132,55 +118,6 @@ const Login = () => {
                 {isLoading ? "Signing in..." : "Sign In"}
               </Button>
             </form>
-          </CardContent>
-        </Card>
-
-        {/* Demo Users Panel */}
-        <Card className="flex-1 max-w-2xl">
-          <CardHeader>
-            <CardTitle>Quick Access Demo Users</CardTitle>
-            <CardDescription>
-              Click on any user to auto-fill their credentials. For all departments and users, visit the Demo Users page.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {demoUsers.map((user, index) => (
-                <Button
-                  key={index}
-                  variant="outline"
-                  className="justify-start h-auto p-4 text-left w-full"
-                  onClick={() => fillDemoCredentials(user.email)}
-                  disabled={isLoading}
-                >
-                  <div className="w-full">
-                    <div className="font-medium">{user.email}</div>
-                    <div className="text-sm text-muted-foreground">{user.role}</div>
-                  </div>
-                </Button>
-              ))}
-            </div>
-            
-            <Button
-              className="w-full mt-4"
-              variant="secondary"
-              onClick={() => window.location.href = '/demo-users'}
-            >
-              <Building2 className="mr-2 h-4 w-4" />
-              View All Demo Users by Department
-            </Button>
-            
-            <div className="mt-6 p-4 bg-muted/50 rounded-lg">
-              <h4 className="font-medium mb-2">Department-Based Access:</h4>
-              <div className="text-sm text-muted-foreground space-y-1">
-                <div><strong>Executives & HR:</strong> Full system access, all departments visible</div>
-                <div><strong>Line Managers:</strong> Department-specific access, can only manage their team</div>
-                <div><strong>Employees:</strong> Self-service, can view department data only</div>
-              </div>
-              <p className="text-xs mt-3 text-muted-foreground">
-                All accounts use password: <code className="bg-background px-1 py-0.5 rounded">password123</code>
-              </p>
-            </div>
           </CardContent>
         </Card>
       </div>

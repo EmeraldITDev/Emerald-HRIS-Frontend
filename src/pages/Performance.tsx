@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Star, Plus, Eye, Download, MessageSquare, Calendar, CheckCircle, ClipboardCheck, FileText } from "lucide-react"
+import { Star, Plus, Eye, Download, MessageSquare, Calendar, CheckCircle, ClipboardCheck, FileText, Search, Filter, X } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from '@/contexts/AuthContext'
 import { apiService, Employee, PerformanceReview } from '@/lib/api'
@@ -476,6 +476,14 @@ export default function Performance() {
   const [selectedReview, setSelectedReview] = useState<Review | null>(null)
   const [employeeComment, setEmployeeComment] = useState("")
   const [selfAssessmentPeriod, setSelfAssessmentPeriod] = useState("")
+  
+  // Filter states
+  const [searchTerm, setSearchTerm] = useState("")
+  const [statusFilter, setStatusFilter] = useState("")
+  const [periodFilter, setPeriodFilter] = useState("")
+  const [departmentFilter, setDepartmentFilter] = useState("")
+  const [showFilters, setShowFilters] = useState(false)
+  
   const [selfAssessmentData, setSelfAssessmentData] = useState({
     mainResponsibilities: "",
     achievements: "",
@@ -526,7 +534,7 @@ export default function Performance() {
         reviewPeriod: r.period,
         reviewDate: (r.created_at || '').split('T')[0] || '',
         rating: Number(r.manager_review?.overall_rating ?? r.self_assessment?.overallRating ?? 0),
-        status: r.status.replace(/_/g, ' '),
+        status: r.status.replaceAll('_',' '),
         reviewer: r.manager?.name ?? '—',
         goals: r.self_assessment?.futureGoals ?? '',
         achievements: r.self_assessment?.achievements ?? '',
@@ -545,7 +553,7 @@ export default function Performance() {
   
   // Determine user's access level
   const isExecutiveOrHR = user?.role === 'executive' || user?.role === 'hr_manager' || user?.role === 'corporate_hr'
-  const isLineManager = user?.role === 'line_manager' || user?.role === 'finance'
+  const isLineManager = user?.role === 'line_manager'
   // All employee-level roles (not executive, HR, or line manager)
   const isGeneralEmployee = !isExecutiveOrHR && !isLineManager
   const canManageReviews = isExecutiveOrHR || isLineManager
@@ -553,20 +561,43 @@ export default function Performance() {
 
   // Get current employee email for filtering
   const currentEmployeeEmail = user?.email
+  const currentEmployeeId = user?.employee_id
 
-  // Filter reviews based on role and department
+  // Filter reviews based on role, department, and search criteria
   const filteredReviews = reviews.filter(review => {
-    // General employees can only see their own reviews
+    // Role-based filtering
+    let passesRoleFilter = false
     if (isGeneralEmployee) {
-      return review.employeeId === currentEmployeeEmail
+      passesRoleFilter = review.employeeId === currentEmployeeEmail || review.employeeId === String(currentEmployeeId ?? '')
+    } else if (isLineManager && userDepartment) {
+      passesRoleFilter = review.department === userDepartment
+    } else {
+      // Executives and HR can see all reviews
+      passesRoleFilter = true
     }
     
-    // Line managers see their own reviews AND reviews from their department
-    if (isLineManager && userDepartment) {
-      return review.department === userDepartment
+    if (!passesRoleFilter) return false
+    
+    // Search term filtering
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase()
+      const matchesSearch = 
+        review.employeeName.toLowerCase().includes(searchLower) ||
+        review.department.toLowerCase().includes(searchLower) ||
+        review.reviewPeriod.toLowerCase().includes(searchLower) ||
+        review.reviewer.toLowerCase().includes(searchLower)
+      if (!matchesSearch) return false
     }
     
-    // Executives and HR can see all reviews
+    // Status filtering
+    if (statusFilter && review.status !== statusFilter) return false
+    
+    // Period filtering
+    if (periodFilter && review.reviewPeriod !== periodFilter) return false
+    
+    // Department filtering
+    if (departmentFilter && review.department !== departmentFilter) return false
+    
     return true
   })
   
@@ -574,6 +605,22 @@ export default function Performance() {
   const filteredEmployees = isLineManager && userDepartment
     ? employees.filter(emp => emp.department === userDepartment)
     : employees
+
+  // Get unique values for filter dropdowns
+  const uniquePeriods = [...new Set(reviews.map(r => r.reviewPeriod))].sort()
+  const uniqueStatuses = [...new Set(reviews.map(r => r.status))].sort()
+  const uniqueDepartments = [...new Set(reviews.map(r => r.department))].sort()
+
+  // Clear all filters
+  const clearFilters = () => {
+    setSearchTerm("")
+    setStatusFilter("")
+    setPeriodFilter("")
+    setDepartmentFilter("")
+  }
+
+  // Check if any filters are active
+  const hasActiveFilters = searchTerm || statusFilter || periodFilter || departmentFilter
   
   const handleCreateNewReview = () => {
     if (!newReview.employeeId || !newReview.reviewPeriod || !newReview.rating) {
@@ -921,6 +968,232 @@ export default function Performance() {
           )}
         </div>
       </div>
+
+      {/* Search and Filters */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+            {/* Search Bar */}
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Input
+                placeholder="Search reviews by employee, department, period, or reviewer..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            
+            {/* Filter Toggle */}
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowFilters(!showFilters)}
+                className="flex items-center gap-2"
+              >
+                <Filter className="h-4 w-4" />
+                Filters
+                {hasActiveFilters && (
+                  <Badge variant="secondary" className="ml-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">
+                    {[searchTerm, statusFilter, periodFilter, departmentFilter].filter(Boolean).length}
+                  </Badge>
+                )}
+              </Button>
+              
+              {hasActiveFilters && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearFilters}
+                  className="flex items-center gap-2"
+                >
+                  <X className="h-4 w-4" />
+                  Clear
+                </Button>
+              )}
+            </div>
+          </div>
+          
+          {/* Filter Options */}
+          {showFilters && (
+            <div className="mt-4 pt-4 border-t">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="status-filter">Status</Label>
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="All statuses" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">All statuses</SelectItem>
+                      {uniqueStatuses.map(status => (
+                        <SelectItem key={status} value={status}>
+                          {status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="period-filter">Period</Label>
+                  <Select value={periodFilter} onValueChange={setPeriodFilter}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="All periods" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">All periods</SelectItem>
+                      {uniquePeriods.map(period => (
+                        <SelectItem key={period} value={period}>
+                          {period}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="department-filter">Department</Label>
+                  <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="All departments" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">All departments</SelectItem>
+                      {uniqueDepartments.map(dept => (
+                        <SelectItem key={dept} value={dept}>
+                          {dept}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Results</Label>
+                  <div className="text-sm text-muted-foreground pt-2">
+                    {filteredReviews.length} of {reviews.length} reviews
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Search and Filters */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+            {/* Search Bar */}
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Input
+                placeholder="Search reviews by employee, department, period, or reviewer..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            
+            {/* Filter Toggle */}
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowFilters(!showFilters)}
+                className="flex items-center gap-2"
+              >
+                <Filter className="h-4 w-4" />
+                Filters
+                {hasActiveFilters && (
+                  <Badge variant="secondary" className="ml-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">
+                    {[searchTerm, statusFilter, periodFilter, departmentFilter].filter(Boolean).length}
+                  </Badge>
+                )}
+              </Button>
+              
+              {hasActiveFilters && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearFilters}
+                  className="flex items-center gap-2"
+                >
+                  <X className="h-4 w-4" />
+                  Clear
+                </Button>
+              )}
+            </div>
+          </div>
+          
+          {/* Filter Options */}
+          {showFilters && (
+            <div className="mt-4 pt-4 border-t">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="status-filter">Status</Label>
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="All statuses" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">All statuses</SelectItem>
+                      {uniqueStatuses.map(status => (
+                        <SelectItem key={status} value={status}>
+                          {status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="period-filter">Period</Label>
+                  <Select value={periodFilter} onValueChange={setPeriodFilter}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="All periods" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">All periods</SelectItem>
+                      {uniquePeriods.map(period => (
+                        <SelectItem key={period} value={period}>
+                          {period}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="department-filter">Department</Label>
+                  <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="All departments" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">All departments</SelectItem>
+                      {uniqueDepartments.map(dept => (
+                        <SelectItem key={dept} value={dept}>
+                          {dept}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Results</Label>
+                  <div className="text-sm text-muted-foreground pt-2">
+                    {filteredReviews.length} of {reviews.length} reviews
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Performance Reviews Table */}
       <Card>

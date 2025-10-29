@@ -305,6 +305,32 @@ export default function Payroll() {
   }
 
   const calculations = calculatePayroll()
+  
+  // Get current user's latest payroll record for display
+  const getCurrentUserPayrollRecord = () => {
+    if (!user) return null
+    
+    // For general employees, get their own latest record
+    if (user.role === 'general_employee' || user.role === 'finance') {
+      const currentEmployee = employees.find(emp => emp.email === user.email)
+      if (!currentEmployee) return null
+      
+      // Get the most recent payroll record for this employee
+      const userRecords = payrollRecords.filter(record => record.employee_id === currentEmployee.id)
+      if (userRecords.length === 0) return null
+      
+      // Sort by pay_period descending and get the latest
+      return userRecords.sort((a, b) => {
+        const dateA = new Date(a.pay_period || '')
+        const dateB = new Date(b.pay_period || '')
+        return dateB.getTime() - dateA.getTime()
+      })[0]
+    }
+    
+    return null
+  }
+  
+  const currentPayrollRecord = getCurrentUserPayrollRecord()
 
   const handleTaxSettings = () => {
     toast({
@@ -1022,91 +1048,135 @@ export default function Payroll() {
               Payroll Breakdown & Summary
             </CardTitle>
             <p className="text-sm text-muted-foreground mt-1">
-              Detailed breakdown of earnings, deductions, and employer costs
+              {currentPayrollRecord 
+                ? `Pay Period: ${currentPayrollRecord.pay_period}` 
+                : "Detailed breakdown of earnings, deductions, and employer costs"}
             </p>
           </CardHeader>
           <CardContent>
-            <div className="space-y-6">
-              {/* Summary Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-3 p-4 bg-muted/30 rounded-lg border">
-                <div className="text-center">
-                  <p className="text-xs text-muted-foreground mb-1">Gross Pay</p>
-                  <p className="text-lg font-bold text-primary">{formatCurrency(calculations.grossPay)}</p>
-                  <p className="text-xs text-muted-foreground">₦{(calculations.grossPay / 12).toFixed(0)}/mo</p>
+            {currentPayrollRecord ? (
+              <div className="space-y-6">
+                {/* Summary Cards - From Database */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-3 p-4 bg-muted/30 rounded-lg border">
+                  <div className="text-center">
+                    <p className="text-xs text-muted-foreground mb-1">Gross Pay</p>
+                    <p className="text-lg font-bold text-primary">{formatCurrency(currentPayrollRecord.gross_pay || 0)}</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-xs text-muted-foreground mb-1">Total Deductions</p>
+                    <p className="text-lg font-bold text-destructive">{formatCurrency(currentPayrollRecord.total_deductions || 0)}</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-xs text-muted-foreground mb-1">Net Pay</p>
+                    <p className="text-lg font-bold text-success">{formatCurrency(currentPayrollRecord.net_pay || 0)}</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-xs text-muted-foreground mb-1">Status</p>
+                    <div className="mt-1">{getStatusBadge(currentPayrollRecord.status || 'pending')}</div>
+                  </div>
                 </div>
-                <div className="text-center">
-                  <p className="text-xs text-muted-foreground mb-1">Total Deductions</p>
-                  <p className="text-lg font-bold text-destructive">{formatCurrency(calculations.totalDeductions)}</p>
-                  <p className="text-xs text-muted-foreground">₦{(calculations.totalDeductions / 12).toFixed(0)}/mo</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-xs text-muted-foreground mb-1">Final Net Pay</p>
-                  <p className="text-lg font-bold text-success">{formatCurrency(calculations.netPay)}</p>
-                  <p className="text-xs text-muted-foreground">₦{(calculations.netPay / 12).toFixed(0)}/mo</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-xs text-muted-foreground mb-1">Total Relief</p>
-                  <p className="text-lg font-bold text-info">{formatCurrency(calculations.totalRelief)}</p>
-                  <p className="text-xs text-muted-foreground">₦{(calculations.monthlyRelief).toFixed(0)}/mo</p>
-                </div>
-              </div>
 
-              {/* Employment Type Badge */}
-              <div className="flex items-center gap-2">
-                <Badge variant={calculations.employmentType === "Contract" ? "secondary" : "default"}>
-                  {calculations.employmentType} Employee
-                </Badge>
-                <span className="text-xs text-muted-foreground">
-                  Tax Type: {calculations.taxType}
-                </span>
-              </div>
-
-              {/* Annual Breakdown */}
+              {/* Salary Components - From Database */}
               <div className="border rounded-lg p-4 bg-card">
                 <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
                   <span className="w-2 h-2 bg-success rounded-full"></span>
-                  Annual Salary Breakdown
+                  Salary Components
                 </h3>
                 <div className="space-y-3">
-                  {calculations.employmentType === "Full-time" ? (
-                    <>
-                      <div className="flex justify-between text-sm">
-                        <span className="font-medium">Basic Salary (Entered):</span>
-                        <span className="font-semibold">{formatCurrency(calculations.basicSalary)}</span>
-                      </div>
-                      <div className="pl-4 space-y-2 text-sm border-l-2 border-primary/20">
-                        <div className="flex justify-between">
-                          <span>Housing Allowance (20% of Gross):</span>
-                          <span>{formatCurrency(calculations.housing)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Transport Allowance (9% of Gross):</span>
-                          <span>{formatCurrency(calculations.transport)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Other Allowances (31% of Gross):</span>
-                          <span>{formatCurrency(calculations.other)}</span>
-                        </div>
-                      </div>
-                      <div className="flex justify-between text-base font-bold border-t-2 pt-3 bg-primary/5 p-2 rounded">
-                        <span>Annual Gross Salary:</span>
-                        <span className="text-primary">{formatCurrency(calculations.annualGross)}</span>
-                      </div>
-                      <div className="text-xs text-muted-foreground text-right">
-                        Monthly: ₦{(calculations.monthlyGross).toFixed(2)}
-                      </div>
-                    </>
-                  ) : (
-                    <div className="flex justify-between text-sm">
-                      <span className="font-medium">Annual Contract Amount:</span>
-                      <span className="font-semibold">{formatCurrency(calculations.basicSalary)}</span>
+                  <div className="flex justify-between text-sm">
+                    <span className="font-medium">Basic Salary:</span>
+                    <span className="font-semibold">{formatCurrency(currentPayrollRecord.basic_salary || 0)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Housing Allowance:</span>
+                    <span>{formatCurrency(currentPayrollRecord.housing_allowance || 0)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Transport Allowance:</span>
+                    <span>{formatCurrency(currentPayrollRecord.transport_allowance || 0)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Meal Allowance:</span>
+                    <span>{formatCurrency(currentPayrollRecord.meal_allowance || 0)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Other Allowance:</span>
+                    <span>{formatCurrency(currentPayrollRecord.other_allowance || 0)}</span>
+                  </div>
+                  {(currentPayrollRecord.overtime || 0) > 0 && (
+                    <div className="flex justify-between text-sm text-success">
+                      <span>Overtime:</span>
+                      <span>+{formatCurrency(currentPayrollRecord.overtime || 0)}</span>
+                    </div>
+                  )}
+                  {(currentPayrollRecord.bonus || 0) > 0 && (
+                    <div className="flex justify-between text-sm text-success">
+                      <span>Bonus:</span>
+                      <span>+{formatCurrency(currentPayrollRecord.bonus || 0)}</span>
+                    </div>
+                  )}
+                  {(currentPayrollRecord.commission || 0) > 0 && (
+                    <div className="flex justify-between text-sm text-success">
+                      <span>Commission:</span>
+                      <span>+{formatCurrency(currentPayrollRecord.commission || 0)}</span>
                     </div>
                   )}
                 </div>
               </div>
 
-              {/* Relief Allowances */}
-              {calculations.employmentType === "Full-time" && (
+              {/* Deductions - From Database */}
+              <div className="border rounded-lg p-4 bg-card">
+                <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
+                  <span className="w-2 h-2 bg-destructive rounded-full"></span>
+                  Deductions
+                </h3>
+                <div className="space-y-3">
+                  <div className="flex justify-between text-sm">
+                    <span>PAYE Tax:</span>
+                    <span>{formatCurrency(currentPayrollRecord.paye_tax || 0)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Employee Pension (8%):</span>
+                    <span>{formatCurrency(currentPayrollRecord.pension_employee || 0)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>NHF (2.5%):</span>
+                    <span>{formatCurrency(currentPayrollRecord.nhf || 0)}</span>
+                  </div>
+                  {(currentPayrollRecord.other_deductions || 0) > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span>Other Deductions:</span>
+                      <span>{formatCurrency(currentPayrollRecord.other_deductions || 0)}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Net Pay Summary */}
+              <div className="border-2 border-success rounded-lg p-6 bg-success/5">
+                <div className="text-center space-y-2">
+                  <p className="text-sm text-muted-foreground">Your Net Pay</p>
+                  <p className="text-4xl font-bold text-success">{formatCurrency(currentPayrollRecord.net_pay || 0)}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Gross: {formatCurrency(currentPayrollRecord.gross_pay || 0)} - Deductions: {formatCurrency(currentPayrollRecord.total_deductions || 0)}
+                  </p>
+                </div>
+              </div>
+            </div>
+            ) : (
+              <div className="text-center py-12 space-y-3">
+                <div className="text-5xl text-muted-foreground/20">💰</div>
+                <div>
+                  <p className="font-medium text-muted-foreground">No Payroll Record Available</p>
+                  <p className="text-sm text-muted-foreground/70 mt-1">
+                    Your payroll information will appear here once it's been processed by HR.
+                  </p>
+                </div>
+              </div>
+            )}
+
+              {/* OLD STATIC SECTION - KEEPING FOR HR CALCULATOR */}
+              {user?.role === 'hr_manager' && !currentPayrollRecord && calculations.employmentType === "Full-time" && (
                 <div className="border rounded-lg p-4 bg-card">
                   <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
                     <span className="w-2 h-2 bg-info rounded-full"></span>

@@ -1831,8 +1831,6 @@ export default function Employees() {
                                 <Edit className="mr-2 h-4 w-4" />
                                 Edit Employee
                               </DropdownMenuItem>
-                            </RoleBasedComponent>
-                            <RoleBasedComponent allowedRoles={['hr_manager', 'executive']}>
                               {employee.user_id && (
                                 <DropdownMenuItem onClick={() => handleResetPassword(employee)}>
                                   <KeyRound className="mr-2 h-4 w-4" />

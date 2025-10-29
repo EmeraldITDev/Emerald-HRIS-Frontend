@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Star, Plus, Eye, Download, MessageSquare, Calendar, CheckCircle, ClipboardCheck, FileText, Search, Filter, X } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { DEPARTMENTS } from '@/constants/departments'
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from '@/contexts/AuthContext'
 import { apiService, Employee, PerformanceReview } from '@/lib/api'
@@ -535,7 +536,7 @@ export default function Performance() {
         reviewPeriod: r.period,
         reviewDate: (r.created_at || '').split('T')[0] || '',
         rating: Number(r.manager_review?.overall_rating ?? r.self_assessment?.overallRating ?? 0),
-        status: r.status.replace(/_/g, ' '),
+        status: r.status.replaceAll('_',' '),
         reviewer: r.manager?.name ?? '—',
         goals: r.self_assessment?.futureGoals ?? '',
         achievements: r.self_assessment?.achievements ?? '',
@@ -562,13 +563,14 @@ export default function Performance() {
 
   // Get current employee email for filtering
   const currentEmployeeEmail = user?.email
+  const currentEmployeeId = user?.employee_id
 
   // Filter reviews based on role, department, and search criteria
   const filteredReviews = reviews.filter(review => {
     // Role-based filtering
     let passesRoleFilter = false
     if (isGeneralEmployee) {
-      passesRoleFilter = review.employeeId === currentEmployeeEmail
+      passesRoleFilter = review.employeeId === currentEmployeeEmail || review.employeeId === String(currentEmployeeId ?? '')
     } else if (isLineManager && userDepartment) {
       passesRoleFilter = review.department === userDepartment
     } else {
@@ -984,79 +986,53 @@ export default function Performance() {
               />
             </div>
             
-            {/* Filter Dropdown */}
-            <div className="flex gap-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="flex items-center gap-2">
-                    <Filter className="h-4 w-4" />
-                    Filters
-                    {hasActiveFilters && (
-                      <Badge variant="secondary" className="ml-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">
-                        {[searchTerm, statusFilter, periodFilter, departmentFilter].filter(Boolean).length}
-                      </Badge>
-                    )}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-80">
-                  <DropdownMenuLabel>Filter reviews</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <div className="p-2 space-y-3">
-                    <div className="space-y-2">
-                      <Label>Status</Label>
-                      <Select value={statusFilter} onValueChange={setStatusFilter}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="All statuses" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="">All statuses</SelectItem>
-                          {uniqueStatuses.map(status => (
-                            <SelectItem key={status} value={status}>
-                              {status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Period</Label>
-                      <Select value={periodFilter} onValueChange={setPeriodFilter}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="All periods" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="">All periods</SelectItem>
-                          {uniquePeriods.map(period => (
-                            <SelectItem key={period} value={period}>{period}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Department</Label>
-                      <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="All departments" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="">All departments</SelectItem>
-                          {uniqueDepartments.map(dept => (
-                            <SelectItem key={dept} value={dept}>{dept}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="flex items-center justify-between pt-1">
-                      <div className="text-xs text-muted-foreground">{filteredReviews.length} of {reviews.length} results</div>
-                      <div className="flex gap-2">
-                        <Button variant="ghost" size="sm" onClick={clearFilters}>
-                          <X className="h-3 w-3 mr-1" /> Clear
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </DropdownMenuContent>
-              </DropdownMenu>
+            {/* Inline Select Filters (match Employee Records format) */}
+            <div className="flex gap-2 w-full sm:w-auto">
+              <div className="w-44">
+                <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Departments" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All Departments</SelectItem>
+                    {DEPARTMENTS.map((dept) => (
+                      <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="w-40">
+                <Select value={periodFilter} onValueChange={setPeriodFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Periods" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All Periods</SelectItem>
+                    {uniquePeriods.map((p) => (
+                      <SelectItem key={p} value={p}>{p}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="w-40">
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Statuses" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All Statuses</SelectItem>
+                    {uniqueStatuses.map((s) => (
+                      <SelectItem key={s} value={s}>{s.replace(/_/g, ' ')}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {hasActiveFilters && (
+                <Button variant="ghost" size="sm" onClick={clearFilters} className="flex items-center gap-2">
+                  <X className="h-4 w-4" />
+                  Clear
+                </Button>
+              )}
             </div>
           </div>
 

@@ -1826,7 +1826,7 @@ export default function Employees() {
                               <Eye className="mr-2 h-4 w-4" />
                               View Details
                             </DropdownMenuItem>
-                            <RoleBasedComponent allowedRoles={['hr_manager', 'corporate_hr', 'line_manager']}>
+                            <RoleBasedComponent allowedRoles={['hr_manager', 'corporate_hr']}>
                               <DropdownMenuItem onClick={() => handleEditEmployee(employee)}>
                                 <Edit className="mr-2 h-4 w-4" />
                                 Edit Employee

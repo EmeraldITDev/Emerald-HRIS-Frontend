@@ -1412,9 +1412,10 @@ export default function Payroll() {
                     <Input
                       id="basic_salary"
                       type="number"
-                      value={editingValues.basic_salary || 0}
+                      value={editingValues.basic_salary || ''}
                       onChange={(e) => setEditingValues({...editingValues, basic_salary: Number(e.target.value)})}
                       className="pl-8"
+                      placeholder="Enter amount"
                     />
                   </div>
                 </div>
@@ -1425,9 +1426,10 @@ export default function Payroll() {
                     <Input
                       id="housing_allowance"
                       type="number"
-                      value={editingValues.housing_allowance || 0}
+                      value={editingValues.housing_allowance || ''}
                       onChange={(e) => setEditingValues({...editingValues, housing_allowance: Number(e.target.value)})}
                       className="pl-8"
+                      placeholder="Enter amount"
                     />
                   </div>
                 </div>
@@ -1438,9 +1440,10 @@ export default function Payroll() {
                     <Input
                       id="transport_allowance"
                       type="number"
-                      value={editingValues.transport_allowance || 0}
+                      value={editingValues.transport_allowance || ''}
                       onChange={(e) => setEditingValues({...editingValues, transport_allowance: Number(e.target.value)})}
                       className="pl-8"
+                      placeholder="Enter amount"
                     />
                   </div>
                 </div>
@@ -1451,9 +1454,10 @@ export default function Payroll() {
                     <Input
                       id="meal_allowance"
                       type="number"
-                      value={editingValues.meal_allowance || 0}
+                      value={editingValues.meal_allowance || ''}
                       onChange={(e) => setEditingValues({...editingValues, meal_allowance: Number(e.target.value)})}
                       className="pl-8"
+                      placeholder="Enter amount"
                     />
                   </div>
                 </div>
@@ -1464,9 +1468,10 @@ export default function Payroll() {
                     <Input
                       id="other_allowance"
                       type="number"
-                      value={editingValues.other_allowance || 0}
+                      value={editingValues.other_allowance || ''}
                       onChange={(e) => setEditingValues({...editingValues, other_allowance: Number(e.target.value)})}
                       className="pl-8"
+                      placeholder="Enter amount"
                     />
                   </div>
                 </div>
@@ -1484,9 +1489,10 @@ export default function Payroll() {
                     <Input
                       id="overtime"
                       type="number"
-                      value={editingValues.overtime || 0}
+                      value={editingValues.overtime || ''}
                       onChange={(e) => setEditingValues({...editingValues, overtime: Number(e.target.value)})}
                       className="pl-8"
+                      placeholder="Enter amount"
                     />
                   </div>
                 </div>
@@ -1497,9 +1503,10 @@ export default function Payroll() {
                     <Input
                       id="bonus"
                       type="number"
-                      value={editingValues.bonus || 0}
+                      value={editingValues.bonus || ''}
                       onChange={(e) => setEditingValues({...editingValues, bonus: Number(e.target.value)})}
                       className="pl-8"
+                      placeholder="Enter amount"
                     />
                   </div>
                 </div>
@@ -1510,9 +1517,10 @@ export default function Payroll() {
                     <Input
                       id="commission"
                       type="number"
-                      value={editingValues.commission || 0}
+                      value={editingValues.commission || ''}
                       onChange={(e) => setEditingValues({...editingValues, commission: Number(e.target.value)})}
                       className="pl-8"
+                      placeholder="Enter amount"
                     />
                   </div>
                 </div>
@@ -1530,9 +1538,10 @@ export default function Payroll() {
                     <Input
                       id="other_deductions"
                       type="number"
-                      value={editingValues.other_deductions || 0}
+                      value={editingValues.other_deductions || ''}
                       onChange={(e) => setEditingValues({...editingValues, other_deductions: Number(e.target.value)})}
                       className="pl-8"
+                      placeholder="Enter amount"
                     />
                   </div>
                 </div>

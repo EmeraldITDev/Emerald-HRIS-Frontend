@@ -1407,48 +1407,68 @@ export default function Payroll() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="basic_salary">Basic Salary</Label>
-                  <Input
-                    id="basic_salary"
-                    type="number"
-                    value={editingValues.basic_salary || 0}
-                    onChange={(e) => setEditingValues({...editingValues, basic_salary: Number(e.target.value)})}
-                  />
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₦</span>
+                    <Input
+                      id="basic_salary"
+                      type="number"
+                      value={editingValues.basic_salary || 0}
+                      onChange={(e) => setEditingValues({...editingValues, basic_salary: Number(e.target.value)})}
+                      className="pl-8"
+                    />
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="housing_allowance">Housing Allowance</Label>
-                  <Input
-                    id="housing_allowance"
-                    type="number"
-                    value={editingValues.housing_allowance || 0}
-                    onChange={(e) => setEditingValues({...editingValues, housing_allowance: Number(e.target.value)})}
-                  />
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₦</span>
+                    <Input
+                      id="housing_allowance"
+                      type="number"
+                      value={editingValues.housing_allowance || 0}
+                      onChange={(e) => setEditingValues({...editingValues, housing_allowance: Number(e.target.value)})}
+                      className="pl-8"
+                    />
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="transport_allowance">Transport Allowance</Label>
-                  <Input
-                    id="transport_allowance"
-                    type="number"
-                    value={editingValues.transport_allowance || 0}
-                    onChange={(e) => setEditingValues({...editingValues, transport_allowance: Number(e.target.value)})}
-                  />
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₦</span>
+                    <Input
+                      id="transport_allowance"
+                      type="number"
+                      value={editingValues.transport_allowance || 0}
+                      onChange={(e) => setEditingValues({...editingValues, transport_allowance: Number(e.target.value)})}
+                      className="pl-8"
+                    />
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="meal_allowance">Meal Allowance</Label>
-                  <Input
-                    id="meal_allowance"
-                    type="number"
-                    value={editingValues.meal_allowance || 0}
-                    onChange={(e) => setEditingValues({...editingValues, meal_allowance: Number(e.target.value)})}
-                  />
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₦</span>
+                    <Input
+                      id="meal_allowance"
+                      type="number"
+                      value={editingValues.meal_allowance || 0}
+                      onChange={(e) => setEditingValues({...editingValues, meal_allowance: Number(e.target.value)})}
+                      className="pl-8"
+                    />
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="other_allowance">Other Allowance</Label>
-                  <Input
-                    id="other_allowance"
-                    type="number"
-                    value={editingValues.other_allowance || 0}
-                    onChange={(e) => setEditingValues({...editingValues, other_allowance: Number(e.target.value)})}
-                  />
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₦</span>
+                    <Input
+                      id="other_allowance"
+                      type="number"
+                      value={editingValues.other_allowance || 0}
+                      onChange={(e) => setEditingValues({...editingValues, other_allowance: Number(e.target.value)})}
+                      className="pl-8"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -1459,30 +1479,42 @@ export default function Payroll() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="overtime">Overtime</Label>
-                  <Input
-                    id="overtime"
-                    type="number"
-                    value={editingValues.overtime || 0}
-                    onChange={(e) => setEditingValues({...editingValues, overtime: Number(e.target.value)})}
-                  />
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₦</span>
+                    <Input
+                      id="overtime"
+                      type="number"
+                      value={editingValues.overtime || 0}
+                      onChange={(e) => setEditingValues({...editingValues, overtime: Number(e.target.value)})}
+                      className="pl-8"
+                    />
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="bonus">Bonus</Label>
-                  <Input
-                    id="bonus"
-                    type="number"
-                    value={editingValues.bonus || 0}
-                    onChange={(e) => setEditingValues({...editingValues, bonus: Number(e.target.value)})}
-                  />
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₦</span>
+                    <Input
+                      id="bonus"
+                      type="number"
+                      value={editingValues.bonus || 0}
+                      onChange={(e) => setEditingValues({...editingValues, bonus: Number(e.target.value)})}
+                      className="pl-8"
+                    />
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="commission">Commission</Label>
-                  <Input
-                    id="commission"
-                    type="number"
-                    value={editingValues.commission || 0}
-                    onChange={(e) => setEditingValues({...editingValues, commission: Number(e.target.value)})}
-                  />
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₦</span>
+                    <Input
+                      id="commission"
+                      type="number"
+                      value={editingValues.commission || 0}
+                      onChange={(e) => setEditingValues({...editingValues, commission: Number(e.target.value)})}
+                      className="pl-8"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -1493,12 +1525,16 @@ export default function Payroll() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="other_deductions">Other Deductions</Label>
-                  <Input
-                    id="other_deductions"
-                    type="number"
-                    value={editingValues.other_deductions || 0}
-                    onChange={(e) => setEditingValues({...editingValues, other_deductions: Number(e.target.value)})}
-                  />
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₦</span>
+                    <Input
+                      id="other_deductions"
+                      type="number"
+                      value={editingValues.other_deductions || 0}
+                      onChange={(e) => setEditingValues({...editingValues, other_deductions: Number(e.target.value)})}
+                      className="pl-8"
+                    />
+                  </div>
                 </div>
               </div>
             </div>

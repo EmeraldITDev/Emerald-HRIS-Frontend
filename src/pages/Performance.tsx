@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Star, Plus, Eye, Download, MessageSquare, Calendar, CheckCircle, ClipboardCheck, FileText } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from '@/contexts/AuthContext'
-import { apiService, Employee } from '@/lib/api'
+import { apiService, Employee, PerformanceReview } from '@/lib/api'
 
 interface Review {
   id: string
@@ -475,6 +475,7 @@ export default function Performance() {
   const [hrReviewDialogOpen, setHrReviewDialogOpen] = useState(false)
   const [selectedReview, setSelectedReview] = useState<Review | null>(null)
   const [employeeComment, setEmployeeComment] = useState("")
+  const [selfAssessmentPeriod, setSelfAssessmentPeriod] = useState("")
   const [selfAssessmentData, setSelfAssessmentData] = useState({
     mainResponsibilities: "",
     achievements: "",
@@ -501,14 +502,44 @@ export default function Performance() {
   
   useEffect(() => {
     fetchEmployees()
+    fetchReviews()
   }, [])
   
   const fetchEmployees = async () => {
     try {
       const data = await apiService.getEmployees()
-      setEmployees(data)
+      const list = Array.isArray(data) ? data : ((data as any)?.data || [])
+      setEmployees(list)
     } catch (error) {
       console.error('Failed to fetch employees:', error)
+    }
+  }
+
+  const fetchReviews = async () => {
+    try {
+      const data = await apiService.getPerformanceReviews()
+      const mapped = (Array.isArray(data) ? data : []).map((r: PerformanceReview) => ({
+        id: String(r.id || ''),
+        employeeId: String(r.employee_id),
+        employeeName: `${r.employee?.first_name ?? ''} ${r.employee?.last_name ?? ''}`.trim() || 'Employee',
+        department: r.employee?.department ?? 'N/A',
+        reviewPeriod: r.period,
+        reviewDate: (r.created_at || '').split('T')[0] || '',
+        rating: Number(r.manager_review?.overall_rating ?? r.self_assessment?.overallRating ?? 0),
+        status: r.status.replaceAll('_',' '),
+        reviewer: r.manager?.name ?? '—',
+        goals: r.self_assessment?.futureGoals ?? '',
+        achievements: r.self_assessment?.achievements ?? '',
+        areasForImprovement: r.self_assessment?.areasForImprovement ?? '',
+        comments: r.manager_review?.comments ?? '',
+        employeeComments: r.self_assessment?.comments ?? '',
+        employeeSignedDate: r.employee_signed_at ? r.employee_signed_at.split('T')[0] : undefined,
+        managerSignedDate: r.manager_signed_at ? r.manager_signed_at.split('T')[0] : undefined,
+        hrApprovedDate: r.hr_approved_at ? r.hr_approved_at.split('T')[0] : undefined,
+      }))
+      if (mapped.length) setReviews(mapped as any)
+    } catch (error) {
+      console.error('Failed to fetch performance reviews:', error)
     }
   }
   
@@ -522,12 +553,13 @@ export default function Performance() {
 
   // Get current employee email for filtering
   const currentEmployeeEmail = user?.email
+  const currentEmployeeId = user?.employee_id
 
   // Filter reviews based on role and department
   const filteredReviews = reviews.filter(review => {
     // General employees (including finance, IT, etc.) can only see their own reviews
     if (isGeneralEmployee) {
-      return review.employeeId === currentEmployeeEmail
+      return review.employeeId === currentEmployeeEmail || review.employeeId === String(currentEmployeeId ?? '')
     }
     
     // Line managers see their own reviews AND reviews from their department
@@ -617,21 +649,28 @@ export default function Performance() {
     })
   }
   
-  const handleSubmitSelfAssessment = () => {
+  const handleSubmitSelfAssessment = async () => {
     // Validate required fields
-    if (!selfAssessmentData.mainResponsibilities || !selfAssessmentData.achievements) {
+    if (!selfAssessmentPeriod || !selfAssessmentData.mainResponsibilities || !selfAssessmentData.achievements) {
       toast({
         title: "Required fields missing",
-        description: "Please fill in all required fields before submitting.",
+        description: "Please enter period and required fields before submitting.",
         variant: "destructive"
       })
       return
     }
 
-    toast({
-      title: "Self-Assessment Submitted",
-      description: "Your self-assessment has been successfully submitted to your manager.",
-    })
+    try {
+      const saved = await apiService.createSelfAssessment({ period: selfAssessmentPeriod, self_assessment: selfAssessmentData })
+      if (saved?.id) {
+        await apiService.submitSelfAssessment(saved.id)
+      }
+      await fetchReviews()
+      toast({ title: "Self-Assessment Submitted", description: "Sent to your manager." })
+    } catch (e) {
+      toast({ title: "Submit failed", description: "Please try again.", variant: 'destructive' })
+      return
+    }
 
     // Reset form
     setSelfAssessmentData({
@@ -652,10 +691,11 @@ export default function Performance() {
       suggestions: "",
       overallRating: "3"
     })
+    setSelfAssessmentPeriod("")
     setSelfAssessmentOpen(false)
   }
 
-  const handleManagerReview = () => {
+  const handleManagerReview = async () => {
     if (!selectedReview || !managerNotes.trim() || !meetingDate) {
       toast({
         title: "Missing information",
@@ -664,47 +704,27 @@ export default function Performance() {
       })
       return
     }
-    
-    const updatedReviews = reviews.map(review => 
-      review.id === selectedReview.id 
-        ? { 
-            ...review, 
-            comments: managerNotes,
-            managerReviewDate: new Date().toISOString().split('T')[0],
-            meetingScheduledDate: meetingDate,
-            status: 'Sent to HR Manager'
-          }
-        : review
-    )
-    
-    setReviews(updatedReviews)
-    setManagerNotes("")
-    setMeetingDate("")
-    setManageReviewDialogOpen(false)
-    
-    toast({
-      title: "Review sent to HR",
-      description: "Manager review completed and sent to HR Manager."
-    })
+    try {
+      await apiService.managerReview(Number(selectedReview.id), { comments: managerNotes })
+      await apiService.schedulePerformanceMeeting(Number(selectedReview.id), new Date(meetingDate).toISOString())
+      await fetchReviews()
+      setManagerNotes("")
+      setMeetingDate("")
+      setManageReviewDialogOpen(false)
+      toast({ title: "Review updated", description: "Sent and meeting scheduled." })
+    } catch (e) {
+      toast({ title: "Update failed", description: "Please try again.", variant: 'destructive' })
+    }
   }
   
-  const handleEmployeeSignOff = (reviewId: string) => {
-    const updatedReviews = reviews.map(review => 
-      review.id === reviewId 
-        ? { 
-            ...review, 
-            employeeSignedDate: new Date().toISOString().split('T')[0],
-            status: 'Signed Off'
-          }
-        : review
-    )
-    
-    setReviews(updatedReviews)
-    
-    toast({
-      title: "Review signed",
-      description: "You have signed off on this performance review."
-    })
+  const handleEmployeeSignOff = async (reviewId: string) => {
+    try {
+      await apiService.signPerformance(Number(reviewId), 'employee')
+      await fetchReviews()
+      toast({ title: "Review signed", description: "You have signed off." })
+    } catch (e) {
+      toast({ title: "Sign failed", description: "Please try again.", variant: 'destructive' })
+    }
   }
   
   const handleManagerSignOff = (reviewId: string) => {
@@ -726,28 +746,17 @@ export default function Performance() {
     })
   }
   
-  const handleHRApproval = () => {
+  const handleHRApproval = async () => {
     if (!selectedReview) return
-    
-    const updatedReviews = reviews.map(review => 
-      review.id === selectedReview.id 
-        ? { 
-            ...review, 
-            hrApprovedDate: new Date().toISOString().split('T')[0],
-            hrComments: hrComments,
-            // Status remains 'Reviewed by Line Manager' until employee signs off
-          }
-        : review
-    )
-    
-    setReviews(updatedReviews)
-    setHrComments("")
-    setHrReviewDialogOpen(false)
-    
-    toast({
-      title: "Review approved",
-      description: "Performance review has been approved. Employee can now sign off."
-    })
+    try {
+      await apiService.approvePerformance(Number(selectedReview.id))
+      await fetchReviews()
+      setHrComments("")
+      setHrReviewDialogOpen(false)
+      toast({ title: "Review approved", description: "Employee can now sign off." })
+    } catch (e) {
+      toast({ title: "Approval failed", description: "Please try again.", variant: 'destructive' })
+    }
   }
   
   const handleExportReview = (review: Review) => {
@@ -1272,6 +1281,15 @@ export default function Performance() {
           </DialogHeader>
 
           <div className="space-y-6 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="sa-period">Review Period *</Label>
+              <Input
+                id="sa-period"
+                placeholder="e.g., Q4 2025 or 2025-10"
+                value={selfAssessmentPeriod}
+                onChange={(e) => setSelfAssessmentPeriod(e.target.value)}
+              />
+            </div>
             {/* Section A: Job Performance */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-foreground border-b pb-2">Section A: Job Performance</h3>

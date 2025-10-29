@@ -989,12 +989,12 @@ export default function Performance() {
             {/* Inline Select Filters (match Employee Records format) */}
             <div className="flex gap-2 w-full sm:w-auto">
               <div className="w-44">
-                <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+                <Select value={departmentFilter || 'all'} onValueChange={(v) => setDepartmentFilter(v === 'all' ? '' : v)}>
                   <SelectTrigger>
                     <SelectValue placeholder="All Departments" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Departments</SelectItem>
+                    <SelectItem value="all">All Departments</SelectItem>
                     {DEPARTMENTS.map((dept) => (
                       <SelectItem key={dept} value={dept}>{dept}</SelectItem>
                     ))}
@@ -1002,12 +1002,12 @@ export default function Performance() {
                 </Select>
               </div>
               <div className="w-40">
-                <Select value={periodFilter} onValueChange={setPeriodFilter}>
+                <Select value={periodFilter || 'all'} onValueChange={(v) => setPeriodFilter(v === 'all' ? '' : v)}>
                   <SelectTrigger>
                     <SelectValue placeholder="All Periods" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Periods</SelectItem>
+                    <SelectItem value="all">All Periods</SelectItem>
                     {uniquePeriods.map((p) => (
                       <SelectItem key={p} value={p}>{p}</SelectItem>
                     ))}
@@ -1015,12 +1015,12 @@ export default function Performance() {
                 </Select>
               </div>
               <div className="w-40">
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <Select value={statusFilter || 'all'} onValueChange={(v) => setStatusFilter(v === 'all' ? '' : v)}>
                   <SelectTrigger>
                     <SelectValue placeholder="All Statuses" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Statuses</SelectItem>
+                    <SelectItem value="all">All Statuses</SelectItem>
                     {uniqueStatuses.map((s) => (
                       <SelectItem key={s} value={s}>{s.replace(/_/g, ' ')}</SelectItem>
                     ))}

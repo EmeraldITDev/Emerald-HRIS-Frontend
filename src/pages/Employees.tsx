@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Search, Filter, Download, Upload, Edit, Eye, MoreHorizontal, CalendarIcon, FileText, Trash2, KeyRound } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -1825,10 +1826,12 @@ export default function Employees() {
                               <Eye className="mr-2 h-4 w-4" />
                               View Details
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleEditEmployee(employee)}>
-                              <Edit className="mr-2 h-4 w-4" />
-                              Edit Employee
-                            </DropdownMenuItem>
+                            <RoleBasedComponent allowedRoles={['hr_manager', 'corporate_hr']}>
+                              <DropdownMenuItem onClick={() => handleEditEmployee(employee)}>
+                                <Edit className="mr-2 h-4 w-4" />
+                                Edit Employee
+                              </DropdownMenuItem>
+                            </RoleBasedComponent>
                             <RoleBasedComponent allowedRoles={['hr_manager', 'executive']}>
                               {employee.user_id && (
                                 <DropdownMenuItem onClick={() => handleResetPassword(employee)}>

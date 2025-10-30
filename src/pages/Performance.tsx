@@ -8,9 +8,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Star, Plus, Eye, Download, MessageSquare, Calendar, CheckCircle, ClipboardCheck, FileText, Search, Filter, X } from "lucide-react"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { DEPARTMENTS } from '@/constants/departments'
+import { Star, Plus, Eye, Download, MessageSquare, Calendar, CheckCircle, ClipboardCheck, FileText } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from '@/contexts/AuthContext'
 import { apiService, Employee, PerformanceReview } from '@/lib/api'
@@ -478,14 +476,6 @@ export default function Performance() {
   const [selectedReview, setSelectedReview] = useState<Review | null>(null)
   const [employeeComment, setEmployeeComment] = useState("")
   const [selfAssessmentPeriod, setSelfAssessmentPeriod] = useState("")
-  
-  // Filter states
-  const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState("")
-  const [periodFilter, setPeriodFilter] = useState("")
-  const [departmentFilter, setDepartmentFilter] = useState("")
-  const [showFilters, setShowFilters] = useState(false)
-  
   const [selfAssessmentData, setSelfAssessmentData] = useState({
     mainResponsibilities: "",
     achievements: "",
@@ -555,7 +545,7 @@ export default function Performance() {
   
   // Determine user's access level
   const isExecutiveOrHR = user?.role === 'executive' || user?.role === 'hr_manager' || user?.role === 'corporate_hr'
-  const isLineManager = user?.role === 'line_manager'
+  const isLineManager = user?.role === 'line_manager' || user?.role === 'finance'
   // All employee-level roles (not executive, HR, or line manager)
   const isGeneralEmployee = !isExecutiveOrHR && !isLineManager
   const canManageReviews = isExecutiveOrHR || isLineManager
@@ -563,43 +553,20 @@ export default function Performance() {
 
   // Get current employee email for filtering
   const currentEmployeeEmail = user?.email
-  const currentEmployeeId = user?.id
 
-  // Filter reviews based on role, department, and search criteria
+  // Filter reviews based on role and department
   const filteredReviews = reviews.filter(review => {
-    // Role-based filtering
-    let passesRoleFilter = false
+    // General employees can only see their own reviews
     if (isGeneralEmployee) {
-      passesRoleFilter = review.employeeId === currentEmployeeEmail || review.employeeId === String(currentEmployeeId ?? '')
-    } else if (isLineManager && userDepartment) {
-      passesRoleFilter = review.department === userDepartment
-    } else {
-      // Executives and HR can see all reviews
-      passesRoleFilter = true
+      return review.employeeId === currentEmployeeEmail
     }
     
-    if (!passesRoleFilter) return false
-    
-    // Search term filtering
-    if (searchTerm) {
-      const searchLower = searchTerm.toLowerCase()
-      const matchesSearch = 
-        review.employeeName.toLowerCase().includes(searchLower) ||
-        review.department.toLowerCase().includes(searchLower) ||
-        review.reviewPeriod.toLowerCase().includes(searchLower) ||
-        review.reviewer.toLowerCase().includes(searchLower)
-      if (!matchesSearch) return false
+    // Line managers see their own reviews AND reviews from their department
+    if (isLineManager && userDepartment) {
+      return review.department === userDepartment
     }
     
-    // Status filtering
-    if (statusFilter && review.status !== statusFilter) return false
-    
-    // Period filtering
-    if (periodFilter && review.reviewPeriod !== periodFilter) return false
-    
-    // Department filtering
-    if (departmentFilter && review.department !== departmentFilter) return false
-    
+    // Executives and HR can see all reviews
     return true
   })
   
@@ -607,22 +574,6 @@ export default function Performance() {
   const filteredEmployees = isLineManager && userDepartment
     ? employees.filter(emp => emp.department === userDepartment)
     : employees
-
-  // Get unique values for filter dropdowns
-  const uniquePeriods = [...new Set(reviews.map(r => r.reviewPeriod))].sort()
-  const uniqueStatuses = [...new Set(reviews.map(r => r.status))].sort()
-  const uniqueDepartments = [...new Set(reviews.map(r => r.department))].sort()
-
-  // Clear all filters
-  const clearFilters = () => {
-    setSearchTerm("")
-    setStatusFilter("")
-    setPeriodFilter("")
-    setDepartmentFilter("")
-  }
-
-  // Check if any filters are active
-  const hasActiveFilters = searchTerm || statusFilter || periodFilter || departmentFilter
   
   const handleCreateNewReview = () => {
     if (!newReview.employeeId || !newReview.reviewPeriod || !newReview.rating) {
@@ -970,76 +921,6 @@ export default function Performance() {
           )}
         </div>
       </div>
-
-      {/* Search and Filters */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-            {/* Search Bar */}
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-              <Input
-                placeholder="Search reviews by employee, department, period, or reviewer..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            
-            {/* Inline Select Filters (match Employee Records format) */}
-            <div className="flex gap-2 w-full sm:w-auto">
-              <div className="w-44">
-                <Select value={departmentFilter || 'all'} onValueChange={(v) => setDepartmentFilter(v === 'all' ? '' : v)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="All Departments" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Departments</SelectItem>
-                    {DEPARTMENTS.map((dept) => (
-                      <SelectItem key={dept} value={dept}>{dept}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="w-40">
-                <Select value={periodFilter || 'all'} onValueChange={(v) => setPeriodFilter(v === 'all' ? '' : v)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="All Periods" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Periods</SelectItem>
-                    {uniquePeriods.map((p) => (
-                      <SelectItem key={p} value={p}>{p}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="w-40">
-                <Select value={statusFilter || 'all'} onValueChange={(v) => setStatusFilter(v === 'all' ? '' : v)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="All Statuses" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Statuses</SelectItem>
-                    {uniqueStatuses.map((s) => (
-                      <SelectItem key={s} value={s}>{s.replace(/_/g, ' ')}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              {hasActiveFilters && (
-                <Button variant="ghost" size="sm" onClick={clearFilters} className="flex items-center gap-2">
-                  <X className="h-4 w-4" />
-                  Clear
-                </Button>
-              )}
-            </div>
-          </div>
-
-        </CardContent>
-      </Card>
-
-      
 
       {/* Performance Reviews Table */}
       <Card>

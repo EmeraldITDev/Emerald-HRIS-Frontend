@@ -1,0 +1,6 @@
+First Name,Last Name,Email,Department,Position,Salary,Status,Join Date,Phone,Vacation Days,Employment Type
+John,Doe,john.doe@company.com,Engineering,Software Engineer,1500000,Active,2023-01-15,+234 801 234 5678,25,FTE
+Jane,Smith,jane.smith@company.com,Marketing,Marketing Manager,1200000,Active,2023-02-01,+234 802 345 6789,30,FTE
+Michael,Johnson,michael.johnson@company.com,Accounting,Financial Analyst,1000000,Active,2023-03-10,+234 803 456 7890,20,Consultant
+Sarah,Williams,sarah.williams@company.com,HR,HR Specialist,950000,On Leave,2023-04-05,+234 804 567 8901,25,FTE
+Robert,Brown,robert.brown@company.com,IT,System Administrator,1300000,Active,2023-05-20,+234 805 678 9012,22,FTE

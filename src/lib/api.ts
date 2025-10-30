@@ -291,16 +291,9 @@ class ApiService {
 
   // Authentication methods
   async login(email: string, password: string): Promise<{ user: any; token: string }> {
-    return this.request<{ user: any; token: string; requires_2fa?: boolean; temp_token?: string; message?: string }>('/auth/login', {
+    return this.request<{ user: any; token: string }>('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
-    });
-  }
-
-  async verifyOtp(temp_token: string, code: string): Promise<{ user: any; token: string }> {
-    return this.request<{ user: any; token: string }>('/auth/verify-otp', {
-      method: 'POST',
-      body: JSON.stringify({ temp_token, code }),
     });
   }
 

@@ -536,7 +536,7 @@ export default function Performance() {
         reviewPeriod: r.period,
         reviewDate: (r.created_at || '').split('T')[0] || '',
         rating: Number(r.manager_review?.overall_rating ?? r.self_assessment?.overallRating ?? 0),
-        status: r.status.replaceAll('_',' '),
+        status: r.status.replace(/_/g, ' '),
         reviewer: r.manager?.name ?? '—',
         goals: r.self_assessment?.futureGoals ?? '',
         achievements: r.self_assessment?.achievements ?? '',
@@ -563,7 +563,7 @@ export default function Performance() {
 
   // Get current employee email for filtering
   const currentEmployeeEmail = user?.email
-  const currentEmployeeId = user?.employee_id
+  const currentEmployeeId = user?.id
 
   // Filter reviews based on role, department, and search criteria
   const filteredReviews = reviews.filter(review => {

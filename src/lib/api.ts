@@ -215,25 +215,6 @@ export interface Policy {
   updated_at?: string;
 }
 
-export interface PerformanceReview {
-  id?: number;
-  employee_id: number;
-  manager_id: number;
-  period: string;
-  status: 'draft' | 'submitted' | 'under_review' | 'meeting_scheduled' | 'discussed' | 'employee_signed' | 'manager_signed' | 'hr_approved' | 'closed';
-  self_assessment?: any;
-  manager_review?: any;
-  meeting_at?: string;
-  meeting_notes?: string;
-  employee_signed_at?: string;
-  manager_signed_at?: string;
-  hr_approved_at?: string;
-  employee?: any;
-  manager?: any;
-  created_at?: string;
-  updated_at?: string;
-}
-
 class ApiService {
   private baseUrl: string;
 
@@ -741,62 +722,6 @@ class ApiService {
   async getLeaveReport(year?: number): Promise<any> {
     const params = year ? `?year=${year}` : '';
     return this.request<any>(`/reports/leave${params}`);
-  }
-
-  // Performance Reviews
-  async getPerformanceReviews(filters?: { department?: string; period?: string }): Promise<PerformanceReview[]> {
-    const params = new URLSearchParams();
-    if (filters?.department) params.append('department', filters.department);
-    if (filters?.period) params.append('period', filters.period);
-    const qs = params.toString() ? `?${params.toString()}` : '';
-    return this.request<PerformanceReview[]>(`/performance${qs}`);
-  }
-
-  async createSelfAssessment(data: { period: string; self_assessment: any }): Promise<PerformanceReview> {
-    return this.request<PerformanceReview>('/performance/self', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  }
-
-  async submitSelfAssessment(id: number): Promise<PerformanceReview> {
-    return this.request<PerformanceReview>(`/performance/${id}/submit-self`, { method: 'PUT' });
-  }
-
-  async managerReview(id: number, manager_review: any): Promise<PerformanceReview> {
-    return this.request<PerformanceReview>(`/performance/${id}/manager-review`, {
-      method: 'PUT',
-      body: JSON.stringify({ manager_review }),
-    });
-  }
-
-  async schedulePerformanceMeeting(id: number, meeting_at: string): Promise<PerformanceReview> {
-    return this.request<PerformanceReview>(`/performance/${id}/schedule-meeting`, {
-      method: 'PUT',
-      body: JSON.stringify({ meeting_at }),
-    });
-  }
-
-  async markPerformanceDiscussed(id: number, meeting_notes?: string): Promise<PerformanceReview> {
-    return this.request<PerformanceReview>(`/performance/${id}/discussed`, {
-      method: 'PUT',
-      body: JSON.stringify({ meeting_notes }),
-    });
-  }
-
-  async signPerformance(id: number, actor: 'employee' | 'manager'): Promise<PerformanceReview> {
-    return this.request<PerformanceReview>(`/performance/${id}/sign`, {
-      method: 'PUT',
-      body: JSON.stringify({ actor }),
-    });
-  }
-
-  async approvePerformance(id: number): Promise<PerformanceReview> {
-    return this.request<PerformanceReview>(`/performance/${id}/approve`, { method: 'PUT' });
-  }
-
-  async closePerformance(id: number): Promise<PerformanceReview> {
-    return this.request<PerformanceReview>(`/performance/${id}/close`, { method: 'PUT' });
   }
 }
 

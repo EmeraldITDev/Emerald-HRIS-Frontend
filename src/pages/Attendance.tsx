@@ -256,18 +256,10 @@ export default function Attendance() {
       );
       setTodayStatus(todayRecord || null);
       
-      // Load all today's attendance for display (already filtered by department from backend)
-      let allTodayRecords = attendanceData.filter(
+      // Load all today's attendance for display
+      const allTodayRecords = attendanceData.filter(
         (record: any) => format(new Date(record.date), 'yyyy-MM-dd') === today
       );
-      
-      // Additional frontend filtering for line managers (belt and suspenders)
-      if (user?.role === 'line_manager' && user?.department) {
-        allTodayRecords = allTodayRecords.filter(
-          (record: any) => record.employee?.department === user.department
-        );
-      }
-      
       setTodayAttendance(allTodayRecords);
     } catch (error) {
       console.error('Failed to load attendance status:', error);
@@ -1060,8 +1052,8 @@ export default function Attendance() {
         )}
       </Card>
 
-      {/* Today's Attendance Section - Manager View */}
-      <RoleBasedComponent allowedRoles={['hr_manager', 'corporate_hr', 'executive', 'line_manager']}>
+      {/* Today's Attendance Section - HR Manager View */}
+      <RoleBasedComponent allowedRoles={['hr_manager', 'corporate_hr', 'executive']}>
         <Card className="border-border/50 shadow-sm mb-6">
           <CardHeader 
             className="cursor-pointer" 
@@ -1070,7 +1062,7 @@ export default function Attendance() {
             <CardTitle className="text-primary flex items-center justify-between">
               <div className="flex items-center">
                 <Clock className="mr-2 h-5 w-5" />
-                {user?.role === 'line_manager' ? "Today's Attendance - My Team" : "Today's Attendance - All Staff"}
+                Today's Attendance - All Staff
               </div>
               <ChevronDown className={`h-5 w-5 transition-transform ${showTodayAttendance ? 'rotate-180' : ''}`} />
             </CardTitle>

@@ -22,7 +22,7 @@ interface LayoutProps {
 
 export default function Layout({ children }: LayoutProps) {
   const isMobile = useIsMobile()
-  const { user, logout, refreshUser } = useAuth()
+  const { user, logout } = useAuth()
   const [showPasswordModal, setShowPasswordModal] = useState(false)
   const [bannerDismissed, setBannerDismissed] = useState(false)
 
@@ -108,6 +108,11 @@ export default function Layout({ children }: LayoutProps) {
                     <div className="text-xs text-muted-foreground mt-1">
                       Role: {getRoleDisplayName(user?.role || '')}
                     </div>
+                    {user?.department && (
+                      <div className="text-xs text-muted-foreground">
+                        Department: {user.department}
+                      </div>
+                    )}
                     {user?.mustChangePassword && (
                       <div className="text-xs text-amber-600 mt-2 flex items-center gap-1">
                         <AlertCircle className="h-3 w-3" />

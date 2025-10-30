@@ -256,10 +256,18 @@ export default function Attendance() {
       );
       setTodayStatus(todayRecord || null);
       
-      // Load all today's attendance for display
-      const allTodayRecords = attendanceData.filter(
+      // Load all today's attendance for display (already filtered by department from backend)
+      let allTodayRecords = attendanceData.filter(
         (record: any) => format(new Date(record.date), 'yyyy-MM-dd') === today
       );
+      
+      // Additional frontend filtering for line managers (belt and suspenders)
+      if (user?.role === 'line_manager' && user?.department) {
+        allTodayRecords = allTodayRecords.filter(
+          (record: any) => record.employee?.department === user.department
+        );
+      }
+      
       setTodayAttendance(allTodayRecords);
     } catch (error) {
       console.error('Failed to load attendance status:', error);
@@ -597,6 +605,8 @@ export default function Attendance() {
       
       const response = await apiService.createAttendance({
         employee_id: currentEmployeeId,
+        date: new Date().toISOString().split('T')[0],
+        status: 'present',
         location: 'office',
         notes: ''
       });
@@ -671,6 +681,8 @@ export default function Attendance() {
       
       const response = await apiService.clockOut({
         employee_id: currentEmployeeId,
+        date: new Date().toISOString().split('T')[0],
+        status: 'present',
         notes: reason || (isLunch ? 'Lunch break' : ''),
         location: 'office'
       });
@@ -1052,8 +1064,8 @@ export default function Attendance() {
         )}
       </Card>
 
-      {/* Today's Attendance Section - HR Manager View */}
-      <RoleBasedComponent allowedRoles={['hr_manager', 'corporate_hr', 'executive']}>
+      {/* Today's Attendance Section - Manager View */}
+      <RoleBasedComponent allowedRoles={['hr_manager', 'corporate_hr', 'executive', 'line_manager']}>
         <Card className="border-border/50 shadow-sm mb-6">
           <CardHeader 
             className="cursor-pointer" 
@@ -1062,7 +1074,7 @@ export default function Attendance() {
             <CardTitle className="text-primary flex items-center justify-between">
               <div className="flex items-center">
                 <Clock className="mr-2 h-5 w-5" />
-                Today's Attendance - All Staff
+                {user?.role === 'line_manager' ? "Today's Attendance - My Team" : "Today's Attendance - All Staff"}
               </div>
               <ChevronDown className={`h-5 w-5 transition-transform ${showTodayAttendance ? 'rotate-180' : ''}`} />
             </CardTitle>

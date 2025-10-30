@@ -22,7 +22,6 @@ import Reports from "./pages/Reports";
 import Security from "./pages/Security";
 import Announcements from "./pages/Announcements";
 import Policies from "./pages/Policies";
-import DemoUsers from "./pages/DemoUsers";
 import { useEffect, useState } from "react";
 import { getUsers } from "./api";
 import { PasswordChangeModal } from "./components/PasswordChangeModal";
@@ -58,7 +57,6 @@ const AppContent = () => {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
-          <Route path="/demo-users" element={<DemoUsers />} />
           <Route path="/*" element={
             <ProtectedRoute>
               <Layout>

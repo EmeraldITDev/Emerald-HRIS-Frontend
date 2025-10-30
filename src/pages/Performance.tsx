@@ -8,10 +8,12 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Star, Plus, Eye, Download, MessageSquare, Calendar, CheckCircle, ClipboardCheck, FileText } from "lucide-react"
+import { Star, Plus, Eye, Download, MessageSquare, Calendar, CheckCircle, ClipboardCheck, FileText, Search, Filter, X } from "lucide-react"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { DEPARTMENTS } from '@/constants/departments'
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from '@/contexts/AuthContext'
-import { apiService, Employee } from '@/lib/api'
+import { apiService, Employee, PerformanceReview } from '@/lib/api'
 
 interface Review {
   id: string
@@ -475,6 +477,15 @@ export default function Performance() {
   const [hrReviewDialogOpen, setHrReviewDialogOpen] = useState(false)
   const [selectedReview, setSelectedReview] = useState<Review | null>(null)
   const [employeeComment, setEmployeeComment] = useState("")
+  const [selfAssessmentPeriod, setSelfAssessmentPeriod] = useState("")
+  
+  // Filter states
+  const [searchTerm, setSearchTerm] = useState("")
+  const [statusFilter, setStatusFilter] = useState("")
+  const [periodFilter, setPeriodFilter] = useState("")
+  const [departmentFilter, setDepartmentFilter] = useState("")
+  const [showFilters, setShowFilters] = useState(false)
+  
   const [selfAssessmentData, setSelfAssessmentData] = useState({
     mainResponsibilities: "",
     achievements: "",
@@ -501,14 +512,44 @@ export default function Performance() {
   
   useEffect(() => {
     fetchEmployees()
+    fetchReviews()
   }, [])
   
   const fetchEmployees = async () => {
     try {
       const data = await apiService.getEmployees()
-      setEmployees(data)
+      const list = Array.isArray(data) ? data : ((data as any)?.data || [])
+      setEmployees(list)
     } catch (error) {
       console.error('Failed to fetch employees:', error)
+    }
+  }
+
+  const fetchReviews = async () => {
+    try {
+      const data = await apiService.getPerformanceReviews()
+      const mapped = (Array.isArray(data) ? data : []).map((r: PerformanceReview) => ({
+        id: String(r.id || ''),
+        employeeId: String(r.employee_id),
+        employeeName: `${r.employee?.first_name ?? ''} ${r.employee?.last_name ?? ''}`.trim() || 'Employee',
+        department: r.employee?.department ?? 'N/A',
+        reviewPeriod: r.period,
+        reviewDate: (r.created_at || '').split('T')[0] || '',
+        rating: Number(r.manager_review?.overall_rating ?? r.self_assessment?.overallRating ?? 0),
+        status: r.status.replace(/_/g, ' '),
+        reviewer: r.manager?.name ?? '—',
+        goals: r.self_assessment?.futureGoals ?? '',
+        achievements: r.self_assessment?.achievements ?? '',
+        areasForImprovement: r.self_assessment?.areasForImprovement ?? '',
+        comments: r.manager_review?.comments ?? '',
+        employeeComments: r.self_assessment?.comments ?? '',
+        employeeSignedDate: r.employee_signed_at ? r.employee_signed_at.split('T')[0] : undefined,
+        managerSignedDate: r.manager_signed_at ? r.manager_signed_at.split('T')[0] : undefined,
+        hrApprovedDate: r.hr_approved_at ? r.hr_approved_at.split('T')[0] : undefined,
+      }))
+      if (mapped.length) setReviews(mapped as any)
+    } catch (error) {
+      console.error('Failed to fetch performance reviews:', error)
     }
   }
   
@@ -522,20 +563,43 @@ export default function Performance() {
 
   // Get current employee email for filtering
   const currentEmployeeEmail = user?.email
+  const currentEmployeeId = user?.id
 
-  // Filter reviews based on role and department
+  // Filter reviews based on role, department, and search criteria
   const filteredReviews = reviews.filter(review => {
-    // General employees (including finance, IT, etc.) can only see their own reviews
+    // Role-based filtering
+    let passesRoleFilter = false
     if (isGeneralEmployee) {
-      return review.employeeId === currentEmployeeEmail
+      passesRoleFilter = review.employeeId === currentEmployeeEmail || review.employeeId === String(currentEmployeeId ?? '')
+    } else if (isLineManager && userDepartment) {
+      passesRoleFilter = review.department === userDepartment
+    } else {
+      // Executives and HR can see all reviews
+      passesRoleFilter = true
     }
     
-    // Line managers see their own reviews AND reviews from their department
-    if (isLineManager && userDepartment) {
-      return review.department === userDepartment
+    if (!passesRoleFilter) return false
+    
+    // Search term filtering
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase()
+      const matchesSearch = 
+        review.employeeName.toLowerCase().includes(searchLower) ||
+        review.department.toLowerCase().includes(searchLower) ||
+        review.reviewPeriod.toLowerCase().includes(searchLower) ||
+        review.reviewer.toLowerCase().includes(searchLower)
+      if (!matchesSearch) return false
     }
     
-    // Executives and HR can see all reviews
+    // Status filtering
+    if (statusFilter && review.status !== statusFilter) return false
+    
+    // Period filtering
+    if (periodFilter && review.reviewPeriod !== periodFilter) return false
+    
+    // Department filtering
+    if (departmentFilter && review.department !== departmentFilter) return false
+    
     return true
   })
   
@@ -543,6 +607,22 @@ export default function Performance() {
   const filteredEmployees = isLineManager && userDepartment
     ? employees.filter(emp => emp.department === userDepartment)
     : employees
+
+  // Get unique values for filter dropdowns
+  const uniquePeriods = [...new Set(reviews.map(r => r.reviewPeriod))].sort()
+  const uniqueStatuses = [...new Set(reviews.map(r => r.status))].sort()
+  const uniqueDepartments = [...new Set(reviews.map(r => r.department))].sort()
+
+  // Clear all filters
+  const clearFilters = () => {
+    setSearchTerm("")
+    setStatusFilter("")
+    setPeriodFilter("")
+    setDepartmentFilter("")
+  }
+
+  // Check if any filters are active
+  const hasActiveFilters = searchTerm || statusFilter || periodFilter || departmentFilter
   
   const handleCreateNewReview = () => {
     if (!newReview.employeeId || !newReview.reviewPeriod || !newReview.rating) {
@@ -617,21 +697,28 @@ export default function Performance() {
     })
   }
   
-  const handleSubmitSelfAssessment = () => {
+  const handleSubmitSelfAssessment = async () => {
     // Validate required fields
-    if (!selfAssessmentData.mainResponsibilities || !selfAssessmentData.achievements) {
+    if (!selfAssessmentPeriod || !selfAssessmentData.mainResponsibilities || !selfAssessmentData.achievements) {
       toast({
         title: "Required fields missing",
-        description: "Please fill in all required fields before submitting.",
+        description: "Please enter period and required fields before submitting.",
         variant: "destructive"
       })
       return
     }
 
-    toast({
-      title: "Self-Assessment Submitted",
-      description: "Your self-assessment has been successfully submitted to your manager.",
-    })
+    try {
+      const saved = await apiService.createSelfAssessment({ period: selfAssessmentPeriod, self_assessment: selfAssessmentData })
+      if (saved?.id) {
+        await apiService.submitSelfAssessment(saved.id)
+      }
+      await fetchReviews()
+      toast({ title: "Self-Assessment Submitted", description: "Sent to your manager." })
+    } catch (e) {
+      toast({ title: "Submit failed", description: "Please try again.", variant: 'destructive' })
+      return
+    }
 
     // Reset form
     setSelfAssessmentData({
@@ -652,10 +739,11 @@ export default function Performance() {
       suggestions: "",
       overallRating: "3"
     })
+    setSelfAssessmentPeriod("")
     setSelfAssessmentOpen(false)
   }
 
-  const handleManagerReview = () => {
+  const handleManagerReview = async () => {
     if (!selectedReview || !managerNotes.trim() || !meetingDate) {
       toast({
         title: "Missing information",
@@ -664,47 +752,27 @@ export default function Performance() {
       })
       return
     }
-    
-    const updatedReviews = reviews.map(review => 
-      review.id === selectedReview.id 
-        ? { 
-            ...review, 
-            comments: managerNotes,
-            managerReviewDate: new Date().toISOString().split('T')[0],
-            meetingScheduledDate: meetingDate,
-            status: 'Sent to HR Manager'
-          }
-        : review
-    )
-    
-    setReviews(updatedReviews)
-    setManagerNotes("")
-    setMeetingDate("")
-    setManageReviewDialogOpen(false)
-    
-    toast({
-      title: "Review sent to HR",
-      description: "Manager review completed and sent to HR Manager."
-    })
+    try {
+      await apiService.managerReview(Number(selectedReview.id), { comments: managerNotes })
+      await apiService.schedulePerformanceMeeting(Number(selectedReview.id), new Date(meetingDate).toISOString())
+      await fetchReviews()
+      setManagerNotes("")
+      setMeetingDate("")
+      setManageReviewDialogOpen(false)
+      toast({ title: "Review updated", description: "Sent and meeting scheduled." })
+    } catch (e) {
+      toast({ title: "Update failed", description: "Please try again.", variant: 'destructive' })
+    }
   }
   
-  const handleEmployeeSignOff = (reviewId: string) => {
-    const updatedReviews = reviews.map(review => 
-      review.id === reviewId 
-        ? { 
-            ...review, 
-            employeeSignedDate: new Date().toISOString().split('T')[0],
-            status: 'Signed Off'
-          }
-        : review
-    )
-    
-    setReviews(updatedReviews)
-    
-    toast({
-      title: "Review signed",
-      description: "You have signed off on this performance review."
-    })
+  const handleEmployeeSignOff = async (reviewId: string) => {
+    try {
+      await apiService.signPerformance(Number(reviewId), 'employee')
+      await fetchReviews()
+      toast({ title: "Review signed", description: "You have signed off." })
+    } catch (e) {
+      toast({ title: "Sign failed", description: "Please try again.", variant: 'destructive' })
+    }
   }
   
   const handleManagerSignOff = (reviewId: string) => {
@@ -726,28 +794,17 @@ export default function Performance() {
     })
   }
   
-  const handleHRApproval = () => {
+  const handleHRApproval = async () => {
     if (!selectedReview) return
-    
-    const updatedReviews = reviews.map(review => 
-      review.id === selectedReview.id 
-        ? { 
-            ...review, 
-            hrApprovedDate: new Date().toISOString().split('T')[0],
-            hrComments: hrComments,
-            // Status remains 'Reviewed by Line Manager' until employee signs off
-          }
-        : review
-    )
-    
-    setReviews(updatedReviews)
-    setHrComments("")
-    setHrReviewDialogOpen(false)
-    
-    toast({
-      title: "Review approved",
-      description: "Performance review has been approved. Employee can now sign off."
-    })
+    try {
+      await apiService.approvePerformance(Number(selectedReview.id))
+      await fetchReviews()
+      setHrComments("")
+      setHrReviewDialogOpen(false)
+      toast({ title: "Review approved", description: "Employee can now sign off." })
+    } catch (e) {
+      toast({ title: "Approval failed", description: "Please try again.", variant: 'destructive' })
+    }
   }
   
   const handleExportReview = (review: Review) => {
@@ -913,6 +970,76 @@ export default function Performance() {
           )}
         </div>
       </div>
+
+      {/* Search and Filters */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+            {/* Search Bar */}
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Input
+                placeholder="Search reviews by employee, department, period, or reviewer..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            
+            {/* Inline Select Filters (match Employee Records format) */}
+            <div className="flex gap-2 w-full sm:w-auto">
+              <div className="w-44">
+                <Select value={departmentFilter || 'all'} onValueChange={(v) => setDepartmentFilter(v === 'all' ? '' : v)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Departments" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Departments</SelectItem>
+                    {DEPARTMENTS.map((dept) => (
+                      <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="w-40">
+                <Select value={periodFilter || 'all'} onValueChange={(v) => setPeriodFilter(v === 'all' ? '' : v)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Periods" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Periods</SelectItem>
+                    {uniquePeriods.map((p) => (
+                      <SelectItem key={p} value={p}>{p}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="w-40">
+                <Select value={statusFilter || 'all'} onValueChange={(v) => setStatusFilter(v === 'all' ? '' : v)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Statuses" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Statuses</SelectItem>
+                    {uniqueStatuses.map((s) => (
+                      <SelectItem key={s} value={s}>{s.replace(/_/g, ' ')}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {hasActiveFilters && (
+                <Button variant="ghost" size="sm" onClick={clearFilters} className="flex items-center gap-2">
+                  <X className="h-4 w-4" />
+                  Clear
+                </Button>
+              )}
+            </div>
+          </div>
+
+        </CardContent>
+      </Card>
+
+      
 
       {/* Performance Reviews Table */}
       <Card>
@@ -1272,6 +1399,15 @@ export default function Performance() {
           </DialogHeader>
 
           <div className="space-y-6 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="sa-period">Review Period *</Label>
+              <Input
+                id="sa-period"
+                placeholder="e.g., Q4 2025 or 2025-10"
+                value={selfAssessmentPeriod}
+                onChange={(e) => setSelfAssessmentPeriod(e.target.value)}
+              />
+            </div>
             {/* Section A: Job Performance */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-foreground border-b pb-2">Section A: Job Performance</h3>
@@ -1502,4 +1638,4 @@ export default function Performance() {
       </Dialog>
     </div>
   )
-}
+}// Performance page updated Wed Oct 29 19:10:53 EDT 2025

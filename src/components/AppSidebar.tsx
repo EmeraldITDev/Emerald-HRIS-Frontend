@@ -41,8 +41,17 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 import { useIsMobile } from "@/hooks/use-mobile"
+import { UserRole } from "@/contexts/AuthContext"
 
-const navigationItems = [
+type NavItem = {
+  title: string;
+  url: string;
+  icon: any;
+  permission: string;
+  roles?: UserRole[];
+}
+
+const navigationItems: NavItem[] = [
   { 
     title: "Dashboard", 
     url: "/", 
@@ -53,7 +62,8 @@ const navigationItems = [
     title: "Employee Records", 
     url: "/employees", 
     icon: Users,
-    permission: "employees.read"
+    permission: "employees.read",
+    roles: ['executive', 'hr_manager', 'corporate_hr'] // Exclude line_manager
   },
   { 
     title: "Attendance & Leave", 
@@ -87,7 +97,7 @@ const navigationItems = [
   }
 ]
 
-const managementItems = [
+const managementItems: NavItem[] = [
   { 
     title: "Recruitment", 
     url: "/recruitment", 
@@ -102,7 +112,7 @@ const managementItems = [
   }
 ]
 
-const systemItems = [
+const systemItems: NavItem[] = [
   { 
     title: "Reports", 
     url: "/reports", 
@@ -154,9 +164,15 @@ export function AppSidebar() {
   }
 
   const renderNavGroup = (items: typeof navigationItems, groupLabel: string, showGroup: boolean = true) => {
-    const visibleItems = items.filter(item => 
-      item.permission === "*" || hasPermission(item.permission)
-    );
+    const visibleItems = items.filter(item => {
+      // Check permission
+      const hasRequiredPermission = item.permission === "*" || hasPermission(item.permission);
+      
+      // Check role if roles array is specified
+      const hasRequiredRole = !item.roles || item.roles.includes(user.role);
+      
+      return hasRequiredPermission && hasRequiredRole;
+    });
     
     if (visibleItems.length === 0 || !showGroup) return null;
 

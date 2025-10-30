@@ -526,7 +526,7 @@ export default function Performance() {
         reviewPeriod: r.period,
         reviewDate: (r.created_at || '').split('T')[0] || '',
         rating: Number(r.manager_review?.overall_rating ?? r.self_assessment?.overallRating ?? 0),
-        status: r.status.replace(/_/g, ' '),
+        status: r.status.replaceAll('_',' '),
         reviewer: r.manager?.name ?? '—',
         goals: r.self_assessment?.futureGoals ?? '',
         achievements: r.self_assessment?.achievements ?? '',
@@ -545,7 +545,7 @@ export default function Performance() {
   
   // Determine user's access level
   const isExecutiveOrHR = user?.role === 'executive' || user?.role === 'hr_manager' || user?.role === 'corporate_hr'
-  const isLineManager = user?.role === 'line_manager' || user?.role === 'finance'
+  const isLineManager = user?.role === 'line_manager'
   // All employee-level roles (not executive, HR, or line manager)
   const isGeneralEmployee = !isExecutiveOrHR && !isLineManager
   const canManageReviews = isExecutiveOrHR || isLineManager
@@ -553,12 +553,13 @@ export default function Performance() {
 
   // Get current employee email for filtering
   const currentEmployeeEmail = user?.email
+  const currentEmployeeId = user?.employee_id
 
   // Filter reviews based on role and department
   const filteredReviews = reviews.filter(review => {
-    // General employees can only see their own reviews
+    // General employees (including finance, IT, etc.) can only see their own reviews
     if (isGeneralEmployee) {
-      return review.employeeId === currentEmployeeEmail
+      return review.employeeId === currentEmployeeEmail || review.employeeId === String(currentEmployeeId ?? '')
     }
     
     // Line managers see their own reviews AND reviews from their department
@@ -1519,4 +1520,4 @@ export default function Performance() {
       </Dialog>
     </div>
   )
-}// Performance page updated Wed Oct 29 19:10:53 EDT 2025
+}

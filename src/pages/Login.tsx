@@ -7,6 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Building2, Eye, EyeOff } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { toast } from '@/hooks/use-toast';
 
 const Login = () => {
@@ -16,7 +18,10 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   
-  const { login, isAuthenticated } = useAuth();
+  const { login, verifyOtp, isAuthenticated } = useAuth();
+  const [requires2FA, setRequires2FA] = useState(false);
+  const [tempToken, setTempToken] = useState<string | null>(null);
+  const [otp, setOtp] = useState('');
 
   if (isAuthenticated) {
     return <Navigate to="/" replace />;
@@ -28,9 +33,16 @@ const Login = () => {
     setError('');
 
     try {
-      const success = await login(email, password);
+      const res = await login(email, password);
       
-      if (success) {
+      if (res.requires2FA && res.tempToken) {
+        setRequires2FA(true);
+        setTempToken(res.tempToken);
+        toast({ title: 'Check your email', description: 'Enter the 6-digit code we sent.' });
+        return;
+      }
+
+      if (res.success) {
         toast({
           title: "Login Successful",
           description: "Welcome to the HRIS platform!",
@@ -38,6 +50,25 @@ const Login = () => {
       } else {
         setError('Invalid email or password. Please try again.');
       }
+  const handleVerify = async () => {
+    if (!tempToken || otp.length !== 6) return;
+    setIsLoading(true);
+    try {
+      const ok = await verifyOtp(tempToken, otp);
+      if (ok) {
+        setRequires2FA(false);
+        setTempToken(null);
+        setOtp('');
+        toast({ title: 'Verified', description: 'You are now signed in.' });
+      } else {
+        setError('Invalid code. Please try again.');
+      }
+    } catch (e) {
+      setError('Verification failed. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
     } catch (err) {
       setError('An error occurred during login. Please try again.');
     } finally {
@@ -122,6 +153,26 @@ const Login = () => {
         </Card>
       </div>
     </div>
+    <Dialog open={requires2FA} onOpenChange={setRequires2FA}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Enter verification code</DialogTitle>
+          <DialogDescription>We emailed you a 6-digit code.</DialogDescription>
+        </DialogHeader>
+        <div className="flex justify-center">
+          <InputOTP maxLength={6} value={otp} onChange={setOtp}>
+            <InputOTPGroup>
+              {[0,1,2,3,4,5].map((i) => (
+                <InputOTPSlot key={i} index={i} />
+              ))}
+            </InputOTPGroup>
+          </InputOTP>
+        </div>
+        <Button className="w-full mt-4" onClick={handleVerify} disabled={isLoading || otp.length !== 6}>
+          Verify
+        </Button>
+      </DialogContent>
+    </Dialog>
   );
 };
 

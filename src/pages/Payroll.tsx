@@ -994,15 +994,19 @@ export default function Payroll() {
               <div className="space-y-3 border-t pt-3">
                 <div>
                   <Label htmlFor="basicSalary" className="font-semibold">
-                    {calculations.employmentType === "Contract" ? "Contract Amount (₦) *" : "Annual Basic Salary (₦) *"}
+                    {calculations.employmentType === "Contract" ? "Contract Amount *" : "Annual Basic Salary *"}
                   </Label>
-                  <Input
-                    id="basicSalary"
-                    type="number"
-                    placeholder="1,600,000"
-                    value={payrollData.basicSalary}
-                    onChange={(e) => setPayrollData({...payrollData, basicSalary: e.target.value})}
-                  />
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₦</span>
+                    <Input
+                      id="basicSalary"
+                      type="number"
+                      placeholder="1,600,000"
+                      value={payrollData.basicSalary}
+                      onChange={(e) => setPayrollData({...payrollData, basicSalary: e.target.value})}
+                      className="pl-8"
+                    />
+                  </div>
                   <p className="text-xs text-muted-foreground mt-1">
                     {calculations.employmentType === "Contract" 
                       ? "Total annual contract payment" 
@@ -1013,15 +1017,19 @@ export default function Payroll() {
                 <div className="border rounded-lg p-3 bg-muted/30 space-y-3">
                   <h4 className="text-sm font-semibold">Additional Earnings</h4>
                   <div>
-                    <Label htmlFor="earnings">Amount (₦)</Label>
-                    <Input
-                      id="earnings"
-                      type="number"
-                      min="0"
-                      placeholder="50,000"
-                      value={payrollData.earnings}
-                      onChange={(e) => setPayrollData({...payrollData, earnings: e.target.value})}
-                    />
+                    <Label htmlFor="earnings">Amount</Label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₦</span>
+                      <Input
+                        id="earnings"
+                        type="number"
+                        min="0"
+                        placeholder="50,000"
+                        value={payrollData.earnings}
+                        onChange={(e) => setPayrollData({...payrollData, earnings: e.target.value})}
+                        className="pl-8"
+                      />
+                    </div>
                   </div>
                   <div>
                     <Label htmlFor="earningsRemarks">Remarks</Label>
@@ -1038,15 +1046,19 @@ export default function Payroll() {
                 <div className="border rounded-lg p-3 bg-muted/30 space-y-3">
                   <h4 className="text-sm font-semibold">Personal Deductions</h4>
                   <div>
-                    <Label htmlFor="deduction">Amount (₦)</Label>
-                    <Input
-                      id="deduction"
-                      type="number"
-                      min="0"
-                      placeholder="25,000"
-                      value={payrollData.deduction}
-                      onChange={(e) => setPayrollData({...payrollData, deduction: e.target.value})}
-                    />
+                    <Label htmlFor="deduction">Amount</Label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₦</span>
+                      <Input
+                        id="deduction"
+                        type="number"
+                        min="0"
+                        placeholder="25,000"
+                        value={payrollData.deduction}
+                        onChange={(e) => setPayrollData({...payrollData, deduction: e.target.value})}
+                        className="pl-8"
+                      />
+                    </div>
                   </div>
                   <div>
                     <Label htmlFor="deductionRemarks">Remarks</Label>

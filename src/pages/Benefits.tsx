@@ -278,16 +278,6 @@ export default function Benefits() {
       }
     }))
   }
-  
-  // Get current user's benefits - if not found in system, generate dummy data for testing
-  // Get current user's benefits from database
-  const currentUserEmployeeId = user?.employee_id
-  const myDbBenefits = dbBenefits.filter(b => b.employee_id === currentUserEmployeeId && b.status === 'active')
-  
-  const myBenefits: EmployeeBenefit | undefined = benefits.find(b => {
-    const employee = employees.find(e => e.id?.toString() === b.employeeId)
-    return employee?.email?.toLowerCase() === user?.email?.toLowerCase()
-  })
 
   const handleCSVUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -345,6 +335,15 @@ export default function Benefits() {
       minimumFractionDigits: 0
     }).format(amount)
   }
+
+  // Get current user's benefits from database
+  const currentUserEmployeeId = user?.employee_id
+  const myDbBenefits = dbBenefits.filter(b => b.employee_id === currentUserEmployeeId && b.status === 'active')
+  
+  const myBenefits: EmployeeBenefit | undefined = benefits.find(b => {
+    const employee = employees.find(e => e.id?.toString() === b.employeeId)
+    return employee?.email?.toLowerCase() === user?.email?.toLowerCase()
+  })
 
   // Employee View (My Benefits)
   if (!canManageBenefits) {
@@ -501,45 +500,45 @@ export default function Benefits() {
               </CardContent>
             </Card>
           </div>
-
-          {/* Database Benefits Section */}
-          {myDbBenefits.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Assigned Benefits</CardTitle>
-                <CardDescription>Benefits assigned to you by your organization</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {myDbBenefits.map((benefit) => (
-                    <div key={benefit.id} className="border rounded-lg p-4">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <h4 className="font-semibold">{benefit.benefit_name}</h4>
-                          <p className="text-sm text-muted-foreground capitalize">{benefit.benefit_type}</p>
-                          {benefit.description && (
-                            <p className="text-sm mt-2">{benefit.description}</p>
-                          )}
-                          {benefit.value && (
-                            <p className="text-sm mt-1">Value: ₦{benefit.value.toLocaleString()}</p>
-                          )}
-                          <div className="text-xs text-muted-foreground mt-2">
-                            Active from {new Date(benefit.start_date).toLocaleDateString()}
-                            {benefit.end_date && ` to ${new Date(benefit.end_date).toLocaleDateString()}`}
-                          </div>
-                        </div>
-                        <Badge variant="default">Active</Badge>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
         ) : (
           <Card>
             <CardContent className="py-12">
               <p className="text-center text-muted-foreground">No benefits information available. Please contact HR.</p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Database Benefits Section */}
+        {myDbBenefits.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Assigned Benefits</CardTitle>
+              <CardDescription>Benefits assigned to you by your organization</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {myDbBenefits.map((benefit) => (
+                  <div key={benefit.id} className="border rounded-lg p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h4 className="font-semibold">{benefit.benefit_name}</h4>
+                        <p className="text-sm text-muted-foreground capitalize">{benefit.benefit_type}</p>
+                        {benefit.description && (
+                          <p className="text-sm mt-2">{benefit.description}</p>
+                        )}
+                        {benefit.value && (
+                          <p className="text-sm mt-1">Value: ₦{benefit.value.toLocaleString()}</p>
+                        )}
+                        <div className="text-xs text-muted-foreground mt-2">
+                          Active from {new Date(benefit.start_date).toLocaleDateString()}
+                          {benefit.end_date && ` to ${new Date(benefit.end_date).toLocaleDateString()}`}
+                        </div>
+                      </div>
+                      <Badge variant="default">Active</Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </CardContent>
           </Card>
         )}

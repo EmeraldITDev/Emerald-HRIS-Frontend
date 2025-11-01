@@ -49,62 +49,23 @@ export default function Training() {
   const [employees, setEmployees] = useState<Employee[]>([])
   const [isLoadingEmployees, setIsLoadingEmployees] = useState(true)
   const [trainingAssignments, setTrainingAssignments] = useState<any[]>([])
-  const [trainings, setTrainings] = useState<TrainingRecord[]>([
-    {
-      id: '1',
-      employeeId: 'EMP001',
-      employeeName: 'Chidi Okonkwo',
-      employeeDepartment: 'Technical Operations',
-      trainingType: 'Technical Skills',
-      notes: 'Advanced React development course',
-      completionDate: '2024-03-15',
-      cost: 150000,
-      status: 'In Progress'
-    },
-    {
-      id: '2',
-      employeeId: 'EMP002',
-      employeeName: 'Ibrahim Suleiman',
-      employeeDepartment: 'IT',
-      trainingType: 'Leadership Development',
-      notes: 'IT Management fundamentals training',
-      completionDate: '2024-02-28',
-      cost: 200000,
-      status: 'Completed',
-      certificateName: 'leadership_certificate.pdf'
-    },
-    {
-      id: '3',
-      employeeId: 'EMP003',
-      employeeName: 'Kunle Adeyemi',
-      employeeDepartment: 'Business Development',
-      trainingType: 'Sales Training',
-      notes: 'Advanced sales techniques and customer relationship management',
-      completionDate: '2024-04-10',
-      cost: 120000,
-      status: 'Scheduled'
-    },
-    {
-      id: '4',
-      employeeId: 'EMP004',
-      employeeName: 'Rachael Daniel',
-      employeeDepartment: 'Finance',
-      trainingType: 'Professional Certification',
-      notes: 'ACCA Financial Reporting certification',
-      completionDate: '2024-05-15',
-      cost: 300000,
-      status: 'In Progress'
-    }
-  ])
+  const [trainings, setTrainings] = useState<TrainingRecord[]>([])
 
   const [newTraining, setNewTraining] = useState({
-    employeeId: '',
-    employeeName: '',
-    trainingType: '',
-    notes: '',
-    completionDate: '',
-    cost: '',
-    certificate: null as File | null
+    title: '',
+    category: '',
+    description: '',
+    instructor: '',
+    location: '',
+    delivery_method: 'online' as 'online' | 'in_person' | 'hybrid',
+  })
+  
+  const [assignmentData, setAssignmentData] = useState({
+    training_id: 0,
+    employee_ids: [] as number[],
+    scheduled_at: '',
+    duration_hours: 1,
+    completion_deadline: '',
   })
 
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -147,8 +108,8 @@ export default function Training() {
     }
   }
 
-  const handleAddTraining = () => {
-    if (!newTraining.employeeId || !newTraining.trainingType || !newTraining.completionDate) {
+  const handleAddTraining = async () => {
+    if (!assignmentData.employee_ids.length || !assignmentData.scheduled_at || !assignmentData.completion_deadline) {
       toast({
         title: "Missing information",
         description: "Please fill in all required fields.",
@@ -157,38 +118,53 @@ export default function Training() {
       return
     }
 
-    const employee = employees.find(emp => emp.id?.toString() === newTraining.employeeId)
-    
-    const training: TrainingRecord = {
-      id: (trainings.length + 1).toString(),
-      employeeId: newTraining.employeeId,
-      employeeName: newTraining.employeeName,
-      employeeDepartment: employee?.department || 'Unknown',
-      trainingType: newTraining.trainingType,
-      notes: newTraining.notes,
-      completionDate: newTraining.completionDate,
-      cost: parseFloat(newTraining.cost) || 0,
-      status: 'Scheduled',
-      certificate: newTraining.certificate,
-      certificateName: newTraining.certificate?.name
+    try {
+      // For now, create a simple training record if none selected
+      // In future, you could have a training library to select from
+      const training = {
+        title: newTraining.title || 'Training Session',
+        category: newTraining.category || 'General',
+        description: newTraining.description,
+        instructor: newTraining.instructor,
+        location: newTraining.location,
+        delivery_method: newTraining.delivery_method,
+        status: 'scheduled',
+      }
+
+      // In a full implementation, you'd create the training first, then assign
+      // For now, assuming training_id=1 or create inline logic
+      await apiService.assignTraining(assignmentData)
+      
+      await fetchTrainingAssignments()
+      
+      setAssignmentData({
+        training_id: 0,
+        employee_ids: [],
+        scheduled_at: '',
+        duration_hours: 1,
+        completion_deadline: '',
+      })
+      setNewTraining({
+        title: '',
+        category: '',
+        description: '',
+        instructor: '',
+        location: '',
+        delivery_method: 'online',
+      })
+      setIsDialogOpen(false)
+
+      toast({
+        title: "Training Assigned",
+        description: "Training has been scheduled and employees notified",
+      })
+    } catch (error) {
+      toast({
+        title: "Assignment failed",
+        description: "Please try again",
+        variant: "destructive"
+      })
     }
-
-    setTrainings([training, ...trainings])
-    setNewTraining({
-      employeeId: '',
-      employeeName: '',
-      trainingType: '',
-      notes: '',
-      completionDate: '',
-      cost: '',
-      certificate: null
-    })
-    setIsDialogOpen(false)
-
-    toast({
-      title: "Training Added",
-      description: "Training record has been added successfully",
-    })
   }
 
   const handleCertificateUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -287,20 +263,21 @@ export default function Training() {
   // Filter trainings based on role and department
   const currentUserFullName = user ? `${user.firstName} ${user.lastName}` : ''
   
-  const filteredTrainings = (() => {
-    // HR Managers see all training programs
-    if (isExecutiveOrHR) {
-      return trainings
-    }
-    
-    // Line Managers see trainings for their department
-    if (isLineManager && userDepartment) {
-      return trainings.filter(t => t.employeeDepartment === userDepartment)
-    }
-    
-    // Regular employees see only their own training programs
-    return trainings.filter(t => t.employeeName === currentUserFullName)
-  })()
+  // Map training assignments to display format
+  const mappedTrainings: TrainingRecord[] = trainingAssignments.map(a => ({
+    id: String(a.id),
+    employeeId: String(a.employee_id),
+    employeeName: `${a.employee?.first_name || ''} ${a.employee?.last_name || ''}`.trim(),
+    employeeDepartment: a.employee?.department || 'N/A',
+    trainingType: a.training?.category || a.training?.title || 'Training',
+    notes: a.training?.description || '',
+    completionDate: a.completion_deadline?.split('T')[0] || '',
+    cost: 0,
+    status: a.status === 'completed' ? 'Completed' : a.status === 'cancelled' ? 'Cancelled' : a.status === 'in_progress' ? 'In Progress' : 'Scheduled',
+    certificateName: undefined
+  }))
+
+  const filteredTrainings = mappedTrainings
 
   const totalCost = filteredTrainings.reduce((sum, training) => sum + training.cost, 0)
   const completedTrainings = filteredTrainings.filter(t => t.status === 'Completed').length

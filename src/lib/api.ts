@@ -838,6 +838,46 @@ class ApiService {
   async cancelTrainingAssignment(id: number): Promise<{ success: boolean; assignment: any }> {
     return this.request<{ success: boolean; assignment: any }>(`/training/assignments/${id}/cancel`, { method: 'PUT' });
   }
+
+  // Employee Benefits
+  async getEmployeeBenefits(): Promise<any[]> {
+    return this.request<any[]>('/benefits');
+  }
+
+  async getEmployeeBenefitsByEmployee(employeeId: number): Promise<any[]> {
+    return this.request<any[]>(`/benefits/employee/${employeeId}`);
+  }
+
+  async assignBenefit(data: {
+    employee_ids: number[];
+    benefit_name: string;
+    benefit_type: string;
+    description?: string;
+    value?: number;
+    start_date: string;
+    end_date?: string;
+    notes?: string;
+  }): Promise<{ success: boolean; benefits: any[] }> {
+    return this.request<{ success: boolean; benefits: any[] }>('/benefits/assign', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateBenefit(id: number, data: any): Promise<{ success: boolean; benefit: any }> {
+    return this.request<{ success: boolean; benefit: any }>(`/benefits/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async revokeBenefit(id: number): Promise<{ success: boolean; benefit: any }> {
+    return this.request<{ success: boolean; benefit: any }>(`/benefits/${id}/revoke`, { method: 'PUT' });
+  }
+
+  async deleteBenefit(id: number): Promise<{ success: boolean; message: string }> {
+    return this.request<{ success: boolean; message: string }>(`/benefits/${id}`, { method: 'DELETE' });
+  }
 }
 
 export const apiService = new ApiService();

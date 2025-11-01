@@ -35,6 +35,7 @@ interface EmployeeBenefit {
 export default function Benefits() {
   const [employees, setEmployees] = useState<Employee[]>([])
   const [benefits, setBenefits] = useState<EmployeeBenefit[]>([])
+  const [dbBenefits, setDbBenefits] = useState<any[]>([])
 
   const [selectedEmployee, setSelectedEmployee] = useState('')
   const [editingBenefit, setEditingBenefit] = useState<EmployeeBenefit | null>(null)
@@ -55,6 +56,17 @@ export default function Benefits() {
   const [selectedCustomBenefit, setSelectedCustomBenefit] = useState('')
 
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false)
+  const [assignBenefitForm, setAssignBenefitForm] = useState({
+    employee_ids: [] as number[],
+    benefit_name: '',
+    benefit_type: '',
+    description: '',
+    value: '',
+    start_date: '',
+    end_date: '',
+    notes: ''
+  })
   const { toast } = useToast()
   const { user } = useAuth()
   
@@ -65,64 +77,24 @@ export default function Benefits() {
   
   useEffect(() => {
     fetchEmployees()
+    fetchBenefits()
   }, [])
+  
+  const fetchBenefits = async () => {
+    try {
+      const data = await apiService.getEmployeeBenefits()
+      setDbBenefits(Array.isArray(data) ? data : (data?.data || []))
+    } catch (error) {
+      console.error('Failed to fetch benefits:', error)
+    }
+  }
   
   const fetchEmployees = async () => {
     try {
       const data = await apiService.getEmployees()
       setEmployees(data)
       
-      // Generate dummy benefits for all employees except HR Manager
-      const generatedBenefits: EmployeeBenefit[] = data
-        .filter(emp => emp.job_title?.toLowerCase() !== 'hr manager')
-        .map((emp, index) => {
-          // Randomize benefits for variety
-          const hasHMO = Math.random() > 0.3
-          const hasInsurance = Math.random() > 0.1
-          const hasInternet = Math.random() > 0.2
-          const hasEquipment = Math.random() > 0.15
-          
-          return {
-            id: emp.id?.toString() || `gen-${index}`,
-            employeeId: emp.id?.toString() || '',
-            employeeName: `${emp.first_name} ${emp.last_name}`,
-            hmo: hasHMO 
-              ? { 
-                  status: 'active' as const, 
-                  cost: Math.random() > 0.5 ? 50000 : 40000, 
-                  usage: Math.floor(Math.random() * 80) + 10,
-                  details: Math.random() > 0.5 ? 'Family plan' : 'Individual plan'
-                } 
-              : { status: 'inactive' as const, cost: 0, usage: 0 },
-            lifeInsurance: hasInsurance
-              ? {
-                  status: 'active' as const,
-                  cost: 25000,
-                  usage: 0,
-                  details: Math.random() > 0.5 ? '₦5M coverage' : '₦3M coverage'
-                }
-              : { status: 'inactive' as const, cost: 0, usage: 0 },
-            internet: hasInternet
-              ? {
-                  status: 'active' as const,
-                  cost: 15000,
-                  usage: Math.floor(Math.random() * 90) + 10,
-                  details: '₦15k/month'
-                }
-              : { status: 'inactive' as const, cost: 0, usage: 0 },
-            equipment: hasEquipment
-              ? {
-                  status: 'active' as const,
-                  cost: Math.floor(Math.random() * 200000) + 300000,
-                  usage: 100,
-                  details: ['MacBook Pro 2023', 'Dell Latitude', 'HP EliteBook', 'Lenovo ThinkPad'][Math.floor(Math.random() * 4)]
-                }
-              : { status: 'inactive' as const, cost: 0, usage: 0 },
-            lastUpdated: new Date(Date.now() - Math.floor(Math.random() * 30) * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-          }
-        })
-      
-      setBenefits(generatedBenefits)
+      // Benefits now loaded from database via fetchBenefits()
     } catch (error) {
       console.error('Failed to fetch employees:', error)
     }
@@ -223,6 +195,49 @@ export default function Benefits() {
     })
   }
   
+  const handleAssignBenefit = async () => {
+    if (!assignBenefitForm.employee_ids.length || !assignBenefitForm.benefit_name || !assignBenefitForm.benefit_type || !assignBenefitForm.start_date) {
+      toast({
+        title: "Missing information",
+        description: "Please fill in all required fields.",
+        variant: "destructive"
+      })
+      return
+    }
+
+    try {
+      await apiService.assignBenefit({
+        ...assignBenefitForm,
+        value: assignBenefitForm.value ? parseFloat(assignBenefitForm.value) : undefined,
+      })
+      
+      await fetchBenefits()
+      
+      setAssignBenefitForm({
+        employee_ids: [],
+        benefit_name: '',
+        benefit_type: '',
+        description: '',
+        value: '',
+        start_date: '',
+        end_date: '',
+        notes: ''
+      })
+      setIsAssignDialogOpen(false)
+
+      toast({
+        title: "Benefit Assigned",
+        description: "Benefit has been assigned successfully to selected employees",
+      })
+    } catch (error) {
+      toast({
+        title: "Assignment failed",
+        description: "Please try again",
+        variant: "destructive"
+      })
+    }
+  }
+
   const handleAssignCustomBenefit = () => {
     if (!selectedEmployeeForBenefit || !selectedCustomBenefit) {
       toast({
@@ -265,51 +280,14 @@ export default function Benefits() {
   }
   
   // Get current user's benefits - if not found in system, generate dummy data for testing
-  const myBenefits: EmployeeBenefit | undefined = (() => {
-    // Try to find existing benefits
-    const existingBenefit = benefits.find(b => {
-      const employee = employees.find(e => e.id?.toString() === b.employeeId)
-      return employee?.email?.toLowerCase() === user?.email?.toLowerCase()
-    })
-    
-    if (existingBenefit) return existingBenefit
-    
-    // Generate dummy benefits for any logged-in user for testing purposes
-    if (user) {
-      return {
-        id: `dummy-${user.id}`,
-        employeeId: user.id || '',
-        employeeName: user.email || 'Current User',
-        hmo: {
-          status: 'active' as const,
-          cost: 50000,
-          usage: 45,
-          details: 'Family plan - Premium coverage'
-        },
-        lifeInsurance: {
-          status: 'active' as const,
-          cost: 25000,
-          usage: 0,
-          details: '₦5M coverage'
-        },
-        internet: {
-          status: 'active' as const,
-          cost: 15000,
-          usage: 68,
-          details: '₦15k/month allowance'
-        },
-        equipment: {
-          status: 'active' as const,
-          cost: 450000,
-          usage: 100,
-          details: 'MacBook Pro 2023 - 16GB RAM'
-        },
-        lastUpdated: new Date().toISOString().split('T')[0]
-      }
-    }
-    
-    return undefined
-  })()
+  // Get current user's benefits from database
+  const currentUserEmployeeId = user?.employee_id
+  const myDbBenefits = dbBenefits.filter(b => b.employee_id === currentUserEmployeeId && b.status === 'active')
+  
+  const myBenefits: EmployeeBenefit | undefined = benefits.find(b => {
+    const employee = employees.find(e => e.id?.toString() === b.employeeId)
+    return employee?.email?.toLowerCase() === user?.email?.toLowerCase()
+  })
 
   const handleCSVUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -523,6 +501,41 @@ export default function Benefits() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Database Benefits Section */}
+          {myDbBenefits.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Assigned Benefits</CardTitle>
+                <CardDescription>Benefits assigned to you by your organization</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {myDbBenefits.map((benefit) => (
+                    <div key={benefit.id} className="border rounded-lg p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <h4 className="font-semibold">{benefit.benefit_name}</h4>
+                          <p className="text-sm text-muted-foreground capitalize">{benefit.benefit_type}</p>
+                          {benefit.description && (
+                            <p className="text-sm mt-2">{benefit.description}</p>
+                          )}
+                          {benefit.value && (
+                            <p className="text-sm mt-1">Value: ₦{benefit.value.toLocaleString()}</p>
+                          )}
+                          <div className="text-xs text-muted-foreground mt-2">
+                            Active from {new Date(benefit.start_date).toLocaleDateString()}
+                            {benefit.end_date && ` to ${new Date(benefit.end_date).toLocaleDateString()}`}
+                          </div>
+                        </div>
+                        <Badge variant="default">Active</Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         ) : (
           <Card>
             <CardContent className="py-12">
@@ -543,13 +556,22 @@ export default function Benefits() {
           <p className="text-muted-foreground">Manage employee benefits and enrollments</p>
         </div>
         
-        <Button 
-          className="bg-emerald-600 hover:bg-emerald-700 text-white"
-          onClick={() => handleOpenManageBenefit()}
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Assign/Edit Benefits
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            className="bg-emerald-600 hover:bg-emerald-700 text-white"
+            onClick={() => setIsAssignDialogOpen(true)}
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Assign Benefit
+          </Button>
+          <Button 
+            variant="outline"
+            onClick={() => handleOpenManageBenefit()}
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Manage Benefits
+          </Button>
+        </div>
       </div>
 
       {/* Statistics Cards */}
@@ -889,6 +911,145 @@ export default function Benefits() {
             </Button>
             <Button onClick={handleSaveBenefit} className="bg-emerald-600 hover:bg-emerald-700 text-white">
               Save Benefits
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Assign Benefit Dialog */}
+      <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Assign Benefit to Employees</DialogTitle>
+            <DialogDescription>
+              Assign a benefit to one or more employees
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label>Select Employees *</Label>
+              <div className="border rounded-md p-3 max-h-32 overflow-y-auto">
+                {employees.map((employee) => (
+                  <div key={employee.id} className="flex items-center space-x-2 py-1">
+                    <input
+                      type="checkbox"
+                      id={`emp-${employee.id}`}
+                      checked={assignBenefitForm.employee_ids.includes(employee.id!)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setAssignBenefitForm({
+                            ...assignBenefitForm,
+                            employee_ids: [...assignBenefitForm.employee_ids, employee.id!]
+                          })
+                        } else {
+                          setAssignBenefitForm({
+                            ...assignBenefitForm,
+                            employee_ids: assignBenefitForm.employee_ids.filter(id => id !== employee.id)
+                          })
+                        }
+                      }}
+                      className="rounded"
+                    />
+                    <label htmlFor={`emp-${employee.id}`} className="text-sm cursor-pointer">
+                      {employee.first_name} {employee.last_name} - {employee.department}
+                    </label>
+                  </div>
+                ))}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {assignBenefitForm.employee_ids.length} employee(s) selected
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="benefit_name">Benefit Name *</Label>
+              <Input
+                id="benefit_name"
+                value={assignBenefitForm.benefit_name}
+                onChange={(e) => setAssignBenefitForm({...assignBenefitForm, benefit_name: e.target.value})}
+                placeholder="e.g., Health Insurance, Gym Membership"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="benefit_type">Benefit Type *</Label>
+              <Select value={assignBenefitForm.benefit_type} onValueChange={(v) => setAssignBenefitForm({...assignBenefitForm, benefit_type: v})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="health">Health & Medical</SelectItem>
+                  <SelectItem value="insurance">Insurance</SelectItem>
+                  <SelectItem value="retirement">Retirement</SelectItem>
+                  <SelectItem value="allowance">Allowance</SelectItem>
+                  <SelectItem value="equipment">Equipment</SelectItem>
+                  <SelectItem value="wellness">Wellness</SelectItem>
+                  <SelectItem value="education">Education</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
+              <Input
+                id="description"
+                value={assignBenefitForm.description}
+                onChange={(e) => setAssignBenefitForm({...assignBenefitForm, description: e.target.value})}
+                placeholder="Brief description"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="value">Monetary Value (₦)</Label>
+              <Input
+                id="value"
+                type="number"
+                value={assignBenefitForm.value}
+                onChange={(e) => setAssignBenefitForm({...assignBenefitForm, value: e.target.value})}
+                placeholder="e.g., 50000"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="start_date">Start Date *</Label>
+                <Input
+                  id="start_date"
+                  type="date"
+                  value={assignBenefitForm.start_date}
+                  onChange={(e) => setAssignBenefitForm({...assignBenefitForm, start_date: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="end_date">End Date</Label>
+                <Input
+                  id="end_date"
+                  type="date"
+                  value={assignBenefitForm.end_date}
+                  onChange={(e) => setAssignBenefitForm({...assignBenefitForm, end_date: e.target.value})}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="notes">Notes</Label>
+              <Input
+                id="notes"
+                value={assignBenefitForm.notes}
+                onChange={(e) => setAssignBenefitForm({...assignBenefitForm, notes: e.target.value})}
+                placeholder="Additional notes"
+              />
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAssignDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleAssignBenefit} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+              Assign Benefit
             </Button>
           </DialogFooter>
         </DialogContent>

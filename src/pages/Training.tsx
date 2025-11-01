@@ -295,7 +295,7 @@ export default function Training() {
                 Schedule Training
               </Button>
             </DialogTrigger>
-          <DialogContent className="sm:max-w-[600px]">
+          <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Schedule New Training</DialogTitle>
               <DialogDescription>

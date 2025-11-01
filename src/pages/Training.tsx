@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Textarea } from "@/components/ui/textarea"
-import { GraduationCap, Calendar, DollarSign, Users, Plus, BookOpen, Upload, Download, Award } from "lucide-react"
+import { GraduationCap, Calendar, DollarSign, Users, Plus, BookOpen, Upload, Download, Award, Bell, CheckCircle } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/contexts/AuthContext"
 import RoleBasedComponent from "@/components/RoleBasedComponent"
@@ -48,6 +48,7 @@ export default function Training() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [employees, setEmployees] = useState<Employee[]>([])
   const [isLoadingEmployees, setIsLoadingEmployees] = useState(true)
+  const [trainingAssignments, setTrainingAssignments] = useState<any[]>([])
   const [trainings, setTrainings] = useState<TrainingRecord[]>([
     {
       id: '1',
@@ -134,7 +135,17 @@ export default function Training() {
       }
     }
     fetchEmployees()
+    fetchTrainingAssignments()
   }, [isLineManager, userDepartment])
+
+  const fetchTrainingAssignments = async () => {
+    try {
+      const data = await apiService.getTrainingAssignments()
+      setTrainingAssignments(Array.isArray(data) ? data : (data?.data || []))
+    } catch (error) {
+      console.error('Failed to fetch training assignments:', error)
+    }
+  }
 
   const handleAddTraining = () => {
     if (!newTraining.employeeId || !newTraining.trainingType || !newTraining.completionDate) {
@@ -406,6 +417,44 @@ export default function Training() {
         </Dialog>
         </RoleBasedComponent>
       </div>
+
+      {/* Training Assignment Notifications - for employees */}
+      {!isExecutiveOrHR && !isLineManager && trainingAssignments.filter(a => !a.notification_read && a.status === 'scheduled').length > 0 && (
+        <Card className="bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-blue-900 dark:text-blue-100">
+              <Bell className="h-5 w-5" />
+              New Training Assignments ({trainingAssignments.filter(a => !a.notification_read && a.status === 'scheduled').length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {trainingAssignments.filter(a => !a.notification_read && a.status === 'scheduled').map((assignment) => (
+              <div key={assignment.id} className="bg-white dark:bg-gray-900 p-4 rounded-lg border">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <h4 className="font-semibold">{assignment.training?.title || 'Training'}</h4>
+                    <div className="text-sm text-muted-foreground mt-2 space-y-1">
+                      <div>📅 Scheduled: {new Date(assignment.scheduled_at).toLocaleString()}</div>
+                      <div>⏱️ Duration: {assignment.duration_hours} hour(s)</div>
+                      <div>⏰ Complete by: {new Date(assignment.completion_deadline).toLocaleDateString()}</div>
+                    </div>
+                  </div>
+                  <Button 
+                    size="sm" 
+                    variant="ghost" 
+                    onClick={async () => {
+                      await apiService.markTrainingNotificationRead(assignment.id);
+                      fetchTrainingAssignments();
+                    }}
+                  >
+                    <CheckCircle className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

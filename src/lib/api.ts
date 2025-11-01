@@ -805,6 +805,39 @@ class ApiService {
   async closePerformance(id: number): Promise<PerformanceReview> {
     return this.request<PerformanceReview>(`/performance/${id}/close`, { method: 'PUT' });
   }
+
+  // Training Assignments
+  async getTrainingAssignments(): Promise<any[]> {
+    return this.request<any[]>('/training/assignments');
+  }
+
+  async assignTraining(data: {
+    training_id: number;
+    employee_ids: number[];
+    scheduled_at: string;
+    duration_hours: number;
+    completion_deadline: string;
+  }): Promise<{ success: boolean; assignments: any[] }> {
+    return this.request<{ success: boolean; assignments: any[] }>('/training/assign', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async markTrainingCompleted(id: number, notes?: string): Promise<{ success: boolean; assignment: any }> {
+    return this.request<{ success: boolean; assignment: any }>(`/training/assignments/${id}/complete`, {
+      method: 'PUT',
+      body: JSON.stringify({ notes }),
+    });
+  }
+
+  async markTrainingNotificationRead(id: number): Promise<{ success: boolean }> {
+    return this.request<{ success: boolean }>(`/training/assignments/${id}/read`, { method: 'PUT' });
+  }
+
+  async cancelTrainingAssignment(id: number): Promise<{ success: boolean; assignment: any }> {
+    return this.request<{ success: boolean; assignment: any }>(`/training/assignments/${id}/cancel`, { method: 'PUT' });
+  }
 }
 
 export const apiService = new ApiService();

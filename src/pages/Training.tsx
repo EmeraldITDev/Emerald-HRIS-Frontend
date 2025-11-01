@@ -119,21 +119,11 @@ export default function Training() {
     }
 
     try {
-      // For now, create a simple training record if none selected
-      // In future, you could have a training library to select from
-      const training = {
-        title: newTraining.title || 'Training Session',
-        category: newTraining.category || 'General',
-        description: newTraining.description,
-        instructor: newTraining.instructor,
-        location: newTraining.location,
-        delivery_method: newTraining.delivery_method,
-        status: 'scheduled',
-      }
-
-      // In a full implementation, you'd create the training first, then assign
-      // For now, assuming training_id=1 or create inline logic
-      await apiService.assignTraining(assignmentData)
+      // Send training details + assignment data together
+      await apiService.assignTraining({
+        ...assignmentData,
+        ...newTraining,
+      } as any)
       
       await fetchTrainingAssignments()
       
@@ -315,30 +305,20 @@ export default function Training() {
             
             <div className="grid gap-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="employee">Employee *</Label>
-                <Select onValueChange={handleEmployeeChange}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select employee" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {isLoadingEmployees ? (
-                      <SelectItem value="loading" disabled>Loading...</SelectItem>
-                    ) : (
-                      employees.map((employee) => (
-                        <SelectItem key={employee.id} value={employee.id?.toString() || ''}>
-                          {employee.first_name} {employee.last_name}
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="title">Training Title *</Label>
+                <Input
+                  id="title"
+                  value={newTraining.title}
+                  onChange={(e) => setNewTraining({...newTraining, title: e.target.value})}
+                  placeholder="e.g., Advanced Excel Training"
+                />
               </div>
-              
+
               <div className="space-y-2">
-                <Label htmlFor="trainingType">Training Type *</Label>
-                <Select onValueChange={(value) => setNewTraining({...newTraining, trainingType: value})}>
+                <Label htmlFor="category">Category *</Label>
+                <Select onValueChange={(value) => setNewTraining({...newTraining, category: value})}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select training type" />
+                    <SelectValue placeholder="Select category" />
                   </SelectTrigger>
                   <SelectContent>
                     {trainingTypes.map((type) => (
@@ -347,38 +327,125 @@ export default function Training() {
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div className="space-y-2">
-                <Label htmlFor="notes">Training Notes</Label>
+                <Label htmlFor="description">Description</Label>
                 <Textarea
-                  id="notes"
-                  value={newTraining.notes}
-                  onChange={(e) => setNewTraining({...newTraining, notes: e.target.value})}
-                  placeholder="Enter training details, objectives, or notes..."
-                  className="min-h-[100px]"
+                  id="description"
+                  value={newTraining.description}
+                  onChange={(e) => setNewTraining({...newTraining, description: e.target.value})}
+                  placeholder="Enter training details and objectives..."
+                  className="min-h-[80px]"
                 />
               </div>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="completionDate">Target Completion Date *</Label>
+                  <Label htmlFor="instructor">Instructor</Label>
                   <Input
-                    id="completionDate"
-                    type="date"
-                    value={newTraining.completionDate}
-                    onChange={(e) => setNewTraining({...newTraining, completionDate: e.target.value})}
+                    id="instructor"
+                    value={newTraining.instructor}
+                    onChange={(e) => setNewTraining({...newTraining, instructor: e.target.value})}
+                    placeholder="Instructor name"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="cost">Training Cost (₦)</Label>
+                  <Label htmlFor="location">Location</Label>
                   <Input
-                    id="cost"
-                    type="number"
-                    value={newTraining.cost}
-                    onChange={(e) => setNewTraining({...newTraining, cost: e.target.value})}
-                    placeholder="0"
+                    id="location"
+                    value={newTraining.location}
+                    onChange={(e) => setNewTraining({...newTraining, location: e.target.value})}
+                    placeholder="Online/Office/Venue"
                   />
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Delivery Method</Label>
+                <Select value={newTraining.delivery_method} onValueChange={(value: any) => setNewTraining({...newTraining, delivery_method: value})}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="online">Online</SelectItem>
+                    <SelectItem value="in_person">In Person</SelectItem>
+                    <SelectItem value="hybrid">Hybrid</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <hr className="my-4" />
+              <h4 className="font-semibold">Assignment Details</h4>
+
+              <div className="space-y-2">
+                <Label>Select Employees *</Label>
+                <div className="border rounded-md p-3 max-h-32 overflow-y-auto">
+                  {isLoadingEmployees ? (
+                    <div className="text-sm text-muted-foreground">Loading employees...</div>
+                  ) : (
+                    employees.map((employee) => (
+                      <div key={employee.id} className="flex items-center space-x-2 py-1">
+                        <input
+                          type="checkbox"
+                          id={`emp-${employee.id}`}
+                          checked={assignmentData.employee_ids.includes(employee.id!)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setAssignmentData({
+                                ...assignmentData,
+                                employee_ids: [...assignmentData.employee_ids, employee.id!]
+                              })
+                            } else {
+                              setAssignmentData({
+                                ...assignmentData,
+                                employee_ids: assignmentData.employee_ids.filter(id => id !== employee.id)
+                              })
+                            }
+                          }}
+                          className="rounded"
+                        />
+                        <label htmlFor={`emp-${employee.id}`} className="text-sm cursor-pointer">
+                          {employee.first_name} {employee.last_name} - {employee.department}
+                        </label>
+                      </div>
+                    ))
+                  )}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {assignmentData.employee_ids.length} employee(s) selected
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="scheduled_at">Scheduled Date & Time *</Label>
+                  <Input
+                    id="scheduled_at"
+                    type="datetime-local"
+                    value={assignmentData.scheduled_at}
+                    onChange={(e) => setAssignmentData({...assignmentData, scheduled_at: e.target.value})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="duration">Duration (hours) *</Label>
+                  <Input
+                    id="duration"
+                    type="number"
+                    min="1"
+                    value={assignmentData.duration_hours}
+                    onChange={(e) => setAssignmentData({...assignmentData, duration_hours: parseInt(e.target.value) || 1})}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="deadline">Completion Deadline *</Label>
+                <Input
+                  id="deadline"
+                  type="datetime-local"
+                  value={assignmentData.completion_deadline}
+                  onChange={(e) => setAssignmentData({...assignmentData, completion_deadline: e.target.value})}
+                />
               </div>
             </div>
             

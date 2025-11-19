@@ -36,6 +36,7 @@ export default function Benefits() {
   const [employees, setEmployees] = useState<Employee[]>([])
   const [benefits, setBenefits] = useState<EmployeeBenefit[]>([])
   const [dbBenefits, setDbBenefits] = useState<any[]>([])
+  const [isLoadingEmployees, setIsLoadingEmployees] = useState(false)
 
   const [selectedEmployee, setSelectedEmployee] = useState('')
   const [editingBenefit, setEditingBenefit] = useState<EmployeeBenefit | null>(null)
@@ -68,35 +69,88 @@ export default function Benefits() {
     notes: ''
   })
   const { toast } = useToast()
-  const { user } = useAuth()
+  const { user, refreshUser } = useAuth()
   
   const canManageBenefits = user?.role === 'executive' || user?.role === 'hr_manager'
   const isLineManager = user?.role === 'line_manager'
   const isGeneralEmployee = !canManageBenefits && !isLineManager
   const userDepartment = user?.department
   
+  // Helper to safely get auth token
+  const getAuthToken = (): string | null => {
+    if (typeof window === 'undefined') return null
+    return localStorage.getItem('auth_token')
+  }
+  
   useEffect(() => {
-    fetchEmployees()
-    fetchBenefits()
-  }, [])
+    // Only fetch data if user is authenticated and has a token
+    const token = getAuthToken()
+    if (user && token) {
+      // If user doesn't have employee_id, refresh user data to get it
+      if (!user.employee_id) {
+        refreshUser()
+      }
+      fetchEmployees()
+      fetchBenefits()
+    } else if (user && !token) {
+      // User is logged in but using dummy account (no token)
+      toast({
+        title: "Limited Access",
+        description: "Some features require backend authentication. Please log in with a backend account.",
+        variant: "default"
+      })
+    }
+  }, [user])
   
   const fetchBenefits = async () => {
+    const token = getAuthToken()
+    if (!token) {
+      console.warn('No auth token available, skipping benefits fetch')
+      return
+    }
+    
     try {
       const data = await apiService.getEmployeeBenefits()
       setDbBenefits(Array.isArray(data) ? data : (data?.data || []))
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to fetch benefits:', error)
+      // Don't show error toast for 401 - user might be using dummy account
+      if (error.message && !error.message.includes('401')) {
+        toast({
+          title: "Error",
+          description: "Failed to load benefits. Please try again.",
+          variant: "destructive"
+        })
+      }
     }
   }
   
   const fetchEmployees = async () => {
+    const token = getAuthToken()
+    if (!token) {
+      console.warn('No auth token available, skipping employees fetch')
+      setIsLoadingEmployees(false)
+      return
+    }
+    
+    setIsLoadingEmployees(true)
     try {
       const data = await apiService.getEmployees()
-      setEmployees(data)
-      
-      // Benefits now loaded from database via fetchBenefits()
-    } catch (error) {
+      // Handle both array and object with data property
+      const employeesList = Array.isArray(data) ? data : (data?.data || [])
+      setEmployees(employeesList)
+    } catch (error: any) {
       console.error('Failed to fetch employees:', error)
+      // Don't show error toast for 401 - user might be using dummy account
+      if (error.message && !error.message.includes('401')) {
+        toast({
+          title: "Error",
+          description: "Failed to load employees. Please try again.",
+          variant: "destructive"
+        })
+      }
+    } finally {
+      setIsLoadingEmployees(false)
     }
   }
 
@@ -196,6 +250,16 @@ export default function Benefits() {
   }
   
   const handleAssignBenefit = async () => {
+    const token = getAuthToken()
+    if (!token) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in with a backend account to assign benefits.",
+        variant: "destructive"
+      })
+      return
+    }
+
     if (!assignBenefitForm.employee_ids.length || !assignBenefitForm.benefit_name || !assignBenefitForm.benefit_type || !assignBenefitForm.start_date) {
       toast({
         title: "Missing information",
@@ -338,7 +402,11 @@ export default function Benefits() {
 
   // Get current user's benefits from database
   const currentUserEmployeeId = user?.employee_id
-  const myDbBenefits = dbBenefits.filter(b => b.employee_id === currentUserEmployeeId && b.status === 'active')
+  const myDbBenefits = dbBenefits.filter(b => {
+    // Handle both number and string comparisons
+    const benefitEmployeeId = typeof b.employee_id === 'string' ? parseInt(b.employee_id, 10) : b.employee_id
+    return benefitEmployeeId === currentUserEmployeeId && b.status === 'active'
+  })
   
   const myBenefits: EmployeeBenefit | undefined = benefits.find(b => {
     const employee = employees.find(e => e.id?.toString() === b.employeeId)
@@ -351,194 +419,39 @@ export default function Benefits() {
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-foreground">My Benefits</h1>
-          <p className="text-muted-foreground">Manage My Benefits</p>
+          <p className="text-muted-foreground">Benefits assigned to you by your organization</p>
         </div>
 
-        {myBenefits ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* HMO Coverage */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2">
-                    <Heart className="h-5 w-5 text-red-500" />
-                    HMO Coverage
-                  </CardTitle>
-                  <Badge variant={myBenefits.hmo.status === 'active' ? 'default' : 'secondary'}>
-                    {myBenefits.hmo.status === 'active' ? 'Active' : 'Inactive'}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {myBenefits.hmo.status === 'active' ? (
-                  <>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">Annual Cost</span>
-                      <span className="font-semibold">{formatCurrency(myBenefits.hmo.cost)}</span>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-muted-foreground">Usage</span>
-                        <span className="font-semibold">{myBenefits.hmo.usage}%</span>
-                      </div>
-                      <div className="w-full bg-secondary rounded-full h-2">
-                        <div 
-                          className="bg-red-500 h-2 rounded-full transition-all"
-                          style={{ width: `${myBenefits.hmo.usage}%` }}
-                        />
+        {myDbBenefits.length > 0 ? (
+          <div className="space-y-3">
+            {myDbBenefits.map((benefit) => (
+              <Card key={benefit.id}>
+                <CardContent className="pt-6">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-lg">{benefit.benefit_name}</h4>
+                      <p className="text-sm text-muted-foreground capitalize mt-1">{benefit.benefit_type}</p>
+                      {benefit.description && (
+                        <p className="text-sm mt-3">{benefit.description}</p>
+                      )}
+                      {benefit.value && (
+                        <p className="text-sm font-medium mt-2">Value: ₦{benefit.value.toLocaleString()}</p>
+                      )}
+                      <div className="text-xs text-muted-foreground mt-3">
+                        Active from {new Date(benefit.start_date).toLocaleDateString()}
+                        {benefit.end_date && ` to ${new Date(benefit.end_date).toLocaleDateString()}`}
                       </div>
                     </div>
-                    {myBenefits.hmo.details && (
-                      <p className="text-sm text-muted-foreground">{myBenefits.hmo.details}</p>
-                    )}
-                  </>
-                ) : (
-                  <p className="text-sm text-muted-foreground">Not enrolled in HMO coverage</p>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Life Insurance */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2">
-                    <Shield className="h-5 w-5 text-blue-500" />
-                    Life Insurance
-                  </CardTitle>
-                  <Badge variant={myBenefits.lifeInsurance.status === 'active' ? 'default' : 'secondary'}>
-                    {myBenefits.lifeInsurance.status === 'active' ? 'Active' : 'Inactive'}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {myBenefits.lifeInsurance.status === 'active' ? (
-                  <>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">Annual Premium</span>
-                      <span className="font-semibold">{formatCurrency(myBenefits.lifeInsurance.cost)}</span>
-                    </div>
-                    {myBenefits.lifeInsurance.details && (
-                      <p className="text-sm text-muted-foreground">{myBenefits.lifeInsurance.details}</p>
-                    )}
-                  </>
-                ) : (
-                  <p className="text-sm text-muted-foreground">Not enrolled in life insurance</p>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Internet Allowance */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2">
-                    <Wifi className="h-5 w-5 text-green-500" />
-                    Internet Allowance
-                  </CardTitle>
-                  <Badge variant={myBenefits.internet.status === 'active' ? 'default' : 'secondary'}>
-                    {myBenefits.internet.status === 'active' ? 'Active' : 'Inactive'}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {myBenefits.internet.status === 'active' ? (
-                  <>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">Monthly Allowance</span>
-                      <span className="font-semibold">{formatCurrency(myBenefits.internet.cost)}</span>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-muted-foreground">Usage This Month</span>
-                        <span className="font-semibold">{myBenefits.internet.usage}%</span>
-                      </div>
-                      <div className="w-full bg-secondary rounded-full h-2">
-                        <div 
-                          className="bg-green-500 h-2 rounded-full transition-all"
-                          style={{ width: `${myBenefits.internet.usage}%` }}
-                        />
-                      </div>
-                    </div>
-                    {myBenefits.internet.details && (
-                      <p className="text-sm text-muted-foreground">{myBenefits.internet.details}</p>
-                    )}
-                  </>
-                ) : (
-                  <p className="text-sm text-muted-foreground">No internet allowance assigned</p>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Equipment */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2">
-                    <Monitor className="h-5 w-5 text-purple-500" />
-                    Equipment
-                  </CardTitle>
-                  <Badge variant={myBenefits.equipment.status === 'active' ? 'default' : 'secondary'}>
-                    {myBenefits.equipment.status === 'active' ? 'Active' : 'Inactive'}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {myBenefits.equipment.status === 'active' ? (
-                  <>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">Equipment Value</span>
-                      <span className="font-semibold">{formatCurrency(myBenefits.equipment.cost)}</span>
-                    </div>
-                    {myBenefits.equipment.details && (
-                      <p className="text-sm text-muted-foreground">{myBenefits.equipment.details}</p>
-                    )}
-                  </>
-                ) : (
-                  <p className="text-sm text-muted-foreground">No equipment assigned</p>
-                )}
-              </CardContent>
-            </Card>
+                    <Badge variant="default">Active</Badge>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         ) : (
           <Card>
             <CardContent className="py-12">
-              <p className="text-center text-muted-foreground">No benefits information available. Please contact HR.</p>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Database Benefits Section */}
-        {myDbBenefits.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Assigned Benefits</CardTitle>
-              <CardDescription>Benefits assigned to you by your organization</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {myDbBenefits.map((benefit) => (
-                  <div key={benefit.id} className="border rounded-lg p-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <h4 className="font-semibold">{benefit.benefit_name}</h4>
-                        <p className="text-sm text-muted-foreground capitalize">{benefit.benefit_type}</p>
-                        {benefit.description && (
-                          <p className="text-sm mt-2">{benefit.description}</p>
-                        )}
-                        {benefit.value && (
-                          <p className="text-sm mt-1">Value: ₦{benefit.value.toLocaleString()}</p>
-                        )}
-                        <div className="text-xs text-muted-foreground mt-2">
-                          Active from {new Date(benefit.start_date).toLocaleDateString()}
-                          {benefit.end_date && ` to ${new Date(benefit.end_date).toLocaleDateString()}`}
-                        </div>
-                      </div>
-                      <Badge variant="default">Active</Badge>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <p className="text-center text-muted-foreground">No benefits assigned yet. Please contact HR if you have questions about your benefits.</p>
             </CardContent>
           </Card>
         )}
@@ -571,6 +484,179 @@ export default function Benefits() {
             Manage Benefits
           </Button>
         </div>
+      </div>
+
+      {/* Manager's Own Benefits Section */}
+      {user?.employee_id && (
+        <Card className="border-emerald-200 bg-emerald-50/50 dark:bg-emerald-950/20">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Award className="h-5 w-5 text-emerald-600" />
+              My Assigned Benefits
+            </CardTitle>
+            <CardDescription>Benefits assigned to you</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {myDbBenefits.length > 0 ? (
+              <div className="space-y-3">
+                {myDbBenefits.map((benefit) => (
+                  <div key={benefit.id} className="border rounded-lg p-4 bg-white dark:bg-gray-900">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h4 className="font-semibold">{benefit.benefit_name}</h4>
+                        <p className="text-sm text-muted-foreground capitalize">{benefit.benefit_type}</p>
+                        {benefit.description && (
+                          <p className="text-sm mt-2">{benefit.description}</p>
+                        )}
+                        {benefit.value && (
+                          <p className="text-sm mt-1">Value: ₦{benefit.value.toLocaleString()}</p>
+                        )}
+                        <div className="text-xs text-muted-foreground mt-2">
+                          Active from {new Date(benefit.start_date).toLocaleDateString()}
+                          {benefit.end_date && ` to ${new Date(benefit.end_date).toLocaleDateString()}`}
+                        </div>
+                      </div>
+                      <Badge variant="default">Active</Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">No benefits assigned to you yet.</p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Benefits Overview Cards - HR Managers Only */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* HMO Coverage */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Heart className="h-5 w-5 text-red-500" />
+                HMO Coverage
+              </CardTitle>
+              <Badge variant="outline">
+                {hmoPercentage}% Active
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Employees with HMO</span>
+                <span className="font-semibold">{totalWithHMO} / {filteredBenefits.length}</span>
+              </div>
+              <div className="w-full bg-secondary rounded-full h-2">
+                <div 
+                  className="bg-red-500 h-2 rounded-full transition-all"
+                  style={{ width: `${hmoPercentage}%` }}
+                />
+              </div>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Track and manage employee health insurance coverage across the organization.
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Life Insurance */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="h-5 w-5 text-blue-500" />
+                Life Insurance
+              </CardTitle>
+              <Badge variant="outline">
+                {insurancePercentage}% Active
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Employees with Insurance</span>
+                <span className="font-semibold">{totalWithInsurance} / {filteredBenefits.length}</span>
+              </div>
+              <div className="w-full bg-secondary rounded-full h-2">
+                <div 
+                  className="bg-blue-500 h-2 rounded-full transition-all"
+                  style={{ width: `${insurancePercentage}%` }}
+                />
+              </div>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Monitor life insurance enrollment and coverage details for all employees.
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Internet Allowance */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Wifi className="h-5 w-5 text-green-500" />
+                Internet Allowance
+              </CardTitle>
+              <Badge variant="outline">
+                {internetPercentage}% Active
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Employees with Allowance</span>
+                <span className="font-semibold">{totalWithInternet} / {filteredBenefits.length}</span>
+              </div>
+              <div className="w-full bg-secondary rounded-full h-2">
+                <div 
+                  className="bg-green-500 h-2 rounded-full transition-all"
+                  style={{ width: `${internetPercentage}%` }}
+                />
+              </div>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Track internet allowance assignments and usage across departments.
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Equipment */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Monitor className="h-5 w-5 text-purple-500" />
+                Equipment
+              </CardTitle>
+              <Badge variant="outline">
+                {equipmentPercentage}% Active
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Employees with Equipment</span>
+                <span className="font-semibold">{totalWithEquipment} / {filteredBenefits.length}</span>
+              </div>
+              <div className="w-full bg-secondary rounded-full h-2">
+                <div 
+                  className="bg-purple-500 h-2 rounded-full transition-all"
+                  style={{ width: `${equipmentPercentage}%` }}
+                />
+              </div>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Manage equipment assignments and track asset allocation for employees.
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Statistics Cards */}
@@ -916,7 +1002,24 @@ export default function Benefits() {
       </Dialog>
 
       {/* Assign Benefit Dialog */}
-      <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
+      <Dialog 
+        open={isAssignDialogOpen} 
+        onOpenChange={(open) => {
+          setIsAssignDialogOpen(open)
+          if (open) {
+            const token = getAuthToken()
+            if (token && employees.length === 0) {
+              fetchEmployees()
+            } else if (!token) {
+              toast({
+                title: "Authentication Required",
+                description: "Please log in with a backend account to assign benefits.",
+                variant: "destructive"
+              })
+            }
+          }
+        }}
+      >
         <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Assign Benefit to Employees</DialogTitle>
@@ -928,33 +1031,54 @@ export default function Benefits() {
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
               <Label>Select Employees *</Label>
-              <div className="border rounded-md p-3 max-h-32 overflow-y-auto">
-                {employees.map((employee) => (
-                  <div key={employee.id} className="flex items-center space-x-2 py-1">
-                    <input
-                      type="checkbox"
-                      id={`emp-${employee.id}`}
-                      checked={assignBenefitForm.employee_ids.includes(employee.id!)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setAssignBenefitForm({
-                            ...assignBenefitForm,
-                            employee_ids: [...assignBenefitForm.employee_ids, employee.id!]
-                          })
-                        } else {
-                          setAssignBenefitForm({
-                            ...assignBenefitForm,
-                            employee_ids: assignBenefitForm.employee_ids.filter(id => id !== employee.id)
-                          })
-                        }
-                      }}
-                      className="rounded"
-                    />
-                    <label htmlFor={`emp-${employee.id}`} className="text-sm cursor-pointer">
-                      {employee.first_name} {employee.last_name} - {employee.department}
-                    </label>
-                  </div>
-                ))}
+              <div className="border rounded-md p-3 max-h-48 overflow-y-auto">
+                {isLoadingEmployees ? (
+                  <div className="text-sm text-muted-foreground text-center py-4">Loading employees...</div>
+                ) : employees.length === 0 ? (
+                  <div className="text-sm text-muted-foreground text-center py-4">No employees available</div>
+                ) : (
+                  employees
+                    .filter(emp => emp.id !== undefined && emp.id !== null)
+                    .map((employee) => {
+                      const employeeId = employee.id!
+                      const isChecked = assignBenefitForm.employee_ids.includes(employeeId)
+                      return (
+                        <div key={employeeId} className="flex items-center space-x-2 py-2 hover:bg-muted/50 rounded px-2">
+                          <Checkbox
+                            id={`emp-${employeeId}`}
+                            checked={isChecked}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setAssignBenefitForm({
+                                  ...assignBenefitForm,
+                                  employee_ids: [...assignBenefitForm.employee_ids, employeeId]
+                                })
+                              } else {
+                                setAssignBenefitForm({
+                                  ...assignBenefitForm,
+                                  employee_ids: assignBenefitForm.employee_ids.filter(id => id !== employeeId)
+                                })
+                              }
+                            }}
+                          />
+                          <label 
+                            htmlFor={`emp-${employeeId}`} 
+                            className="text-sm cursor-pointer flex-1"
+                            onClick={() => {
+                              setAssignBenefitForm({
+                                ...assignBenefitForm,
+                                employee_ids: isChecked
+                                  ? assignBenefitForm.employee_ids.filter(id => id !== employeeId)
+                                  : [...assignBenefitForm.employee_ids, employeeId]
+                              })
+                            }}
+                          >
+                            {employee.first_name} {employee.last_name} {employee.department ? `- ${employee.department}` : ''}
+                          </label>
+                        </div>
+                      )
+                    })
+                )}
               </div>
               <div className="text-xs text-muted-foreground">
                 {assignBenefitForm.employee_ids.length} employee(s) selected

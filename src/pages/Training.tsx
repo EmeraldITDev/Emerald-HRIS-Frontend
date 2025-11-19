@@ -61,7 +61,7 @@ export default function Training() {
   })
   
   const [assignmentData, setAssignmentData] = useState({
-    training_id: 0,
+    training_id: null as number | null,
     employee_ids: [] as number[],
     scheduled_at: '',
     duration_hours: 1,
@@ -120,15 +120,21 @@ export default function Training() {
 
     try {
       // Send training details + assignment data together
-      await apiService.assignTraining({
+      const payload: Record<string, unknown> = {
         ...assignmentData,
         ...newTraining,
-      } as any)
+      }
+
+      if (!payload.training_id) {
+        delete payload.training_id
+      }
+
+      await apiService.assignTraining(payload as any)
       
       await fetchTrainingAssignments()
       
       setAssignmentData({
-        training_id: 0,
+        training_id: null,
         employee_ids: [],
         scheduled_at: '',
         duration_hours: 1,

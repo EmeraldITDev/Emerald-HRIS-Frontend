@@ -23,6 +23,7 @@ export interface User {
   email: string;
   role: UserRole;
   department: string;
+  employee_id?: number;
   mustChangePassword?: boolean;
 }
 
@@ -156,6 +157,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           email: (response as any).user.email,
           role: (response as any).user.role as UserRole,
           department: (response as any).user.department || 'General',
+          employee_id: (response as any).user.employee_id,
           mustChangePassword: (response as any).user.must_change_password,
         };
         
@@ -191,6 +193,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           email: (resp as any).user.email,
           role: (resp as any).user.role as UserRole,
           department: (resp as any).user.department || 'General',
+          employee_id: (resp as any).user.employee_id,
           mustChangePassword: (resp as any).user.must_change_password,
         };
         setUser(user);
@@ -241,6 +244,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           email: response.user.email,
           role: response.user.role as UserRole,
           department: response.user.department || 'General',
+          employee_id: response.user.employee_id,
           mustChangePassword: response.user.must_change_password,
         };
         

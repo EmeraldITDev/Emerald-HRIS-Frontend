@@ -812,7 +812,13 @@ class ApiService {
   }
 
   async assignTraining(data: {
-    training_id: number;
+    training_id?: number;
+    title?: string;
+    category?: string;
+    description?: string;
+    instructor?: string;
+    location?: string;
+    delivery_method?: 'online' | 'in_person' | 'hybrid';
     employee_ids: number[];
     scheduled_at: string;
     duration_hours: number;

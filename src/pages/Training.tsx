@@ -26,6 +26,9 @@ interface TrainingRecord {
   status: 'Scheduled' | 'In Progress' | 'Completed' | 'Cancelled'
   certificate?: File | null
   certificateName?: string
+  trainingId?: number
+  attachmentName?: string
+  attachmentPath?: string
 }
 
 const trainingTypes = [
@@ -67,6 +70,9 @@ export default function Training() {
     duration_hours: 1,
     completion_deadline: '',
   })
+
+  const [trainingAttachment, setTrainingAttachment] = useState<File | null>(null)
+  const attachmentInputRef = useRef<HTMLInputElement>(null)
 
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const certificateInputRef = useRef<HTMLInputElement>(null)
@@ -120,16 +126,17 @@ export default function Training() {
 
     try {
       // Send training details + assignment data together
-      const payload: Record<string, unknown> = {
+      const payload: any = {
         ...assignmentData,
         ...newTraining,
+        attachment: trainingAttachment || undefined,
       }
 
       if (!payload.training_id) {
         delete payload.training_id
       }
 
-      await apiService.assignTraining(payload as any)
+      await apiService.assignTraining(payload)
       
       await fetchTrainingAssignments()
       
@@ -148,6 +155,7 @@ export default function Training() {
         location: '',
         delivery_method: 'online',
       })
+      setTrainingAttachment(null)
       setIsDialogOpen(false)
 
       toast({
@@ -270,7 +278,10 @@ export default function Training() {
     completionDate: a.completion_deadline?.split('T')[0] || '',
     cost: 0,
     status: a.status === 'completed' ? 'Completed' : a.status === 'cancelled' ? 'Cancelled' : a.status === 'in_progress' ? 'In Progress' : 'Scheduled',
-    certificateName: undefined
+    certificateName: undefined,
+    trainingId: a.training_id,
+    attachmentName: a.training?.attachment_name,
+    attachmentPath: a.training?.attachment_path,
   }))
 
   const filteredTrainings = mappedTrainings
@@ -378,6 +389,54 @@ export default function Training() {
                     <SelectItem value="hybrid">Hybrid</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="training_attachment">Training Materials (Optional)</Label>
+                <div className="flex items-center gap-2">
+                  <input
+                    ref={attachmentInputRef}
+                    type="file"
+                    id="training_attachment"
+                    accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.jpg,.jpeg,.png"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      if (file) {
+                        if (file.size > 10 * 1024 * 1024) {
+                          toast({
+                            title: "File too large",
+                            description: "File must be smaller than 10MB",
+                            variant: "destructive"
+                          })
+                          return
+                        }
+                        setTrainingAttachment(file)
+                      }
+                    }}
+                    className="hidden"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => attachmentInputRef.current?.click()}
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    {trainingAttachment ? trainingAttachment.name : 'Choose File'}
+                  </Button>
+                  {trainingAttachment && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setTrainingAttachment(null)}
+                    >
+                      Remove
+                    </Button>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Upload training materials, documents, or resources (PDF, DOC, XLS, PPT, images - max 10MB)
+                </p>
               </div>
 
               <hr className="my-4" />
@@ -488,6 +547,35 @@ export default function Training() {
                       <div>⏱️ Duration: {assignment.duration_hours} hour(s)</div>
                       <div>⏰ Complete by: {new Date(assignment.completion_deadline).toLocaleDateString()}</div>
                     </div>
+                    {assignment.training?.attachment_name && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="mt-2"
+                        onClick={async () => {
+                          try {
+                            const blob = await apiService.downloadTrainingAttachment(assignment.training_id)
+                            const url = window.URL.createObjectURL(blob)
+                            const a = document.createElement('a')
+                            a.href = url
+                            a.download = assignment.training.attachment_name || 'training-material'
+                            document.body.appendChild(a)
+                            a.click()
+                            window.URL.revokeObjectURL(url)
+                            document.body.removeChild(a)
+                          } catch (error) {
+                            toast({
+                              title: "Download failed",
+                              description: "Could not download training materials",
+                              variant: "destructive"
+                            })
+                          }
+                        }}
+                      >
+                        <Download className="h-4 w-4 mr-1" />
+                        Download Materials
+                      </Button>
+                    )}
                   </div>
                   <Button 
                     size="sm" 
@@ -577,6 +665,7 @@ export default function Training() {
                   <TableHead>Completion Date</TableHead>
                   <TableHead className="hidden sm:table-cell">Cost</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Materials</TableHead>
                   {canUploadCertificate && <TableHead>Certificate</TableHead>}
                 </TableRow>
               </TableHeader>
@@ -593,6 +682,38 @@ export default function Training() {
                       ₦{training.cost.toLocaleString()}
                     </TableCell>
                     <TableCell>{getStatusBadge(training.status)}</TableCell>
+                    <TableCell>
+                      {training.attachmentName ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={async () => {
+                            try {
+                              const blob = await apiService.downloadTrainingAttachment(training.trainingId!)
+                              const url = window.URL.createObjectURL(blob)
+                              const a = document.createElement('a')
+                              a.href = url
+                              a.download = training.attachmentName || 'training-material'
+                              document.body.appendChild(a)
+                              a.click()
+                              window.URL.revokeObjectURL(url)
+                              document.body.removeChild(a)
+                            } catch (error) {
+                              toast({
+                                title: "Download failed",
+                                description: "Could not download training materials",
+                                variant: "destructive"
+                              })
+                            }
+                          }}
+                        >
+                          <Download className="h-4 w-4 mr-1" />
+                          Download
+                        </Button>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">No materials</span>
+                      )}
+                    </TableCell>
                     {canUploadCertificate && (
                       <TableCell>
                         {training.certificateName ? (

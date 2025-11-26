@@ -58,6 +58,8 @@ export default function Benefits() {
 
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false)
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false)
+  const [selectedEmployeeForView, setSelectedEmployeeForView] = useState<{employeeId: number, employeeName: string, benefits: any[]} | null>(null)
   const [assignBenefitForm, setAssignBenefitForm] = useState({
     employee_ids: [] as number[],
     benefit_name: '',
@@ -361,37 +363,6 @@ export default function Benefits() {
     }
   }
 
-  // Filter benefits based on role and department
-  const currentUserFullName = user ? `${user.firstName} ${user.lastName}` : ''
-  
-  const filteredBenefits = (() => {
-    // Executives and HR Managers see all benefits
-    if (canManageBenefits) {
-      return benefits
-    }
-    
-    // Line Managers see benefits for their department only
-    if (isLineManager && userDepartment) {
-      return benefits.filter(b => {
-        const employee = employees.find(e => `${e.first_name} ${e.last_name}` === b.employeeName)
-        return employee?.department === userDepartment
-      })
-    }
-    
-    // General employees see only their own benefits
-    return benefits.filter(b => b.employeeName === currentUserFullName)
-  })()
-  
-  const totalWithHMO = filteredBenefits.filter(b => b.hmo.status === 'active').length
-  const totalWithInsurance = filteredBenefits.filter(b => b.lifeInsurance.status === 'active').length
-  const totalWithInternet = filteredBenefits.filter(b => b.internet.status === 'active').length
-  const totalWithEquipment = filteredBenefits.filter(b => b.equipment.status === 'active').length
-  
-  const hmoPercentage = filteredBenefits.length > 0 ? Math.round((totalWithHMO / filteredBenefits.length) * 100) : 0
-  const insurancePercentage = filteredBenefits.length > 0 ? Math.round((totalWithInsurance / filteredBenefits.length) * 100) : 0
-  const internetPercentage = filteredBenefits.length > 0 ? Math.round((totalWithInternet / filteredBenefits.length) * 100) : 0
-  const equipmentPercentage = filteredBenefits.length > 0 ? Math.round((totalWithEquipment / filteredBenefits.length) * 100) : 0
-
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-NG', {
       style: 'currency',
@@ -400,6 +371,59 @@ export default function Benefits() {
     }).format(amount)
   }
 
+  // Calculate benefit statistics from database
+  const activeDbBenefits = dbBenefits.filter(b => b.status === 'active')
+  const totalEmployees = employees.length
+  const employeesWithBenefitsCount = new Set(activeDbBenefits.map(b => b.employee_id)).size
+  
+  // Count unique employees by benefit type - map benefit_type values to categories
+  const hmoEmployees = new Set(
+    activeDbBenefits
+      .filter(b => {
+        const type = b.benefit_type?.toLowerCase()
+        return type === 'health' || type === 'wellness'
+      })
+      .map(b => b.employee_id)
+  ).size
+  
+  const insuranceEmployees = new Set(
+    activeDbBenefits
+      .filter(b => {
+        const type = b.benefit_type?.toLowerCase()
+        return type === 'insurance'
+      })
+      .map(b => b.employee_id)
+  ).size
+  
+  const internetEmployees = new Set(
+    activeDbBenefits
+      .filter(b => {
+        const type = b.benefit_type?.toLowerCase()
+        // Allowance type could be internet, transport, meal, etc. 
+        // Check benefit_name for internet-specific allowances
+        return type === 'allowance' && (
+          b.benefit_name?.toLowerCase().includes('internet') ||
+          b.benefit_name?.toLowerCase().includes('data') ||
+          b.benefit_name?.toLowerCase().includes('wifi')
+        )
+      })
+      .map(b => b.employee_id)
+  ).size
+  
+  const equipmentEmployees = new Set(
+    activeDbBenefits
+      .filter(b => {
+        const type = b.benefit_type?.toLowerCase()
+        return type === 'equipment'
+      })
+      .map(b => b.employee_id)
+  ).size
+
+  const hmoPercentage = totalEmployees > 0 ? Math.round((hmoEmployees / totalEmployees) * 100) : 0
+  const insurancePercentage = totalEmployees > 0 ? Math.round((insuranceEmployees / totalEmployees) * 100) : 0
+  const internetPercentage = totalEmployees > 0 ? Math.round((internetEmployees / totalEmployees) * 100) : 0
+  const equipmentPercentage = totalEmployees > 0 ? Math.round((equipmentEmployees / totalEmployees) * 100) : 0
+
   // Get current user's benefits from database
   const currentUserEmployeeId = user?.employee_id
   const myDbBenefits = dbBenefits.filter(b => {
@@ -407,6 +431,28 @@ export default function Benefits() {
     const benefitEmployeeId = typeof b.employee_id === 'string' ? parseInt(b.employee_id, 10) : b.employee_id
     return benefitEmployeeId === currentUserEmployeeId && b.status === 'active'
   })
+  
+  // Group database benefits by employee for manager view
+  const employeeBenefitsMap = new Map<number, any[]>()
+  dbBenefits.forEach(benefit => {
+    const empId = typeof benefit.employee_id === 'string' ? parseInt(benefit.employee_id, 10) : benefit.employee_id
+    if (!employeeBenefitsMap.has(empId)) {
+      employeeBenefitsMap.set(empId, [])
+    }
+    employeeBenefitsMap.get(empId)!.push(benefit)
+  })
+
+  // Create list of employees with their benefits for the table
+  const employeesWithBenefits = Array.from(employeeBenefitsMap.entries()).map(([employeeId, benefits]) => {
+    const employee = employees.find(e => e.id === employeeId)
+    return {
+      employeeId,
+      employeeName: employee ? `${employee.first_name} ${employee.last_name}` : 'Unknown',
+      employeeDepartment: employee?.department || 'N/A',
+      benefits: benefits.filter(b => b.status === 'active'),
+      lastUpdated: benefits.length > 0 ? benefits[0].updated_at : null
+    }
+  }).filter(item => item.employeeName !== 'Unknown')
   
   const myBenefits: EmployeeBenefit | undefined = benefits.find(b => {
     const employee = employees.find(e => e.id?.toString() === b.employeeId)
@@ -528,26 +574,21 @@ export default function Benefits() {
         </Card>
       )}
 
-      {/* Benefits Overview Cards - HR Managers Only */}
+      {/* Benefits Overview Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* HMO Coverage */}
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <Heart className="h-5 w-5 text-red-500" />
-                HMO Coverage
-              </CardTitle>
-              <Badge variant="outline">
-                {hmoPercentage}% Active
-              </Badge>
-            </div>
+            <CardTitle className="flex items-center gap-2">
+              <Heart className="h-5 w-5 text-red-500" />
+              HMO Coverage
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">Employees with HMO</span>
-                <span className="font-semibold">{totalWithHMO} / {filteredBenefits.length}</span>
+                <span className="text-2xl font-bold text-red-600">{hmoPercentage}%</span>
               </div>
               <div className="w-full bg-secondary rounded-full h-2">
                 <div 
@@ -555,6 +596,9 @@ export default function Benefits() {
                   style={{ width: `${hmoPercentage}%` }}
                 />
               </div>
+              <p className="text-xs text-muted-foreground text-right">
+                {hmoEmployees} of {totalEmployees} employees
+              </p>
             </div>
             <p className="text-sm text-muted-foreground">
               Track and manage employee health insurance coverage across the organization.
@@ -565,21 +609,16 @@ export default function Benefits() {
         {/* Life Insurance */}
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="h-5 w-5 text-blue-500" />
-                Life Insurance
-              </CardTitle>
-              <Badge variant="outline">
-                {insurancePercentage}% Active
-              </Badge>
-            </div>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5 text-blue-500" />
+              Life Insurance
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">Employees with Insurance</span>
-                <span className="font-semibold">{totalWithInsurance} / {filteredBenefits.length}</span>
+                <span className="text-2xl font-bold text-blue-600">{insurancePercentage}%</span>
               </div>
               <div className="w-full bg-secondary rounded-full h-2">
                 <div 
@@ -587,6 +626,9 @@ export default function Benefits() {
                   style={{ width: `${insurancePercentage}%` }}
                 />
               </div>
+              <p className="text-xs text-muted-foreground text-right">
+                {insuranceEmployees} of {totalEmployees} employees
+              </p>
             </div>
             <p className="text-sm text-muted-foreground">
               Monitor life insurance enrollment and coverage details for all employees.
@@ -597,21 +639,16 @@ export default function Benefits() {
         {/* Internet Allowance */}
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <Wifi className="h-5 w-5 text-green-500" />
-                Internet Allowance
-              </CardTitle>
-              <Badge variant="outline">
-                {internetPercentage}% Active
-              </Badge>
-            </div>
+            <CardTitle className="flex items-center gap-2">
+              <Wifi className="h-5 w-5 text-green-500" />
+              Internet Allowance
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">Employees with Allowance</span>
-                <span className="font-semibold">{totalWithInternet} / {filteredBenefits.length}</span>
+                <span className="text-2xl font-bold text-green-600">{internetPercentage}%</span>
               </div>
               <div className="w-full bg-secondary rounded-full h-2">
                 <div 
@@ -619,6 +656,9 @@ export default function Benefits() {
                   style={{ width: `${internetPercentage}%` }}
                 />
               </div>
+              <p className="text-xs text-muted-foreground text-right">
+                {internetEmployees} of {totalEmployees} employees
+              </p>
             </div>
             <p className="text-sm text-muted-foreground">
               Track internet allowance assignments and usage across departments.
@@ -629,21 +669,16 @@ export default function Benefits() {
         {/* Equipment */}
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <Monitor className="h-5 w-5 text-purple-500" />
-                Equipment
-              </CardTitle>
-              <Badge variant="outline">
-                {equipmentPercentage}% Active
-              </Badge>
-            </div>
+            <CardTitle className="flex items-center gap-2">
+              <Monitor className="h-5 w-5 text-purple-500" />
+              Equipment
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">Employees with Equipment</span>
-                <span className="font-semibold">{totalWithEquipment} / {filteredBenefits.length}</span>
+                <span className="text-2xl font-bold text-purple-600">{equipmentPercentage}%</span>
               </div>
               <div className="w-full bg-secondary rounded-full h-2">
                 <div 
@@ -651,6 +686,9 @@ export default function Benefits() {
                   style={{ width: `${equipmentPercentage}%` }}
                 />
               </div>
+              <p className="text-xs text-muted-foreground text-right">
+                {equipmentEmployees} of {totalEmployees} employees
+              </p>
             </div>
             <p className="text-sm text-muted-foreground">
               Manage equipment assignments and track asset allocation for employees.
@@ -660,48 +698,39 @@ export default function Benefits() {
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">HMO Coverage</CardTitle>
-            <Heart className="h-4 w-4 text-red-500" />
+            <CardTitle className="text-sm font-medium">Total Employees</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">{hmoPercentage}%</div>
-            <p className="text-xs text-muted-foreground mt-1">of staff HMO active</p>
+            <div className="text-2xl font-bold text-emerald-600">{employeesWithBenefits.length}</div>
+            <p className="text-xs text-muted-foreground mt-1">with assigned benefits</p>
           </CardContent>
         </Card>
         
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Life Insurance</CardTitle>
-            <Shield className="h-4 w-4 text-blue-500" />
+            <CardTitle className="text-sm font-medium">Total Benefits</CardTitle>
+            <Award className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{insurancePercentage}%</div>
-            <p className="text-xs text-muted-foreground mt-1">of staff Life Insurance active</p>
+            <div className="text-2xl font-bold text-blue-600">{dbBenefits.filter(b => b.status === 'active').length}</div>
+            <p className="text-xs text-muted-foreground mt-1">active benefit assignments</p>
           </CardContent>
         </Card>
         
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Internet Allowance</CardTitle>
-            <Wifi className="h-4 w-4 text-green-500" />
+            <CardTitle className="text-sm font-medium">Benefit Types</CardTitle>
+            <Shield className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{internetPercentage}%</div>
-            <p className="text-xs text-muted-foreground mt-1">of staff Internet active</p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Equipment</CardTitle>
-            <Monitor className="h-4 w-4 text-purple-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-purple-600">{equipmentPercentage}%</div>
-            <p className="text-xs text-muted-foreground mt-1">of staff Equipment active</p>
+            <div className="text-2xl font-bold text-purple-600">
+              {new Set(dbBenefits.map(b => b.benefit_type)).size}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">unique benefit types</p>
           </CardContent>
         </Card>
       </div>
@@ -720,50 +749,55 @@ export default function Benefits() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Employee</TableHead>
-                  <TableHead>HMO</TableHead>
-                  <TableHead>Life Insurance</TableHead>
-                  <TableHead className="hidden sm:table-cell">Internet</TableHead>
-                  <TableHead className="hidden md:table-cell">Equipment</TableHead>
+                  <TableHead>Department</TableHead>
+                  <TableHead>Benefits</TableHead>
                   <TableHead className="hidden lg:table-cell">Last Updated</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredBenefits.map((benefit) => (
-                  <TableRow key={benefit.id}>
-                    <TableCell className="font-medium">{benefit.employeeName}</TableCell>
-                    <TableCell>
-                      <Badge variant={benefit.hmo.status === 'active' ? 'default' : 'secondary'}>
-                        {benefit.hmo.status === 'active' ? 'Active' : 'Inactive'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={benefit.lifeInsurance.status === 'active' ? 'default' : 'secondary'}>
-                        {benefit.lifeInsurance.status === 'active' ? 'Active' : 'Inactive'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="hidden sm:table-cell">
-                      <Badge variant={benefit.internet.status === 'active' ? 'default' : 'secondary'}>
-                        {benefit.internet.status === 'active' ? 'Active' : 'Inactive'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell">
-                      <Badge variant={benefit.equipment.status === 'active' ? 'default' : 'secondary'}>
-                        {benefit.equipment.status === 'active' ? 'Active' : 'Inactive'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="hidden lg:table-cell">{benefit.lastUpdated}</TableCell>
-                    <TableCell>
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => handleOpenManageBenefit(benefit.employeeId)}
-                      >
-                        Edit
-                      </Button>
+                {employeesWithBenefits.length > 0 ? (
+                  employeesWithBenefits.map((item) => (
+                    <TableRow key={item.employeeId}>
+                      <TableCell className="font-medium">{item.employeeName}</TableCell>
+                      <TableCell>{item.employeeDepartment}</TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {item.benefits.map((benefit) => (
+                            <Badge key={benefit.id} variant="default" className="text-xs">
+                              {benefit.benefit_name}
+                            </Badge>
+                          ))}
+                        </div>
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell">
+                        {item.lastUpdated ? new Date(item.lastUpdated).toLocaleDateString() : 'N/A'}
+                      </TableCell>
+                      <TableCell>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => {
+                            setSelectedEmployeeForView({
+                              employeeId: item.employeeId,
+                              employeeName: item.employeeName,
+                              benefits: item.benefits
+                            })
+                            setIsViewDialogOpen(true)
+                          }}
+                        >
+                          View
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                      No employee benefits found. Assign benefits to get started.
                     </TableCell>
                   </TableRow>
-                ))}
+                )}
               </TableBody>
             </Table>
           </div>
@@ -1173,6 +1207,61 @@ export default function Benefits() {
             </Button>
             <Button onClick={handleAssignBenefit} className="bg-emerald-600 hover:bg-emerald-700 text-white">
               Assign Benefit
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Employee Benefits Dialog */}
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Benefits for {selectedEmployeeForView?.employeeName}</DialogTitle>
+            <DialogDescription>
+              View all assigned benefits for this employee
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            {selectedEmployeeForView && selectedEmployeeForView.benefits.length > 0 ? (
+              selectedEmployeeForView.benefits.map((benefit) => (
+                <Card key={benefit.id}>
+                  <CardContent className="pt-6">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-lg">{benefit.benefit_name}</h4>
+                        <p className="text-sm text-muted-foreground capitalize mt-1">{benefit.benefit_type}</p>
+                        {benefit.description && (
+                          <p className="text-sm mt-3">{benefit.description}</p>
+                        )}
+                        {benefit.value && (
+                          <p className="text-sm font-medium mt-2">Value: ₦{benefit.value.toLocaleString()}</p>
+                        )}
+                        <div className="text-xs text-muted-foreground mt-3">
+                          Active from {new Date(benefit.start_date).toLocaleDateString()}
+                          {benefit.end_date && ` to ${new Date(benefit.end_date).toLocaleDateString()}`}
+                        </div>
+                        {benefit.notes && (
+                          <p className="text-sm text-muted-foreground mt-2 italic">Notes: {benefit.notes}</p>
+                        )}
+                      </div>
+                      <Badge variant={benefit.status === 'active' ? 'default' : 'secondary'}>
+                        {benefit.status}
+                      </Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            ) : (
+              <p className="text-center text-muted-foreground py-8">
+                No benefits assigned to this employee.
+              </p>
+            )}
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>

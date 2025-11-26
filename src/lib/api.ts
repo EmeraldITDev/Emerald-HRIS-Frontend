@@ -823,11 +823,52 @@ class ApiService {
     scheduled_at: string;
     duration_hours: number;
     completion_deadline: string;
+    attachment?: File;
   }): Promise<{ success: boolean; assignments: any[] }> {
-    return this.request<{ success: boolean; assignments: any[] }>('/training/assign', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
+    const url = `${this.baseUrl}/training/assign`;
+    const token = localStorage.getItem('auth_token');
+    
+    // Use FormData if file is present, otherwise use JSON
+    if (data.attachment) {
+      const formData = new FormData();
+      
+      // Add all fields to FormData
+      Object.keys(data).forEach(key => {
+        if (key === 'attachment') {
+          formData.append('attachment', data.attachment!);
+        } else if (key === 'employee_ids') {
+          // Handle array separately
+          data.employee_ids.forEach((id, index) => {
+            formData.append(`employee_ids[${index}]`, id.toString());
+          });
+        } else if (data[key as keyof typeof data] !== undefined && data[key as keyof typeof data] !== null) {
+          formData.append(key, String(data[key as keyof typeof data]));
+        }
+      });
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          ...(token && { 'Authorization': `Bearer ${token}` }),
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return await response.json();
+    } else {
+      // No file, use regular JSON request
+      const { attachment, ...jsonData } = data;
+      return this.request<{ success: boolean; assignments: any[] }>('/training/assign', {
+        method: 'POST',
+        body: JSON.stringify(jsonData),
+      });
+    }
   }
 
   async markTrainingCompleted(id: number, notes?: string): Promise<{ success: boolean; assignment: any }> {
@@ -843,6 +884,25 @@ class ApiService {
 
   async cancelTrainingAssignment(id: number): Promise<{ success: boolean; assignment: any }> {
     return this.request<{ success: boolean; assignment: any }>(`/training/assignments/${id}/cancel`, { method: 'PUT' });
+  }
+
+  async downloadTrainingAttachment(trainingId: number): Promise<Blob> {
+    const url = `${this.baseUrl}/training/${trainingId}/download`;
+    const token = localStorage.getItem('auth_token');
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Accept': '*/*',
+        ...(token && { 'Authorization': `Bearer ${token}` }),
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    return await response.blob();
   }
 
   // Employee Benefits

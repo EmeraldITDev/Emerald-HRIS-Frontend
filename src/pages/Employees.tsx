@@ -981,7 +981,7 @@ export default function Employees() {
 
 
   return (
-    <ProtectedRoute roles={[...PERMISSIONS.FULL]}>
+    <ProtectedRoute roles={[...PERMISSIONS.EMPLOYEE_MGMT]}>
       <div className="space-y-4 md:space-y-6">
         <div className="flex flex-col space-y-3 md:space-y-0 md:flex-row md:items-center md:justify-between">
           <div>

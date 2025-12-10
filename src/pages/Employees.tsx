@@ -1018,7 +1018,7 @@ export default function Employees() {
                   <DialogTitle>Add New Employee</DialogTitle>
                   <DialogDescription className="sr-only">Employee dialog</DialogDescription>
                 </DialogHeader>
-                <RoleBasedComponent allowedRoles={[...PERMISSIONS.FULL]}>
+                <RoleBasedComponent allowedRoles={[...PERMISSIONS.FULL, 'corporate_hr']}>
                   <div className="mt-2 mb-4 space-y-2">
                     <Label>System Role</Label>
                     <Select
@@ -1110,7 +1110,7 @@ export default function Employees() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="maritalStatus">Marital Status *</Label>
                         <Select value={newEmployee.maritalStatus} onValueChange={value => setNewEmployee({
@@ -1143,7 +1143,7 @@ export default function Employees() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="phoneNumber">Phone Number *</Label>
                         <Input id="phoneNumber" value={newEmployee.phoneNumber} onChange={e => setNewEmployee({
@@ -1168,7 +1168,7 @@ export default function Employees() {
                     })} placeholder="Full residential address" className={formErrors.homeAddress ? "border-destructive" : ""} />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                         <Label htmlFor="emergencyContact">Emergency Contact Name *</Label>
                         <Input id="emergencyContact" value={newEmployee.emergencyContact} onChange={e => setNewEmployee({
@@ -1185,7 +1185,7 @@ export default function Employees() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="nextOfKinName">Next of Kin Name *</Label>
                         <Input id="nextOfKinName" value={newEmployee.nextOfKinName} onChange={e => setNewEmployee({
@@ -1202,7 +1202,7 @@ export default function Employees() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="nextOfKinPhone">Next of Kin Phone Number *</Label>
                         <Input id="nextOfKinPhone" value={newEmployee.nextOfKinPhone} onChange={e => setNewEmployee({
@@ -1229,7 +1229,7 @@ export default function Employees() {
                   </TabsContent>
 
                   <TabsContent value="job" className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="jobTitle">Job Title *</Label>
                         <Input id="jobTitle" value={newEmployee.jobTitle} onChange={e => setNewEmployee({
@@ -1253,7 +1253,7 @@ export default function Employees() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="employmentType">Employment Type *</Label>
                         <Select value={newEmployee.employmentType} onValueChange={value => setNewEmployee({
@@ -1287,7 +1287,7 @@ export default function Employees() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="supervisorName">Supervisor Name *</Label>
                         <Input id="supervisorName" value={newEmployee.supervisorName} onChange={e => setNewEmployee({
@@ -1304,7 +1304,7 @@ export default function Employees() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                       <div className="space-y-2">
                         <Label>Hire Date *</Label>
                         <DateInput
@@ -1352,7 +1352,7 @@ export default function Employees() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="employmentStatus">Employment Status</Label>
                         <Select value={newEmployee.employmentStatus} onValueChange={value => setNewEmployee({
@@ -1488,7 +1488,7 @@ export default function Employees() {
                     <div className="space-y-4">
                       <h3 className="text-base font-medium">Bank Account for Salary Payments</h3>
                       
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label htmlFor="bankName">Bank Name</Label>
                           <Select value={newEmployee.bankName || ""} onValueChange={value => setNewEmployee({
@@ -1515,7 +1515,7 @@ export default function Employees() {
                         </div>
                       </div>
                       
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label htmlFor="nuban">NUBAN</Label>
                           <Input id="nuban" value={newEmployee.nuban} onChange={e => setNewEmployee({
@@ -1535,7 +1535,7 @@ export default function Employees() {
                   </TabsContent>
 
                   <TabsContent value="government" className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="employeeId">Employee ID</Label>
                         <Input 
@@ -1558,7 +1558,7 @@ export default function Employees() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="passportNumber">Passport Number</Label>
                         <Input id="passportNumber" value={newEmployee.passportNumber} onChange={e => setNewEmployee({
@@ -1568,7 +1568,7 @@ export default function Employees() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="tin">TIN</Label>
                         <Input id="tin" value={newEmployee.tin} onChange={e => setNewEmployee({
@@ -1578,7 +1578,7 @@ export default function Employees() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="pensionPin">Pension PIN</Label>
                         <Input id="pensionPin" value={newEmployee.pensionPin} onChange={e => setNewEmployee({

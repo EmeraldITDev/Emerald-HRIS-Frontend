@@ -20,7 +20,8 @@ export const PERMISSIONS = {
 } as const;
 
 export const ROLE_OPTIONS = [
-  { label: 'Executives & HR Managers', value: 'executive' }, // Combined - uses executive role
+  { label: 'Executive', value: 'executive' },
+  { label: 'HR Manager', value: 'hr_manager' },
   { label: 'Corporate HR', value: 'corporate_hr' },
   { label: 'Line Manager', value: 'line_manager' },
   { label: 'Finance Manager', value: 'finance' },

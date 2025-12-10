@@ -108,7 +108,7 @@ export default function Training() {
   const fetchTrainingAssignments = async () => {
     try {
       const data = await apiService.getTrainingAssignments()
-      setTrainingAssignments(Array.isArray(data) ? data : (data?.data || []))
+      setTrainingAssignments(Array.isArray(data) ? data : ((data as any)?.data || []))
     } catch (error) {
       console.error('Failed to fetch training assignments:', error)
     }
@@ -198,11 +198,8 @@ export default function Training() {
 
   const handleEmployeeChange = (employeeId: string) => {
     const employee = employees.find(emp => emp.id?.toString() === employeeId)
-    setNewTraining({
-      ...newTraining,
-      employeeId,
-      employeeName: employee ? `${employee.first_name} ${employee.last_name}` : ''
-    })
+    // Note: employee selection is handled via assignmentData.employee_ids, not newTraining
+    console.log('Selected employee:', employee ? `${employee.first_name} ${employee.last_name}` : 'Unknown')
   }
   
   const handleUploadCertificateForTraining = (trainingId: string, event: React.ChangeEvent<HTMLInputElement>) => {
@@ -356,7 +353,7 @@ export default function Training() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="instructor">Instructor</Label>
                   <Input
@@ -481,7 +478,7 @@ export default function Training() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="scheduled_at">Scheduled Date & Time *</Label>
                   <Input

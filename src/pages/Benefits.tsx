@@ -113,7 +113,14 @@ export default function Benefits() {
     
     try {
       const data = await apiService.getEmployeeBenefits()
+<<<<<<< HEAD
       setDbBenefits(Array.isArray(data) ? data : ((data as any)?.data || []))
+=======
+      const benefitsArray = Array.isArray(data) ? data : (data?.data || [])
+      console.log('Fetched benefits:', benefitsArray)
+      console.log('Current user employee_id:', user?.employee_id)
+      setDbBenefits(benefitsArray)
+>>>>>>> b7816ac (Improve benefits assignment: add error handling, logging, and better employee_id matching)
     } catch (error: any) {
       console.error('Failed to fetch benefits:', error)
       // Don't show error toast for 401 - user might be using dummy account
@@ -272,13 +279,22 @@ export default function Benefits() {
     }
 
     try {
-      await apiService.assignBenefit({
+      console.log('Assigning benefit with data:', {
         ...assignBenefitForm,
         value: assignBenefitForm.value ? parseFloat(assignBenefitForm.value) : undefined,
       })
       
+      const response = await apiService.assignBenefit({
+        ...assignBenefitForm,
+        value: assignBenefitForm.value ? parseFloat(assignBenefitForm.value) : undefined,
+      })
+      
+      console.log('Benefit assignment response:', response)
+      
+      // Refresh benefits list
       await fetchBenefits()
       
+      // Reset form
       setAssignBenefitForm({
         employee_ids: [],
         benefit_name: '',
@@ -293,12 +309,14 @@ export default function Benefits() {
 
       toast({
         title: "Benefit Assigned",
-        description: "Benefit has been assigned successfully to selected employees",
+        description: `Benefit "${assignBenefitForm.benefit_name}" has been assigned successfully to ${assignBenefitForm.employee_ids.length} employee(s)`,
       })
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Error assigning benefit:', error)
+      const errorMessage = error?.message || error?.response?.data?.message || 'Unknown error occurred'
       toast({
         title: "Assignment failed",
-        description: "Please try again",
+        description: errorMessage || "Please try again",
         variant: "destructive"
       })
     }
@@ -429,8 +447,28 @@ export default function Benefits() {
   const myDbBenefits = dbBenefits.filter(b => {
     // Handle both number and string comparisons
     const benefitEmployeeId = typeof b.employee_id === 'string' ? parseInt(b.employee_id, 10) : b.employee_id
-    return benefitEmployeeId === currentUserEmployeeId && b.status === 'active'
+    const userEmployeeId = typeof currentUserEmployeeId === 'string' ? parseInt(currentUserEmployeeId, 10) : currentUserEmployeeId
+    const matches = benefitEmployeeId === userEmployeeId && b.status === 'active'
+    
+    // Debug logging
+    if (userEmployeeId) {
+      console.log('Benefit filter check:', {
+        benefit_id: b.id,
+        benefit_employee_id: b.employee_id,
+        benefit_employee_id_parsed: benefitEmployeeId,
+        user_employee_id: currentUserEmployeeId,
+        user_employee_id_parsed: userEmployeeId,
+        status: b.status,
+        matches
+      })
+    }
+    
+    return matches
   })
+  
+  console.log('Filtered myDbBenefits:', myDbBenefits)
+  console.log('Total dbBenefits:', dbBenefits.length)
+  console.log('Current user employee_id:', currentUserEmployeeId)
   
   // Group database benefits by employee for manager view
   const employeeBenefitsMap = new Map<number, any[]>()

@@ -1,6 +1,6 @@
 # PHP Backend for HR Management System
 
-This backend provides REST APIs for attendance tracking and leave request management.
+This backend provides REST APIs for the HRIS platform including attendance, leave, benefits, and training management.
 
 ## 📁 File Structure
 
@@ -9,6 +9,8 @@ backend/
 ├── config.php           # Database configuration and helper functions
 ├── attendance.php       # Attendance API endpoints
 ├── leave.php           # Leave request API endpoints
+├── benefits.php        # Employee benefits API endpoints
+├── training.php        # Training assignments API endpoints
 ├── database-schema.sql # Database table creation script
 └── README.md           # This file
 ```
@@ -43,197 +45,196 @@ define('DB_PASS', 'your_password');       // Your database password
 ### 3. Server Setup
 
 #### Option A: Using XAMPP/WAMP/MAMP
-1. Copy the `backend` folder to your web server directory:
-   - XAMPP: `C:\xampp\htdocs\backend\`
-   - WAMP: `C:\wamp64\www\backend\`
-   - MAMP: `/Applications/MAMP/htdocs/backend/`
-
+1. Copy the `backend` folder to your web server directory
 2. Start Apache and MySQL services
+3. Access via: `http://localhost/backend/`
 
-3. Access via: `http://localhost/backend/attendance.php`
-
-#### Option B: Using PHP Built-in Server (for testing)
+#### Option B: Using PHP Built-in Server
 ```bash
 cd backend
 php -S localhost:8000
 ```
-Access via: `http://localhost:8000/attendance.php`
-
-### 4. Update Frontend API URLs
-
-Update your frontend code to point to your PHP backend:
-
-In `src/api.ts` or wherever you make API calls, change:
-```typescript
-const API_BASE_URL = 'http://localhost:8000'; // Or your server URL
-```
 
 ## 📡 API Endpoints
 
-### Attendance Endpoints
+### Attendance Endpoints (`attendance.php`)
 
-#### Get Today's Attendance (All Employees)
-```
-GET /attendance.php?action=today
-```
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `?action=today` | Get today's attendance for all employees |
+| GET | `?action=user&user_id=1` | Get specific user's attendance status |
+| GET | `?start_date=YYYY-MM-DD&end_date=YYYY-MM-DD` | Get attendance with filters |
+| POST | `?action=clockin` | Clock in employee |
+| POST | `?action=clockout` | Clock out employee |
 
-#### Get User's Attendance Status
-```
-GET /attendance.php?action=user&user_id=1
-```
+### Leave Request Endpoints (`leave.php`)
 
-#### Get All Attendance (with filters)
-```
-GET /attendance.php?start_date=2025-10-01&end_date=2025-10-08&employee_id=1
-```
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/` | Get all leave requests |
+| GET | `?action=pending` | Get pending leave requests |
+| GET | `?action=user&user_id=1` | Get user's leave requests |
+| GET | `?id=1` | Get specific leave request |
+| POST | `/` | Create new leave request |
+| POST | `?action=approve` | Approve leave request |
+| POST | `?action=reject` | Reject leave request |
+| DELETE | `?id=1` | Delete leave request |
 
-#### Clock In
-```
-POST /attendance.php?action=clockin
-Content-Type: application/json
+### Benefits Endpoints (`benefits.php`)
 
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/` | Get all employee benefits |
+| GET | `?action=employee&employee_id=1` | Get benefits for specific employee |
+| POST | `?action=assign` | Assign benefits to multiple employees |
+| POST | `/` | Create single benefit |
+| PUT | `?id=1` | Update benefit |
+| PUT | `?action=revoke&id=1` | Revoke benefit (set inactive) |
+| DELETE | `?id=1` | Delete benefit permanently |
+
+#### Assign Benefits Request Body:
+```json
 {
-  "employee_id": 1
+  "employee_ids": [1, 2, 3],
+  "benefit_name": "Health Insurance",
+  "benefit_type": "health",
+  "description": "Comprehensive health coverage",
+  "value": 50000,
+  "start_date": "2025-01-01",
+  "end_date": "2025-12-31",
+  "notes": "Annual plan"
 }
 ```
 
-#### Clock Out
-```
-POST /attendance.php?action=clockout
-Content-Type: application/json
+### Training Endpoints (`training.php`)
 
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/` or `?action=assignments` | Get all training assignments |
+| GET | `?action=trainings` | Get all training programs |
+| GET | `?action=employee&employee_id=1` | Get trainings for employee |
+| POST | `?action=assign` | Assign training to employees |
+| POST | `?action=create` | Create new training program |
+| PUT | `?action=complete&id=1` | Mark training as completed |
+| PUT | `?action=cancel&id=1` | Cancel training assignment |
+| PUT | `?action=read&id=1` | Mark notification as read |
+| PUT | `?id=1` | Update training assignment |
+| DELETE | `?id=1` | Delete training assignment |
+
+#### Assign Training Request Body:
+```json
 {
-  "employee_id": 1
+  "employee_ids": [1, 2, 3],
+  "title": "Leadership Training",
+  "category": "Leadership Development",
+  "description": "Management skills workshop",
+  "instructor": "John Smith",
+  "location": "Conference Room A",
+  "delivery_method": "in_person",
+  "scheduled_at": "2025-01-15T09:00:00",
+  "completion_deadline": "2025-01-15T17:00:00",
+  "duration_hours": 8
 }
 ```
 
-### Leave Request Endpoints
+## 🗄️ Database Tables
 
-#### Get All Leave Requests
-```
-GET /leave.php
-```
+### Required Tables
+- `employees` - Main employee records (should already exist)
+- `attendance` - Clock in/out records
+- `leave_requests` - Leave applications
+- `employee_benefits` - Assigned benefits
+- `trainings` - Training programs
+- `training_assignments` - Training-employee assignments
 
-#### Get Pending Leave Requests
-```
-GET /leave.php?action=pending
-```
-
-#### Get User's Leave Requests
-```
-GET /leave.php?action=user&user_id=1
-```
-
-#### Create Leave Request
-```
-POST /leave.php
-Content-Type: application/json
-
-{
-  "employee_id": 1,
-  "leave_type": "annual",
-  "start_date": "2025-10-15",
-  "end_date": "2025-10-17",
-  "reason": "Family vacation"
-}
-```
-
-#### Approve Leave Request
-```
-POST /leave.php?action=approve
-Content-Type: application/json
-
-{
-  "request_id": 1,
-  "approver_id": 5,
-  "comments": "Approved"
-}
-```
-
-#### Reject Leave Request
-```
-POST /leave.php?action=reject
-Content-Type: application/json
-
-{
-  "request_id": 1,
-  "approver_id": 5,
-  "comments": "Insufficient leave balance"
-}
-```
+Run `database-schema.sql` to create all required tables.
 
 ## 🔒 Security Considerations
 
-### IMPORTANT: Before Production
+### Before Production:
 
-1. **Authentication**: The current `getAuthenticatedUserId()` function in `config.php` is a placeholder. Implement proper JWT token validation or session-based authentication.
-
-2. **Role-Based Access Control**: Add checks to ensure only authorized users can:
-   - Approve/reject leave requests (HR/Managers only)
-   - View other employees' data
-   - Perform administrative actions
-
-3. **Input Validation**: Add more robust validation for:
-   - Date ranges
-   - Leave types
-   - Employee IDs
-
-4. **SQL Injection**: The code uses prepared statements, but always validate input.
-
-5. **CORS**: Currently set to allow all origins (`*`). In production, restrict to your frontend domain:
+1. **Authentication**: Implement proper JWT token validation in `config.php`
+2. **CORS**: Restrict to your frontend domain:
 ```php
 header('Access-Control-Allow-Origin: https://yourdomain.com');
 ```
+3. **HTTPS**: Always use HTTPS in production
+4. **Input Validation**: Add robust validation for all inputs
+5. **Rate Limiting**: Implement rate limiting for API endpoints
 
-6. **HTTPS**: Always use HTTPS in production.
+## 🧪 Testing with cURL
 
-## 🧪 Testing
-
-### Using cURL
-
-Test clock-in:
+### Test Benefits Assignment:
 ```bash
-curl -X POST http://localhost:8000/attendance.php?action=clockin \
+curl -X POST "http://localhost:8000/benefits.php?action=assign" \
   -H "Content-Type: application/json" \
-  -d '{"employee_id": 1}'
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -d '{
+    "employee_ids": [1, 2],
+    "benefit_name": "Health Insurance",
+    "benefit_type": "health",
+    "start_date": "2025-01-01"
+  }'
 ```
 
-Test getting today's attendance:
+### Test Training Assignment:
 ```bash
-curl http://localhost:8000/attendance.php?action=today
+curl -X POST "http://localhost:8000/training.php?action=assign" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -d '{
+    "employee_ids": [1],
+    "title": "Safety Training",
+    "category": "Safety",
+    "scheduled_at": "2025-01-20T09:00:00",
+    "completion_deadline": "2025-01-20T17:00:00",
+    "duration_hours": 4
+  }'
 ```
-
-### Using Postman or Thunder Client
-Import the endpoints and test with your preferred API testing tool.
 
 ## 🐛 Troubleshooting
 
 ### "Database connection failed"
-- Check your database credentials in `config.php`
-- Ensure MySQL service is running
+- Check credentials in `config.php`
+- Ensure MySQL is running
 - Verify database exists
 
-### "CORS errors"
-- Check that CORS headers are properly set in `config.php`
-- Ensure your frontend is making requests to the correct URL
+### "Table doesn't exist" errors
+- Run `database-schema.sql` to create tables
+- Ensure employees table exists first
 
-### "404 Not Found"
-- Verify PHP files are in the correct directory
-- Check your web server configuration
-- Ensure `.php` extension is included in URLs
+### "500 Server Error"
+- Check PHP error logs
+- Verify all required tables exist
+- Check for syntax errors in PHP files
 
-## 📝 Next Steps
+## 🔗 Integration with Render Backend
 
-1. Implement authentication system
-2. Add role-based access control
-3. Add email notifications for leave approvals
-4. Add leave balance tracking
-5. Add reporting and analytics
-6. Deploy to production server
+Your backend is deployed at: `https://hris-backend-to3i.onrender.com`
 
-## 🔗 Integration with Your Existing Backend
+To add these new endpoints:
+1. Upload the new PHP files to your Render deployment
+2. Run the database schema updates
+3. Test each endpoint
 
-If you already have a backend at `https://hris-backend-to3i.onrender.com`, you can:
-1. Copy these endpoint implementations into your existing codebase
-2. Ensure table schemas match
-3. Update the base URL in your frontend
+## 📝 API Response Format
+
+All endpoints return JSON responses:
+
+**Success:**
+```json
+{
+  "success": true,
+  "message": "Operation completed",
+  "data": { ... }
+}
+```
+
+**Error:**
+```json
+{
+  "success": false,
+  "message": "Error description",
+  "error": "Detailed error (dev only)"
+}
+```

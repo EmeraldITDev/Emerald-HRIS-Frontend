@@ -19,15 +19,10 @@ CREATE TABLE IF NOT EXISTS `attendance` (
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   
-  -- Indexes for performance
   INDEX idx_employee_date (`employee_id`, `date`),
   INDEX idx_date (`date`),
   INDEX idx_status (`status`),
   
-  -- Foreign key constraint (uncomment if you have employees table)
-  -- FOREIGN KEY (`employee_id`) REFERENCES `employees`(`id`) ON DELETE CASCADE,
-  
-  -- Ensure one record per employee per day
   UNIQUE KEY unique_employee_date (`employee_id`, `date`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -37,67 +32,109 @@ CREATE TABLE IF NOT EXISTS `attendance` (
 CREATE TABLE IF NOT EXISTS `leave_requests` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
   `employee_id` INT NOT NULL,
-  `leave_type` VARCHAR(50) NOT NULL, -- e.g., 'annual', 'sick', 'casual', 'maternity', etc.
+  `leave_type` VARCHAR(50) NOT NULL,
   `start_date` DATE NOT NULL,
   `end_date` DATE NOT NULL,
   `days` INT NOT NULL,
   `reason` TEXT NOT NULL,
   `status` ENUM('pending', 'approved', 'rejected', 'cancelled') DEFAULT 'pending',
-  `approved_by` INT DEFAULT NULL, -- Employee ID of approver
+  `approved_by` INT DEFAULT NULL,
   `approved_at` DATETIME DEFAULT NULL,
-  `comments` TEXT DEFAULT NULL, -- Approver's comments
+  `comments` TEXT DEFAULT NULL,
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   
-  -- Indexes for performance
   INDEX idx_employee (`employee_id`),
   INDEX idx_status (`status`),
   INDEX idx_dates (`start_date`, `end_date`),
   INDEX idx_approved_by (`approved_by`)
-  
-  -- Foreign key constraints (uncomment if you have employees table)
-  -- FOREIGN KEY (`employee_id`) REFERENCES `employees`(`id`) ON DELETE CASCADE,
-  -- FOREIGN KEY (`approved_by`) REFERENCES `employees`(`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ================================================================
--- SAMPLE DATA FOR TESTING (Optional)
+-- EMPLOYEE BENEFITS TABLE
 -- ================================================================
+CREATE TABLE IF NOT EXISTS `employee_benefits` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `employee_id` INT NOT NULL,
+  `benefit_name` VARCHAR(255) NOT NULL,
+  `benefit_type` VARCHAR(100) NOT NULL,
+  `description` TEXT DEFAULT NULL,
+  `value` DECIMAL(15,2) DEFAULT NULL,
+  `start_date` DATE NOT NULL,
+  `end_date` DATE DEFAULT NULL,
+  `notes` TEXT DEFAULT NULL,
+  `status` ENUM('active', 'inactive', 'pending') DEFAULT 'active',
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  
+  INDEX idx_employee (`employee_id`),
+  INDEX idx_status (`status`),
+  INDEX idx_benefit_type (`benefit_type`),
+  INDEX idx_dates (`start_date`, `end_date`),
+  
+  FOREIGN KEY (`employee_id`) REFERENCES `employees`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Sample attendance records
--- INSERT INTO `attendance` (`employee_id`, `date`, `clock_in`, `clock_out`, `hours_worked`, `status`) VALUES
--- (1, '2025-10-08', '2025-10-08 09:00:00', '2025-10-08 17:30:00', 8.5, 'present'),
--- (2, '2025-10-08', '2025-10-08 09:15:00', NULL, NULL, 'present');
+-- ================================================================
+-- TRAININGS TABLE (Training Programs)
+-- ================================================================
+CREATE TABLE IF NOT EXISTS `trainings` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `title` VARCHAR(255) NOT NULL,
+  `category` VARCHAR(100) DEFAULT NULL,
+  `description` TEXT DEFAULT NULL,
+  `instructor` VARCHAR(255) DEFAULT NULL,
+  `location` VARCHAR(255) DEFAULT NULL,
+  `delivery_method` ENUM('online', 'in_person', 'hybrid') DEFAULT 'online',
+  `attachment_name` VARCHAR(255) DEFAULT NULL,
+  `attachment_path` VARCHAR(500) DEFAULT NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  
+  INDEX idx_category (`category`),
+  INDEX idx_delivery_method (`delivery_method`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Sample leave requests
--- INSERT INTO `leave_requests` (`employee_id`, `leave_type`, `start_date`, `end_date`, `days`, `reason`, `status`) VALUES
--- (1, 'annual', '2025-10-15', '2025-10-17', 3, 'Family vacation', 'pending'),
--- (2, 'sick', '2025-10-09', '2025-10-09', 1, 'Medical appointment', 'approved');
+-- ================================================================
+-- TRAINING ASSIGNMENTS TABLE
+-- ================================================================
+CREATE TABLE IF NOT EXISTS `training_assignments` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `training_id` INT DEFAULT NULL,
+  `employee_id` INT NOT NULL,
+  `scheduled_at` DATETIME NOT NULL,
+  `completion_deadline` DATETIME NOT NULL,
+  `duration_hours` INT DEFAULT 1,
+  `status` ENUM('scheduled', 'in_progress', 'completed', 'cancelled') DEFAULT 'scheduled',
+  `completed_at` DATETIME DEFAULT NULL,
+  `notes` TEXT DEFAULT NULL,
+  `notification_read` TINYINT(1) DEFAULT 0,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  
+  INDEX idx_employee (`employee_id`),
+  INDEX idx_training (`training_id`),
+  INDEX idx_status (`status`),
+  INDEX idx_scheduled (`scheduled_at`),
+  
+  FOREIGN KEY (`employee_id`) REFERENCES `employees`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`training_id`) REFERENCES `trainings`(`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ================================================================
 -- USEFUL QUERIES
 -- ================================================================
 
--- Get today's attendance
--- SELECT a.*, e.first_name, e.last_name 
--- FROM attendance a
--- JOIN employees e ON a.employee_id = e.id
--- WHERE a.date = CURDATE();
+-- Get active benefits for an employee
+-- SELECT * FROM employee_benefits WHERE employee_id = 1 AND status = 'active';
 
--- Get pending leave requests
--- SELECT lr.*, e.first_name, e.last_name 
--- FROM leave_requests lr
--- JOIN employees e ON lr.employee_id = e.id
--- WHERE lr.status = 'pending'
--- ORDER BY lr.created_at ASC;
+-- Get upcoming training assignments
+-- SELECT ta.*, t.title, e.first_name, e.last_name 
+-- FROM training_assignments ta
+-- JOIN trainings t ON ta.training_id = t.id
+-- JOIN employees e ON ta.employee_id = e.id
+-- WHERE ta.status = 'scheduled' AND ta.scheduled_at >= NOW();
 
--- Get employee attendance summary for current month
--- SELECT 
---     employee_id,
---     COUNT(*) as days_present,
---     SUM(hours_worked) as total_hours,
---     AVG(hours_worked) as avg_hours
--- FROM attendance
--- WHERE MONTH(date) = MONTH(CURDATE()) 
---   AND YEAR(date) = YEAR(CURDATE())
--- GROUP BY employee_id;
+-- Get benefit summary by type
+-- SELECT benefit_type, COUNT(*) as count, SUM(value) as total_value
+-- FROM employee_benefits WHERE status = 'active' GROUP BY benefit_type;

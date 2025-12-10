@@ -468,13 +468,16 @@ export default function Dashboard() {
     }
   };
 
+  // Test mode: bypass time restrictions for specific test users
+  const isTestMode = user?.email === 'bunmi.babajide@emeraldcfze.com'
+  
   const handleClockIn = () => {
     if (!user) {
       toast({ title: "Error", description: "No user logged in.", variant: "destructive" })
       return
     }
 
-    // Enforce clock-in window (7:00 AM - 9:30 AM)
+    // Enforce clock-in window (7:00 AM - 9:30 AM) - bypass for test mode
     const nowDate = new Date()
     const currentHour = nowDate.getHours()
     const currentMinute = nowDate.getMinutes()
@@ -483,7 +486,7 @@ export default function Dashboard() {
     const clockInEndTime = 9 * 60 + 30 // 9:30 AM
     console.log('Clock-in (Dashboard):', nowDate.toLocaleTimeString(), 'mins:', currentTimeInMinutes, 'allowed:', clockInStartTime, '-', clockInEndTime)
 
-    if (currentTimeInMinutes < clockInStartTime || currentTimeInMinutes > clockInEndTime) {
+    if (!isTestMode && (currentTimeInMinutes < clockInStartTime || currentTimeInMinutes > clockInEndTime)) {
       toast({
         title: "Clock In Unavailable",
         description: `Clock in is only allowed between 7:00 AM and 9:30 AM. Current time: ${nowDate.toLocaleTimeString()}`,
@@ -568,7 +571,8 @@ export default function Dashboard() {
       return
     }
     
-    if (currentHour >= 11 && currentHour < 14) {
+    // Test mode bypasses time restrictions
+    if (isTestMode || (currentHour >= 11 && currentHour < 14)) {
       // Start lunch break directly without dialog
       performLunchBreak()
     } else {

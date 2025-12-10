@@ -113,14 +113,10 @@ export default function Benefits() {
     
     try {
       const data = await apiService.getEmployeeBenefits()
-<<<<<<< HEAD
-      setDbBenefits(Array.isArray(data) ? data : ((data as any)?.data || []))
-=======
       const benefitsArray = Array.isArray(data) ? data : (data?.data || [])
       console.log('Fetched benefits:', benefitsArray)
       console.log('Current user employee_id:', user?.employee_id)
       setDbBenefits(benefitsArray)
->>>>>>> b7816ac (Improve benefits assignment: add error handling, logging, and better employee_id matching)
     } catch (error: any) {
       console.error('Failed to fetch benefits:', error)
       // Don't show error toast for 401 - user might be using dummy account
@@ -146,7 +142,7 @@ export default function Benefits() {
     try {
       const data = await apiService.getEmployees()
       // Handle both array and object with data property
-      const employeesList = Array.isArray(data) ? data : ((data as any)?.data || [])
+      const employeesList = Array.isArray(data) ? data : (data?.data || [])
       setEmployees(employeesList)
     } catch (error: any) {
       console.error('Failed to fetch employees:', error)
@@ -307,16 +303,48 @@ export default function Benefits() {
       })
       setIsAssignDialogOpen(false)
 
-      toast({
-        title: "Benefit Assigned",
-        description: `Benefit "${assignBenefitForm.benefit_name}" has been assigned successfully to ${assignBenefitForm.employee_ids.length} employee(s)`,
-      })
+      // Check if there were any skipped employees
+      if (response.skipped && response.skipped.length > 0) {
+        const skippedMessages = response.skipped.map((s: any) => {
+          if (typeof s === 'object' && s.reason) {
+            return `Employee ${s.employee_id}: ${s.reason}`;
+          }
+          return `Employee ${s}`;
+        }).join(', ');
+        
+        toast({
+          title: response.benefits?.length > 0 ? "Partially Assigned" : "Assignment Failed",
+          description: response.benefits?.length > 0 
+            ? `${response.benefits.length} benefit(s) assigned. Skipped: ${skippedMessages}`
+            : `No benefits assigned. Errors: ${skippedMessages}`,
+          variant: response.benefits?.length > 0 ? "default" : "destructive"
+        })
+      } else {
+        toast({
+          title: "Benefit Assigned",
+          description: `Benefit "${assignBenefitForm.benefit_name}" has been assigned successfully to ${response.benefits?.length || assignBenefitForm.employee_ids.length} employee(s)`,
+        })
+      }
     } catch (error: any) {
       console.error('Error assigning benefit:', error)
-      const errorMessage = error?.message || error?.response?.data?.message || 'Unknown error occurred'
+      const errorData = error?.response?.data || {}
+      const errorMessage = errorData.error || error?.message || 'Unknown error occurred'
+      const skippedDetails = errorData.skipped || []
+      
+      let description = errorMessage
+      if (skippedDetails.length > 0) {
+        const skippedMessages = skippedDetails.map((s: any) => {
+          if (typeof s === 'object' && s.reason) {
+            return `Employee ${s.employee_id}: ${s.reason}`;
+          }
+          return `Employee ${s}`;
+        }).join(', ');
+        description = `${errorMessage}. Details: ${skippedMessages}`
+      }
+      
       toast({
         title: "Assignment failed",
-        description: errorMessage || "Please try again",
+        description: description,
         variant: "destructive"
       })
     }

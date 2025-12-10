@@ -65,6 +65,14 @@ import ApiTest from "@/components/ApiTest"
 import { useAuth } from "@/contexts/AuthContext"
 import RoleBasedComponent from "@/components/RoleBasedComponent"
 
+interface UserActivity {
+  id: string
+  type: 'clock_in' | 'clock_out' | 'lunch_start' | 'lunch_end'
+  description: string
+  timestamp: string
+  userId: string
+}
+
 export default function Dashboard() {
   const navigate = useNavigate()
   const { toast } = useToast()
@@ -79,6 +87,36 @@ export default function Dashboard() {
   const [showClockOutDialog, setShowClockOutDialog] = useState(false)
   const [clockOutReason, setClockOutReason] = useState("")
   const [isLunchBreak, setIsLunchBreak] = useState(false)
+  const [recentActivities, setRecentActivities] = useState<UserActivity[]>([])
+
+  // Load user activities from localStorage
+  const loadUserActivities = () => {
+    if (!user) return
+    const activities = JSON.parse(localStorage.getItem('userActivities') || '[]') as UserActivity[]
+    const userActivities = activities
+      .filter(a => a.userId === user.id)
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+      .slice(0, 10)
+    setRecentActivities(userActivities)
+  }
+
+  // Save a new activity
+  const saveActivity = (type: UserActivity['type'], description: string) => {
+    if (!user) return
+    const activities = JSON.parse(localStorage.getItem('userActivities') || '[]') as UserActivity[]
+    const newActivity: UserActivity = {
+      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      type,
+      description,
+      timestamp: new Date().toISOString(),
+      userId: user.id
+    }
+    activities.unshift(newActivity)
+    // Keep only last 100 activities per user
+    const filtered = activities.slice(0, 500)
+    localStorage.setItem('userActivities', JSON.stringify(filtered))
+    loadUserActivities()
+  }
 
   const getRoleSpecificTitle = () => {
     const isLineManager = user?.role === 'line_manager'
@@ -160,6 +198,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     loadTodayStatus()
+    loadUserActivities()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user])
 
@@ -528,6 +567,7 @@ export default function Dashboard() {
       
       localStorage.setItem('attendanceRecords', JSON.stringify(updatedRecords))
       loadTodayStatus()
+      saveActivity('clock_in', `Clocked in at ${now}`)
       toast({ title: "Success", description: "Clocked in successfully!" })
     } catch (error) {
       console.error('Clock in error:', error)
@@ -605,6 +645,7 @@ export default function Dashboard() {
         }
         localStorage.setItem('attendanceRecords', JSON.stringify(attendanceRecords))
         loadTodayStatus()
+        saveActivity('lunch_start', `Started lunch break at ${now}`)
         toast({
           title: "Lunch Break Started",
           description: "Enjoy your lunch! Click the button again to return.",
@@ -640,6 +681,7 @@ export default function Dashboard() {
         }
         localStorage.setItem('attendanceRecords', JSON.stringify(attendanceRecords))
         loadTodayStatus()
+        saveActivity('lunch_end', `Returned from lunch at ${now}`)
         toast({
           title: "Welcome Back",
           description: "You've returned from lunch break."
@@ -678,6 +720,7 @@ export default function Dashboard() {
           lunch_break_start: now,
           is_clocked_in: false
         }
+        saveActivity('lunch_start', `Started lunch break at ${now}`)
         toast({ title: "Success", description: "Lunch break started. Click Lunch Break button to return!" })
       } else {
         attendanceRecords[existingRecordIndex] = {
@@ -686,6 +729,7 @@ export default function Dashboard() {
           is_clocked_in: false,
           early_departure_reason: reason || ""
         }
+        saveActivity('clock_out', `Clocked out at ${now}${reason ? ` - ${reason}` : ''}`)
         toast({ title: "Success", description: "Clocked out successfully!" })
       }
       
@@ -1103,50 +1147,32 @@ export default function Dashboard() {
                   </div>
                 ))}
               </div>
-            ) : ['general_employee', 'finance', 'line_manager', 'executive'].includes(user?.role || '') ? (
+            ) : recentActivities.length > 0 ? (
               <div className="space-y-3">
-                <div className="flex items-center justify-between text-sm">
-                  <span>Clocked in today</span>
-                  <span className="text-muted-foreground">8:00 AM</span>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span>Performance review submitted</span>
-                  <span className="text-muted-foreground">Yesterday</span>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span>Training module completed</span>
-                  <span className="text-muted-foreground">2 days ago</span>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span>Leave request approved</span>
-                  <span className="text-muted-foreground">3 days ago</span>
-                </div>
+                {recentActivities.slice(0, 5).map((activity) => {
+                  const activityDate = new Date(activity.timestamp)
+                  const now = new Date()
+                  const diffMs = now.getTime() - activityDate.getTime()
+                  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+                  let timeDisplay = ''
+                  if (diffDays === 0) {
+                    timeDisplay = format(activityDate, 'h:mm a')
+                  } else if (diffDays === 1) {
+                    timeDisplay = 'Yesterday'
+                  } else {
+                    timeDisplay = `${diffDays} days ago`
+                  }
+                  return (
+                    <div key={activity.id} className="flex items-center justify-between text-sm">
+                      <span>{activity.description}</span>
+                      <span className="text-muted-foreground">{timeDisplay}</span>
+                    </div>
+                  )
+                })}
               </div>
             ) : (
-              <div className="space-y-3">
-                {recentEmployees.length > 0 && (
-                  <div className="flex items-center justify-between text-sm">
-                    <span>New employee onboarded</span>
-                    <span className="text-muted-foreground">
-                      {recentEmployees[0]?.hire_date ? 
-                        format(new Date(recentEmployees[0].hire_date), 'MMM dd') : 
-                        'Recently'
-                      }
-                    </span>
-                  </div>
-                )}
-                <div className="flex items-center justify-between text-sm">
-                  <span>Total employees: {allEmployees.length}</span>
-                  <span className="text-muted-foreground">Current</span>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span>Active employees: {allEmployees.filter(emp => emp.employment_status === 'Active').length}</span>
-                  <span className="text-muted-foreground">Today</span>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span>Departments: {Object.keys(departmentStats).length}</span>
-                  <span className="text-muted-foreground">Active</span>
-                </div>
+              <div className="text-sm text-muted-foreground text-center py-4">
+                No recent activities
               </div>
             )}
           </CardContent>

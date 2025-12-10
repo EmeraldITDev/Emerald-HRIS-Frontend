@@ -25,6 +25,7 @@ export interface User {
   department: string;
   employee_id?: number;
   mustChangePassword?: boolean;
+  isDummyAccount?: boolean; // Flag to identify test/dummy accounts
 }
 
 interface AuthContextType {
@@ -159,6 +160,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           department: (response as any).user.department || 'General',
           employee_id: (response as any).user.employee_id,
           mustChangePassword: (response as any).user.must_change_password,
+          isDummyAccount: false, // Real database account
         };
         
         setUser(user);
@@ -174,8 +176,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const userRecord = dummyUsers[email.toLowerCase()];
     
     if (userRecord && userRecord.password === password) {
-      setUser(userRecord.user);
-      localStorage.setItem('hris_user', JSON.stringify(userRecord.user));
+      const dummyUser: User = {
+        ...userRecord.user,
+        isDummyAccount: true, // Mark as dummy/test account
+      };
+      setUser(dummyUser);
+      localStorage.setItem('hris_user', JSON.stringify(dummyUser));
       return { success: true };
     }
     
@@ -195,6 +201,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           department: (resp as any).user.department || 'General',
           employee_id: (resp as any).user.employee_id,
           mustChangePassword: (resp as any).user.must_change_password,
+          isDummyAccount: false, // Real database account
         };
         setUser(user);
         localStorage.setItem('hris_user', JSON.stringify(user));
@@ -246,6 +253,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           department: response.user.department || 'General',
           employee_id: response.user.employee_id,
           mustChangePassword: response.user.must_change_password,
+          isDummyAccount: false, // Real database account
         };
         
         setUser(updatedUser);

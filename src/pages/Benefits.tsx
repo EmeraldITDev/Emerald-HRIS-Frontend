@@ -112,7 +112,7 @@ export default function Benefits() {
     }
     
     try {
-      const data = await apiService.getEmployeeBenefits()
+      const data = await apiService.getEmployeeBenefits() as any
       const benefitsArray = Array.isArray(data) ? data : (data?.data || [])
       console.log('Fetched benefits:', benefitsArray)
       console.log('Current user employee_id:', user?.employee_id)
@@ -140,7 +140,7 @@ export default function Benefits() {
     
     setIsLoadingEmployees(true)
     try {
-      const data = await apiService.getEmployees()
+      const data = await apiService.getEmployees() as any
       // Handle both array and object with data property
       const employeesList = Array.isArray(data) ? data : (data?.data || [])
       setEmployees(employeesList)
@@ -304,8 +304,9 @@ export default function Benefits() {
       setIsAssignDialogOpen(false)
 
       // Check if there were any skipped employees
-      if (response.skipped && response.skipped.length > 0) {
-        const skippedMessages = response.skipped.map((s: any) => {
+      const responseAny = response as any
+      if (responseAny.skipped && responseAny.skipped.length > 0) {
+        const skippedMessages = responseAny.skipped.map((s: any) => {
           if (typeof s === 'object' && s.reason) {
             return `Employee ${s.employee_id}: ${s.reason}`;
           }
@@ -313,16 +314,16 @@ export default function Benefits() {
         }).join(', ');
         
         toast({
-          title: response.benefits?.length > 0 ? "Partially Assigned" : "Assignment Failed",
-          description: response.benefits?.length > 0 
-            ? `${response.benefits.length} benefit(s) assigned. Skipped: ${skippedMessages}`
+          title: responseAny.benefits?.length > 0 ? "Partially Assigned" : "Assignment Failed",
+          description: responseAny.benefits?.length > 0 
+            ? `${responseAny.benefits.length} benefit(s) assigned. Skipped: ${skippedMessages}`
             : `No benefits assigned. Errors: ${skippedMessages}`,
-          variant: response.benefits?.length > 0 ? "default" : "destructive"
+          variant: responseAny.benefits?.length > 0 ? "default" : "destructive"
         })
       } else {
         toast({
           title: "Benefit Assigned",
-          description: `Benefit "${assignBenefitForm.benefit_name}" has been assigned successfully to ${response.benefits?.length || assignBenefitForm.employee_ids.length} employee(s)`,
+          description: `Benefit "${assignBenefitForm.benefit_name}" has been assigned successfully to ${responseAny.benefits?.length || assignBenefitForm.employee_ids.length} employee(s)`,
         })
       }
     } catch (error: any) {

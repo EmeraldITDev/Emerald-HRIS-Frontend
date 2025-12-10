@@ -84,8 +84,9 @@ export default function Training() {
         const data = await apiService.getEmployees()
         let activeEmployees = data.filter(emp => emp.employment_status === 'Active')
         
-        // Filter by department for line managers
-        if (isLineManager && userDepartment) {
+        // Executives, HR Managers, and Corporate HR see ALL employees
+        // Line Managers only see employees in their own department
+        if (isLineManager && !isExecutiveOrHR && userDepartment) {
           activeEmployees = activeEmployees.filter(emp => emp.department === userDepartment)
         }
         
@@ -103,7 +104,7 @@ export default function Training() {
     }
     fetchEmployees()
     fetchTrainingAssignments()
-  }, [isLineManager, userDepartment])
+  }, [isLineManager, isExecutiveOrHR, userDepartment])
 
   const fetchTrainingAssignments = async () => {
     try {

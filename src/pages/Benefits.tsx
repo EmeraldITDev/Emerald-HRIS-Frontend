@@ -113,7 +113,7 @@ export default function Benefits() {
     
     try {
       const data = await apiService.getEmployeeBenefits()
-      setDbBenefits(Array.isArray(data) ? data : (data?.data || []))
+      setDbBenefits(Array.isArray(data) ? data : ((data as any)?.data || []))
     } catch (error: any) {
       console.error('Failed to fetch benefits:', error)
       // Don't show error toast for 401 - user might be using dummy account
@@ -139,7 +139,7 @@ export default function Benefits() {
     try {
       const data = await apiService.getEmployees()
       // Handle both array and object with data property
-      const employeesList = Array.isArray(data) ? data : (data?.data || [])
+      const employeesList = Array.isArray(data) ? data : ((data as any)?.data || [])
       setEmployees(employeesList)
     } catch (error: any) {
       console.error('Failed to fetch employees:', error)

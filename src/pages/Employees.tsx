@@ -168,6 +168,7 @@ export default function Employees() {
   // Add this function to fetch employees
   const fetchEmployees = async () => {
     try {
+      setIsLoading(true);
       const data = await apiService.getEmployees();
       setEmployeeList(data);
     } catch (error) {
@@ -177,6 +178,8 @@ export default function Employees() {
         description: "Failed to load employees",
         variant: "destructive"
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -1793,74 +1796,87 @@ export default function Employees() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredEmployees.map((employee) => (
-                    <TableRow key={employee.id}>
-                      <TableCell className="font-medium">
-                        {employee.employee_code || `EMP${employee.id?.toString().padStart(3, '0')}`}
+                  {isLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={9} className="text-center py-8">
+                        <div className="flex items-center justify-center space-x-2">
+                          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                          <span className="text-muted-foreground">Loading employees...</span>
+                        </div>
                       </TableCell>
-                      <TableCell>
-                        {employee.first_name} {employee.last_name}
+                    </TableRow>
+                  ) : filteredEmployees.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                        No employees found matching your search criteria.
                       </TableCell>
-                      <TableCell>{employee.email}</TableCell>
-                      <TableCell>{employee.department}</TableCell>
-                      <TableCell>{employee.job_title}</TableCell>
-                      <TableCell>
-                        <Badge variant={employee.employment_status === 'Active' ? 'default' : 'secondary'}>
-                          {employee.employment_status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{employee.employment_type}</TableCell>
-                      <TableCell>{employee.vacation_days || 0}</TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => {
-                              setSelectedEmployee(employee);
-                              setShowViewDetails(true);
-                            }}>
-                              <Eye className="mr-2 h-4 w-4" />
-                              View Details
-                            </DropdownMenuItem>
-                            <RoleBasedComponent allowedRoles={['hr_manager', 'corporate_hr']}>
-                              <DropdownMenuItem onClick={() => handleEditEmployee(employee)}>
-                                <Edit className="mr-2 h-4 w-4" />
-                                Edit Employee
+                    </TableRow>
+                  ) : (
+                    filteredEmployees.map((employee) => (
+                      <TableRow key={employee.id}>
+                        <TableCell className="font-medium">
+                          {employee.employee_code || `EMP${employee.id?.toString().padStart(3, '0')}`}
+                        </TableCell>
+                        <TableCell>
+                          {employee.first_name} {employee.last_name}
+                        </TableCell>
+                        <TableCell>{employee.email}</TableCell>
+                        <TableCell>{employee.department}</TableCell>
+                        <TableCell>{employee.job_title}</TableCell>
+                        <TableCell>
+                          <Badge variant={employee.employment_status === 'Active' ? 'default' : 'secondary'}>
+                            {employee.employment_status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{employee.employment_type}</TableCell>
+                        <TableCell>{employee.vacation_days || 0}</TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" className="h-8 w-8 p-0">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => {
+                                setSelectedEmployee(employee);
+                                setShowViewDetails(true);
+                              }}>
+                                <Eye className="mr-2 h-4 w-4" />
+                                View Details
                               </DropdownMenuItem>
-                              {employee.user_id && (
-                                <DropdownMenuItem onClick={() => handleResetPassword(employee)}>
-                                  <KeyRound className="mr-2 h-4 w-4" />
-                                  Reset Password
+                              <RoleBasedComponent allowedRoles={['hr_manager', 'corporate_hr']}>
+                                <DropdownMenuItem onClick={() => handleEditEmployee(employee)}>
+                                  <Edit className="mr-2 h-4 w-4" />
+                                  Edit Employee
                                 </DropdownMenuItem>
-                              )}
-                            </RoleBasedComponent>
-                            <DropdownMenuItem onClick={() => handleDownloadProfile(employee)}>
-                              <Download className="mr-2 h-4 w-4" />
-                              Download Profile
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              onClick={() => handleResignEmployee(employee)}
-                              className="text-destructive focus:text-destructive"
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Resign Employee
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                  </TableRow>
-                ))}
+                                {employee.user_id && (
+                                  <DropdownMenuItem onClick={() => handleResetPassword(employee)}>
+                                    <KeyRound className="mr-2 h-4 w-4" />
+                                    Reset Password
+                                  </DropdownMenuItem>
+                                )}
+                              </RoleBasedComponent>
+                              <DropdownMenuItem onClick={() => handleDownloadProfile(employee)}>
+                                <Download className="mr-2 h-4 w-4" />
+                                Download Profile
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                onClick={() => handleResignEmployee(employee)}
+                                className="text-destructive focus:text-destructive"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Resign Employee
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                    </TableRow>
+                  ))
+                  )}
                 </TableBody>
               </Table>
             </div>
-            
-            {filteredEmployees.length === 0 && <div className="text-center py-8 text-muted-foreground text-sm">
-                No employees found matching your search criteria.
-              </div>}
           </CardContent>
         </Card>
 

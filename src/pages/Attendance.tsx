@@ -27,7 +27,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Calendar, Plus, Clock, CalendarDays, LogIn, LogOut, Bell, Cake, Award, ChevronDown, Download, FileText, User, Phone, Building, Users, Upload } from "lucide-react"
+import { Calendar, Plus, Clock, CalendarDays, LogIn, LogOut, Bell, ChevronDown, Download, FileText, User, Phone, Building, Users, Upload } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -36,121 +36,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { useAuth } from "@/contexts/AuthContext"
 import { RoleBasedComponent } from "@/components/RoleBasedComponent"
 import apiService, { Employee } from "@/lib/api"
-
-// Sample employee data for dropdown
-const employees = [
-  { id: "EMP001", name: "Adebayo Johnson", vacationDays: 25, usedDays: 5, birthday: "1990-08-23", joinDate: "2020-08-25", confirmationDate: "2024-08-23" },
-  { id: "EMP002", name: "Fatima Abdul", vacationDays: 30, usedDays: 12, birthday: "1988-08-22", joinDate: "2019-08-20", confirmationDate: "2024-08-22" },
-  { id: "EMP003", name: "Chinedu Okafor", vacationDays: 20, usedDays: 8, birthday: "1992-08-26", joinDate: "2021-08-24", confirmationDate: "2024-08-26" },
-  { id: "EMP004", name: "Kemi Adeleke", vacationDays: 25, usedDays: 3, birthday: "1989-08-21", joinDate: "2018-08-19", confirmationDate: "2024-08-21" },
-]
-
-// Helper function to check if date is within current month
-const isInCurrentMonth = (dateString: string) => {
-  const today = new Date()
-  const targetDate = new Date(dateString)
-  targetDate.setFullYear(today.getFullYear()) // Use current year for birthdays
-  return targetDate.getMonth() === today.getMonth()
-}
-
-// Helper function to check if date is within next 7 days
-const isWithinNextWeek = (dateString: string) => {
-  const today = new Date()
-  const targetDate = new Date(dateString)
-  targetDate.setFullYear(today.getFullYear()) // Use current year for birthdays
-  const diffTime = targetDate.getTime() - today.getTime()
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-  return diffDays >= 0 && diffDays <= 7
-}
-
-// Get notifications for the current month
-const getCurrentMonthEvents = () => {
-  const today = new Date()
-  const events = { birthdays: [], anniversaries: [] }
-
-  employees.forEach(emp => {
-    // Birthday events in current month
-    if (isInCurrentMonth(emp.birthday)) {
-      const birthdayDate = new Date(emp.birthday)
-      birthdayDate.setFullYear(today.getFullYear())
-      events.birthdays.push({
-        type: 'birthday',
-        employee: emp.name,
-        date: birthdayDate.toLocaleDateString(),
-        day: birthdayDate.getDate(),
-        message: `${emp.name}'s birthday`,
-        icon: Cake
-      })
-    }
-
-    // Work anniversary events in current month
-    const joinDate = new Date(emp.joinDate)
-    const anniversaryDate = new Date(joinDate)
-    anniversaryDate.setFullYear(today.getFullYear())
-    if (isInCurrentMonth(anniversaryDate.toISOString().split('T')[0])) {
-      const yearsOfService = today.getFullYear() - joinDate.getFullYear()
-      events.anniversaries.push({
-        type: 'anniversary',
-        employee: emp.name,
-        date: anniversaryDate.toLocaleDateString(),
-        day: anniversaryDate.getDate(),
-        message: `${emp.name}'s ${yearsOfService} year work anniversary`,
-        icon: Award
-      })
-    }
-  })
-
-  return events
-}
-
-// Get notifications for upcoming events (within 7 days)
-const getNotifications = () => {
-  const today = new Date()
-  const notifications = []
-
-  employees.forEach(emp => {
-    // Birthday notifications
-    if (isWithinNextWeek(emp.birthday)) {
-      const birthdayDate = new Date(emp.birthday)
-      birthdayDate.setFullYear(today.getFullYear())
-      notifications.push({
-        type: 'birthday',
-        employee: emp.name,
-        date: birthdayDate.toLocaleDateString(),
-        message: `${emp.name}'s birthday`,
-        icon: Cake
-      })
-    }
-
-    // Work anniversary notifications
-    const joinDate = new Date(emp.joinDate)
-    const anniversaryDate = new Date(joinDate)
-    anniversaryDate.setFullYear(today.getFullYear())
-    if (isWithinNextWeek(anniversaryDate.toISOString().split('T')[0])) {
-      const yearsOfService = today.getFullYear() - joinDate.getFullYear()
-      notifications.push({
-        type: 'anniversary',
-        employee: emp.name,
-        date: anniversaryDate.toLocaleDateString(),
-        message: `${emp.name}'s ${yearsOfService} year work anniversary`,
-        icon: Award
-      })
-    }
-
-    // Employment confirmation notifications
-    if (isWithinNextWeek(emp.confirmationDate)) {
-      notifications.push({
-        type: 'confirmation',
-        employee: emp.name,
-        date: new Date(emp.confirmationDate).toLocaleDateString(),
-        message: `${emp.name}'s employment confirmation due`,
-        icon: Bell
-      })
-    }
-  })
-
-  return notifications
-}
+import { getCurrentMonthCelebrations, type Celebration } from "@/utils/celebrations"
+import { CelebrationsCard } from "@/components/CelebrationsCard"
 
 // Sample attendance records
 const attendanceRecords = [
@@ -220,9 +107,8 @@ export default function Attendance() {
   const [records, setRecords] = useState(leaveRecords)
   const [attendance, setAttendance] = useState(attendanceRecords)
   const [currentTime] = useState(new Date())
-  const [notifications] = useState(getNotifications())
-  const [currentMonthEvents] = useState(getCurrentMonthEvents())
-  const [showMonthlyEvents, setShowMonthlyEvents] = useState(false)
+  const [currentMonthCelebrations, setCurrentMonthCelebrations] = useState<Celebration[]>([])
+  const [isCelebrationsLoading, setIsCelebrationsLoading] = useState(false)
   const [startDateOpen, setStartDateOpen] = useState(false)
   const [endDateOpen, setEndDateOpen] = useState(false)
   const { toast } = useToast()
@@ -301,6 +187,24 @@ export default function Attendance() {
       }
     }
   }, [user, employees])
+
+  // Update celebrations when all employees are loaded
+  useEffect(() => {
+    const fetchCelebrations = async () => {
+      setIsCelebrationsLoading(true)
+      try {
+        // Get all employees for celebrations regardless of role filtering
+        const allEmployees = await apiService.getEmployees()
+        const celebrations = getCurrentMonthCelebrations(allEmployees)
+        setCurrentMonthCelebrations(celebrations)
+      } catch (error) {
+        console.error('Error loading celebrations:', error)
+      } finally {
+        setIsCelebrationsLoading(false)
+      }
+    }
+    fetchCelebrations()
+  }, [])
 
   const fetchEmployees = async () => {
     try {
@@ -824,119 +728,13 @@ export default function Attendance() {
         </RoleBasedComponent>
       </div>
 
-      {/* Notifications Section */}
-      {notifications.length > 0 && (
-        <Card className="border-border/50 shadow-sm bg-primary/5">
-          <CardHeader>
-            <CardTitle className="text-primary flex items-center">
-              <Bell className="mr-2 h-5 w-5" />
-              Upcoming Events & Notifications
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {notifications.map((notification, index) => {
-                const IconComponent = notification.icon
-                return (
-                  <div key={index} className="flex items-center space-x-3 p-3 bg-background rounded-lg border">
-                    <IconComponent className="h-5 w-5 text-primary flex-shrink-0" />
-                    <div className="flex-1">
-                      <div className="font-medium text-sm">{notification.message}</div>
-                      <div className="text-xs text-muted-foreground">{notification.date}</div>
-                    </div>
-                    <Badge variant="outline" className="text-xs">
-                      {notification.type === 'birthday' && 'Birthday'}
-                      {notification.type === 'anniversary' && 'Anniversary'}
-                      {notification.type === 'confirmation' && 'Confirmation'}
-                    </Badge>
-                  </div>
-                )
-              })}
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
-      {/* Monthly Events Dropdown */}
-      <Card className="border-border/50 shadow-sm">
-        <CardHeader 
-          className="cursor-pointer" 
-          onClick={() => setShowMonthlyEvents(!showMonthlyEvents)}
-        >
-          <CardTitle className="text-primary flex items-center justify-between">
-            <div className="flex items-center">
-              <Cake className="mr-2 h-5 w-5" />
-              This Month's Birthdays & Anniversaries
-            </div>
-            <ChevronDown className={`h-5 w-5 transition-transform ${showMonthlyEvents ? 'rotate-180' : ''}`} />
-          </CardTitle>
-        </CardHeader>
-        {showMonthlyEvents && (
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Birthdays Section */}
-              <div>
-                <h3 className="font-semibold text-primary mb-3 flex items-center">
-                  <Cake className="mr-2 h-4 w-4" />
-                  Birthdays ({currentMonthEvents.birthdays.length})
-                </h3>
-                <div className="space-y-2">
-                  {currentMonthEvents.birthdays.length > 0 ? (
-                    currentMonthEvents.birthdays
-                      .sort((a, b) => a.day - b.day)
-                      .map((birthday, index) => (
-                        <div key={index} className="flex items-center justify-between p-3 bg-background rounded-lg border">
-                          <div className="flex items-center space-x-3">
-                            <Cake className="h-4 w-4 text-primary" />
-                            <div>
-                              <div className="font-medium text-sm">{birthday.employee}</div>
-                              <div className="text-xs text-muted-foreground">{birthday.date}</div>
-                            </div>
-                          </div>
-                          <Badge variant="outline" className="text-xs bg-primary/5 text-primary border-primary/20">
-                            Day {birthday.day}
-                          </Badge>
-                        </div>
-                      ))
-                  ) : (
-                    <p className="text-sm text-muted-foreground">No birthdays this month</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Work Anniversaries Section */}
-              <div>
-                <h3 className="font-semibold text-primary mb-3 flex items-center">
-                  <Award className="mr-2 h-4 w-4" />
-                  Work Anniversaries ({currentMonthEvents.anniversaries.length})
-                </h3>
-                <div className="space-y-2">
-                  {currentMonthEvents.anniversaries.length > 0 ? (
-                    currentMonthEvents.anniversaries
-                      .sort((a, b) => a.day - b.day)
-                      .map((anniversary, index) => (
-                        <div key={index} className="flex items-center justify-between p-3 bg-background rounded-lg border">
-                          <div className="flex items-center space-x-3">
-                            <Award className="h-4 w-4 text-primary" />
-                            <div>
-                              <div className="font-medium text-sm">{anniversary.employee}</div>
-                              <div className="text-xs text-muted-foreground">{anniversary.date}</div>
-                            </div>
-                          </div>
-                          <Badge variant="outline" className="text-xs bg-primary/5 text-primary border-primary/20">
-                            Day {anniversary.day}
-                          </Badge>
-                        </div>
-                      ))
-                  ) : (
-                    <p className="text-sm text-muted-foreground">No work anniversaries this month</p>
-                  )}
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        )}
-      </Card>
+      {/* This Month's Birthdays & Anniversaries - Available to all users */}
+      <CelebrationsCard 
+        celebrations={currentMonthCelebrations} 
+        isLoading={isCelebrationsLoading}
+        title="This Month's Birthdays & Anniversaries"
+      />
 
       {/* Weekly Attendance View - For All Users */}
       <Card className="border-border/50 shadow-sm mb-6">

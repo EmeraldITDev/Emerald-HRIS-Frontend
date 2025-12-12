@@ -48,13 +48,13 @@ export default function MyProfile() {
     }
 
     try {
-      const employees = await apiService.getEmployees() as Employee[]
-      const myEmployee = employees.find(e => e.id === user.employee_id)
+      // Use the dedicated my-profile endpoint for better performance
+      const myEmployee = await apiService.getMyProfile()
       
       if (myEmployee) {
         setEmployeeData(myEmployee)
         setFormData({
-          phone_number: myEmployee.phone_number || "",
+          phone_number: myEmployee.phone_number || myEmployee.phone || "",
           address: myEmployee.address || "",
         })
       }
@@ -134,49 +134,38 @@ export default function MyProfile() {
 
     setIsUploadingPhoto(true)
     try {
-      // Convert to base64 for storage
-      const reader = new FileReader()
-      reader.onload = async (event) => {
-        const base64 = event.target?.result as string
-        
-        try {
-          // Store in localStorage for now as profile_photo isn't in the API
-          const profilePhotos = JSON.parse(localStorage.getItem('profile_photos') || '{}')
-          profilePhotos[employeeData.id!] = base64
-          localStorage.setItem('profile_photos', JSON.stringify(profilePhotos))
-          
-          toast({
-            title: "Photo Updated",
-            description: "Your profile photo has been updated successfully"
-          })
-          
-          await loadEmployeeData()
-        } catch (error) {
-          console.error("Failed to upload photo:", error)
-          toast({
-            title: "Upload Failed",
-            description: "Failed to upload your photo. Please try again.",
-            variant: "destructive"
-          })
-        } finally {
-          setIsUploadingPhoto(false)
-        }
-      }
-      reader.readAsDataURL(file)
-    } catch (error) {
-      setIsUploadingPhoto(false)
+      const response = await apiService.uploadProfilePicture(employeeData.id, file)
+      
       toast({
-        title: "Error",
-        description: "Failed to process the image",
+        title: "Photo Updated",
+        description: "Your profile photo has been updated successfully"
+      })
+      
+      // Reload employee data to get the new profile picture URL
+      await loadEmployeeData()
+    } catch (error) {
+      console.error("Failed to upload photo:", error)
+      toast({
+        title: "Upload Failed",
+        description: "Failed to upload your photo. Please try again.",
         variant: "destructive"
       })
+    } finally {
+      setIsUploadingPhoto(false)
     }
   }
 
   const getProfilePhoto = () => {
-    if (!employeeData?.id) return ""
-    const profilePhotos = JSON.parse(localStorage.getItem('profile_photos') || '{}')
-    return profilePhotos[employeeData.id] || ""
+    if (!employeeData?.profile_picture) return ""
+    
+    // If it's a full URL, return as is
+    if (employeeData.profile_picture.startsWith('http')) {
+      return employeeData.profile_picture
+    }
+    
+    // Otherwise, construct the storage URL
+    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+    return `${baseUrl}/storage/${employeeData.profile_picture}`
   }
 
   const getRoleDisplayName = (role: string) => {

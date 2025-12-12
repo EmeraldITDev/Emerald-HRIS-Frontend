@@ -254,9 +254,12 @@ class ApiService {
     console.log('🌍 Environment:', process.env.NODE_ENV);
     console.log('📤 Endpoint being called:', endpoint);
     
+    // Don't set Content-Type for FormData - let browser set it with boundary
+    const isFormData = options.body instanceof FormData;
+    
     const config: RequestInit = {
       headers: {
-        'Content-Type': 'application/json',
+        ...(!isFormData && { 'Content-Type': 'application/json' }),
         'Accept': 'application/json',
         ...(token && { 'Authorization': `Bearer ${token}` }),
         ...options.headers,
@@ -317,6 +320,11 @@ class ApiService {
   // Get all employees
   async getEmployees(): Promise<Employee[]> {
     return this.request<Employee[]>('/employees-full');
+  }
+
+  // Get current user's employee profile
+  async getMyProfile(): Promise<Employee> {
+    return this.request<Employee>('/employees-full/my-profile');
   }
 
   // Create a new employee

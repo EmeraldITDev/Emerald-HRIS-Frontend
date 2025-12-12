@@ -33,6 +33,8 @@ import {
   Briefcase
 } from "lucide-react"
 import { format } from "date-fns"
+import { getWorkAnniversaryDate, getYearsOfService } from "@/utils/celebrations"
+import { Cake, Award } from "lucide-react"
 import apiService, { Employee } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
 import { EmployeeEditDialog } from "@/components/EmployeeEditDialog"
@@ -324,8 +326,21 @@ export default function EmployeeProfile() {
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm font-medium text-muted-foreground">Hire Date</label>
+                    <label className="text-sm font-medium text-muted-foreground flex items-center space-x-1">
+                      <Award className="h-3 w-3" />
+                      <span>Hire Date</span>
+                    </label>
                     <p className="text-sm">{employee.hire_date ? format(new Date(employee.hire_date), 'PPP') : 'N/A'}</p>
+                    {employee.hire_date && (
+                      <div className="text-xs text-muted-foreground mt-1 space-y-1">
+                        <p>
+                          Work Anniversary: {format(new Date(employee.hire_date), 'MMMM d')}
+                        </p>
+                        <p className="font-medium text-primary">
+                          Years of Service: {getYearsOfService(employee.hire_date)} year{getYearsOfService(employee.hire_date) !== 1 ? 's' : ''}
+                        </p>
+                      </div>
+                    )}
                   </div>
                   <div>
                     <label className="text-sm font-medium text-muted-foreground">Employment Type</label>

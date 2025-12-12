@@ -27,7 +27,11 @@ import {
   ArrowLeft,
   Clock,
   LogIn,
-  LogOut
+  LogOut,
+  Cake,
+  Award,
+  MessageSquare,
+  Send
 } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 import { useToast } from "@/hooks/use-toast"
@@ -64,6 +68,7 @@ import { Textarea } from "@/components/ui/textarea"
 import ApiTest from "@/components/ApiTest"
 import { useAuth } from "@/contexts/AuthContext"
 import RoleBasedComponent from "@/components/RoleBasedComponent"
+import { getCurrentMonthCelebrations, getUpcomingCelebrations, type Celebration } from "@/utils/celebrations"
 
 interface UserActivity {
   id: string
@@ -88,6 +93,11 @@ export default function Dashboard() {
   const [clockOutReason, setClockOutReason] = useState("")
   const [isLunchBreak, setIsLunchBreak] = useState(false)
   const [recentActivities, setRecentActivities] = useState<UserActivity[]>([])
+  const [currentMonthCelebrations, setCurrentMonthCelebrations] = useState<Celebration[]>([])
+  const [upcomingCelebrations, setUpcomingCelebrations] = useState<Celebration[]>([])
+  const [showMessageDialog, setShowMessageDialog] = useState(false)
+  const [selectedCelebration, setSelectedCelebration] = useState<Celebration | null>(null)
+  const [celebrationMessage, setCelebrationMessage] = useState("")
 
   // Load user activities from localStorage
   const loadUserActivities = () => {
@@ -235,6 +245,13 @@ export default function Dashboard() {
           }
         })
         setDepartmentStats(deptStats)
+        
+        // Calculate celebrations
+        const celebrations = getCurrentMonthCelebrations(employees)
+        setCurrentMonthCelebrations(celebrations)
+        
+        const upcoming = getUpcomingCelebrations(employees, 7)
+        setUpcomingCelebrations(upcoming)
       } catch (error) {
         console.error('Failed to fetch dashboard data:', error)
       } finally {
@@ -1517,12 +1534,124 @@ export default function Dashboard() {
             )}
           </CardContent>
         </Card>
+
+        {/* Birthdays & Anniversaries Section */}
+        <Card className="border-border/50 shadow-sm">
+          <CardHeader>
+            <CardTitle className="flex items-center text-primary">
+              <Calendar className="mr-2 h-5 w-5" />
+              This Month's Celebrations
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {isLoading ? (
+              <div className="space-y-3">
+                {[1, 2].map((i) => (
+                  <div key={i} className="h-16 bg-muted rounded animate-pulse"></div>
+                ))}
+              </div>
+            ) : currentMonthCelebrations.length > 0 ? (
+              <div className="space-y-3">
+                {currentMonthCelebrations.map((celebration) => (
+                  <div
+                    key={`${celebration.type}-${celebration.id}-${celebration.day}`}
+                    className="flex items-center justify-between p-3 bg-background rounded-lg border hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="flex items-center space-x-3 flex-1">
+                      {celebration.type === 'birthday' ? (
+                        <Cake className="h-5 w-5 text-pink-500" />
+                      ) : (
+                        <Award className="h-5 w-5 text-amber-500" />
+                      )}
+                      <div className="flex-1">
+                        <div className="font-medium text-sm">
+                          {celebration.employee.first_name} {celebration.employee.last_name}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {celebration.type === 'birthday' 
+                            ? `Birthday - ${celebration.displayDate}`
+                            : `Work Anniversary - ${celebration.displayDate} (${celebration.yearsOfService} year${celebration.yearsOfService !== 1 ? 's' : ''})`
+                          }
+                        </div>
+                      </div>
+                      <Badge variant="outline" className="text-xs bg-primary/5 text-primary border-primary/20 mr-2">
+                        Day {celebration.day}
+                      </Badge>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedCelebration(celebration)
+                          setShowMessageDialog(true)
+                        }}
+                        className="h-8"
+                      >
+                        <MessageSquare className="h-4 w-4 mr-1" />
+                        Send Message
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center text-muted-foreground text-sm py-4">
+                No celebrations this month
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       {/* Test/Debug Component for IT Power Users */}
       <RoleBasedComponent allowedRoles={['it_power_user']}>
         <ApiTest />
       </RoleBasedComponent>
+
+      {/* Send Celebration Message Dialog */}
+      <Dialog open={showMessageDialog} onOpenChange={setShowMessageDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Send Celebration Message</DialogTitle>
+            <DialogDescription>
+              Send a message to {selectedCelebration?.employee.first_name} {selectedCelebration?.employee.last_name} celebrating their {selectedCelebration?.type === 'birthday' ? 'birthday' : 'work anniversary'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="message">Your Message</Label>
+              <Textarea
+                id="message"
+                placeholder={`Congratulations on your ${selectedCelebration?.type === 'birthday' ? 'birthday' : `${selectedCelebration?.yearsOfService} year work anniversary`}!`}
+                value={celebrationMessage}
+                onChange={(e) => setCelebrationMessage(e.target.value)}
+                rows={4}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setShowMessageDialog(false)
+              setCelebrationMessage("")
+              setSelectedCelebration(null)
+            }}>
+              Cancel
+            </Button>
+            <Button onClick={() => {
+              // TODO: Implement API call to send message
+              toast({
+                title: "Message Sent",
+                description: `Your message has been sent to ${selectedCelebration?.employee.first_name} ${selectedCelebration?.employee.last_name}`,
+              })
+              setShowMessageDialog(false)
+              setCelebrationMessage("")
+              setSelectedCelebration(null)
+            }}>
+              <Send className="mr-2 h-4 w-4" />
+              Send Message
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -40,21 +40,8 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Demo user for testing
-const dummyUsers: Record<string, { user: User; password: string }> = {
-  'austin.nwachwukwu@emeraldcfze.com': {
-    user: {
-      id: '1',
-      firstName: 'Austin',
-      lastName: 'Nwachwukwu',
-      email: 'austin.nwachwukwu@emeraldcfze.com',
-      role: 'hr_manager',
-      department: 'Human Resources',
-      mustChangePassword: false
-    },
-    password: 'password123'
-  }
-};
+// No demo users - all authentication goes through the backend
+const dummyUsers: Record<string, { user: User; password: string }> = {};
 
 // Role permissions mapping
 const rolePermissions: Record<UserRole, string[]> = {

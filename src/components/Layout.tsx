@@ -2,6 +2,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/AppSidebar"
 import { ReactNode, useState } from "react"
 import { useIsMobile } from "@/hooks/use-mobile"
+import { useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Menu, LogOut, User, AlertCircle, X } from "lucide-react"
 import { ThemeToggle } from "@/components/ThemeToggle"
@@ -22,6 +23,7 @@ interface LayoutProps {
 
 export default function Layout({ children }: LayoutProps) {
   const isMobile = useIsMobile()
+  const navigate = useNavigate()
   const { user, logout, refreshUser } = useAuth()
   const [showPasswordModal, setShowPasswordModal] = useState(false)
   const [bannerDismissed, setBannerDismissed] = useState(false)
@@ -139,15 +141,17 @@ export default function Layout({ children }: LayoutProps) {
                     )}
                   </div>
                   <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => navigate('/my-profile')}>
+                    <User className="mr-2 h-4 w-4" />
+                    My Profile
+                  </DropdownMenuItem>
                   {user?.mustChangePassword && (
-                    <>
-                      <DropdownMenuItem onClick={() => setShowPasswordModal(true)}>
-                        <AlertCircle className="mr-2 h-4 w-4 text-amber-600" />
-                        Change Password
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                    </>
+                    <DropdownMenuItem onClick={() => setShowPasswordModal(true)}>
+                      <AlertCircle className="mr-2 h-4 w-4 text-amber-600" />
+                      Change Password
+                    </DropdownMenuItem>
                   )}
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={logout}>
                     <LogOut className="mr-2 h-4 w-4" />
                     Logout

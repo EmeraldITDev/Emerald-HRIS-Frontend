@@ -728,14 +728,6 @@ export default function Attendance() {
         </RoleBasedComponent>
       </div>
 
-
-      {/* This Month's Birthdays & Anniversaries - Available to all users */}
-      <CelebrationsCard 
-        celebrations={currentMonthCelebrations} 
-        isLoading={isCelebrationsLoading}
-        title="This Month's Birthdays & Anniversaries"
-      />
-
       {/* Weekly Attendance View - For All Users */}
       <Card className="border-border/50 shadow-sm mb-6">
         <CardHeader 
@@ -1426,6 +1418,13 @@ export default function Attendance() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* This Month's Birthdays & Anniversaries - Available to all users */}
+      <CelebrationsCard 
+        celebrations={currentMonthCelebrations} 
+        isLoading={isCelebrationsLoading}
+        title="This Month's Birthdays & Anniversaries"
+      />
     </div>
   )
 }

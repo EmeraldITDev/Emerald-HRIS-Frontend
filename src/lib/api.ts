@@ -18,6 +18,8 @@ export interface Employee {
   nationality?: string;
   phone_number?: string;
   address?: string;
+  profile_picture?: string;
+  profile_picture_url?: string;
   job_title: string;
   department?: string;
   employment_type?: string;

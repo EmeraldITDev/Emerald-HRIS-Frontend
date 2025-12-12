@@ -41,6 +41,17 @@ export default function MyProfile() {
     loadEmployeeData()
   }, [user])
 
+  // Refresh data periodically to reflect changes made by HR/Execs (every 30 seconds)
+  useEffect(() => {
+    if (!user?.employee_id) return
+
+    const interval = setInterval(() => {
+      loadEmployeeData()
+    }, 30000) // Refresh every 30 seconds
+
+    return () => clearInterval(interval)
+  }, [user])
+
   const loadEmployeeData = async () => {
     if (!user?.employee_id) {
       setIsLoading(false)

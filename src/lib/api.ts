@@ -944,6 +944,30 @@ class ApiService {
   async deleteBenefit(id: number): Promise<{ success: boolean; message: string }> {
     return this.request<{ success: boolean; message: string }>(`/benefits/${id}`, { method: 'DELETE' });
   }
+
+  // Celebration Messages
+  async sendCelebrationMessage(data: {
+    employee_id: number;
+    celebration_type: 'birthday' | 'anniversary';
+    message: string;
+    celebration_date: string;
+    years_of_service?: number;
+  }): Promise<any> {
+    return this.request('/celebration-messages', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getCelebrationMessages(): Promise<any[]> {
+    return this.request('/celebration-messages');
+  }
+
+  async markCelebrationMessageRead(messageId: number): Promise<any> {
+    return this.request(`/celebration-messages/${messageId}/read`, {
+      method: 'PUT',
+    });
+  }
 }
 
 export const apiService = new ApiService();

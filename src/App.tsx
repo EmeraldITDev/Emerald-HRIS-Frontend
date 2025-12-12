@@ -22,6 +22,7 @@ import Reports from "./pages/Reports";
 import Security from "./pages/Security";
 import Announcements from "./pages/Announcements";
 import Policies from "./pages/Policies";
+import MyProfile from "./pages/MyProfile";
 import { useEffect, useState } from "react";
 import { getUsers } from "./api";
 import { PasswordChangeModal } from "./components/PasswordChangeModal";
@@ -83,6 +84,7 @@ const AppContent = () => {
                   <Route path="/announcements" element={<Announcements />} />
                   <Route path="/policies" element={<Policies />} />
                   <Route path="/security" element={<Security />} />
+                  <Route path="/my-profile" element={<MyProfile />} />
                   <Route
                     path="/settings"
                     element={

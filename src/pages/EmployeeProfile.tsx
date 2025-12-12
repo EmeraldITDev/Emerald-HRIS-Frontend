@@ -30,11 +30,11 @@ import {
   Building,
   Users,
   TrendingUp,
-  Briefcase
+  Briefcase,
+  Cake
 } from "lucide-react"
 import { format } from "date-fns"
 import { getWorkAnniversaryDate, getYearsOfService } from "@/utils/celebrations"
-import { Cake, Award } from "lucide-react"
 import apiService, { Employee } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
 import { EmployeeEditDialog } from "@/components/EmployeeEditDialog"

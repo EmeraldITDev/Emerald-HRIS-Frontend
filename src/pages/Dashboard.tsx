@@ -1636,15 +1636,39 @@ export default function Dashboard() {
             }}>
               Cancel
             </Button>
-            <Button onClick={() => {
-              // TODO: Implement API call to send message
-              toast({
-                title: "Message Sent",
-                description: `Your message has been sent to ${selectedCelebration?.employee.first_name} ${selectedCelebration?.employee.last_name}`,
-              })
-              setShowMessageDialog(false)
-              setCelebrationMessage("")
-              setSelectedCelebration(null)
+            <Button onClick={async () => {
+              if (!selectedCelebration || !celebrationMessage.trim()) {
+                toast({
+                  title: "Error",
+                  description: "Please enter a message",
+                  variant: "destructive"
+                })
+                return
+              }
+
+              try {
+                await apiService.sendCelebrationMessage({
+                  employee_id: selectedCelebration.employee.id!,
+                  celebration_type: selectedCelebration.type,
+                  message: celebrationMessage,
+                  celebration_date: selectedCelebration.date.toISOString().split('T')[0],
+                  years_of_service: selectedCelebration.yearsOfService,
+                })
+                
+                toast({
+                  title: "Message Sent",
+                  description: `Your message has been sent to ${selectedCelebration.employee.first_name} ${selectedCelebration.employee.last_name}`,
+                })
+                setShowMessageDialog(false)
+                setCelebrationMessage("")
+                setSelectedCelebration(null)
+              } catch (error) {
+                toast({
+                  title: "Error",
+                  description: "Failed to send message. Please try again.",
+                  variant: "destructive"
+                })
+              }
             }}>
               <Send className="mr-2 h-4 w-4" />
               Send Message

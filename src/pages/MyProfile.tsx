@@ -300,12 +300,50 @@ export default function MyProfile() {
         </CardContent>
       </Card>
 
-      {/* Editable Personal Information */}
+      {/* Personal Information - View Only */}
+      {employeeData && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <User className="h-5 w-5" />
+              Personal Information
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">Date of Birth</p>
+                <p className="font-medium">
+                  {employeeData.dob ? new Date(employeeData.dob).toLocaleDateString() : "—"}
+                </p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">Gender</p>
+                <p className="font-medium capitalize">{employeeData.gender || "—"}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">Marital Status</p>
+                <p className="font-medium capitalize">{employeeData.marital_status || "—"}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">Nationality</p>
+                <p className="font-medium">{employeeData.nationality || "—"}</p>
+              </div>
+            </div>
+            
+            <p className="text-xs text-muted-foreground mt-4 italic">
+              * Contact HR to update personal information
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Editable Contact Information */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <User className="h-5 w-5" />
-            Personal Information
+            <Phone className="h-5 w-5" />
+            Contact Information
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">

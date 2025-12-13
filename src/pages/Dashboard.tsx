@@ -210,18 +210,27 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        let employees = await apiService.getEmployees()
+        // Fetch ALL employees first for celebrations (should be visible to everyone)
+        const allEmployeesData = await apiService.getEmployees()
         
-        // Filter by department for line managers and executives
+        // Calculate celebrations from ALL employees - available to all users
+        const celebrations = getCurrentMonthCelebrations(allEmployeesData)
+        setCurrentMonthCelebrations(celebrations)
+        
+        const upcoming = getUpcomingCelebrations(allEmployeesData, 7)
+        setUpcomingCelebrations(upcoming)
+        
+        // Now apply role-based filtering for other dashboard data
+        let employees = allEmployeesData
         const isLineManager = user?.role === 'line_manager'
         const isExecutive = user?.role === 'executive'
         const userDepartment = user?.department
         
         if ((isLineManager || isExecutive) && userDepartment) {
-          employees = employees.filter(emp => emp.department === userDepartment)
+          employees = allEmployeesData.filter(emp => emp.department === userDepartment)
         }
         
-        // Store all employees for stats calculations
+        // Store filtered employees for stats calculations
         setAllEmployees(employees)
         
         // Get recent employees (last 5 hired) for the recent activities section
@@ -240,13 +249,6 @@ export default function Dashboard() {
           }
         })
         setDepartmentStats(deptStats)
-        
-        // Calculate celebrations
-        const celebrations = getCurrentMonthCelebrations(employees)
-        setCurrentMonthCelebrations(celebrations)
-        
-        const upcoming = getUpcomingCelebrations(employees, 7)
-        setUpcomingCelebrations(upcoming)
       } catch (error) {
         console.error('Failed to fetch dashboard data:', error)
       } finally {

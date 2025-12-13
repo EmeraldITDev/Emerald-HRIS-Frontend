@@ -52,44 +52,97 @@ export default function Reports() {
     setIsLoading(true)
     
     try {
-      const report = await apiService.getEmployeeReport(parseInt(employeeId))
+      // First try the report endpoint
+      let report: any = null
+      
+      try {
+        report = await apiService.getEmployeeReport(parseInt(employeeId))
+      } catch (reportError) {
+        console.warn('Report endpoint failed, using employee data directly:', reportError)
+      }
+      
+      // If report endpoint fails, build report from employee data
+      if (!report) {
+        const selectedEmp = employees.find(emp => emp.id?.toString() === employeeId)
+        if (!selectedEmp) {
+          throw new Error('Employee not found')
+        }
+        
+        // Build report from employee data
+        const transformedReport = {
+          id: selectedEmp.employee_code || `EMP${selectedEmp.id?.toString().padStart(3, '0')}`,
+          firstName: selectedEmp.first_name,
+          lastName: selectedEmp.last_name,
+          email: selectedEmp.email,
+          phone: selectedEmp.phone_number || 'N/A',
+          department: selectedEmp.department || 'N/A',
+          position: selectedEmp.job_title || 'N/A',
+          employmentType: selectedEmp.employment_type || 'N/A',
+          status: selectedEmp.employment_status || 'Active',
+          joinDate: selectedEmp.hire_date || 'N/A',
+          birthDate: selectedEmp.dob || 'N/A',
+          gender: selectedEmp.gender || 'N/A',
+          maritalStatus: selectedEmp.marital_status || 'N/A',
+          nationality: selectedEmp.nationality || 'N/A',
+          stateOfOrigin: 'N/A',
+          vacationDays: selectedEmp.vacation_days || 0,
+          vacationTaken: 0,
+          vacationRemaining: selectedEmp.vacation_days || 0,
+          salary: selectedEmp.gross_salary ? `₦${selectedEmp.gross_salary.toLocaleString()}` : 'N/A',
+          netSalary: 'N/A',
+          address: selectedEmp.address || 'N/A',
+          emergencyContact: 'N/A',
+          financial: {
+            bankName: selectedEmp.bank_account ? 'Bank' : 'N/A',
+            accountNumber: selectedEmp.bank_account || 'N/A',
+            pensionPin: selectedEmp.pension_pin || 'N/A',
+            taxId: selectedEmp.tax_id || 'N/A',
+          },
+          attendance: null,
+          payroll: null,
+          performance: null,
+          systemRole: 'employee',
+        }
+        setReportData(transformedReport)
+        return
+      }
       
       // Transform backend data to frontend format
       const transformedReport = {
-        id: report.employee.employee_code || `EMP${report.employee.id.toString().padStart(3, '0')}`,
-        firstName: report.employee.first_name,
-        lastName: report.employee.last_name,
-        email: report.employee.email,
-        phone: report.employee.phone_number || 'N/A',
-        department: report.employee.department || 'N/A',
-        position: report.employee.job_title || 'N/A',
-        employmentType: report.employee.employment_type || 'N/A',
-        status: report.employee.employment_status || 'Active',
-        joinDate: report.employee.hire_date || 'N/A',
-        birthDate: report.employee.birth_date || 'N/A',
-        gender: report.employee.gender || 'N/A',
-        maritalStatus: report.employee.marital_status || 'N/A',
-        nationality: report.employee.nationality || 'N/A',
-        stateOfOrigin: report.employee.state_of_origin || 'N/A',
-        vacationDays: report.leave_summary.vacation_days_allocated || 0,
-        vacationTaken: report.leave_summary.vacation_days_taken || 0,
-        vacationRemaining: report.leave_summary.vacation_days_remaining || 0,
-        salary: report.financial.gross_salary ? `₦${report.financial.gross_salary.toLocaleString()}` : 'N/A',
-        netSalary: report.financial.net_salary ? `₦${report.financial.net_salary.toLocaleString()}` : 'N/A',
-        address: report.employee.address || 'N/A',
-        emergencyContact: report.employee.emergency_contact_name 
-          ? `${report.employee.emergency_contact_name} (${report.employee.emergency_contact_relationship}) - ${report.employee.emergency_contact_phone}`
+        id: report.employee?.employee_code || `EMP${report.employee?.id?.toString().padStart(3, '0')}`,
+        firstName: report.employee?.first_name || 'N/A',
+        lastName: report.employee?.last_name || '',
+        email: report.employee?.email || 'N/A',
+        phone: report.employee?.phone_number || 'N/A',
+        department: report.employee?.department || 'N/A',
+        position: report.employee?.job_title || 'N/A',
+        employmentType: report.employee?.employment_type || 'N/A',
+        status: report.employee?.employment_status || 'Active',
+        joinDate: report.employee?.hire_date || 'N/A',
+        birthDate: report.employee?.birth_date || report.employee?.dob || 'N/A',
+        gender: report.employee?.gender || 'N/A',
+        maritalStatus: report.employee?.marital_status || 'N/A',
+        nationality: report.employee?.nationality || 'N/A',
+        stateOfOrigin: report.employee?.state_of_origin || 'N/A',
+        vacationDays: report.leave_summary?.vacation_days_allocated || 0,
+        vacationTaken: report.leave_summary?.vacation_days_taken || 0,
+        vacationRemaining: report.leave_summary?.vacation_days_remaining || 0,
+        salary: report.financial?.gross_salary ? `₦${report.financial.gross_salary.toLocaleString()}` : 'N/A',
+        netSalary: report.financial?.net_salary ? `₦${report.financial.net_salary.toLocaleString()}` : 'N/A',
+        address: report.employee?.address || 'N/A',
+        emergencyContact: report.employee?.emergency_contact_name 
+          ? `${report.employee.emergency_contact_name} (${report.employee.emergency_contact_relationship || ''}) - ${report.employee.emergency_contact_phone || ''}`
           : 'N/A',
         financial: {
-          bankName: report.financial.bank_name,
-          accountNumber: report.financial.account_number,
-          pensionPin: report.financial.pension_pin,
-          taxId: report.financial.tax_id,
+          bankName: report.financial?.bank_name || 'N/A',
+          accountNumber: report.financial?.account_number || 'N/A',
+          pensionPin: report.financial?.pension_pin || 'N/A',
+          taxId: report.financial?.tax_id || 'N/A',
         },
         attendance: report.attendance_summary,
         payroll: report.payroll_summary,
         performance: report.performance,
-        systemRole: report.system_role,
+        systemRole: report.system_role || 'employee',
       }
       
       setReportData(transformedReport)
@@ -97,9 +150,10 @@ export default function Reports() {
       console.error('Failed to fetch employee report:', error)
       toast({
         title: "Error",
-        description: error.message || "Failed to load employee report",
+        description: error.message || "Failed to load employee report. Please try again.",
         variant: "destructive"
       })
+      setReportData(null)
     } finally {
       setIsLoading(false)
     }

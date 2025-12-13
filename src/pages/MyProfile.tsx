@@ -65,7 +65,7 @@ export default function MyProfile() {
       if (myEmployee) {
         setEmployeeData(myEmployee)
         setFormData({
-          phone_number: myEmployee.phone_number || myEmployee.phone || "",
+          phone_number: myEmployee.phone_number || "",
           address: myEmployee.address || "",
         })
       }
@@ -145,15 +145,28 @@ export default function MyProfile() {
 
     setIsUploadingPhoto(true)
     try {
-      const response = await apiService.uploadProfilePicture(employeeData.id, file)
-      
-      toast({
-        title: "Photo Updated",
-        description: "Your profile photo has been updated successfully"
-      })
-      
-      // Reload employee data to get the new profile picture URL
-      await loadEmployeeData()
+      // For now, just update the employee with a data URL
+      const reader = new FileReader()
+      reader.onloadend = async () => {
+        try {
+          await apiService.updateEmployee(employeeData.id, { profile_picture: reader.result as string })
+          toast({
+            title: "Photo Updated",
+            description: "Your profile photo has been updated successfully"
+          })
+          await loadEmployeeData()
+        } catch (error) {
+          console.error("Failed to upload photo:", error)
+          toast({
+            title: "Upload Failed",
+            description: "Failed to upload your photo. Please try again.",
+            variant: "destructive"
+          })
+        } finally {
+          setIsUploadingPhoto(false)
+        }
+      }
+      reader.readAsDataURL(file)
     } catch (error) {
       console.error("Failed to upload photo:", error)
       toast({
@@ -161,7 +174,6 @@ export default function MyProfile() {
         description: "Failed to upload your photo. Please try again.",
         variant: "destructive"
       })
-    } finally {
       setIsUploadingPhoto(false)
     }
   }

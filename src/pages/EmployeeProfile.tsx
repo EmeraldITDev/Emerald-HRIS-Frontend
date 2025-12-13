@@ -31,8 +31,10 @@ import {
   Users,
   TrendingUp,
   Briefcase,
-  Cake
+  Cake,
+  Loader2
 } from "lucide-react"
+import jsPDF from "jspdf"
 import { format } from "date-fns"
 import { getWorkAnniversaryDate, getYearsOfService } from "@/utils/celebrations"
 import apiService, { Employee } from "@/lib/api"
@@ -92,6 +94,203 @@ export default function EmployeeProfile() {
       }
     } catch (error) {
       console.error('Failed to refresh employee:', error)
+    }
+  }
+
+  const handleDownloadProfile = async () => {
+    if (!employee) return
+    
+    try {
+      const doc = new jsPDF()
+      const pageWidth = doc.internal.pageSize.getWidth()
+      let yPos = 20
+      
+      // Add logo
+      const logoUrl = '/lovable-uploads/cbfc52d9-b5d8-4ea8-9ec0-98664ee4afad.png'
+      try {
+        const logoImg = new Image()
+        logoImg.crossOrigin = 'anonymous'
+        await new Promise((resolve, reject) => {
+          logoImg.onload = resolve
+          logoImg.onerror = reject
+          logoImg.src = logoUrl
+        })
+        doc.addImage(logoImg, 'PNG', 15, yPos, 30, 30)
+        yPos += 35
+      } catch (e) {
+        console.warn('Could not load logo:', e)
+        yPos += 5
+      }
+
+      // Header
+      doc.setFontSize(20)
+      doc.setFont('helvetica', 'bold')
+      doc.text('EMPLOYEE PROFILE', pageWidth / 2, yPos, { align: 'center' })
+      yPos += 10
+      
+      doc.setFontSize(10)
+      doc.setFont('helvetica', 'normal')
+      doc.text(`Generated on: ${format(new Date(), 'MMMM dd, yyyy')}`, pageWidth / 2, yPos, { align: 'center' })
+      yPos += 15
+
+      // Personal Information Section
+      doc.setFontSize(14)
+      doc.setFont('helvetica', 'bold')
+      doc.setFillColor(240, 240, 240)
+      doc.rect(15, yPos - 5, pageWidth - 30, 10, 'F')
+      doc.text('PERSONAL INFORMATION', 20, yPos)
+      yPos += 12
+
+      doc.setFontSize(10)
+      doc.setFont('helvetica', 'normal')
+      
+      const personalInfo = [
+        ['Full Name', `${employee.first_name} ${employee.last_name}`],
+        ['Employee ID', employee.employee_code || `EMP${String(employee.id).padStart(3, '0')}`],
+        ['Email', employee.email],
+        ['Phone', employee.phone_number || 'N/A'],
+        ['Address', employee.address || 'N/A'],
+        ['Date of Birth', employee.dob ? format(new Date(employee.dob), 'PPP') : 'N/A'],
+        ['Gender', employee.gender || 'N/A'],
+        ['Marital Status', employee.marital_status || 'N/A'],
+        ['Nationality', employee.nationality || 'N/A'],
+      ]
+
+      personalInfo.forEach(([label, value]) => {
+        doc.setFont('helvetica', 'bold')
+        doc.text(`${label}:`, 20, yPos)
+        doc.setFont('helvetica', 'normal')
+        doc.text(String(value), 70, yPos)
+        yPos += 6
+      })
+      yPos += 5
+
+      // Employment Details Section
+      doc.setFontSize(14)
+      doc.setFont('helvetica', 'bold')
+      doc.setFillColor(240, 240, 240)
+      doc.rect(15, yPos - 5, pageWidth - 30, 10, 'F')
+      doc.text('EMPLOYMENT DETAILS', 20, yPos)
+      yPos += 12
+
+      doc.setFontSize(10)
+      const employmentInfo = [
+        ['Job Title', employee.job_title || 'N/A'],
+        ['Department', employee.department || 'N/A'],
+        ['Employment Type', employee.employment_type || 'N/A'],
+        ['Employment Status', employee.employment_status || 'Active'],
+        ['Hire Date', employee.hire_date ? format(new Date(employee.hire_date), 'PPP') : 'N/A'],
+        ['Grade Level', employee.grade_level || 'N/A'],
+        ['Work Location', employee.work_location || 'N/A'],
+        ['Supervisor', employee.supervisor_name || 'N/A'],
+        ['Vacation Days', `${employee.vacation_days || 0} days`],
+      ]
+
+      employmentInfo.forEach(([label, value]) => {
+        doc.setFont('helvetica', 'bold')
+        doc.text(`${label}:`, 20, yPos)
+        doc.setFont('helvetica', 'normal')
+        doc.text(String(value), 70, yPos)
+        yPos += 6
+      })
+      yPos += 5
+
+      // Check for page break
+      if (yPos > 250) {
+        doc.addPage()
+        yPos = 20
+      }
+
+      // Financial Information Section
+      doc.setFontSize(14)
+      doc.setFont('helvetica', 'bold')
+      doc.setFillColor(240, 240, 240)
+      doc.rect(15, yPos - 5, pageWidth - 30, 10, 'F')
+      doc.text('FINANCIAL INFORMATION', 20, yPos)
+      yPos += 12
+
+      doc.setFontSize(10)
+      const totalSalary = (employee.gross_salary || 0) + (employee.meal_allowance || 0) + 
+                          (employee.housing_allowance || 0) + (employee.transport_allowance || 0)
+      
+      const financialInfo = [
+        ['Basic Salary', formatCurrency(employee.gross_salary)],
+        ['Meal Allowance', formatCurrency(employee.meal_allowance)],
+        ['Housing Allowance', formatCurrency(employee.housing_allowance)],
+        ['Transport Allowance', formatCurrency(employee.transport_allowance)],
+        ['Total Monthly Salary', formatCurrency(totalSalary)],
+        ['Bank Account', employee.bank_account || 'N/A'],
+      ]
+
+      financialInfo.forEach(([label, value]) => {
+        doc.setFont('helvetica', 'bold')
+        doc.text(`${label}:`, 20, yPos)
+        doc.setFont('helvetica', 'normal')
+        doc.text(String(value), 80, yPos)
+        yPos += 6
+      })
+      yPos += 5
+
+      // Government IDs Section
+      if (yPos > 250) {
+        doc.addPage()
+        yPos = 20
+      }
+
+      doc.setFontSize(14)
+      doc.setFont('helvetica', 'bold')
+      doc.setFillColor(240, 240, 240)
+      doc.rect(15, yPos - 5, pageWidth - 30, 10, 'F')
+      doc.text('GOVERNMENT IDENTIFICATIONS', 20, yPos)
+      yPos += 12
+
+      doc.setFontSize(10)
+      const govInfo = [
+        ['National ID (NIN)', employee.national_id || 'N/A'],
+        ['BVN', employee.bvn || 'N/A'],
+        ['TIN', employee.tin || 'N/A'],
+        ['Pension PIN', employee.pension_pin || 'N/A'],
+        ['NHF Number', employee.nhf_number || 'N/A'],
+        ['Tax ID', employee.tax_id || 'N/A'],
+      ]
+
+      govInfo.forEach(([label, value]) => {
+        doc.setFont('helvetica', 'bold')
+        doc.text(`${label}:`, 20, yPos)
+        doc.setFont('helvetica', 'normal')
+        doc.text(String(value), 70, yPos)
+        yPos += 6
+      })
+
+      // Footer
+      const pageCount = doc.getNumberOfPages()
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i)
+        doc.setFontSize(8)
+        doc.setFont('helvetica', 'normal')
+        doc.text(
+          `Page ${i} of ${pageCount} - Confidential Employee Record`,
+          pageWidth / 2,
+          doc.internal.pageSize.getHeight() - 10,
+          { align: 'center' }
+        )
+      }
+
+      // Save with employee name
+      const fileName = `${employee.first_name}_${employee.last_name}_Profile_${format(new Date(), 'yyyy-MM-dd')}.pdf`
+      doc.save(fileName)
+
+      toast({
+        title: "Profile Downloaded",
+        description: `Employee profile has been saved as ${fileName}`,
+      })
+    } catch (error) {
+      console.error('Failed to generate PDF:', error)
+      toast({
+        title: "Download Failed",
+        description: "Failed to generate PDF. Please try again.",
+        variant: "destructive"
+      })
     }
   }
 
@@ -180,9 +379,9 @@ export default function EmployeeProfile() {
             <Edit className="mr-2 h-4 w-4" />
             Edit
           </Button>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={handleDownloadProfile}>
             <Download className="mr-2 h-4 w-4" />
-            Export
+            Download Profile
           </Button>
         </div>
       </div>

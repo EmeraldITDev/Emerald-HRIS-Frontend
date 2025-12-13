@@ -69,7 +69,8 @@ export default function Payroll() {
     const fetchEmployees = async () => {
       try {
         const data = await apiService.getEmployees()
-        setEmployees(data.filter(emp => emp.employment_status === 'Active'))
+        // Show all employees regardless of status for payroll generation
+        setEmployees(data)
       } catch (error) {
         console.error('Failed to fetch employees:', error)
         toast({

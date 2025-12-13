@@ -380,8 +380,18 @@ export default function Policies() {
                     placeholder="Enter the full policy content here..."
                     className="min-h-[200px]"
                   />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="file">Attach Document (Optional)</Label>
+                  <Input
+                    id="file"
+                    type="file"
+                    accept=".pdf,.doc,.docx,.txt"
+                    className="cursor-pointer"
+                  />
                   <p className="text-xs text-muted-foreground">
-                    Enter the complete policy text. Support for file uploads coming soon.
+                    Supported formats: PDF, Word (.doc, .docx), Text (.txt)
                   </p>
                 </div>
 

@@ -27,7 +27,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Calendar, Plus, Clock, CalendarDays, LogIn, LogOut, Bell, ChevronDown, Download, FileText, User, Phone, Building, Users, Upload } from "lucide-react"
+import { Calendar, Plus, Clock, CalendarDays, LogIn, LogOut, Bell, ChevronDown, ChevronUp, Download, FileText, User, Phone, Building, Users, Upload } from "lucide-react"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { useToast } from "@/hooks/use-toast"
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -1419,12 +1420,55 @@ export default function Attendance() {
         </DialogContent>
       </Dialog>
 
-      {/* This Month's Birthdays & Anniversaries - Available to all users */}
-      <CelebrationsCard 
+      {/* This Month's Birthdays & Anniversaries - Collapsible */}
+      <CollapsibleCelebrations 
         celebrations={currentMonthCelebrations} 
         isLoading={isCelebrationsLoading}
-        title="This Month's Birthdays & Anniversaries"
       />
     </div>
+  )
+}
+
+// Collapsible Celebrations Component
+function CollapsibleCelebrations({ 
+  celebrations, 
+  isLoading 
+}: { 
+  celebrations: Celebration[], 
+  isLoading: boolean 
+}) {
+  const [isOpen, setIsOpen] = useState(true)
+
+  return (
+    <Collapsible open={isOpen} onOpenChange={setIsOpen} className="space-y-2">
+      <div className="flex items-center justify-between">
+        <CollapsibleTrigger asChild>
+          <Button variant="ghost" className="w-full justify-between p-4 h-auto bg-gradient-to-r from-pink-500/10 via-amber-500/10 to-purple-500/10 hover:from-pink-500/20 hover:via-amber-500/20 hover:to-purple-500/20 rounded-lg border border-border/30">
+            <span className="flex items-center gap-2 font-semibold text-foreground">
+              <span className="p-2 rounded-lg bg-gradient-to-br from-pink-500 to-amber-500 text-white">
+                🎉
+              </span>
+              This Month's Birthdays & Anniversaries
+              <Badge variant="secondary" className="ml-2">
+                {celebrations.length}
+              </Badge>
+            </span>
+            {isOpen ? (
+              <ChevronUp className="h-5 w-5 text-muted-foreground" />
+            ) : (
+              <ChevronDown className="h-5 w-5 text-muted-foreground" />
+            )}
+          </Button>
+        </CollapsibleTrigger>
+      </div>
+      <CollapsibleContent className="space-y-2">
+        <CelebrationsCard 
+          celebrations={celebrations} 
+          isLoading={isLoading}
+          title=""
+          className="border-t-0 rounded-t-none"
+        />
+      </CollapsibleContent>
+    </Collapsible>
   )
 }

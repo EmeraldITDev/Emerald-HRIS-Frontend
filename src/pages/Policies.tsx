@@ -22,7 +22,8 @@ import {
   Edit,
   CheckCircle,
   Archive,
-  AlertCircle
+  AlertCircle,
+  Download
 } from "lucide-react"
 import {
   DropdownMenu,
@@ -234,6 +235,41 @@ export default function Policies() {
   const handleViewPolicy = (policy: Policy) => {
     setSelectedPolicy(policy)
     setShowViewPolicy(true)
+  }
+
+  const handleDownloadPolicy = (policy: Policy) => {
+    // Create a text file with policy content
+    const content = `
+${policy.title}
+${'='.repeat(policy.title.length)}
+
+Category: ${policy.category || 'N/A'}
+Version: ${policy.version || '1.0'}
+Effective Date: ${policy.effective_date ? format(new Date(policy.effective_date), 'MMMM dd, yyyy') : 'N/A'}
+Status: ${policy.status || 'N/A'}
+
+Policy Content:
+${'-'.repeat(50)}
+
+${policy.content}
+
+${policy.approved_at ? `\nApproved on: ${format(new Date(policy.approved_at), 'MMMM dd, yyyy')}` : ''}
+    `.trim()
+
+    const blob = new Blob([content], { type: 'text/plain' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${policy.title.replace(/[^a-z0-9]/gi, '_')}_Policy.txt`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+
+    toast({
+      title: "Policy Downloaded",
+      description: `${policy.title} has been downloaded.`,
+    })
   }
 
   const handleEditClick = (policy: Policy) => {
@@ -473,6 +509,10 @@ export default function Policies() {
                               <Eye className="h-3 w-3 mr-2" />
                               View
                             </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleDownloadPolicy(policy)}>
+                              <Download className="h-3 w-3 mr-2" />
+                              Download
+                            </DropdownMenuItem>
                             {canManagePolicy && (
                               <>
                                 <DropdownMenuItem onClick={() => handleEditClick(policy)}>
@@ -544,7 +584,14 @@ export default function Policies() {
               </div>
             )}
 
-            <div className="flex justify-end">
+            <div className="flex justify-end gap-2">
+              <Button 
+                variant="outline" 
+                onClick={() => selectedPolicy && handleDownloadPolicy(selectedPolicy)}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Download
+              </Button>
               <Button onClick={() => setShowViewPolicy(false)}>
                 Close
               </Button>

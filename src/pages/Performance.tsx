@@ -556,6 +556,7 @@ export default function Performance() {
   // Determine user's access level (still useful for UI controls)
   const isExecutiveOrHR = user?.role === 'executive' || user?.role === 'hr_manager' || user?.role === 'corporate_hr'
   const isLineManager = user?.role === 'line_manager'
+  const isGeneralEmployee = !isExecutiveOrHR && !isLineManager
   const canManageReviews = isExecutiveOrHR || isLineManager
   const userDepartment = user?.department
   const currentEmployeeIdFromUser = user?.employee_id ? String(user.employee_id) : undefined

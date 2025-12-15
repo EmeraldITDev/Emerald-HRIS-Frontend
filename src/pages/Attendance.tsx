@@ -306,7 +306,7 @@ export default function Attendance() {
     }
   }
 
-  const handleGenerateReport = (reportType: string) => {
+  const handleGenerateReport = async (reportType: string) => {
     const today = new Date()
     let startDate: Date
     let endDate: Date = new Date()
@@ -328,45 +328,131 @@ export default function Attendance() {
       default:
         startDate = new Date(today)
     }
-    
-    // Get attendance records from localStorage
-    const attendanceRecords = JSON.parse(localStorage.getItem('attendanceRecords') || '[]')
-    const filteredRecords = attendanceRecords.filter((record: any) => {
-      const recordDate = new Date(record.date)
-      return recordDate >= startDate && recordDate <= endDate
-    })
-    
-    // Create CSV content
-    const headers = ['Employee ID', 'Employee Name', 'Date', 'Clock In', 'Clock Out', 'Status']
-    const rows = filteredRecords.map((record: any) => [
-      record.employee_id,
-      record.employee_name,
-      record.date,
-      record.clock_in_time || 'N/A',
-      record.clock_out_time || 'N/A',
-      record.is_clocked_in ? 'Clocked In' : 'Completed'
-    ])
-    
-    const csvContent = [
-      headers.join(','),
-      ...rows.map((row: any[]) => row.join(','))
-    ].join('\n')
-    
-    // Download CSV
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-    const link = document.createElement('a')
-    const url = URL.createObjectURL(blob)
-    link.setAttribute('href', url)
-    link.setAttribute('download', `attendance_${reportType.toLowerCase()}_${format(today, 'yyyy-MM-dd')}.csv`)
-    link.style.visibility = 'hidden'
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    
-    toast({
-      title: "Report Downloaded",
-      description: `${reportType} attendance report has been downloaded successfully.`,
-    })
+
+    const startStr = format(startDate, 'yyyy-MM-dd')
+    const endStr = format(endDate, 'yyyy-MM-dd')
+    const year = startDate.getFullYear()
+
+    try {
+      // Fetch reports from backend so they are based on real database data
+      const [attendanceReport, leaveReport] = await Promise.all([
+        apiService.getAttendanceReport(startStr, endStr),
+        apiService.getLeaveReport(year),
+      ])
+
+      // ===== Attendance report (by employee summary) =====
+      const attendanceByEmployee = Array.isArray(attendanceReport?.by_employee)
+        ? attendanceReport.by_employee
+        : []
+
+      if (attendanceByEmployee.length > 0) {
+        const attendanceHeaders = [
+          'Employee Code',
+          'Employee Name',
+          'Department',
+          'Total Present Days',
+          'Total Absent Days',
+          'Total Late Days',
+          'Attendance Rate (%)',
+          'Period Start',
+          'Period End',
+          'Total Days in Period'
+        ]
+
+        const attendanceRows = attendanceByEmployee.map((item: any) => [
+          item.employee_code || 'N/A',
+          item.employee_name || 'N/A',
+          item.department || 'N/A',
+          item.total_present ?? 0,
+          item.total_absent ?? 0,
+          item.total_late ?? 0,
+          item.attendance_rate ?? 0,
+          attendanceReport?.period?.start || startStr,
+          attendanceReport?.period?.end || endStr,
+          attendanceReport?.period?.total_days ?? ''
+        ])
+
+        const attendanceCsv = [
+          attendanceHeaders.join(','),
+          ...attendanceRows.map((row: any[]) => row.join(','))
+        ].join('\n')
+
+        const attendanceBlob = new Blob([attendanceCsv], { type: 'text/csv;charset=utf-8;' })
+        const attendanceLink = document.createElement('a')
+        const attendanceUrl = URL.createObjectURL(attendanceBlob)
+        attendanceLink.setAttribute('href', attendanceUrl)
+        attendanceLink.setAttribute('download', `attendance_${reportType.toLowerCase()}_${startStr}_${endStr}.csv`)
+        attendanceLink.style.visibility = 'hidden'
+        document.body.appendChild(attendanceLink)
+        attendanceLink.click()
+        document.body.removeChild(attendanceLink)
+      }
+
+      // ===== Leave report (request-level data) =====
+      const leaveRequestsReport = Array.isArray(leaveReport?.requests)
+        ? leaveReport.requests
+        : []
+
+      if (leaveRequestsReport.length > 0) {
+        const leaveHeaders = [
+          'Employee Code',
+          'Employee Name',
+          'Department',
+          'Leave Type',
+          'Start Date',
+          'End Date',
+          'Days Requested',
+          'Status',
+          'Year'
+        ]
+
+        const leaveRows = leaveRequestsReport.map((req: any) => [
+          req.employee_code || 'N/A',
+          req.employee_name || 'N/A',
+          req.department || 'N/A',
+          req.leave_type || 'N/A',
+          req.start_date || 'N/A',
+          req.end_date || 'N/A',
+          req.days_requested ?? 'N/A',
+          (req.status || 'N/A').toString().toUpperCase(),
+          leaveReport?.year ?? year
+        ])
+
+        const leaveCsv = [
+          leaveHeaders.join(','),
+          ...leaveRows.map((row: any[]) => row.join(','))
+        ].join('\n')
+
+        const leaveBlob = new Blob([leaveCsv], { type: 'text/csv;charset=utf-8;' })
+        const leaveLink = document.createElement('a')
+        const leaveUrl = URL.createObjectURL(leaveBlob)
+        leaveLink.setAttribute('href', leaveUrl)
+        leaveLink.setAttribute('download', `leave_${reportType.toLowerCase()}_${year}.csv`)
+        leaveLink.style.visibility = 'hidden'
+        document.body.appendChild(leaveLink)
+        leaveLink.click()
+        document.body.removeChild(leaveLink)
+      }
+
+      if (attendanceByEmployee.length === 0 && leaveRequestsReport.length === 0) {
+        toast({
+          title: "No Data",
+          description: `No attendance or leave records found in the selected ${reportType.toLowerCase()} period.`,
+        })
+      } else {
+        toast({
+          title: "Reports Downloaded",
+          description: `${reportType} attendance and leave reports have been downloaded successfully from live data.`,
+        })
+      }
+    } catch (error) {
+      console.error('Failed to generate reports:', error)
+      toast({
+        title: "Error",
+        description: "Failed to generate attendance/leave reports. Please try again.",
+        variant: "destructive"
+      })
+    }
   }
 
   // Updated handleSubmit function with enhanced leave request data

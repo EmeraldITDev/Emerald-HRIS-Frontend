@@ -780,6 +780,13 @@ class ApiService {
     return this.request<PerformanceReview>(`/performance/${id}/submit-self`, { method: 'PUT' });
   }
 
+  async addEmployeePerformanceComment(id: number, comment: string): Promise<PerformanceReview> {
+    return this.request<PerformanceReview>(`/performance/${id}/employee-comment`, {
+      method: 'PUT',
+      body: JSON.stringify({ comment }),
+    });
+  }
+
   async managerReview(id: number, manager_review: any): Promise<PerformanceReview> {
     return this.request<PerformanceReview>(`/performance/${id}/manager-review`, {
       method: 'PUT',

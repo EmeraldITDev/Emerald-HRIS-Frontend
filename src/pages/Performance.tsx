@@ -553,33 +553,17 @@ export default function Performance() {
     }
   }
   
-  // Determine user's access level
+  // Determine user's access level (still useful for UI controls)
   const isExecutiveOrHR = user?.role === 'executive' || user?.role === 'hr_manager' || user?.role === 'corporate_hr'
   const isLineManager = user?.role === 'line_manager'
-  // All employee-level roles (not executive, HR, or line manager)
-  const isGeneralEmployee = !isExecutiveOrHR && !isLineManager
   const canManageReviews = isExecutiveOrHR || isLineManager
   const userDepartment = user?.department
-
-  // Get current employee email for filtering
-  const currentEmployeeEmail = user?.email
-  const currentEmployeeId = user?.id
-
-  // Filter reviews based on role, department, and search criteria
+  const currentEmployeeIdFromUser = user?.employee_id ? String(user.employee_id) : undefined
+  
+  // Filter reviews based on search and filter criteria only.
+  // Backend (PerformanceReviewController@index) already enforces role-based visibility,
+  // so every review returned by the API is one the current user is allowed to see.
   const filteredReviews = reviews.filter(review => {
-    // Role-based filtering
-    let passesRoleFilter = false
-    if (isGeneralEmployee) {
-      passesRoleFilter = review.employeeId === currentEmployeeEmail || review.employeeId === String(currentEmployeeId ?? '')
-    } else if (isLineManager && userDepartment) {
-      passesRoleFilter = review.department === userDepartment
-    } else {
-      // Executives and HR can see all reviews
-      passesRoleFilter = true
-    }
-    
-    if (!passesRoleFilter) return false
-    
     // Search term filtering
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase()
@@ -671,7 +655,7 @@ export default function Performance() {
     })
   }
   
-  const handleAddEmployeeComment = () => {
+  const handleAddEmployeeComment = async () => {
     if (!selectedReview || !employeeComment.trim()) {
       toast({
         title: "Missing information",
@@ -681,20 +665,26 @@ export default function Performance() {
       return
     }
     
-    const updatedReviews = reviews.map(review => 
-      review.id === selectedReview.id 
-        ? { ...review, employeeComments: employeeComment }
-        : review
-    )
-    
-    setReviews(updatedReviews)
-    setEmployeeComment("")
-    setCommentDialogOpen(false)
-    
-    toast({
-      title: "Comment added",
-      description: "Your comment has been added to the review."
-    })
+    try {
+      // Persist employee comment to the backend
+      await apiService.addEmployeePerformanceComment(Number(selectedReview.id), employeeComment.trim())
+      await fetchReviews()
+
+      setEmployeeComment("")
+      setCommentDialogOpen(false)
+      
+      toast({
+        title: "Comment added",
+        description: "Your comment has been saved to this performance review."
+      })
+    } catch (error) {
+      console.error('Failed to add employee comment:', error)
+      toast({
+        title: "Error",
+        description: "Failed to save your comment. Please try again.",
+        variant: "destructive"
+      })
+    }
   }
   
   const handleSubmitSelfAssessment = async () => {

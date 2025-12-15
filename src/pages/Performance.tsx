@@ -1090,8 +1090,8 @@ export default function Performance() {
                           <Eye className="h-3 w-3 md:h-4 md:w-4" />
                         </Button>
                         
-                        {/* Employee actions */}
-                        {!isExecutiveOrHR && !isLineManager && review.employeeId === currentEmployeeEmail && (
+                        {/* Employee actions - only the employee assigned to this review */}
+                        {!isExecutiveOrHR && !isLineManager && review.employeeId === currentEmployeeIdFromUser && (
                           <>
                             {/* Sign-Off button - only after reviewed by both Line Manager and HR Manager */}
                             {review.managerReviewDate && review.hrApprovedDate && !review.employeeSignedDate && (

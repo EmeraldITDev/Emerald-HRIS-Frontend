@@ -389,69 +389,98 @@ export default function Employees() {
     }
   };
 
+  // Helper function to convert DD/MM/YYYY to yyyy-MM-dd
+  const convertDateFormat = (dateStr: string): string | null => {
+    if (!dateStr || dateStr.trim() === '') return null;
+    const parts = dateStr.trim().split('/');
+    if (parts.length === 3) {
+      const [day, month, year] = parts;
+      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    }
+    return null;
+  };
+
   const handleConfirmImport = async (validRows: ValidatedRow[]) => {
     try {
-      const newEmployees: Employee[] = validRows.map(row => ({
-        first_name: row.data['First Name'] || '',
-        middle_name: row.data['Middle Name'] || '',
-        last_name: row.data['Last Name'] || '',
-        email: row.data['Email'] || '',
-        phone_number: row.data['Phone Number'] || '',
-        date_of_birth: row.data['Date of Birth'] || '',
-        gender: row.data['Gender'] || '',
-        marital_status: row.data['Marital Status'] || '',
-        nationality: row.data['Nationality'] || '',
-        home_address: row.data['Home Address'] || '',
-        emergency_contact: row.data['Emergency Contact'] || '',
-        emergency_contact_number: row.data['Emergency Contact Number'] || '',
-        next_of_kin_name: row.data['Next of Kin Name'] || '',
-        next_of_kin_relationship: row.data['Next of Kin Relationship'] || '',
-        next_of_kin_phone: row.data['Next of Kin Phone'] || '',
-        next_of_kin_address: row.data['Next of Kin Address'] || '',
-        next_of_kin_email: row.data['Next of Kin Email'] || '',
-        job_title: row.data['Job Title'] || '',
-        department: row.data['Department'] || '',
-        employment_type: row.data['Employment Type'] || '',
-        grade_level: row.data['Grade Level'] || '',
-        supervisor_name: row.data['Supervisor Name'] || '',
-        work_location: row.data['Work Location'] || '',
-        hire_date: row.data['Hire Date'] || '',
-        probation_period: row.data['Probation Period'] || '',
-        confirmation_date: row.data['Confirmation Date'] || '',
-        employment_status: row.data['Employment Status'] || 'Active',
-        gross_salary: parseFloat(row.data['Gross Salary']?.replace(/[₦,]/g, '') || '0') || 0,
-        basic_salary: parseFloat(row.data['Basic Salary']?.replace(/[₦,]/g, '') || '0') || 0,
-        housing_allowance: parseFloat(row.data['Housing Allowance']?.replace(/[₦,]/g, '') || '0') || 0,
-        transport_allowance: parseFloat(row.data['Transport Allowance']?.replace(/[₦,]/g, '') || '0') || 0,
-        other_allowance: parseFloat(row.data['Other Allowance']?.replace(/[₦,]/g, '') || '0') || 0,
-        meal_allowance: parseFloat(row.data['Meal Allowance']?.replace(/[₦,]/g, '') || '0') || 0,
-        bank_name: row.data['Bank Name'] || '',
-        account_number: row.data['Account Number'] || '',
-        nuban: row.data['NUBAN'] || '',
-        sort_code: row.data['Sort Code'] || '',
-        employee_code: row.data['Employee Code'] || '',
-        national_id: row.data['National ID (NIN)'] || '',
-        passport_number: row.data['Passport Number'] || '',
-        bvn: row.data['BVN'] || '',
-        tin: row.data['TIN'] || '',
-        pension_pin: row.data['Pension PIN'] || '',
-        nhf_number: row.data['NHF Number'] || '',
-        tax_id: row.data['Tax ID'] || '',
-        vacation_days: parseInt(row.data['Vacation Days'] || '25') || 25,
-      }));
+      let successCount = 0;
+      let errorCount = 0;
 
-      // Add employees via API
-      for (const emp of newEmployees) {
-        await apiService.createEmployee(emp);
+      for (const row of validRows) {
+        try {
+          // Map CSV fields to API payload - using the same structure as handleAddEmployee
+          const employeeData = {
+            first_name: row.data['First Name'] || '',
+            last_name: row.data['Last Name'] || '',
+            middle_name: row.data['Middle Name'] || '',
+            email: row.data['Email Address'] || row.data['Email'] || '',
+            dob: convertDateFormat(row.data['Date of Birth']),
+            job_title: row.data['Job Title'] || '',
+            gross_salary: parseInt(row.data['Gross Salary']?.replace(/[₦,]/g, '') || '0') || 0,
+            department: row.data['Department'] || '',
+            employment_type: row.data['Employment Type'] || '',
+            employment_status: row.data['Employment Status'] || 'Active',
+            hire_date: convertDateFormat(row.data['Hire Date']) || new Date().toISOString().split('T')[0],
+            phone: row.data['Phone Number'] || '',
+            address: row.data['Home Address'] || '',
+            gender: row.data['Gender'] || '',
+            marital_status: row.data['Marital Status'] || '',
+            nationality: row.data['Nationality'] || '',
+            grade_level: row.data['Grade Level'] || '',
+            supervisor_name: row.data['Supervisor Name'] || '',
+            work_location: row.data['Work Location'] || '',
+            probation_period: row.data['Probation Period (in months)'] || '',
+            confirmation_date: convertDateFormat(row.data['Confirmation Date']),
+            vacation_days: parseInt(row.data['Vacation Days (7-30 days)'] || row.data['Vacation Days'] || '20') || 20,
+            
+            // Emergency contact
+            emergency_contact: row.data['Emergency Contact Name'] || '',
+            emergency_phone: row.data['Emergency Contact Phone'] || '',
+            
+            // Next of Kin
+            next_of_kin_name: row.data['Next of Kin Name'] || '',
+            next_of_kin_relationship: row.data['Next of Kin Relationship'] || '',
+            next_of_kin_phone: row.data['Next of Kin Phone'] || '',
+            next_of_kin_address: row.data['Next of Kin Address'] || '',
+            next_of_kin_email: row.data['Next of Kin Email'] || '',
+            
+            // Banking Information
+            bank_name: row.data['Bank Name'] || '',
+            account_number: row.data['Account Number'] || '',
+            nuban: row.data['NUBAN'] || '',
+            sort_code: row.data['Sort Code'] || '',
+            
+            // Government IDs
+            national_id: row.data['National ID (NIN)'] || '',
+            passport_number: row.data['Passport Number'] || '',
+            bvn: row.data['BVN'] || '',
+            tin: row.data['Tax Identification Number (TIN)'] || row.data['TIN'] || '',
+            pension_pin: row.data['Pension PIN'] || '',
+            nhf_number: row.data['NHF Number'] || '',
+          };
+
+          await apiService.createEmployee(employeeData);
+          successCount++;
+        } catch (rowError) {
+          console.error(`Failed to import row ${row.rowNumber}:`, rowError);
+          errorCount++;
+        }
       }
       
       // Refresh employee list
       await fetchEmployees();
       
-      toast({
-        title: "Import Successful",
-        description: `Successfully imported ${validRows.length} employee(s)`
-      });
+      if (errorCount > 0) {
+        toast({
+          title: "Partial Import",
+          description: `Imported ${successCount} employee(s). ${errorCount} failed.`,
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Import Successful",
+          description: `Successfully imported ${successCount} employee(s)`
+        });
+      }
     } catch (error) {
       console.error('Import Error:', error);
       toast({

@@ -251,20 +251,18 @@ export function CSVValidationPreview({
           </Tabs>
         </div>
 
-        <DialogFooter className="mt-4 pt-4 border-t">
-          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 w-full">
-            <Button variant="outline" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleImport} 
-              disabled={validRows.length === 0}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              Import {validRows.length} Valid Employee{validRows.length !== 1 ? 's' : ''}
-            </Button>
-          </div>
-        </DialogFooter>
+        <div className="flex justify-end gap-2 mt-4 pt-4 border-t">
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleImport} 
+            disabled={validRows.length === 0}
+            className="bg-green-600 hover:bg-green-700"
+          >
+            Import {validRows.length} Valid Employee{validRows.length !== 1 ? 's' : ''}
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   );

@@ -8,12 +8,13 @@ export const ALLOWED_VALUES = {
   employmentType: ['Full-time', 'Part-time', 'Contract', 'Intern'],
   employmentStatus: ['Active', 'On Leave', 'Suspended', 'Terminated'],
   gradeLevel: ['Entry', 'Junior', 'Mid-Level', 'Senior', 'Lead', 'Manager', 'Director', 'Executive'],
-  relationship: ['Spouse', 'Parent', 'Sibling', 'Child', 'Friend', 'Other'],
+  relationship: ['Spouse', 'Parent', 'Sibling', 'Child', 'Brother', 'Sister', 'Friend', 'Other'],
   bankNames: [
-    'Access Bank', 'GTBank', 'First Bank', 'UBA', 'Zenith Bank', 
+    'Access Bank', 'GT Bank', 'GTBank', 'First Bank', 'UBA', 'Zenith Bank', 
     'Fidelity Bank', 'Union Bank', 'Sterling Bank', 'Stanbic IBTC', 
     'Ecobank', 'FCMB', 'Polaris Bank', 'Wema Bank', 'Keystone Bank'
-  ]
+  ],
+  probationPeriod: ['3 months', '6 months', '9 months', '12 months']
 } as const;
 
 export interface CSVTemplateField {
@@ -30,61 +31,52 @@ export const csvTemplateFields: CSVTemplateField[] = [
   { header: "First Name", description: "Employee's first name", example: "John", required: true },
   { header: "Middle Name", description: "Employee's middle name (optional)", example: "Michael", required: false },
   { header: "Last Name", description: "Employee's last name", example: "Doe", required: true },
-  { header: "Email", description: "Employee's email address", example: "john.doe@company.com", required: true, format: "email@domain.com" },
-  { header: "Phone Number", description: "Employee's phone number", example: "+234 803 123 4567", required: true, format: "+234 XXX XXX XXXX" },
-  { header: "Date of Birth", description: "Employee's date of birth", example: "1990-05-15", required: false, format: "YYYY-MM-DD" },
+  { header: "Date of Birth", description: "Employee's date of birth", example: "29/01/1990", required: false, format: "DD/MM/YYYY" },
   { header: "Gender", description: "Employee's gender", example: "Male", required: false, allowedValues: ALLOWED_VALUES.gender },
   { header: "Marital Status", description: "Employee's marital status", example: "Single", required: false, allowedValues: ALLOWED_VALUES.maritalStatus },
   { header: "Nationality", description: "Employee's nationality", example: "Nigerian", required: false },
+  { header: "Phone Number", description: "Employee's phone number", example: "09045677890", required: true, format: "Phone number" },
+  { header: "Email Address", description: "Employee's email address", example: "john.doe@company.com", required: true, format: "email@domain.com" },
   { header: "Home Address", description: "Employee's home address", example: "123 Main St, Lagos", required: false },
   
   // Emergency Contact
-  { header: "Emergency Contact", description: "Emergency contact name", example: "Jane Doe", required: false },
-  { header: "Emergency Contact Number", description: "Emergency contact phone", example: "+234 803 123 4568", required: false, format: "+234 XXX XXX XXXX" },
+  { header: "Emergency Contact Name", description: "Emergency contact full name", example: "Jane Doe", required: false },
+  { header: "Emergency Contact Phone", description: "Emergency contact phone number", example: "09038899400", required: false, format: "Phone number" },
   
   // Next of Kin
   { header: "Next of Kin Name", description: "Next of kin full name", example: "Jane Doe", required: false },
-  { header: "Next of Kin Relationship", description: "Relationship to employee", example: "Spouse", required: false, allowedValues: ALLOWED_VALUES.relationship },
-  { header: "Next of Kin Phone", description: "Next of kin phone number", example: "+234 803 123 4569", required: false, format: "+234 XXX XXX XXXX" },
+  { header: "Next of Kin Relationship", description: "Relationship to employee", example: "Brother", required: false, allowedValues: ALLOWED_VALUES.relationship },
+  { header: "Next of Kin Phone", description: "Next of kin phone number", example: "09038899401", required: false, format: "Phone number" },
   { header: "Next of Kin Address", description: "Next of kin address", example: "456 Side St, Lagos", required: false },
-  { header: "Next of Kin Email", description: "Next of kin email", example: "jane.doe@email.com", required: false, format: "email@domain.com" },
+  { header: "Next of Kin Email", description: "Next of kin email address", example: "jane.doe@email.com", required: false, format: "email@domain.com" },
   
   // Employment Information
-  { header: "Job Title", description: "Employee's job title/position", example: "Software Engineer", required: true },
-  { header: "Department", description: "Employee's department", example: "IT", required: true, allowedValues: [...DEPARTMENTS] },
+  { header: "Job Title", description: "Employee's job title/position", example: "Senior Dev", required: true },
+  { header: "Department", description: "Employee's department", example: "Business Development", required: true, allowedValues: [...DEPARTMENTS] },
   { header: "Employment Type", description: "Type of employment", example: "Full-time", required: true, allowedValues: ALLOWED_VALUES.employmentType },
-  { header: "Grade Level", description: "Employee's grade level", example: "Senior", required: false, allowedValues: ALLOWED_VALUES.gradeLevel },
+  { header: "Grade Level", description: "Employee's grade level", example: "Junior", required: false, allowedValues: ALLOWED_VALUES.gradeLevel },
   { header: "Supervisor Name", description: "Name of direct supervisor", example: "Jane Smith", required: false },
   { header: "Work Location", description: "Primary work location", example: "Lagos Office", required: false },
-  { header: "Hire Date", description: "Employee's hire date", example: "2023-01-15", required: true, format: "YYYY-MM-DD" },
-  { header: "Probation Period", description: "Probation period in months", example: "6", required: false, format: "Number (months)" },
-  { header: "Confirmation Date", description: "Date of confirmation", example: "2023-07-15", required: false, format: "YYYY-MM-DD" },
-  { header: "Employment Status", description: "Current employment status", example: "Active", required: false, allowedValues: ALLOWED_VALUES.employmentStatus },
+  { header: "Hire Date", description: "Employee's hire date", example: "11/12/2025", required: true, format: "DD/MM/YYYY" },
+  { header: "Probation Period (in months)", description: "Probation period", example: "3 months", required: false, allowedValues: ALLOWED_VALUES.probationPeriod },
   
   // Financial Information
-  { header: "Gross Salary", description: "Employee's gross salary amount", example: "1500000", required: false, format: "Number (no commas)" },
-  { header: "Basic Salary", description: "Basic salary (40% of gross)", example: "600000", required: false, format: "Number (no commas)" },
-  { header: "Housing Allowance", description: "Housing allowance (20% of gross)", example: "300000", required: false, format: "Number (no commas)" },
-  { header: "Transport Allowance", description: "Transport allowance (9% of gross)", example: "135000", required: false, format: "Number (no commas)" },
-  { header: "Other Allowance", description: "Other allowances (31% of gross)", example: "465000", required: false, format: "Number (no commas)" },
-  { header: "Meal Allowance", description: "Meal allowance amount", example: "50000", required: false, format: "Number (no commas)" },
+  { header: "Gross Salary", description: "Employee's gross salary amount", example: "250000", required: false, format: "Number (no commas)" },
   
   // Bank Details
-  { header: "Bank Name", description: "Employee's bank name", example: "GTBank", required: false, allowedValues: ALLOWED_VALUES.bankNames },
-  { header: "Account Number", description: "Bank account number", example: "0123456789", required: false, format: "10 digits" },
-  { header: "NUBAN", description: "NUBAN account number", example: "0123456789012", required: false, format: "13 digits" },
-  { header: "Sort Code", description: "Bank sort code", example: "058", required: false, format: "3 digits" },
+  { header: "Bank Name", description: "Employee's bank name", example: "GT Bank", required: false, allowedValues: ALLOWED_VALUES.bankNames },
+  { header: "Account Number", description: "Bank account number", example: "0525417209", required: false, format: "10 digits" },
+  { header: "NUBAN", description: "NUBAN identifier", example: "sa", required: false },
+  { header: "Sort Code", description: "Bank sort code", example: "df22", required: false },
   
   // Employee Identification
-  { header: "Employee Code", description: "Custom employee code (auto-generated if empty)", example: "EMR001", required: false, format: "EMR followed by numbers" },
-  { header: "National ID (NIN)", description: "National Identification Number", example: "12345678901", required: true, format: "11 digits" },
+  { header: "National ID (NIN)", description: "National Identification Number", example: "8900002033", required: false },
   { header: "Passport Number", description: "Passport number (optional)", example: "A12345678", required: false },
-  { header: "BVN", description: "Bank Verification Number", example: "12345678901", required: false, format: "11 digits" },
-  { header: "TIN", description: "Tax Identification Number", example: "1234567890", required: false, format: "10 digits" },
+  { header: "Tax Identification Number (TIN)", description: "Tax Identification Number", example: "330303", required: false },
   { header: "Pension PIN", description: "Pension fund PIN", example: "PEN123456789", required: false },
   { header: "NHF Number", description: "National Housing Fund number", example: "NHF123456789", required: false },
-  { header: "Tax ID", description: "Tax identification", example: "TAX123456789", required: false },
-  { header: "Vacation Days", description: "Annual vacation days entitlement", example: "25", required: false, format: "Number" }
+  { header: "BVN", description: "Bank Verification Number", example: "222300303393", required: false, format: "11 digits" },
+  { header: "Vacation Days (7-30 days)", description: "Annual vacation days entitlement (7-30)", example: "23", required: false, format: "Number between 7-30" }
 ];
 
 // Generate CSV template content with instructions
@@ -135,7 +127,8 @@ export const generateSmartCSVTemplate = (): string => {
     '# Fields marked with * are REQUIRED',
     '# Fields with [options] must use one of the listed values',
     '# Fields with (format) must follow the specified format',
-    '# Delete these instruction rows (rows 1-6) before importing',
+    '# Date format: DD/MM/YYYY (e.g. 29/01/1990)',
+    '# Delete these instruction rows (rows 1-7) before importing',
     '#',
     headers.join(','),
     requiredRow.join(','),
@@ -193,7 +186,8 @@ export const generateFieldGuide = (): string => {
     '2. Delete the instruction rows (rows starting with #)',
     '3. Fill in employee data starting from row 2',
     '4. For fields with predefined values, use ONLY the listed options',
-    '5. Save the file and upload for import',
+    '5. Use DD/MM/YYYY format for all dates (e.g., 29/01/1990)',
+    '6. Save the file and upload for import',
     '',
     '═══════════════════════════════════════════════════════════════',
     '                    FIELD DEFINITIONS',
@@ -206,10 +200,10 @@ export const generateFieldGuide = (): string => {
     { name: 'PERSONAL INFORMATION', start: 0, end: 9 },
     { name: 'EMERGENCY CONTACT', start: 10, end: 11 },
     { name: 'NEXT OF KIN', start: 12, end: 16 },
-    { name: 'EMPLOYMENT INFORMATION', start: 17, end: 27 },
-    { name: 'FINANCIAL INFORMATION', start: 28, end: 33 },
-    { name: 'BANK DETAILS', start: 34, end: 37 },
-    { name: 'IDENTIFICATION & COMPLIANCE', start: 38, end: 46 }
+    { name: 'EMPLOYMENT INFORMATION', start: 17, end: 24 },
+    { name: 'FINANCIAL INFORMATION', start: 25, end: 25 },
+    { name: 'BANK DETAILS', start: 26, end: 29 },
+    { name: 'IDENTIFICATION & COMPLIANCE', start: 30, end: 36 }
   ];
   
   categories.forEach(category => {
@@ -255,6 +249,9 @@ export const generateFieldGuide = (): string => {
   lines.push('GRADE LEVEL OPTIONS:');
   lines.push(`  ${ALLOWED_VALUES.gradeLevel.join(', ')}\n`);
   
+  lines.push('PROBATION PERIOD OPTIONS:');
+  lines.push(`  ${ALLOWED_VALUES.probationPeriod.join(', ')}\n`);
+  
   lines.push('DEPARTMENT OPTIONS:');
   lines.push(`  ${DEPARTMENTS.join(', ')}\n`);
   
@@ -266,6 +263,7 @@ export const generateFieldGuide = (): string => {
   
   lines.push('\n═══════════════════════════════════════════════════════════════');
   lines.push('* Indicates required field');
+  lines.push('Date format: DD/MM/YYYY');
   lines.push('═══════════════════════════════════════════════════════════════');
   
   return lines.join('\n');

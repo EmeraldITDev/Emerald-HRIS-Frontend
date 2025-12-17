@@ -24,7 +24,7 @@ export interface CSVValidationResult {
   totalErrors: number;
 }
 
-// Field mapping for CSV headers to allowed values
+// Field mapping for CSV headers to allowed values (normalized to lowercase)
 const fieldValidationMap: Record<string, readonly string[] | string[]> = {
   'gender': ALLOWED_VALUES.gender,
   'marital status': ALLOWED_VALUES.maritalStatus,
@@ -34,6 +34,7 @@ const fieldValidationMap: Record<string, readonly string[] | string[]> = {
   'next of kin relationship': ALLOWED_VALUES.relationship,
   'bank name': ALLOWED_VALUES.bankNames,
   'department': [...DEPARTMENTS],
+  'probation period (in months)': ALLOWED_VALUES.probationPeriod,
 };
 
 // Normalize header for matching
@@ -76,26 +77,27 @@ const validateRow = (rowData: Record<string, string>, rowNumber: number): Valida
     }
   });
 
-  // Validate date formats
+  // Validate date formats (DD/MM/YYYY)
   const dateFields = ['date of birth', 'hire date', 'confirmation date'];
   Object.entries(rowData).forEach(([header, value]) => {
     const normalizedHeader = normalizeHeader(header);
     if (dateFields.includes(normalizedHeader) && value && value.trim() !== '') {
-      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      // Accept DD/MM/YYYY format
+      const dateRegex = /^\d{1,2}\/\d{1,2}\/\d{4}$/;
       if (!dateRegex.test(value.trim())) {
         errors.push({
           row: rowNumber,
           column: header,
           value: value,
-          expectedValues: ['YYYY-MM-DD'],
-          message: `"${value}" is not a valid date format. Use YYYY-MM-DD`
+          expectedValues: ['DD/MM/YYYY'],
+          message: `"${value}" is not a valid date format. Use DD/MM/YYYY (e.g., 29/01/1990)`
         });
       }
     }
   });
 
   // Validate email format
-  const emailFields = ['email', 'next of kin email'];
+  const emailFields = ['email', 'email address', 'next of kin email'];
   Object.entries(rowData).forEach(([header, value]) => {
     const normalizedHeader = normalizeHeader(header);
     if (emailFields.includes(normalizedHeader) && value && value.trim() !== '') {
@@ -112,7 +114,7 @@ const validateRow = (rowData: Record<string, string>, rowNumber: number): Valida
     }
   });
 
-  // Validate required fields
+  // Validate required fields based on current template
   const requiredFields = csvTemplateFields.filter(f => f.required).map(f => normalizeHeader(f.header));
   Object.entries(rowData).forEach(([header, value]) => {
     const normalizedHeader = normalizeHeader(header);
@@ -124,6 +126,23 @@ const validateRow = (rowData: Record<string, string>, rowNumber: number): Valida
         expectedValues: [],
         message: `${header} is required`
       });
+    }
+  });
+
+  // Validate vacation days range (7-30)
+  Object.entries(rowData).forEach(([header, value]) => {
+    const normalizedHeader = normalizeHeader(header);
+    if (normalizedHeader.includes('vacation days') && value && value.trim() !== '') {
+      const days = parseInt(value.trim(), 10);
+      if (isNaN(days) || days < 7 || days > 30) {
+        errors.push({
+          row: rowNumber,
+          column: header,
+          value: value,
+          expectedValues: ['7-30'],
+          message: `Vacation days must be a number between 7 and 30`
+        });
+      }
     }
   });
 

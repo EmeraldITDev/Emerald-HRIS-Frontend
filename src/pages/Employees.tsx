@@ -19,7 +19,7 @@ import { Plus, Search, Filter, Download, Upload, Edit, Eye, MoreHorizontal, Cale
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { parseCSVFile, formatDataForPHP, type EmployeeData, type CSVImportResult } from "@/utils/csvImport";
-import { downloadCSVTemplate, downloadTemplateGuide } from "@/utils/csvTemplate";
+import { downloadCSVTemplate, downloadTemplateGuide, downloadExcelTemplateSimple } from "@/utils/csvTemplate";
 import { CSVValidationPreview } from "@/components/CSVValidationPreview";
 import jsPDF from 'jspdf';
 import * as XLSX from 'xlsx';
@@ -335,17 +335,21 @@ export default function Employees() {
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    if (!file.name.endsWith('.csv')) {
+    
+    const isCSV = file.name.endsWith('.csv');
+    const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
+    
+    if (!isCSV && !isExcel) {
       toast({
         title: "Invalid File Type",
-        description: "Please select a CSV file",
+        description: "Please select a CSV or Excel (.xlsx, .xls) file",
         variant: "destructive"
       });
       return;
     }
     
     try {
-      // Convert employees to EmployeeData format for CSV parsing compatibility
+      // Convert employees to EmployeeData format for validation
       const employeeDataList: EmployeeData[] = employeeList.map(emp => ({
         id: emp.id?.toString() || '',
         firstName: emp.first_name,
@@ -361,17 +365,34 @@ export default function Employees() {
         employmentType: emp.employment_type || 'Full-time'
       }));
       
-      const result = await parseCSVFile(file, employeeDataList);
+      let result: CSVImportResult;
+      
+      if (isExcel) {
+        // Parse Excel file
+        const data = await file.arrayBuffer();
+        const workbook = XLSX.read(data);
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        
+        // Convert to CSV format for parsing
+        const csvData = XLSX.utils.sheet_to_csv(worksheet);
+        const csvBlob = new Blob([csvData], { type: 'text/csv' });
+        const csvFile = new File([csvBlob], 'converted.csv', { type: 'text/csv' });
+        
+        result = await parseCSVFile(csvFile, employeeDataList);
+      } else {
+        result = await parseCSVFile(file, employeeDataList);
+      }
       
       // Show validation preview instead of importing directly
       setCsvValidationResult(result);
       setShowValidationPreview(true);
       
     } catch (error) {
-      console.error('CSV Parse Error:', error);
+      console.error('File Parse Error:', error);
       toast({
         title: "Parse Error",
-        description: error instanceof Error ? error.message : "An error occurred while parsing the CSV file.",
+        description: error instanceof Error ? error.message : "An error occurred while parsing the file.",
         variant: "destructive"
       });
     }
@@ -1036,6 +1057,10 @@ export default function Employees() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={downloadExcelTemplateSimple}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  Excel Template (.xlsx) with Dropdowns
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={downloadCSVTemplate}>
                   <FileText className="mr-2 h-4 w-4" />
                   CSV Template
@@ -1048,9 +1073,9 @@ export default function Employees() {
             </DropdownMenu>
             <Button variant="outline" size="sm" className="text-xs md:text-sm" onClick={handleImportCSV}>
               <Upload className="mr-2 h-3 w-3 md:h-4 md:w-4" />
-              Import CSV
+              Import
             </Button>
-            <input ref={fileInputRef} type="file" accept=".csv" onChange={handleFileChange} style={{
+            <input ref={fileInputRef} type="file" accept=".csv,.xlsx,.xls" onChange={handleFileChange} style={{
             display: 'none'
           }} />
             <Button variant="outline" size="sm" className="text-xs md:text-sm" onClick={handleExportData}>

@@ -1,14 +1,21 @@
-import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { CheckCircle2, XCircle, AlertTriangle, FileSpreadsheet } from 'lucide-react';
-import { CSVValidationResult, ValidatedRow, getAllowedValuesForValidation } from '@/utils/csvValidation';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { CheckCircle2, XCircle, AlertTriangle, FileSpreadsheet } from "lucide-react";
+import { CSVValidationResult, ValidatedRow, getAllowedValuesForValidation } from "@/utils/csvValidation";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface CSVValidationPreviewProps {
   isOpen: boolean;
@@ -23,9 +30,9 @@ export function CSVValidationPreview({
   onClose,
   onConfirmImport,
   validationResult,
-  fileName
+  fileName,
 }: CSVValidationPreviewProps) {
-  const [activeTab, setActiveTab] = useState<string>('summary');
+  const [activeTab, setActiveTab] = useState<string>("summary");
 
   if (!validationResult) return null;
 
@@ -37,8 +44,8 @@ export function CSVValidationPreview({
   };
 
   const renderCellValue = (row: ValidatedRow, column: string) => {
-    const error = row.errors.find(e => e.column === column);
-    const value = row.data[column] || '';
+    const error = row.errors.find((e) => e.column === column);
+    const value = row.data[column] || "";
 
     if (error) {
       return (
@@ -46,7 +53,7 @@ export function CSVValidationPreview({
           <Tooltip>
             <TooltipTrigger asChild>
               <span className="bg-destructive/20 text-destructive px-2 py-1 rounded border border-destructive/30 cursor-help inline-block">
-                {value || '(empty)'}
+                {value || "(empty)"}
               </span>
             </TooltipTrigger>
             <TooltipContent className="max-w-xs">
@@ -54,7 +61,10 @@ export function CSVValidationPreview({
               {error.expectedValues.length > 0 && (
                 <div className="mt-1">
                   <p className="text-xs text-muted-foreground">Allowed values:</p>
-                  <p className="text-xs">{error.expectedValues.slice(0, 5).join(', ')}{error.expectedValues.length > 5 ? '...' : ''}</p>
+                  <p className="text-xs">
+                    {error.expectedValues.slice(0, 5).join(", ")}
+                    {error.expectedValues.length > 5 ? "..." : ""}
+                  </p>
                 </div>
               )}
             </TooltipContent>
@@ -77,18 +87,16 @@ export function CSVValidationPreview({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-5xl">
+      <DialogContent className="max-w-5xl max-h-[90vh]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileSpreadsheet className="h-5 w-5" />
             CSV Import Validation - {fileName}
           </DialogTitle>
-          <DialogDescription>
-            Review validation results before importing employees
-          </DialogDescription>
+          <DialogDescription>Review validation results before importing employees</DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+        <div className="space-y-4">
           {/* Summary Stats */}
           <div className="grid grid-cols-4 gap-4">
             <div className="bg-muted rounded-lg p-3 text-center">
@@ -111,7 +119,7 @@ export function CSVValidationPreview({
 
           {/* Status Alert */}
           {isValid ? (
-            <Alert className="border-green-500 bg-green-500/10">
+            <Alert className="border-green-500 bg-green-500/10 mb-[200px]">
               <CheckCircle2 className="h-4 w-4 text-green-600" />
               <AlertDescription className="text-green-600">
                 All rows passed validation. Ready to import {validRows.length} employees.
@@ -121,7 +129,8 @@ export function CSVValidationPreview({
             <Alert variant="destructive">
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription>
-                {invalidRows.length} row(s) have validation errors. You can still import {validRows.length} valid row(s).
+                {invalidRows.length} row(s) have validation errors. You can still import {validRows.length} valid
+                row(s).
               </AlertDescription>
             </Alert>
           )}
@@ -147,13 +156,16 @@ export function CSVValidationPreview({
             </TabsList>
 
             <TabsContent value="summary" className="mt-4">
-              <ScrollArea className="h-[200px]">
+              <ScrollArea className="h-[300px]">
                 <div className="space-y-3">
                   {invalidRows.length > 0 && (
                     <div>
                       <h4 className="font-semibold text-destructive mb-2">Errors by Row:</h4>
                       {invalidRows.map((row) => (
-                        <div key={row.rowNumber} className="bg-destructive/5 border border-destructive/20 rounded-lg p-3 mb-2">
+                        <div
+                          key={row.rowNumber}
+                          className="bg-destructive/5 border border-destructive/20 rounded-lg p-3 mb-2"
+                        >
                           <p className="font-medium text-sm">Row {row.rowNumber}:</p>
                           <ul className="list-disc list-inside text-sm text-muted-foreground mt-1">
                             {row.errors.map((error, idx) => (
@@ -177,14 +189,16 @@ export function CSVValidationPreview({
             </TabsContent>
 
             <TabsContent value="errors" className="mt-4">
-              <ScrollArea className="h-[200px]">
+              <ScrollArea className="h-[300px]">
                 {invalidRows.length > 0 ? (
                   <Table>
                     <TableHeader>
                       <TableRow>
                         <TableHead className="w-16">Row</TableHead>
                         {displayColumns.map((col) => (
-                          <TableHead key={col} className="text-xs">{col}</TableHead>
+                          <TableHead key={col} className="text-xs">
+                            {col}
+                          </TableHead>
                         ))}
                       </TableRow>
                     </TableHeader>
@@ -211,14 +225,16 @@ export function CSVValidationPreview({
             </TabsContent>
 
             <TabsContent value="valid" className="mt-4">
-              <ScrollArea className="h-[200px]">
+              <ScrollArea className="h-[300px]">
                 {validRows.length > 0 ? (
                   <Table>
                     <TableHeader>
                       <TableRow>
                         <TableHead className="w-16">Row</TableHead>
                         {displayColumns.map((col) => (
-                          <TableHead key={col} className="text-xs">{col}</TableHead>
+                          <TableHead key={col} className="text-xs">
+                            {col}
+                          </TableHead>
                         ))}
                       </TableRow>
                     </TableHeader>
@@ -233,7 +249,7 @@ export function CSVValidationPreview({
                           </TableCell>
                           {displayColumns.map((col) => (
                             <TableCell key={col} className="text-xs">
-                              {row.data[col] || '-'}
+                              {row.data[col] || "-"}
                             </TableCell>
                           ))}
                         </TableRow>
@@ -251,18 +267,18 @@ export function CSVValidationPreview({
           </Tabs>
         </div>
 
-        <div className="flex justify-end gap-2 mt-4 pt-4 border-t">
-          <Button variant="outline" onClick={onClose}>
+        <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:justify-end pt-4 border-t">
+          <Button variant="outline" onClick={onClose} className="w-full sm:w-auto mb-[200px]">
             Cancel
           </Button>
-          <Button 
-            onClick={handleImport} 
+          <Button
+            onClick={handleImport}
             disabled={validRows.length === 0}
-            className="bg-green-600 hover:bg-green-700"
+            className="w-full sm:w-auto bg-green-600 hover:bg-green-700"
           >
-            Import {validRows.length} Valid Employee{validRows.length !== 1 ? 's' : ''}
+            Import {validRows.length} Valid Employee{validRows.length !== 1 ? "s" : ""}
           </Button>
-        </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

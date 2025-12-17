@@ -404,6 +404,7 @@ export default function Employees() {
     try {
       let successCount = 0;
       let errorCount = 0;
+      const importedCredentials: Array<{ name: string; credentials: any }> = [];
 
       for (const row of validRows) {
         try {
@@ -456,10 +457,21 @@ export default function Employees() {
             tin: row.data['Tax Identification Number (TIN)'] || row.data['TIN'] || '',
             pension_pin: row.data['Pension PIN'] || '',
             nhf_number: row.data['NHF Number'] || '',
+            
+            // System Role - default to general_employee for imported employees
+            system_role: 'general_employee',
           };
 
-          await apiService.createEmployee(employeeData);
+          const response = await apiService.createEmployee(employeeData);
           successCount++;
+          
+          // Collect credentials if returned
+          if (response.user_credentials) {
+            importedCredentials.push({
+              name: `${employeeData.first_name} ${employeeData.last_name}`,
+              credentials: response.user_credentials
+            });
+          }
         } catch (rowError) {
           console.error(`Failed to import row ${row.rowNumber}:`, rowError);
           errorCount++;
@@ -469,7 +481,19 @@ export default function Employees() {
       // Refresh employee list
       await fetchEmployees();
       
-      if (errorCount > 0) {
+      // Show credentials for the first imported employee (user can view others via reset password)
+      if (importedCredentials.length > 0) {
+        setNewEmployeeCredentials(importedCredentials[0].credentials);
+        setNewEmployeeName(importedCredentials[0].name);
+        setShowCredentialsModal(true);
+        
+        if (importedCredentials.length > 1) {
+          toast({
+            title: "Import Successful",
+            description: `Imported ${successCount} employee(s). Showing credentials for the first employee. Use "Reset Password" for other employees.`,
+          });
+        }
+      } else if (errorCount > 0) {
         toast({
           title: "Partial Import",
           description: `Imported ${successCount} employee(s). ${errorCount} failed.`,

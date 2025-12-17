@@ -19,7 +19,7 @@ import { Plus, Search, Filter, Download, Upload, Edit, Eye, MoreHorizontal, Cale
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { parseCSVFile, formatDataForPHP, type EmployeeData } from "@/utils/csvImport";
-import { downloadCSVTemplate } from "@/utils/csvTemplate";
+import { downloadCSVTemplate, downloadTemplateGuide } from "@/utils/csvTemplate";
 import jsPDF from 'jspdf';
 import * as XLSX from 'xlsx';
 import apiService, { Employee } from "@/lib/api";
@@ -994,10 +994,24 @@ export default function Employees() {
             </p>
           </div>
           <div className="flex flex-col sm:flex-row gap-2">
-            <Button variant="outline" size="sm" className="text-xs md:text-sm" onClick={downloadCSVTemplate}>
-              <FileText className="mr-2 h-3 w-3 md:h-4 md:w-4" />
-              Download Template
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="text-xs md:text-sm">
+                  <FileText className="mr-2 h-3 w-3 md:h-4 md:w-4" />
+                  Download Template
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={downloadCSVTemplate}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  CSV Template
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={downloadTemplateGuide}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  Field Guide (Instructions)
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button variant="outline" size="sm" className="text-xs md:text-sm" onClick={handleImportCSV}>
               <Upload className="mr-2 h-3 w-3 md:h-4 md:w-4" />
               Import CSV

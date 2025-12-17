@@ -1,8 +1,11 @@
 import Papa from 'papaparse';
+import { ALLOWED_VALUES, csvTemplateFields, getAllowedValuesForField } from './csvTemplate';
+import { DEPARTMENTS } from '@/constants/departments';
 
 export interface EmployeeData {
   id: string;
   firstName: string;
+  middleName?: string;
   lastName: string;
   email: string;
   department: string;
@@ -14,13 +17,114 @@ export interface EmployeeData {
   vacationDays: number;
   employmentType: string;
   workLocation?: string;
+  gender?: string;
+  maritalStatus?: string;
+  gradeLevel?: string;
+  bankName?: string;
+  nationalId?: string;
+  [key: string]: any;
+}
+
+export interface ValidationError {
+  row: number;
+  field: string;
+  value: string;
+  allowedValues: string[];
+  message: string;
 }
 
 export interface CSVImportResult {
   success: boolean;
   data: EmployeeData[];
   errors: string[];
+  validationErrors: ValidationError[];
+  warnings: string[];
 }
+
+// Field validation rules with allowed values
+const VALIDATION_RULES: { [key: string]: { allowedValues?: string[]; required?: boolean; format?: RegExp; formatMessage?: string } } = {
+  'Gender': { allowedValues: [...ALLOWED_VALUES.gender] },
+  'Marital Status': { allowedValues: [...ALLOWED_VALUES.maritalStatus] },
+  'Employment Type': { allowedValues: [...ALLOWED_VALUES.employmentType], required: true },
+  'Employment Status': { allowedValues: [...ALLOWED_VALUES.employmentStatus] },
+  'Grade Level': { allowedValues: [...ALLOWED_VALUES.gradeLevel] },
+  'Department': { allowedValues: [...DEPARTMENTS], required: true },
+  'Bank Name': { allowedValues: [...ALLOWED_VALUES.bankNames] },
+  'Next of Kin Relationship': { allowedValues: [...ALLOWED_VALUES.relationship] },
+  'Email': { format: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, formatMessage: 'Invalid email format', required: true },
+  'First Name': { required: true },
+  'Last Name': { required: true },
+  'Job Title': { required: true },
+  'Phone Number': { required: true },
+  'Hire Date': { format: /^\d{4}-\d{2}-\d{2}$/, formatMessage: 'Date must be in YYYY-MM-DD format', required: true },
+  'Date of Birth': { format: /^\d{4}-\d{2}-\d{2}$/, formatMessage: 'Date must be in YYYY-MM-DD format' },
+  'Confirmation Date': { format: /^\d{4}-\d{2}-\d{2}$/, formatMessage: 'Date must be in YYYY-MM-DD format' },
+  'National ID (NIN)': { format: /^\d{11}$/, formatMessage: 'NIN must be 11 digits', required: true },
+  'BVN': { format: /^\d{11}$/, formatMessage: 'BVN must be 11 digits' },
+  'Account Number': { format: /^\d{10}$/, formatMessage: 'Account number must be 10 digits' },
+};
+
+// Validate a single field value against rules
+export const validateFieldValue = (field: string, value: string): { isValid: boolean; error?: ValidationError } => {
+  const rule = VALIDATION_RULES[field];
+  
+  if (!rule) return { isValid: true };
+  
+  // Skip validation for empty optional fields
+  if (!value || value.trim() === '') {
+    if (rule.required) {
+      return {
+        isValid: false,
+        error: {
+          row: 0,
+          field,
+          value,
+          allowedValues: rule.allowedValues || [],
+          message: `${field} is required`
+        }
+      };
+    }
+    return { isValid: true };
+  }
+  
+  const trimmedValue = value.trim();
+  
+  // Check allowed values (case-insensitive)
+  if (rule.allowedValues && rule.allowedValues.length > 0) {
+    const isValidValue = rule.allowedValues.some(
+      allowed => allowed.toLowerCase() === trimmedValue.toLowerCase()
+    );
+    
+    if (!isValidValue) {
+      return {
+        isValid: false,
+        error: {
+          row: 0,
+          field,
+          value: trimmedValue,
+          allowedValues: rule.allowedValues,
+          message: `"${trimmedValue}" is not a valid option for ${field}`
+        }
+      };
+    }
+  }
+  
+  // Check format
+  if (rule.format && !rule.format.test(trimmedValue)) {
+    return {
+      isValid: false,
+      error: {
+        row: 0,
+        field,
+        value: trimmedValue,
+        allowedValues: [],
+        message: rule.formatMessage || `Invalid format for ${field}`
+      }
+    };
+  }
+  
+  return { isValid: true };
+};
 
 // Generate CSV template for download
 export const generateCSVTemplate = () => {
@@ -70,11 +174,11 @@ export const generateCSVTemplate = () => {
 // Generate unique employee ID
 const generateEmployeeId = (existingIds: string[]): string => {
   let counter = 1;
-  let newId = `EMP${counter.toString().padStart(3, '0')}`;
+  let newId = `EMR${counter.toString().padStart(3, '0')}`;
   
   while (existingIds.includes(newId)) {
     counter++;
-    newId = `EMP${counter.toString().padStart(3, '0')}`;
+    newId = `EMR${counter.toString().padStart(3, '0')}`;
   }
   
   return newId;
@@ -107,45 +211,92 @@ const validateEmployeeData = (data: any): string[] => {
   return errors;
 };
 
+// Extended field mapping for comprehensive CSV import
+const FIELD_MAPPING: { [key: string]: string } = {
+  'first name': 'firstName',
+  'firstname': 'firstName',
+  'fname': 'firstName',
+  'middle name': 'middleName',
+  'middlename': 'middleName',
+  'last name': 'lastName',
+  'lastname': 'lastName',
+  'lname': 'lastName',
+  'email': 'email',
+  'email address': 'email',
+  'phone number': 'phone',
+  'phone': 'phone',
+  'mobile': 'phone',
+  'date of birth': 'dateOfBirth',
+  'dob': 'dateOfBirth',
+  'gender': 'gender',
+  'marital status': 'maritalStatus',
+  'nationality': 'nationality',
+  'home address': 'homeAddress',
+  'address': 'homeAddress',
+  'emergency contact': 'emergencyContact',
+  'emergency contact number': 'emergencyContactNumber',
+  'next of kin name': 'nextOfKinName',
+  'next of kin relationship': 'nextOfKinRelationship',
+  'next of kin phone': 'nextOfKinPhone',
+  'next of kin address': 'nextOfKinAddress',
+  'next of kin email': 'nextOfKinEmail',
+  'job title': 'position',
+  'position': 'position',
+  'title': 'position',
+  'department': 'department',
+  'dept': 'department',
+  'employment type': 'employmentType',
+  'type': 'employmentType',
+  'contract type': 'employmentType',
+  'grade level': 'gradeLevel',
+  'grade': 'gradeLevel',
+  'supervisor name': 'supervisorName',
+  'supervisor': 'supervisorName',
+  'work location': 'workLocation',
+  'location': 'workLocation',
+  'hire date': 'joinDate',
+  'join date': 'joinDate',
+  'start date': 'joinDate',
+  'probation period': 'probationPeriod',
+  'confirmation date': 'confirmationDate',
+  'employment status': 'status',
+  'status': 'status',
+  'gross salary': 'salary',
+  'salary': 'salary',
+  'pay': 'salary',
+  'basic salary': 'basicSalary',
+  'housing allowance': 'housingAllowance',
+  'transport allowance': 'transportAllowance',
+  'other allowance': 'otherAllowance',
+  'meal allowance': 'mealAllowance',
+  'bank name': 'bankName',
+  'bank': 'bankName',
+  'account number': 'accountNumber',
+  'nuban': 'nuban',
+  'sort code': 'sortCode',
+  'employee code': 'employeeCode',
+  'national id (nin)': 'nationalId',
+  'nin': 'nationalId',
+  'national id': 'nationalId',
+  'passport number': 'passportNumber',
+  'bvn': 'bvn',
+  'tin': 'tin',
+  'tax identification number': 'tin',
+  'pension pin': 'pensionPin',
+  'nhf number': 'nhfNumber',
+  'tax id': 'taxId',
+  'vacation days': 'vacationDays',
+  'leave days': 'vacationDays'
+};
+
 // Map CSV column headers to employee fields
 const mapCSVFields = (csvData: any): EmployeeData | null => {
-  const fieldMapping: { [key: string]: string } = {
-    'first name': 'firstName',
-    'firstname': 'firstName',
-    'fname': 'firstName',
-    'last name': 'lastName',
-    'lastname': 'lastName',
-    'lname': 'lastName',
-    'email': 'email',
-    'email address': 'email',
-    'department': 'department',
-    'dept': 'department',
-    'position': 'position',
-    'job title': 'position',
-    'title': 'position',
-    'salary': 'salary',
-    'pay': 'salary',
-    'status': 'status',
-    'employment status': 'status',
-    'join date': 'joinDate',
-    'start date': 'joinDate',
-    'hire date': 'joinDate',
-    'phone': 'phone',
-    'phone number': 'phone',
-    'mobile': 'phone',
-    'vacation days': 'vacationDays',
-    'leave days': 'vacationDays',
-    'employment type': 'employmentType',
-    'type': 'employmentType',
-    'contract type': 'employmentType'
-  };
-
   const mappedData: any = {};
   
   // Map CSV fields to employee fields
   Object.keys(csvData).forEach(key => {
     const normalizedKey = key.toLowerCase().trim();
-    const mappedField = fieldMapping[normalizedKey];
+    const mappedField = FIELD_MAPPING[normalizedKey];
     
     if (mappedField) {
       mappedData[mappedField] = csvData[key];
@@ -156,6 +307,7 @@ const mapCSVFields = (csvData: any): EmployeeData | null => {
   return {
     id: '', // Will be generated later
     firstName: mappedData.firstName || '',
+    middleName: mappedData.middleName || '',
     lastName: mappedData.lastName || '',
     email: mappedData.email || '',
     department: mappedData.department || '',
@@ -165,55 +317,112 @@ const mapCSVFields = (csvData: any): EmployeeData | null => {
     joinDate: mappedData.joinDate || new Date().toISOString().split('T')[0],
     phone: mappedData.phone || '',
     vacationDays: parseInt(mappedData.vacationDays) || 25,
-    employmentType: mappedData.employmentType || 'FTE'
+    employmentType: mappedData.employmentType || 'Full-time',
+    gender: mappedData.gender || '',
+    maritalStatus: mappedData.maritalStatus || '',
+    gradeLevel: mappedData.gradeLevel || '',
+    bankName: mappedData.bankName || '',
+    nationalId: mappedData.nationalId || '',
+    ...mappedData
   };
 };
 
-// Parse CSV file and return employee data
+// Validate CSV data and return detailed validation results
+export const validateCSVData = (data: any[], existingEmployees: EmployeeData[] = []): CSVImportResult => {
+  const validationErrors: ValidationError[] = [];
+  const warnings: string[] = [];
+  const errors: string[] = [];
+  const validData: EmployeeData[] = [];
+  const existingIds = existingEmployees.map(emp => emp.id);
+  const existingEmails = existingEmployees.map(emp => emp.email.toLowerCase());
+  
+  data.forEach((row, rowIndex) => {
+    const rowNumber = rowIndex + 2; // +2 because row 1 is header
+    let rowHasErrors = false;
+    
+    // Skip instruction/comment rows
+    const firstValue = Object.values(row)[0];
+    if (typeof firstValue === 'string' && (firstValue.startsWith('#') || firstValue.startsWith('*') || firstValue.includes('REQUIRED') || firstValue.includes('CHOOSE'))) {
+      return;
+    }
+    
+    // Validate each field
+    Object.keys(row).forEach(header => {
+      const value = row[header];
+      const validation = validateFieldValue(header, value);
+      
+      if (!validation.isValid && validation.error) {
+        validationErrors.push({
+          ...validation.error,
+          row: rowNumber
+        });
+        rowHasErrors = true;
+      }
+    });
+    
+    // Check for duplicate emails
+    const email = row['Email'] || row['email'];
+    if (email && existingEmails.includes(email.toLowerCase())) {
+      warnings.push(`Row ${rowNumber}: Email "${email}" already exists in the system`);
+    }
+    
+    // Map and collect valid data
+    if (!rowHasErrors) {
+      const mappedEmployee = mapCSVFields(row);
+      if (mappedEmployee) {
+        mappedEmployee.id = generateEmployeeId([...existingIds, ...validData.map(emp => emp.id)]);
+        validData.push(mappedEmployee);
+      }
+    }
+  });
+  
+  return {
+    success: validationErrors.length === 0,
+    data: validData,
+    errors,
+    validationErrors,
+    warnings
+  };
+};
+
+// Parse CSV file and return employee data with validation
 export const parseCSVFile = async (
   file: File, 
   existingEmployees: EmployeeData[]
 ): Promise<CSVImportResult> => {
   return new Promise((resolve) => {
-    const existingIds = existingEmployees.map(emp => emp.id);
-    const importedData: EmployeeData[] = [];
-    const errors: string[] = [];
-
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
       complete: (results) => {
-        if (results.errors.length > 0) {
-          errors.push(...results.errors.map(err => err.message));
-        }
-
-        results.data.forEach((row: any, index: number) => {
-          const mappedEmployee = mapCSVFields(row);
-          
-          if (mappedEmployee) {
-            const validationErrors = validateEmployeeData(mappedEmployee);
-            
-            if (validationErrors.length > 0) {
-              errors.push(`Row ${index + 1}: ${validationErrors.join(', ')}`);
-            } else {
-              // Generate unique ID
-              mappedEmployee.id = generateEmployeeId([...existingIds, ...importedData.map(emp => emp.id)]);
-              importedData.push(mappedEmployee);
-            }
-          }
+        const parseErrors: string[] = results.errors.map(err => err.message);
+        
+        // Filter out instruction rows
+        const dataRows = results.data.filter((row: any) => {
+          const firstValue = Object.values(row)[0];
+          return !(typeof firstValue === 'string' && (
+            firstValue.startsWith('#') || 
+            firstValue.startsWith('*') || 
+            firstValue.includes('REQUIRED') || 
+            firstValue.includes('CHOOSE') ||
+            firstValue.includes('FORMAT')
+          ));
         });
-
+        
+        const validationResult = validateCSVData(dataRows, existingEmployees);
+        
         resolve({
-          success: errors.length === 0,
-          data: importedData,
-          errors
+          ...validationResult,
+          errors: [...parseErrors, ...validationResult.errors]
         });
       },
       error: (error) => {
         resolve({
           success: false,
           data: [],
-          errors: [error.message]
+          errors: [error.message],
+          validationErrors: [],
+          warnings: []
         });
       }
     });
@@ -225,55 +434,11 @@ export const parseCSVFileForAPI = async (
   file: File, 
   existingEmployees: EmployeeData[]
 ): Promise<CSVImportResult> => {
-  return new Promise((resolve) => {
-    const existingIds = existingEmployees.map(emp => emp.id);
-    const importedData: EmployeeData[] = [];
-    const errors: string[] = [];
-
-    Papa.parse(file, {
-      header: true,
-      skipEmptyLines: true,
-      complete: (results) => {
-        if (results.errors.length > 0) {
-          errors.push(...results.errors.map(err => err.message));
-        }
-
-        results.data.forEach((row: any, index: number) => {
-          const mappedEmployee = mapCSVFields(row);
-          
-          if (mappedEmployee) {
-            const validationErrors = validateEmployeeData(mappedEmployee);
-            
-            if (validationErrors.length > 0) {
-              errors.push(`Row ${index + 1}: ${validationErrors.join(', ')}`);
-            } else {
-              // Generate unique ID
-              mappedEmployee.id = generateEmployeeId([...existingIds, ...importedData.map(emp => emp.id)]);
-              importedData.push(mappedEmployee);
-            }
-          }
-        });
-
-        resolve({
-          success: errors.length === 0,
-          data: importedData,
-          errors
-        });
-      },
-      error: (error) => {
-        resolve({
-          success: false,
-          data: [],
-          errors: [error.message]
-        });
-      }
-    });
-  });
+  return parseCSVFile(file, existingEmployees);
 };
 
 // Export function for future PHP integration
 export const formatDataForPHP = (employees: EmployeeData[]): string => {
-  // Structure data in a format that can be easily sent to PHP backend
   const phpData = {
     action: 'import_employees',
     data: employees,
@@ -281,4 +446,20 @@ export const formatDataForPHP = (employees: EmployeeData[]): string => {
   };
   
   return JSON.stringify(phpData);
+};
+
+// Get validation summary for display
+export const getValidationSummary = (result: CSVImportResult): {
+  totalRows: number;
+  validRows: number;
+  errorRows: number;
+  warningCount: number;
+} => {
+  const errorRows = new Set(result.validationErrors.map(e => e.row)).size;
+  return {
+    totalRows: result.data.length + errorRows,
+    validRows: result.data.length,
+    errorRows,
+    warningCount: result.warnings.length
+  };
 };

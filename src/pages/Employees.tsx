@@ -18,8 +18,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Plus, Search, Filter, Download, Upload, Edit, Eye, MoreHorizontal, CalendarIcon, FileText, Trash2, KeyRound } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
-import { parseCSVFile, formatDataForPHP, type EmployeeData } from "@/utils/csvImport";
+import { parseCSVFile, formatDataForPHP, type EmployeeData, type CSVImportResult } from "@/utils/csvImport";
 import { downloadCSVTemplate, downloadTemplateGuide } from "@/utils/csvTemplate";
+import { CSVValidationPreview } from "@/components/CSVValidationPreview";
 import jsPDF from 'jspdf';
 import * as XLSX from 'xlsx';
 import apiService, { Employee } from "@/lib/api";
@@ -66,7 +67,10 @@ export default function Employees() {
   const [newEmployeeCredentials, setNewEmployeeCredentials] = useState<any>(null);
   const [newEmployeeName, setNewEmployeeName] = useState<string>('');
   const [resetPasswordEmployee, setResetPasswordEmployee] = useState<any>(null);
-  const [editSystemRole, setEditSystemRole] = useState<string>(''); // Add this line
+  const [editSystemRole, setEditSystemRole] = useState<string>('');
+  const [showValidationPreview, setShowValidationPreview] = useState(false);
+  const [csvValidationResult, setCsvValidationResult] = useState<CSVImportResult | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
   const [newEmployee, setNewEmployee] = useState({
     // Personal Information
     firstName: "",
@@ -327,6 +331,7 @@ export default function Employees() {
   const handleImportCSV = () => {
     fileInputRef.current?.click();
   };
+
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -338,66 +343,35 @@ export default function Employees() {
       });
       return;
     }
+    
     try {
-  // Convert employees to EmployeeData format for CSV parsing compatibility
-  const employeeDataList: EmployeeData[] = employeeList.map(emp => ({
-    id: emp.id?.toString() || '',
-    firstName: emp.first_name,
-    lastName: emp.last_name,
-    email: emp.email,
-    department: emp.department || '',
-    position: emp.job_title,
-    salary: emp.gross_salary?.toString() || '₦0',
-    status: emp.employment_status || 'Active',
-    joinDate: emp.hire_date || new Date().toISOString().split('T')[0],
-    phone: emp.phone_number || '',
-    vacationDays: emp.vacation_days || 25,
-    employmentType: emp.employment_type || 'Full-time'
-  }))
-  
-  const result = await parseCSVFile(file, employeeDataList);
-  if (result.success && result.data.length > 0) {
-    // Convert EmployeeData back to Employee format and add to list
-    const newEmployees: Employee[] = result.data.map(data => ({
-      first_name: data.firstName,
-      last_name: data.lastName,
-      email: data.email,
-      job_title: data.position,
-      department: data.department,
-      employment_type: data.employmentType,
-      employment_status: data.status,
-      hire_date: data.joinDate,
-      phone_number: data.phone,
-      vacation_days: data.vacationDays,
-      gross_salary: parseFloat(data.salary.replace(/[₦,]/g, '')) || 0
-    }))
-    setEmployeeList(prev => [...prev, ...newEmployees]);
-        
-        // Convert EmployeeData back to Employee format for formatting
-        const phpData = formatDataForPHP(result.data);
-        console.log('Data formatted for PHP backend:', phpData);
-        toast({
-          title: "Import Successful",
-          description: `Successfully imported ${result.data.length} employees`
-        });
-      } else if (result.errors.length > 0) {
-        toast({
-          title: "Import Failed",
-          description: result.errors.join(', '),
-          variant: "destructive"
-        });
-      } else {
-        toast({
-          title: "No Data Found",
-          description: "No valid employee data found in the CSV file",
-          variant: "destructive"
-        });
-      }
+      // Convert employees to EmployeeData format for CSV parsing compatibility
+      const employeeDataList: EmployeeData[] = employeeList.map(emp => ({
+        id: emp.id?.toString() || '',
+        firstName: emp.first_name,
+        lastName: emp.last_name,
+        email: emp.email,
+        department: emp.department || '',
+        position: emp.job_title,
+        salary: emp.gross_salary?.toString() || '₦0',
+        status: emp.employment_status || 'Active',
+        joinDate: emp.hire_date || new Date().toISOString().split('T')[0],
+        phone: emp.phone_number || '',
+        vacationDays: emp.vacation_days || 25,
+        employmentType: emp.employment_type || 'Full-time'
+      }));
+      
+      const result = await parseCSVFile(file, employeeDataList);
+      
+      // Show validation preview instead of importing directly
+      setCsvValidationResult(result);
+      setShowValidationPreview(true);
+      
     } catch (error) {
-      console.error('CSV Import Error:', error);
+      console.error('CSV Parse Error:', error);
       toast({
-        title: "Import Error",
-        description: error instanceof Error ? error.message : "An error occurred while importing the CSV file. Please check the file format and try again.",
+        title: "Parse Error",
+        description: error instanceof Error ? error.message : "An error occurred while parsing the CSV file.",
         variant: "destructive"
       });
     }
@@ -405,6 +379,54 @@ export default function Employees() {
     // Reset file input
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
+    }
+  };
+
+  const handleConfirmImport = async () => {
+    if (!csvValidationResult || csvValidationResult.data.length === 0) return;
+    
+    setIsImporting(true);
+    
+    try {
+      // Convert EmployeeData back to Employee format and add to list
+      const newEmployees: Employee[] = csvValidationResult.data.map(data => ({
+        first_name: data.firstName,
+        last_name: data.lastName,
+        email: data.email,
+        job_title: data.position,
+        department: data.department,
+        employment_type: data.employmentType,
+        employment_status: data.status,
+        hire_date: data.joinDate,
+        phone_number: data.phone,
+        vacation_days: data.vacationDays,
+        gross_salary: parseFloat(data.salary.replace(/[₦,]/g, '')) || 0
+      }));
+      
+      // TODO: In production, send to API
+      // For now, add to local state
+      setEmployeeList(prev => [...prev, ...newEmployees]);
+      
+      const phpData = formatDataForPHP(csvValidationResult.data);
+      console.log('Data formatted for PHP backend:', phpData);
+      
+      toast({
+        title: "Import Successful",
+        description: `Successfully imported ${csvValidationResult.data.length} employee(s)`
+      });
+      
+      setShowValidationPreview(false);
+      setCsvValidationResult(null);
+      
+    } catch (error) {
+      console.error('CSV Import Error:', error);
+      toast({
+        title: "Import Error",
+        description: error instanceof Error ? error.message : "An error occurred while importing employees.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsImporting(false);
     }
   };
   const handleAddEmployee = async () => {
@@ -985,6 +1007,18 @@ export default function Employees() {
 
   return (
     <ProtectedRoute roles={[...PERMISSIONS.EMPLOYEE_MGMT]}>
+      {/* CSV Validation Preview Modal */}
+      <CSVValidationPreview
+        isOpen={showValidationPreview}
+        onClose={() => {
+          setShowValidationPreview(false);
+          setCsvValidationResult(null);
+        }}
+        onConfirmImport={handleConfirmImport}
+        validationResult={csvValidationResult}
+        isImporting={isImporting}
+      />
+      
       <div className="space-y-4 md:space-y-6">
         <div className="flex flex-col space-y-3 md:space-y-0 md:flex-row md:items-center md:justify-between">
           <div>

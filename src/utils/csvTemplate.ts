@@ -1,5 +1,6 @@
 // CSV Template utility for employee data import
 import { DEPARTMENTS } from '@/constants/departments';
+import * as XLSX from 'xlsx';
 
 // Predefined allowed values for selection fields
 export const ALLOWED_VALUES = {
@@ -284,4 +285,265 @@ export const getAllowedValuesForField = (fieldHeader: string): string[] | null =
     return [...field.allowedValues];
   }
   return null;
+};
+
+// Excel column letter helper
+const getColumnLetter = (colIndex: number): string => {
+  let letter = '';
+  while (colIndex >= 0) {
+    letter = String.fromCharCode((colIndex % 26) + 65) + letter;
+    colIndex = Math.floor(colIndex / 26) - 1;
+  }
+  return letter;
+};
+
+// Generate Excel template with data validation dropdowns
+export const downloadExcelTemplate = (): void => {
+  // Create workbook
+  const wb = XLSX.utils.book_new();
+  
+  // Create main data sheet
+  const headers = csvTemplateFields.map(field => field.header);
+  const requiredRow = csvTemplateFields.map(field => field.required ? '* REQUIRED' : '');
+  const formatRow = csvTemplateFields.map(field => {
+    if (field.allowedValues && field.allowedValues.length > 0) {
+      return '↓ Select from dropdown';
+    }
+    if (field.format) {
+      return `Format: ${field.format}`;
+    }
+    return '';
+  });
+  const exampleRow = csvTemplateFields.map(field => field.example);
+  
+  // Main sheet data
+  const mainSheetData = [
+    headers,
+    requiredRow,
+    formatRow,
+    exampleRow,
+    // Empty rows for data entry (10 rows)
+    ...Array(10).fill(csvTemplateFields.map(() => ''))
+  ];
+  
+  const mainSheet = XLSX.utils.aoa_to_sheet(mainSheetData);
+  
+  // Set column widths
+  mainSheet['!cols'] = csvTemplateFields.map(field => ({
+    wch: Math.max(field.header.length + 2, 15)
+  }));
+  
+  // Style header row (make it bold would require xlsx-style, so we use comments instead)
+  // Add cell comments for guidance
+  csvTemplateFields.forEach((field, colIndex) => {
+    const cellRef = `${getColumnLetter(colIndex)}1`;
+    if (!mainSheet[cellRef]) return;
+    
+    // Add comment with field description
+    mainSheet[cellRef].c = [{
+      a: 'Template Guide',
+      t: `${field.description}${field.required ? ' (Required)' : ''}${field.allowedValues ? '\n\nAllowed values: ' + field.allowedValues.join(', ') : ''}${field.format ? '\n\nFormat: ' + field.format : ''}`
+    }];
+  });
+  
+  // Create a hidden sheet for dropdown values (data validation source)
+  const dropdownData: string[][] = [];
+  const maxLength = Math.max(
+    ALLOWED_VALUES.gender.length,
+    ALLOWED_VALUES.maritalStatus.length,
+    ALLOWED_VALUES.employmentType.length,
+    ALLOWED_VALUES.employmentStatus.length,
+    ALLOWED_VALUES.gradeLevel.length,
+    ALLOWED_VALUES.relationship.length,
+    ALLOWED_VALUES.bankNames.length,
+    DEPARTMENTS.length
+  );
+  
+  // Build dropdown reference sheet
+  const dropdownHeaders = [
+    'Gender', 'Marital Status', 'Employment Type', 'Employment Status', 
+    'Grade Level', 'Relationship', 'Bank Name', 'Department'
+  ];
+  const dropdownValues = [
+    [...ALLOWED_VALUES.gender],
+    [...ALLOWED_VALUES.maritalStatus],
+    [...ALLOWED_VALUES.employmentType],
+    [...ALLOWED_VALUES.employmentStatus],
+    [...ALLOWED_VALUES.gradeLevel],
+    [...ALLOWED_VALUES.relationship],
+    [...ALLOWED_VALUES.bankNames],
+    [...DEPARTMENTS]
+  ];
+  
+  // Create rows for dropdown sheet
+  dropdownData.push(dropdownHeaders);
+  for (let i = 0; i < maxLength; i++) {
+    const row = dropdownValues.map(values => values[i] || '');
+    dropdownData.push(row);
+  }
+  
+  const dropdownSheet = XLSX.utils.aoa_to_sheet(dropdownData);
+  dropdownSheet['!cols'] = dropdownHeaders.map(() => ({ wch: 20 }));
+  
+  // Add data validation to main sheet
+  // Note: xlsx library has limited support for data validation, 
+  // so we'll use a workaround with the dropdown sheet
+  
+  // Map field indices to dropdown columns
+  const fieldToDropdownCol: { [key: string]: number } = {
+    'Gender': 0,
+    'Marital Status': 1,
+    'Employment Type': 2,
+    'Employment Status': 3,
+    'Grade Level': 4,
+    'Next of Kin Relationship': 5,
+    'Bank Name': 6,
+    'Department': 7
+  };
+  
+  // Create data validations array
+  const dataValidations: any[] = [];
+  
+  csvTemplateFields.forEach((field, colIndex) => {
+    const dropdownColIndex = fieldToDropdownCol[field.header];
+    if (dropdownColIndex !== undefined) {
+      const dropdownCol = getColumnLetter(dropdownColIndex);
+      const values = dropdownValues[dropdownColIndex] as string[];
+      
+      // Add validation for rows 5-14 (data entry rows)
+      for (let row = 5; row <= 14; row++) {
+        const cellRef = `${getColumnLetter(colIndex)}${row}`;
+        dataValidations.push({
+          sqref: cellRef,
+          type: 'list',
+          formula1: `"${values.join(',')}"`,
+          showDropDown: false,
+          showErrorMessage: true,
+          errorTitle: 'Invalid Value',
+          error: `Please select from: ${values.join(', ')}`,
+          showInputMessage: true,
+          promptTitle: field.header,
+          prompt: `Select ${field.header} from the dropdown`
+        });
+      }
+    }
+  });
+  
+  // Apply data validations (if supported)
+  if (dataValidations.length > 0) {
+    mainSheet['!dataValidation'] = dataValidations;
+  }
+  
+  // Add sheets to workbook
+  XLSX.utils.book_append_sheet(wb, mainSheet, 'Employee Import');
+  XLSX.utils.book_append_sheet(wb, dropdownSheet, 'Dropdown Values');
+  
+  // Generate and download file
+  XLSX.writeFile(wb, 'employee_import_template.xlsx');
+};
+
+// Generate a simplified Excel template that works better with data validation
+export const downloadExcelTemplateSimple = (): void => {
+  const wb = XLSX.utils.book_new();
+  
+  // Headers and example row
+  const headers = csvTemplateFields.map(field => 
+    field.required ? `${field.header} *` : field.header
+  );
+  
+  // Instructions row with allowed values
+  const instructionsRow = csvTemplateFields.map(field => {
+    if (field.allowedValues && field.allowedValues.length > 0) {
+      return `Options: ${field.allowedValues.join(' | ')}`;
+    }
+    if (field.format) {
+      return `Format: ${field.format}`;
+    }
+    return field.required ? 'Required' : 'Optional';
+  });
+  
+  const exampleRow = csvTemplateFields.map(field => field.example);
+  
+  // Create sheet with headers, instructions, example, and empty rows
+  const sheetData = [
+    headers,
+    instructionsRow,
+    exampleRow,
+    ...Array(20).fill(csvTemplateFields.map(() => ''))
+  ];
+  
+  const ws = XLSX.utils.aoa_to_sheet(sheetData);
+  
+  // Set column widths based on content
+  ws['!cols'] = csvTemplateFields.map(field => ({
+    wch: Math.max(
+      field.header.length + 3,
+      field.example.length + 2,
+      field.allowedValues ? Math.max(...field.allowedValues.map(v => v.length)) + 10 : 15,
+      20
+    )
+  }));
+  
+  // Freeze first row (headers)
+  ws['!freeze'] = { xSplit: 0, ySplit: 1 };
+  
+  // Add data validation for dropdown fields
+  csvTemplateFields.forEach((field, colIndex) => {
+    if (field.allowedValues && field.allowedValues.length > 0) {
+      const col = getColumnLetter(colIndex);
+      const values = [...field.allowedValues];
+      
+      // Create validation for data rows (rows 4-23)
+      for (let row = 4; row <= 23; row++) {
+        const cellRef = `${col}${row}`;
+        
+        // Set cell with data validation formula
+        if (!ws[cellRef]) {
+          ws[cellRef] = { t: 's', v: '' };
+        }
+      }
+    }
+  });
+  
+  // Create reference sheet with all dropdown values
+  const refData: string[][] = [
+    ['FIELD', 'ALLOWED VALUES'],
+    [''],
+    ['Gender', ...ALLOWED_VALUES.gender],
+    ['Marital Status', ...ALLOWED_VALUES.maritalStatus],
+    ['Employment Type', ...ALLOWED_VALUES.employmentType],
+    ['Employment Status', ...ALLOWED_VALUES.employmentStatus],
+    ['Grade Level', ...ALLOWED_VALUES.gradeLevel],
+    ['Next of Kin Relationship', ...ALLOWED_VALUES.relationship],
+    ['Bank Name', ...ALLOWED_VALUES.bankNames],
+    ['Department', ...DEPARTMENTS],
+    [''],
+    ['* Fields marked with asterisk (*) are required'],
+    ['* For dropdown fields, use only the values listed above'],
+    ['* Dates must be in YYYY-MM-DD format (e.g., 2024-01-15)'],
+    ['* Delete this reference sheet before importing']
+  ];
+  
+  const refSheet = XLSX.utils.aoa_to_sheet(refData);
+  refSheet['!cols'] = [
+    { wch: 25 },
+    { wch: 15 },
+    { wch: 15 },
+    { wch: 15 },
+    { wch: 15 },
+    { wch: 15 },
+    { wch: 15 },
+    { wch: 15 },
+    { wch: 15 },
+    { wch: 15 },
+    { wch: 15 },
+    { wch: 15 }
+  ];
+  
+  // Add sheets
+  XLSX.utils.book_append_sheet(wb, ws, 'Employee Data');
+  XLSX.utils.book_append_sheet(wb, refSheet, 'Valid Options Reference');
+  
+  // Download
+  XLSX.writeFile(wb, 'employee_import_template.xlsx');
 };

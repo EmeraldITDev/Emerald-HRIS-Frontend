@@ -77,7 +77,7 @@ export function CSVValidationPreview({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-5xl max-h-[90vh]">
+      <DialogContent className="max-w-5xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileSpreadsheet className="h-5 w-5" />
@@ -88,7 +88,7 @@ export function CSVValidationPreview({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-4 max-h-[60vh] overflow-y-auto">
           {/* Summary Stats */}
           <div className="grid grid-cols-4 gap-4">
             <div className="bg-muted rounded-lg p-3 text-center">
@@ -147,7 +147,7 @@ export function CSVValidationPreview({
             </TabsList>
 
             <TabsContent value="summary" className="mt-4">
-              <ScrollArea className="h-[300px]">
+              <ScrollArea className="h-[200px]">
                 <div className="space-y-3">
                   {invalidRows.length > 0 && (
                     <div>
@@ -177,7 +177,7 @@ export function CSVValidationPreview({
             </TabsContent>
 
             <TabsContent value="errors" className="mt-4">
-              <ScrollArea className="h-[300px]">
+              <ScrollArea className="h-[200px]">
                 {invalidRows.length > 0 ? (
                   <Table>
                     <TableHeader>
@@ -211,7 +211,7 @@ export function CSVValidationPreview({
             </TabsContent>
 
             <TabsContent value="valid" className="mt-4">
-              <ScrollArea className="h-[300px]">
+              <ScrollArea className="h-[200px]">
                 {validRows.length > 0 ? (
                   <Table>
                     <TableHeader>

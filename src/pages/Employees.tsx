@@ -647,6 +647,8 @@ export default function Employees() {
     try {
       let successCount = 0;
       let errorCount = 0;
+      let lastCredentials: any = null;
+      let lastEmployeeName = "";
 
       for (const row of validRows) {
         try {
@@ -699,10 +701,19 @@ export default function Employees() {
             tin: row.data["Tax Identification Number (TIN)"] || row.data["TIN"] || "",
             pension_pin: row.data["Pension PIN"] || "",
             nhf_number: row.data["NHF Number"] || "",
+
+            // System Role for user account creation - default to general_employee
+            system_role: "general_employee",
           };
 
-          await apiService.createEmployee(employeeData);
+          const response = await apiService.createEmployee(employeeData);
           successCount++;
+
+          // Store last credentials to show to HR
+          if (response.user_credentials) {
+            lastCredentials = response.user_credentials;
+            lastEmployeeName = `${row.data["First Name"] || ""} ${row.data["Last Name"] || ""}`.trim();
+          }
         } catch (rowError) {
           console.error(`Failed to import row ${row.rowNumber}:`, rowError);
           errorCount++;
@@ -711,6 +722,13 @@ export default function Employees() {
 
       // Refresh employee list
       await fetchEmployees();
+
+      // Show credentials modal for the last imported employee (or only employee if just one)
+      if (lastCredentials) {
+        setNewEmployeeCredentials(lastCredentials);
+        setNewEmployeeName(lastEmployeeName);
+        setShowCredentialsModal(true);
+      }
 
       if (errorCount > 0) {
         toast({
@@ -721,7 +739,7 @@ export default function Employees() {
       } else {
         toast({
           title: "Import Successful",
-          description: `Successfully imported ${successCount} employee(s)`,
+          description: `Successfully imported ${successCount} employee(s)${validRows.length > 1 ? ". Showing credentials for last employee." : ""}`,
         });
       }
     } catch (error) {

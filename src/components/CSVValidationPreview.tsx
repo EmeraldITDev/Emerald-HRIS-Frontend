@@ -119,7 +119,7 @@ export function CSVValidationPreview({
 
           {/* Status Alert */}
           {isValid ? (
-            <Alert className="border-green-500 bg-green-500/10 mb-[200px]">
+            <Alert className="border-green-500 bg-green-500/10">
               <CheckCircle2 className="h-4 w-4 text-green-600" />
               <AlertDescription className="text-green-600">
                 All rows passed validation. Ready to import {validRows.length} employees.
@@ -267,14 +267,14 @@ export function CSVValidationPreview({
           </Tabs>
         </div>
 
-        <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:justify-end pt-4 border-t">
-          <Button variant="outline" onClick={onClose} className="w-full sm:w-auto mb-[200px]">
+        <DialogFooter className="flex flex-row gap-2 justify-end pt-4 border-t">
+          <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
           <Button
             onClick={handleImport}
             disabled={validRows.length === 0}
-            className="w-full sm:w-auto bg-green-600 hover:bg-green-700"
+            className="bg-green-600 hover:bg-green-700"
           >
             Import {validRows.length} Valid Employee{validRows.length !== 1 ? "s" : ""}
           </Button>

@@ -87,8 +87,8 @@ export function CSVValidationPreview({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-5xl max-h-[90vh]">
-        <DialogHeader>
+      <DialogContent className="max-w-5xl flex flex-col" style={{ maxHeight: "80vh" }}>
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <FileSpreadsheet className="h-5 w-5" />
             CSV Import Validation - {fileName}
@@ -96,7 +96,7 @@ export function CSVValidationPreview({
           <DialogDescription>Review validation results before importing employees</DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="flex-1 overflow-y-auto space-y-4 min-h-0">
           {/* Summary Stats */}
           <div className="grid grid-cols-4 gap-4">
             <div className="bg-muted rounded-lg p-3 text-center">
@@ -156,7 +156,7 @@ export function CSVValidationPreview({
             </TabsList>
 
             <TabsContent value="summary" className="mt-4">
-              <ScrollArea className="h-[300px]">
+              <ScrollArea className="h-[180px]">
                 <div className="space-y-3">
                   {invalidRows.length > 0 && (
                     <div>
@@ -189,7 +189,7 @@ export function CSVValidationPreview({
             </TabsContent>
 
             <TabsContent value="errors" className="mt-4">
-              <ScrollArea className="h-[300px]">
+              <ScrollArea className="h-[180px]">
                 {invalidRows.length > 0 ? (
                   <Table>
                     <TableHeader>
@@ -225,7 +225,7 @@ export function CSVValidationPreview({
             </TabsContent>
 
             <TabsContent value="valid" className="mt-4">
-              <ScrollArea className="h-[300px]">
+              <ScrollArea className="h-[180px]">
                 {validRows.length > 0 ? (
                   <Table>
                     <TableHeader>
@@ -267,7 +267,7 @@ export function CSVValidationPreview({
           </Tabs>
         </div>
 
-        <DialogFooter className="flex flex-row gap-2 justify-end pt-4 border-t">
+        <DialogFooter className="flex-shrink-0 flex flex-row gap-2 justify-end pt-4 border-t mt-4">
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>

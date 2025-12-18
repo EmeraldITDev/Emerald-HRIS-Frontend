@@ -16,7 +16,8 @@ export interface Employee {
   gender?: string;
   marital_status?: string;
   nationality?: string;
-  phone_number?: string;
+  phone?: string; // Backend uses 'phone'
+  phone_number?: string; // Keep for backwards compatibility
   address?: string;
   profile_picture?: string;
   profile_picture_url?: string;
@@ -35,9 +36,16 @@ export interface Employee {
   meal_allowance?: number;
   housing_allowance?: number;
   transport_allowance?: number;
+  basic_salary?: number;
+  other_allowance?: number;
   bank_account?: string;
+  bank_name?: string;
+  account_number?: string;
+  nuban?: string;
+  sort_code?: string;
   employee_code?: string;
   national_id?: string;
+  passport_number?: string;
   bvn?: string;
   tin?: string;
   pension_pin?: string;

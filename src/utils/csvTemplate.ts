@@ -15,7 +15,7 @@ export const ALLOWED_VALUES = {
     'Ecobank', 'FCMB', 'Polaris Bank', 'Wema Bank', 'Keystone Bank'
   ],
   probationPeriod: ['3 months', '6 months', '9 months', '12 months'],
-  systemRole: ['executive', 'hr_manager', 'corporate_hr', 'line_manager', 'finance_manager', 'it_power_user', 'contract_employee', 'general_employee']
+  systemRole: ['executive', 'hr_manager', 'corporate_hr', 'line_manager', 'finance', 'it_power_user', 'contract_employee', 'general_employee']
 } as const;
 
 export interface CSVTemplateField {

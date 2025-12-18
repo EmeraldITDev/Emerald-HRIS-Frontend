@@ -10,11 +10,12 @@ export const ALLOWED_VALUES = {
   gradeLevel: ['Entry', 'Junior', 'Mid-Level', 'Senior', 'Lead', 'Manager', 'Director', 'Executive'],
   relationship: ['Spouse', 'Parent', 'Sibling', 'Child', 'Brother', 'Sister', 'Friend', 'Other'],
   bankNames: [
-    'Access Bank', 'GT Bank', 'GTBank', 'First Bank', 'UBA', 'Zenith Bank', 
+    'Access Bank', 'GT Bank', 'GTBank', 'Guaranty Trust Bank', 'First Bank', 'UBA', 'Zenith Bank', 
     'Fidelity Bank', 'Union Bank', 'Sterling Bank', 'Stanbic IBTC', 
     'Ecobank', 'FCMB', 'Polaris Bank', 'Wema Bank', 'Keystone Bank'
   ],
-  probationPeriod: ['3 months', '6 months', '9 months', '12 months']
+  probationPeriod: ['3 months', '6 months', '9 months', '12 months'],
+  systemRole: ['executive', 'hr_manager', 'corporate_hr', 'line_manager', 'finance_manager', 'it_power_user', 'contract_employee', 'general_employee']
 } as const;
 
 export interface CSVTemplateField {
@@ -27,6 +28,9 @@ export interface CSVTemplateField {
 }
 
 export const csvTemplateFields: CSVTemplateField[] = [
+  // System Role (for user account creation)
+  { header: "Role", description: "System role for login access", example: "general_employee", required: false, allowedValues: ALLOWED_VALUES.systemRole },
+  
   // Personal Information
   { header: "First Name", description: "Employee's first name", example: "John", required: true },
   { header: "Middle Name", description: "Employee's middle name (optional)", example: "Michael", required: false },
@@ -197,13 +201,14 @@ export const generateFieldGuide = (): string => {
   
   // Group fields by category
   const categories = [
-    { name: 'PERSONAL INFORMATION', start: 0, end: 9 },
-    { name: 'EMERGENCY CONTACT', start: 10, end: 11 },
-    { name: 'NEXT OF KIN', start: 12, end: 16 },
-    { name: 'EMPLOYMENT INFORMATION', start: 17, end: 24 },
-    { name: 'FINANCIAL INFORMATION', start: 25, end: 25 },
-    { name: 'BANK DETAILS', start: 26, end: 29 },
-    { name: 'IDENTIFICATION & COMPLIANCE', start: 30, end: 36 }
+    { name: 'SYSTEM ROLE', start: 0, end: 0 },
+    { name: 'PERSONAL INFORMATION', start: 1, end: 10 },
+    { name: 'EMERGENCY CONTACT', start: 11, end: 12 },
+    { name: 'NEXT OF KIN', start: 13, end: 17 },
+    { name: 'EMPLOYMENT INFORMATION', start: 18, end: 25 },
+    { name: 'FINANCIAL INFORMATION', start: 26, end: 26 },
+    { name: 'BANK DETAILS', start: 27, end: 30 },
+    { name: 'IDENTIFICATION & COMPLIANCE', start: 31, end: 37 }
   ];
   
   categories.forEach(category => {
@@ -233,6 +238,9 @@ export const generateFieldGuide = (): string => {
   lines.push('\n═══════════════════════════════════════════════════════════════');
   lines.push('                    QUICK REFERENCE');
   lines.push('═══════════════════════════════════════════════════════════════\n');
+  
+  lines.push('SYSTEM ROLE OPTIONS:');
+  lines.push(`  ${ALLOWED_VALUES.systemRole.join(', ')}\n`);
   
   lines.push('GENDER OPTIONS:');
   lines.push(`  ${ALLOWED_VALUES.gender.join(', ')}\n`);

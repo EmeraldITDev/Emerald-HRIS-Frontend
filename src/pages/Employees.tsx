@@ -45,7 +45,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { parseCSVFile, formatDataForPHP, type EmployeeData } from "@/utils/csvImport";
 import { downloadCSVTemplate, downloadTemplateGuide } from "@/utils/csvTemplate";
-import { validateCSVData, CSVValidationResult, ValidatedRow } from "@/utils/csvValidation";
+import { validateCSVData, CSVValidationResult, ValidatedRow, getRoleValue } from "@/utils/csvValidation";
 import { CSVValidationPreview } from "@/components/CSVValidationPreview";
 import Papa from "papaparse";
 import jsPDF from "jspdf";
@@ -702,8 +702,8 @@ export default function Employees() {
             pension_pin: row.data["Pension PIN"] || "",
             nhf_number: row.data["NHF Number"] || "",
 
-            // System Role - read from CSV "Role" field, default to general_employee if not provided
-            system_role: row.data["Role"] || row.data["System Role"] || "general_employee",
+            // System Role - convert label to value (e.g., "Finance Manager" -> "finance_manager")
+            system_role: getRoleValue(row.data["Role"] || row.data["System Role"] || "") || "general_employee",
           };
 
           const response = await apiService.createEmployee(employeeData);

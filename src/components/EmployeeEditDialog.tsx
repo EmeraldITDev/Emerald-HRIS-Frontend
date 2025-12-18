@@ -153,7 +153,7 @@ export function EmployeeEditDialog({ employee, open, onOpenChange, onSuccess }: 
             <TabsTrigger value="personal">Personal</TabsTrigger>
             <TabsTrigger value="job">Job Info</TabsTrigger>
             <TabsTrigger value="financial">Financial</TabsTrigger>
-            <TabsTrigger value="documents">Documents</TabsTrigger>
+            <TabsTrigger value="additional">Additional</TabsTrigger>
           </TabsList>
 
           <TabsContent value="personal" className="space-y-4 mt-4">
@@ -405,142 +405,142 @@ export function EmployeeEditDialog({ employee, open, onOpenChange, onSuccess }: 
             </div>
           </TabsContent>
 
-          <TabsContent value="documents" className="space-y-4 mt-4">
-            <div className="space-y-4">
-              {/* Government IDs Section */}
-              <div className="border rounded-lg p-4">
-                <Label className="text-base font-semibold mb-3 block">Government IDs</Label>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="national_id">National ID Number</Label>
-                    <Input
-                      id="national_id"
-                      value={formData.national_id || ''}
-                      onChange={(e) => handleChange('national_id', e.target.value)}
-                      placeholder="Enter National ID"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="passport_number">Passport Number</Label>
-                    <Input
-                      id="passport_number"
-                      value={formData.passport_number || ''}
-                      onChange={(e) => handleChange('passport_number', e.target.value)}
-                      placeholder="Enter Passport Number"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="bvn">BVN</Label>
-                    <Input
-                      id="bvn"
-                      value={formData.bvn || ''}
-                      onChange={(e) => handleChange('bvn', e.target.value)}
-                      placeholder="Enter BVN"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="tin">TIN</Label>
-                    <Input
-                      id="tin"
-                      value={formData.tin || ''}
-                      onChange={(e) => handleChange('tin', e.target.value)}
-                      placeholder="Enter Tax ID Number"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="nhf_number">NHF Number</Label>
-                    <Input
-                      id="nhf_number"
-                      value={formData.nhf_number || ''}
-                      onChange={(e) => handleChange('nhf_number', e.target.value)}
-                      placeholder="Enter NHF Number"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="pension_pin">Pension PIN</Label>
-                    <Input
-                      id="pension_pin"
-                      value={formData.pension_pin || ''}
-                      onChange={(e) => handleChange('pension_pin', e.target.value)}
-                      placeholder="Enter Pension PIN"
-                    />
-                  </div>
+          <TabsContent value="additional" className="space-y-6 mt-4">
+            {/* Government IDs Section */}
+            <div className="border rounded-lg p-4 bg-card">
+              <h3 className="text-base font-semibold mb-4">Government IDs</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="national_id">National ID Number</Label>
+                  <Input
+                    id="national_id"
+                    value={formData.national_id || ''}
+                    onChange={(e) => handleChange('national_id', e.target.value)}
+                    placeholder="Enter National ID"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="passport_number">Passport Number</Label>
+                  <Input
+                    id="passport_number"
+                    value={formData.passport_number || ''}
+                    onChange={(e) => handleChange('passport_number', e.target.value)}
+                    placeholder="Enter Passport Number"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="bvn">BVN</Label>
+                  <Input
+                    id="bvn"
+                    value={formData.bvn || ''}
+                    onChange={(e) => handleChange('bvn', e.target.value)}
+                    placeholder="Enter BVN"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="tin">TIN</Label>
+                  <Input
+                    id="tin"
+                    value={formData.tin || ''}
+                    onChange={(e) => handleChange('tin', e.target.value)}
+                    placeholder="Enter Tax ID Number"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="nhf_number">NHF Number</Label>
+                  <Input
+                    id="nhf_number"
+                    value={formData.nhf_number || ''}
+                    onChange={(e) => handleChange('nhf_number', e.target.value)}
+                    placeholder="Enter NHF Number"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="pension_pin">Pension PIN</Label>
+                  <Input
+                    id="pension_pin"
+                    value={formData.pension_pin || ''}
+                    onChange={(e) => handleChange('pension_pin', e.target.value)}
+                    placeholder="Enter Pension PIN"
+                  />
                 </div>
               </div>
+            </div>
 
-              {/* Supporting Documents Section */}
-              <div className="border rounded-lg p-4">
-                <Label className="text-base font-semibold mb-3 block">Supporting Documents</Label>
-                <p className="text-sm text-muted-foreground mb-4">Upload employee documents such as certificates, contracts, or ID copies.</p>
-                
-                {/* Current Documents List */}
-                {formData.supporting_documents && (
-                  <div className="mb-4">
-                    <Label className="text-sm font-medium mb-2 block">Current Documents</Label>
-                    <div className="space-y-2">
-                      {formData.supporting_documents.split(',').filter(Boolean).map((doc, index) => (
-                        <div key={index} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium">{doc.trim()}</span>
-                          </div>
-                          <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleDocumentDownload(doc.trim(), doc.trim())}
-                            >
-                              <Download className="h-4 w-4 mr-1" />
-                              Download
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              onClick={() => {
-                                const docs = formData.supporting_documents?.split(',').filter(d => d.trim() !== doc.trim()).join(',')
-                                handleChange('supporting_documents', docs || null)
-                                toast({
-                                  title: "Document Removed",
-                                  description: "Document will be removed when you save."
-                                })
-                              }}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
+            {/* Supporting Documents Section */}
+            <div className="border rounded-lg p-4 bg-card">
+              <h3 className="text-base font-semibold mb-2">Supporting Documents</h3>
+              <p className="text-sm text-muted-foreground mb-4">Upload employee documents such as certificates, contracts, or ID copies.</p>
+              
+              {/* Current Documents List */}
+              <div className="mb-4">
+                <Label className="text-sm font-medium mb-2 block">Current Documents</Label>
+                {formData.supporting_documents ? (
+                  <div className="space-y-2">
+                    {formData.supporting_documents.split(',').filter(Boolean).map((doc, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                        <span className="text-sm font-medium truncate flex-1">{doc.trim()}</span>
+                        <div className="flex gap-2 ml-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleDocumentDownload(doc.trim(), doc.trim())}
+                          >
+                            <Download className="h-4 w-4 mr-1" />
+                            Download
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => {
+                              const docs = formData.supporting_documents?.split(',').filter(d => d.trim() !== doc.trim()).join(',')
+                              handleChange('supporting_documents', docs || null)
+                              toast({
+                                title: "Document Removed",
+                                description: "Document will be removed when you save."
+                              })
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
-                      ))}
-                    </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-4 bg-muted/50 rounded-lg text-center">
+                    <p className="text-sm text-muted-foreground">No documents uploaded yet</p>
                   </div>
                 )}
+              </div>
 
-                {/* Upload New Document */}
-                <div className="border-2 border-dashed rounded-lg p-4">
-                  <Label className="text-sm font-medium mb-2 block">Add New Document</Label>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      type="file"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0]
-                        if (file) {
-                          const currentDocs = formData.supporting_documents || ''
-                          const newDocs = currentDocs ? `${currentDocs},${file.name}` : file.name
-                          handleChange('supporting_documents', newDocs)
-                          toast({
-                            title: "Document Added",
-                            description: `${file.name} will be uploaded when you save.`
-                          })
-                        }
-                      }}
-                      accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                      className="flex-1"
-                    />
-                    <Button size="sm" variant="outline" type="button">
-                      <Upload className="h-4 w-4 mr-1" />
-                      Upload
-                    </Button>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-2">Accepted formats: PDF, DOC, DOCX, JPG, PNG</p>
+              {/* Upload New Document */}
+              <div className="border-2 border-dashed rounded-lg p-4">
+                <Label className="text-sm font-medium mb-2 block">Add New Document</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="file"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      if (file) {
+                        const currentDocs = formData.supporting_documents || ''
+                        const newDocs = currentDocs ? `${currentDocs},${file.name}` : file.name
+                        handleChange('supporting_documents', newDocs)
+                        toast({
+                          title: "Document Added",
+                          description: `${file.name} will be uploaded when you save.`
+                        })
+                      }
+                    }}
+                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                    className="flex-1"
+                  />
+                  <Button size="sm" variant="outline" type="button">
+                    <Upload className="h-4 w-4 mr-1" />
+                    Upload
+                  </Button>
                 </div>
+                <p className="text-xs text-muted-foreground mt-2">Accepted formats: PDF, DOC, DOCX, JPG, PNG</p>
               </div>
             </div>
           </TabsContent>

@@ -1044,7 +1044,7 @@ export default function Employees() {
         last_name: editEmployee.lastName,
         // Remove middle_name - doesn't exist in database
         email: editEmployee.email,
-        phone_number: editEmployee.phoneNumber, // Fixed: use phone_number
+        phone: editEmployee.phoneNumber, // Backend uses 'phone' not 'phone_number'
         job_title: editEmployee.jobTitle,
         department: editEmployee.department,
         employment_type: editEmployee.employment_type,

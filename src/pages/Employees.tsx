@@ -3747,11 +3747,118 @@ export default function Employees() {
                 </TabsContent>
 
                 <TabsContent value="additional" className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Additional Information</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Extended employee information can be added here in future updates.
-                    </p>
+                  {/* Supporting Documents Section */}
+                  <div className="border rounded-lg p-4 bg-card">
+                    <h3 className="text-base font-semibold mb-2">Supporting Documents</h3>
+                    <p className="text-sm text-muted-foreground mb-4">Upload employee documents such as certificates, contracts, or ID copies.</p>
+                    
+                    {/* Current Documents List */}
+                    <div className="mb-4">
+                      <Label className="text-sm font-medium mb-2 block">Current Documents</Label>
+                      {editEmployee.supporting_documents ? (
+                        <div className="space-y-2">
+                          {editEmployee.supporting_documents.split(',').filter(Boolean).map((doc: string, index: number) => (
+                            <div key={index} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                              <span className="text-sm font-medium truncate flex-1">{doc.trim()}</span>
+                              <div className="flex gap-2 ml-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    const a = document.createElement('a');
+                                    a.href = doc.trim();
+                                    a.download = doc.trim();
+                                    document.body.appendChild(a);
+                                    a.click();
+                                    document.body.removeChild(a);
+                                    toast({
+                                      title: "Download Started",
+                                      description: `Downloading ${doc.trim()}`
+                                    });
+                                  }}
+                                >
+                                  <Download className="h-4 w-4 mr-1" />
+                                  Download
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  onClick={() => {
+                                    const docs = editEmployee.supporting_documents?.split(',').filter((d: string) => d.trim() !== doc.trim()).join(',');
+                                    setEditEmployee({
+                                      ...editEmployee,
+                                      supporting_documents: docs || null
+                                    });
+                                    toast({
+                                      title: "Document Removed",
+                                      description: "Document will be removed when you save."
+                                    });
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="p-4 bg-muted/50 rounded-lg text-center">
+                          <p className="text-sm text-muted-foreground">No documents uploaded yet</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Upload New Document */}
+                    <div className="border-2 border-dashed rounded-lg p-4">
+                      <Label className="text-sm font-medium mb-2 block">Add New Document</Label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="file"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              const currentDocs = editEmployee.supporting_documents || '';
+                              const newDocs = currentDocs ? `${currentDocs},${file.name}` : file.name;
+                              setEditEmployee({
+                                ...editEmployee,
+                                supporting_documents: newDocs
+                              });
+                              toast({
+                                title: "Document Added",
+                                description: `${file.name} will be uploaded when you save.`
+                              });
+                            }
+                          }}
+                          accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                          className="flex-1"
+                        />
+                        <Button size="sm" variant="outline" type="button">
+                          <Upload className="h-4 w-4 mr-1" />
+                          Upload
+                        </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-2">Accepted formats: PDF, DOC, DOCX, JPG, PNG</p>
+                    </div>
+                  </div>
+
+                  {/* Vacation Days */}
+                  <div className="border rounded-lg p-4 bg-card">
+                    <h3 className="text-base font-semibold mb-4">Leave Information</h3>
+                    <div className="space-y-2">
+                      <Label htmlFor="editVacationDays">Vacation Days</Label>
+                      <Input
+                        id="editVacationDays"
+                        type="number"
+                        value={editEmployee.vacation_days || ""}
+                        onChange={(e) =>
+                          setEditEmployee({
+                            ...editEmployee,
+                            vacation_days: e.target.value,
+                          })
+                        }
+                        placeholder="Number of vacation days"
+                      />
+                    </div>
                   </div>
                 </TabsContent>
 

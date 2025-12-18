@@ -702,8 +702,8 @@ export default function Employees() {
             pension_pin: row.data["Pension PIN"] || "",
             nhf_number: row.data["NHF Number"] || "",
 
-            // System Role for user account creation - default to general_employee
-            system_role: "general_employee",
+            // System Role - read from CSV "Role" field, default to general_employee if not provided
+            system_role: row.data["Role"] || row.data["System Role"] || "general_employee",
           };
 
           const response = await apiService.createEmployee(employeeData);

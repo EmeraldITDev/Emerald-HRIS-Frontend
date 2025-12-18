@@ -26,6 +26,8 @@ export interface CSVValidationResult {
 
 // Field mapping for CSV headers to allowed values (normalized to lowercase)
 const fieldValidationMap: Record<string, readonly string[] | string[]> = {
+  'role': ALLOWED_VALUES.systemRole,
+  'system role': ALLOWED_VALUES.systemRole,
   'gender': ALLOWED_VALUES.gender,
   'marital status': ALLOWED_VALUES.maritalStatus,
   'employment type': ALLOWED_VALUES.employmentType,

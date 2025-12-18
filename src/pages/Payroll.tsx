@@ -93,7 +93,7 @@ export default function Payroll() {
         const filters: any = {}
         
         // Filter based on user role
-        if (user?.role === 'general_employee' || user?.role === 'finance') {
+        if (user?.role === 'general_employee' || user?.role === 'finance_manager') {
           // Employees see only their own payroll
           const currentEmployee = employees.find(emp => emp.email === user.email)
           if (currentEmployee?.id) {
@@ -325,7 +325,7 @@ export default function Payroll() {
     if (!user) return null
     
     // For general employees, get their own latest record
-    if (user.role === 'general_employee' || user.role === 'finance') {
+    if (user.role === 'general_employee' || user.role === 'finance_manager') {
       const currentEmployee = employees.find(emp => emp.email === user.email)
       if (!currentEmployee) return null
       
@@ -774,7 +774,7 @@ export default function Payroll() {
 
       // Refresh payroll records to show the new one
       const filters: any = {}
-      if (user?.role === 'general_employee' || user?.role === 'finance') {
+      if (user?.role === 'general_employee' || user?.role === 'finance_manager') {
         const currentEmployee = employees.find(emp => emp.email === user.email)
         if (currentEmployee?.id) {
           filters.employee_id = currentEmployee.id
@@ -869,7 +869,7 @@ export default function Payroll() {
 
       // Refresh payroll records
       const filters: any = {}
-      if (user?.role === 'general_employee' || user?.role === 'finance') {
+      if (user?.role === 'general_employee' || user?.role === 'finance_manager') {
         const currentEmployee = employees.find(emp => emp.email === user.email)
         if (currentEmployee?.id) {
           filters.employee_id = currentEmployee.id
@@ -1265,7 +1265,7 @@ export default function Payroll() {
                           <div className="space-y-1">
                             <p className="font-medium text-muted-foreground">No Payroll Records Available</p>
                             <p className="text-sm text-muted-foreground/70">
-                              {user?.role === 'general_employee' || user?.role === 'finance' 
+                              {user?.role === 'general_employee' || user?.role === 'finance_manager' 
                                 ? "Your payroll information will appear here once it's been processed by HR."
                                 : "No payroll records found for the selected period. Generate payroll to get started."}
                             </p>

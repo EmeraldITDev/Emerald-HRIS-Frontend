@@ -449,7 +449,7 @@ export default function Employees() {
         ? true
         : user?.role === "line_manager" && user?.department // Line managers see only their department
           ? employee.department === user.department
-          : user?.role === "general_employee" || user?.role === "finance_manager" // Employees see only themselves
+          : user?.role === "general_employee" || user?.role === "finance" // Employees see only themselves
             ? employee.email === user.email
             : true; // Other roles see all (fallback)
 
@@ -714,12 +714,8 @@ export default function Employees() {
             lastCredentials = response.user_credentials;
             lastEmployeeName = `${row.data["First Name"] || ""} ${row.data["Last Name"] || ""}`.trim();
           }
-        } catch (rowError: any) {
+        } catch (rowError) {
           console.error(`Failed to import row ${row.rowNumber}:`, rowError);
-          console.error('Row data:', JSON.stringify(row.data));
-          console.error('Role value attempted:', row.data["Role"] || row.data["System Role"]);
-          console.error('Converted role:', getRoleValue(row.data["Role"] || row.data["System Role"] || ""));
-          console.error('Error response:', rowError?.response?.data || rowError?.message);
           errorCount++;
         }
       }

@@ -217,7 +217,7 @@ export default function Attendance() {
       if (user?.role === 'line_manager' && user?.department) {
         // Line managers see only their department
         filteredData = employeeData.filter(emp => emp.department === user.department);
-      } else if (user?.role === 'general_employee' || user?.role === 'finance') {
+      } else if (user?.role === 'general_employee' || user?.role === 'finance_manager') {
         // Employees see only themselves
         filteredData = employeeData.filter(emp => emp.email === user.email);
       }

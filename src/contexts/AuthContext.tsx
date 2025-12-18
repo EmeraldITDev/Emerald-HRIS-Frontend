@@ -6,7 +6,7 @@ export type UserRole =
   | 'hr_manager' 
   | 'corporate_hr' 
   | 'line_manager' 
-  | 'finance'
+  | 'finance_manager'
   | 'it_admin' 
   | 'it_power_user' 
   | 'consulting_hr' 
@@ -69,7 +69,7 @@ const rolePermissions: Record<UserRole, string[]> = {
     'benefits.view',
     'training.view'
   ],
-  finance: [
+  finance_manager: [
     'payroll.view_own',
     'benefits.view',
     'leave.request',

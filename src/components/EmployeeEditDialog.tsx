@@ -33,7 +33,55 @@ export function EmployeeEditDialog({ employee, open, onOpenChange, onSuccess }: 
 
     setIsLoading(true)
     try {
-      await apiService.updateEmployee(employee.id, formData)
+      // Build payload with only valid database columns
+      const payload: Record<string, any> = {
+        // Personal Info
+        first_name: formData.first_name,
+        last_name: formData.last_name,
+        email: formData.email,
+        phone: formData.phone, // Backend uses 'phone' not 'phone_number'
+        dob: formData.dob,
+        gender: formData.gender,
+        marital_status: formData.marital_status,
+        nationality: formData.nationality,
+        address: formData.address,
+
+        // Job Info
+        employee_code: formData.employee_code,
+        job_title: formData.job_title,
+        department: formData.department,
+        employment_type: formData.employment_type,
+        employment_status: formData.employment_status,
+        hire_date: formData.hire_date,
+        work_location: formData.work_location,
+        supervisor_name: formData.supervisor_name,
+
+        // Financial Info
+        gross_salary: formData.gross_salary,
+        housing_allowance: formData.housing_allowance,
+        transport_allowance: formData.transport_allowance,
+        meal_allowance: formData.meal_allowance,
+        bank_account: formData.bank_account,
+        bank_name: formData.bank_name,
+        account_number: formData.account_number,
+        pension_pin: formData.pension_pin,
+        tax_id: formData.tax_id,
+        bvn: formData.bvn,
+
+        // Documents
+        national_id: formData.national_id,
+        nhf_number: formData.nhf_number,
+        supporting_documents: formData.supporting_documents,
+      }
+
+      // Remove undefined/null values to avoid sending unnecessary fields
+      Object.keys(payload).forEach(key => {
+        if (payload[key] === undefined) {
+          delete payload[key]
+        }
+      })
+
+      await apiService.updateEmployee(employee.id, payload)
       toast({
         title: "Success",
         description: "Employee record updated successfully."
@@ -134,11 +182,11 @@ export function EmployeeEditDialog({ employee, open, onOpenChange, onSuccess }: 
                 />
               </div>
               <div>
-                <Label htmlFor="phone_number">Phone Number</Label>
+                <Label htmlFor="phone">Phone Number</Label>
                 <Input
-                  id="phone_number"
-                  value={formData.phone_number || ''}
-                  onChange={(e) => handleChange('phone_number', e.target.value)}
+                  id="phone"
+                  value={formData.phone || ''}
+                  onChange={(e) => handleChange('phone', e.target.value)}
                 />
               </div>
               <div>

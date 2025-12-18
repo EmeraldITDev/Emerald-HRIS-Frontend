@@ -39,9 +39,63 @@ const fieldValidationMap: Record<string, readonly string[] | string[]> = {
   'probation period (in months)': ALLOWED_VALUES.probationPeriod,
 };
 
+// Role label to value mapping (accepts both label and value)
+const roleLabelToValue: Record<string, string> = {
+  'executive': 'executive',
+  'hr manager': 'hr_manager',
+  'hr_manager': 'hr_manager',
+  'corporate hr': 'corporate_hr',
+  'corporate_hr': 'corporate_hr',
+  'line manager': 'line_manager',
+  'line_manager': 'line_manager',
+  'finance manager': 'finance_manager',
+  'finance_manager': 'finance_manager',
+  'it (power user)': 'it_power_user',
+  'it power user': 'it_power_user',
+  'it_power_user': 'it_power_user',
+  'contract employee': 'contract_employee',
+  'contract_employee': 'contract_employee',
+  'general employee': 'general_employee',
+  'general_employee': 'general_employee',
+};
+
+// Bank name normalization (treat variations as the same)
+const bankNameAliases: Record<string, string[]> = {
+  'guaranty trust bank': ['gtbank', 'gt bank', 'guaranty trust bank'],
+  'first bank': ['first bank', 'first bank of nigeria'],
+  'united bank for africa': ['uba', 'united bank for africa'],
+};
+
 // Normalize header for matching
 const normalizeHeader = (header: string): string => {
   return header.toLowerCase().trim();
+};
+
+// Check if a role value is valid (accepts both labels and values)
+const isValidRoleValue = (value: string): boolean => {
+  if (!value || value.trim() === '') return true;
+  const normalizedValue = value.trim().toLowerCase();
+  return normalizedValue in roleLabelToValue;
+};
+
+// Check if a bank name is valid (with alias support)
+const isValidBankName = (value: string, allowedValues: readonly string[] | string[]): boolean => {
+  if (!value || value.trim() === '') return true;
+  const normalizedValue = value.trim().toLowerCase();
+  
+  // Check direct match
+  if (allowedValues.some(allowed => allowed.toLowerCase() === normalizedValue)) {
+    return true;
+  }
+  
+  // Check aliases
+  for (const [canonical, aliases] of Object.entries(bankNameAliases)) {
+    if (aliases.includes(normalizedValue) || canonical === normalizedValue) {
+      return true;
+    }
+  }
+  
+  return false;
 };
 
 // Check if a value matches allowed values (case-insensitive)
@@ -58,6 +112,13 @@ export const getCorrectCaseValue = (value: string, allowedValues: readonly strin
   return match || null;
 };
 
+// Get the system role value from a label or value
+export const getRoleValue = (value: string): string | null => {
+  if (!value || value.trim() === '') return null;
+  const normalizedValue = value.trim().toLowerCase();
+  return roleLabelToValue[normalizedValue] || null;
+};
+
 // Validate a single row
 const validateRow = (rowData: Record<string, string>, rowNumber: number): ValidatedRow => {
   const errors: ValidationError[] = [];
@@ -67,7 +128,32 @@ const validateRow = (rowData: Record<string, string>, rowNumber: number): Valida
     const allowedValues = fieldValidationMap[normalizedHeader];
     
     if (allowedValues && value && value.trim() !== '') {
-      if (!isValidValue(value, allowedValues)) {
+      // Special validation for role field (accepts both labels and values)
+      if (normalizedHeader === 'role' || normalizedHeader === 'system role') {
+        if (!isValidRoleValue(value)) {
+          errors.push({
+            row: rowNumber,
+            column: header,
+            value: value,
+            expectedValues: [...allowedValues],
+            message: `"${value}" is not a valid option for ${header}. Use values like: executive, hr_manager, finance_manager, etc. or labels like: Executive, HR Manager, Finance Manager, etc.`
+          });
+        }
+      }
+      // Special validation for bank name (accepts aliases)
+      else if (normalizedHeader === 'bank name') {
+        if (!isValidBankName(value, allowedValues)) {
+          errors.push({
+            row: rowNumber,
+            column: header,
+            value: value,
+            expectedValues: [...allowedValues],
+            message: `"${value}" is not a valid option for ${header}`
+          });
+        }
+      }
+      // Standard validation for other fields
+      else if (!isValidValue(value, allowedValues)) {
         errors.push({
           row: rowNumber,
           column: header,

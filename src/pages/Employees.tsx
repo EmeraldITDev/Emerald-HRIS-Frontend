@@ -714,8 +714,12 @@ export default function Employees() {
             lastCredentials = response.user_credentials;
             lastEmployeeName = `${row.data["First Name"] || ""} ${row.data["Last Name"] || ""}`.trim();
           }
-        } catch (rowError) {
+        } catch (rowError: any) {
           console.error(`Failed to import row ${row.rowNumber}:`, rowError);
+          console.error('Row data:', JSON.stringify(row.data));
+          console.error('Role value attempted:', row.data["Role"] || row.data["System Role"]);
+          console.error('Converted role:', getRoleValue(row.data["Role"] || row.data["System Role"] || ""));
+          console.error('Error response:', rowError?.response?.data || rowError?.message);
           errorCount++;
         }
       }

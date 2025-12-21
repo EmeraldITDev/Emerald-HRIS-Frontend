@@ -133,18 +133,33 @@ export default function Attendance() {
     if (!user || !currentEmployeeId) return;
     
     try {
-      const attendanceData = await apiService.getAttendance();
+      const response = await apiService.getAttendance();
       const today = format(new Date(), 'yyyy-MM-dd');
       
+      // Handle paginated response from backend
+      // Backend returns: { success: true, data: { data: [...], current_page: 1, ... } }
+      let attendanceArray: any[] = [];
+      if (response && typeof response === 'object') {
+        if (Array.isArray(response)) {
+          // Direct array response
+          attendanceArray = response;
+        } else if (response.data) {
+          // Paginated response - extract the data array
+          attendanceArray = Array.isArray(response.data) 
+            ? response.data 
+            : (response.data.data || []);
+        }
+      }
+      
       // Find current user's record for today
-      const todayRecord = attendanceData.find(
+      const todayRecord = attendanceArray.find(
         (record: any) => record.employee_id === currentEmployeeId && 
         format(new Date(record.date), 'yyyy-MM-dd') === today
       );
       setTodayStatus(todayRecord || null);
       
       // Load all today's attendance for display (already filtered by department from backend)
-      let allTodayRecords = attendanceData.filter(
+      let allTodayRecords = attendanceArray.filter(
         (record: any) => format(new Date(record.date), 'yyyy-MM-dd') === today
       );
       

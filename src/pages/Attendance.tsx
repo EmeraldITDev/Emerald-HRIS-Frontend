@@ -1205,23 +1205,24 @@ export default function Attendance() {
                     <Select 
                       value={leaveType} 
                       onValueChange={setLeaveType}
-                      disabled={isLoadingLeaveTypes}
+                      disabled={isLoadingLeaveTypes || leaveTypes.length === 0}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder={isLoadingLeaveTypes ? "Loading leave types..." : "Select leave type"} />
+                        <SelectValue placeholder={isLoadingLeaveTypes ? "Loading leave types..." : leaveTypes.length === 0 ? "No leave types available" : "Select leave type"} />
                       </SelectTrigger>
-                      <SelectContent className="bg-popover border shadow-lg">
-                        {leaveTypes.length > 0 ? (
-                          leaveTypes.map((lt) => (
+                      {leaveTypes.length > 0 && (
+                        <SelectContent className="bg-popover border shadow-lg">
+                          {leaveTypes.map((lt) => (
                             <SelectItem key={lt.id} value={lt.name}>
                               {lt.name}
                             </SelectItem>
-                          ))
-                        ) : (
-                          <SelectItem value="" disabled>No leave types available</SelectItem>
-                        )}
-                      </SelectContent>
+                          ))}
+                        </SelectContent>
+                      )}
                     </Select>
+                    {!isLoadingLeaveTypes && leaveTypes.length === 0 && (
+                      <p className="text-sm text-muted-foreground">No leave types are currently available. Please contact HR.</p>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">

@@ -423,7 +423,12 @@ class ApiService {
   }
 
   async getLeaveTypes(): Promise<LeaveType[]> {
-    return this.request<LeaveType[]>('/leave/types');
+    const response = await this.request<{ success: boolean; data: LeaveType[] }>('/leave/types');
+    // Handle both direct array and wrapped response
+    if (Array.isArray(response)) {
+      return response;
+    }
+    return response?.data || [];
   }
 
   async createLeaveRequest(leaveData: any): Promise<{ message: string }> {

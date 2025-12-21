@@ -118,6 +118,8 @@ export default function Attendance() {
   const [isLoadingEmployees, setIsLoadingEmployees] = useState(false)
   const [leaveRequests, setLeaveRequests] = useState<any[]>([])
   const [isLoadingLeaveRequests, setIsLoadingLeaveRequests] = useState(false)
+  const [leaveTypes, setLeaveTypes] = useState<any[]>([])
+  const [isLoadingLeaveTypes, setIsLoadingLeaveTypes] = useState(false)
   const [todayStatus, setTodayStatus] = useState<any>(null);
   const [isPunching, setIsPunching] = useState(false);
   const [todayAttendance, setTodayAttendance] = useState<any[]>([]);
@@ -187,6 +189,10 @@ export default function Attendance() {
 
   useEffect(() => {
     fetchLeaveRequests()
+  }, [])
+
+  useEffect(() => {
+    fetchLeaveTypes()
   }, [])
 
   // Auto-select current user for non-HR managers and set employee ID
@@ -277,6 +283,31 @@ export default function Attendance() {
   // Function to save leave requests to localStorage as backup
   const saveLeaveRequestsToStorage = (requests: any[]) => {
     localStorage.setItem('leaveRequests', JSON.stringify(requests))
+  }
+
+  // Function to fetch leave types from backend
+  const fetchLeaveTypes = async () => {
+    try {
+      setIsLoadingLeaveTypes(true)
+      const response = await apiService.getLeaveTypes()
+      // Handle response structure: could be direct array or { success: true, data: [...] }
+      const types = Array.isArray(response) ? response : (response?.data || [])
+      setLeaveTypes(types)
+    } catch (error) {
+      console.error('Error fetching leave types:', error)
+      // Fallback to default leave types if API fails
+      setLeaveTypes([
+        { id: 1, name: 'Annual Leave' },
+        { id: 2, name: 'Sick Leave' },
+        { id: 3, name: 'Maternity Leave' },
+        { id: 4, name: 'Paternity Leave' },
+        { id: 5, name: 'Emergency Leave' },
+        { id: 6, name: 'Study Leave' },
+        { id: 7, name: 'Unpaid Leave' },
+      ])
+    } finally {
+      setIsLoadingLeaveTypes(false)
+    }
   }
 
   const calculateDays = () => {
@@ -477,7 +508,21 @@ export default function Attendance() {
     if (!selectedEmployee || !leaveType || !startDate || !endDate) {
       toast({
         title: "Error", 
-        description: "Please fill in all required fields",
+        description: "Please fill in all required fields (Employee, Leave Type, Start Date, and End Date)",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Find the leave type ID from the selected leave type name
+    const selectedLeaveType = leaveTypes.find(lt => 
+      lt.name === leaveType || lt.id?.toString() === leaveType
+    )
+    
+    if (!selectedLeaveType || !selectedLeaveType.id) {
+      toast({
+        title: "Error", 
+        description: "Invalid leave type selected. Please select a valid leave type.",
         variant: "destructive",
       })
       return
@@ -523,22 +568,14 @@ export default function Attendance() {
         return
       }
       
-      const leaveRequestData = {
-        employee_id: parseInt(selectedEmployee),
-        leave_type: leaveType,
-        start_date: startDate,
-        end_date: endDate,
-        reason: reason,
-        contact_during_leave: contactDuringLeave,
-        status: "Pending",
-        days_requested: daysDiff
-      }
-
       // Try to submit to database
       try {
         const leaveRequestWithTypeId = {
-          ...leaveRequestData,
-          leave_type_id: 1 // Default leave type ID, should be dynamic based on selected leave type
+          employee_id: parseInt(selectedEmployee),
+          leave_type_id: selectedLeaveType.id, // Use the actual leave type ID from database
+          start_date: startDate,
+          end_date: endDate,
+          reason: reason || 'Leave request submitted', // Provide default if empty
         }
         await apiService.createLeaveRequest(leaveRequestWithTypeId)
         
@@ -549,15 +586,36 @@ export default function Attendance() {
           title: "Success",
           description: `Leave request submitted for ${selectedEmp ? `${selectedEmp.first_name} ${selectedEmp.last_name}` : "Employee"}`,
         })
-      } catch (dbError) {
+      } catch (dbError: any) {
         console.error('Database submission failed:', dbError)
         
-        // Fallback to local state and localStorage
+        // Show backend validation errors if available
+        const errorMessage = dbError?.message || 'Failed to submit leave request';
+        const backendErrors = dbError?.response?.data?.errors || dbError?.errors;
+        
+        if (backendErrors) {
+          const errorDetails = Object.values(backendErrors).flat().join(', ');
+          toast({
+            title: "Validation Error",
+            description: errorDetails || errorMessage,
+            variant: "destructive",
+          })
+          return; // Don't fallback to local storage if there's a validation error
+        }
+        
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive",
+        })
+        
+        // Fallback to local state and localStorage only for network errors
         const newRequest = {
           id: Date.now(),
           employee_id: parseInt(selectedEmployee),
           employee_name: selectedEmp ? `${selectedEmp.first_name} ${selectedEmp.last_name}` : "Unknown",
-          leave_type: leaveType,
+          leave_type: selectedLeaveType.name,
+          leave_type_id: selectedLeaveType.id,
           start_date: startDate,
           end_date: endDate,
           status: "Pending",
@@ -1144,19 +1202,24 @@ export default function Attendance() {
                   
                   <div className="space-y-2">
                     <Label htmlFor="leaveType">Type of Leave Requested *</Label>
-                    <Select value={leaveType} onValueChange={setLeaveType}>
+                    <Select 
+                      value={leaveType} 
+                      onValueChange={setLeaveType}
+                      disabled={isLoadingLeaveTypes}
+                    >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select leave type" />
+                        <SelectValue placeholder={isLoadingLeaveTypes ? "Loading leave types..." : "Select leave type"} />
                       </SelectTrigger>
                       <SelectContent className="bg-popover border shadow-lg">
-                        <SelectItem value="Annual">Annual Leave</SelectItem>
-                        <SelectItem value="Sick">Sick Leave</SelectItem>
-                        <SelectItem value="Maternity">Maternity Leave</SelectItem>
-                        <SelectItem value="Paternity">Paternity Leave</SelectItem>
-                        <SelectItem value="Compassionate">Compassionate Leave</SelectItem>
-                        <SelectItem value="Study">Study Leave</SelectItem>
-                        <SelectItem value="Unpaid">Unpaid Leave</SelectItem>
-                        <SelectItem value="Other">Other</SelectItem>
+                        {leaveTypes.length > 0 ? (
+                          leaveTypes.map((lt) => (
+                            <SelectItem key={lt.id} value={lt.name}>
+                              {lt.name}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="" disabled>No leave types available</SelectItem>
+                        )}
                       </SelectContent>
                     </Select>
                   </div>

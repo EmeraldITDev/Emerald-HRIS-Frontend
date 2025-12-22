@@ -292,7 +292,22 @@ export default function Attendance() {
       const response = await apiService.getLeaveTypes()
       // Handle response structure: could be direct array or { success: true, data: [...] }
       const types = Array.isArray(response) ? response : (response?.data || [])
-      setLeaveTypes(types)
+      
+      // If no leave types from backend, use fallback
+      if (types.length === 0) {
+        console.warn('No leave types found in database, using fallback types')
+        setLeaveTypes([
+          { id: 1, name: 'Annual Leave' },
+          { id: 2, name: 'Sick Leave' },
+          { id: 3, name: 'Maternity Leave' },
+          { id: 4, name: 'Paternity Leave' },
+          { id: 5, name: 'Emergency Leave' },
+          { id: 6, name: 'Study Leave' },
+          { id: 7, name: 'Unpaid Leave' },
+        ])
+      } else {
+        setLeaveTypes(types)
+      }
     } catch (error) {
       console.error('Error fetching leave types:', error)
       // Fallback to default leave types if API fails

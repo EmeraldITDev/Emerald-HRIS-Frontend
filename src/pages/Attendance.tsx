@@ -118,6 +118,12 @@ export default function Attendance() {
   const [isLoadingEmployees, setIsLoadingEmployees] = useState(false)
   const [leaveRequests, setLeaveRequests] = useState<any[]>([])
   const [isLoadingLeaveRequests, setIsLoadingLeaveRequests] = useState(false)
+  const [leaveFilterStatus, setLeaveFilterStatus] = useState<string>("all")
+  const [leaveFilterEmployee, setLeaveFilterEmployee] = useState<string>("all")
+  const [leaveFilterType, setLeaveFilterType] = useState<string>("all")
+  const [leaveFilterDateFrom, setLeaveFilterDateFrom] = useState<string>("")
+  const [leaveFilterDateTo, setLeaveFilterDateTo] = useState<string>("")
+  const [leaveFilterDepartment, setLeaveFilterDepartment] = useState<string>("all")
   const [leaveTypes, setLeaveTypes] = useState<any[]>([])
   const [isLoadingLeaveTypes, setIsLoadingLeaveTypes] = useState(false)
   const [todayStatus, setTodayStatus] = useState<any>(null);
@@ -128,6 +134,9 @@ export default function Attendance() {
   const [isLunchBreak, setIsLunchBreak] = useState(false);
   const [selectedLeaveRequest, setSelectedLeaveRequest] = useState<any>(null);
   const [showLeaveDetailsDialog, setShowLeaveDetailsDialog] = useState(false);
+  const [showApprovalDialog, setShowApprovalDialog] = useState(false);
+  const [approvalAction, setApprovalAction] = useState<'approve' | 'reject'>('approve');
+  const [approvalNotes, setApprovalNotes] = useState("");
   const [showWeeklyAttendance, setShowWeeklyAttendance] = useState(true);
   const [showTodayAttendance, setShowTodayAttendance] = useState(true);
   const [currentEmployeeId, setCurrentEmployeeId] = useState<number | null>(null);
@@ -266,9 +275,19 @@ export default function Attendance() {
   const fetchLeaveRequests = async () => {
     try {
       setIsLoadingLeaveRequests(true)
-      const leaveData = await apiService.getLeaveRequests()
-      // Ensure leaveData is an array
-      const requests = Array.isArray(leaveData) ? leaveData : []
+      const response = await apiService.getLeaveRequests()
+      // Handle paginated response from backend
+      let requests: any[] = []
+      if (Array.isArray(response)) {
+        requests = response
+      } else if (response && typeof response === 'object') {
+        // Handle paginated response: { success: true, data: { data: [...], current_page: 1, ... } }
+        if (response.data) {
+          requests = Array.isArray(response.data) 
+            ? response.data 
+            : (response.data.data || [])
+        }
+      }
       setLeaveRequests(requests)
     } catch (error) {
       console.error('Error fetching leave requests:', error)
@@ -874,35 +893,50 @@ export default function Attendance() {
   }
 
   // Function to handle approve/reject leave requests
-  const handleUpdateLeaveStatus = async (requestId: number, newStatus: string) => {
+  const handleUpdateLeaveStatus = async (requestId: number, newStatus: string, notes?: string) => {
     try {
+      // Get current user's employee ID for approved_by
+      const currentUserEmployee = employees.find(emp => 
+        emp.email?.toLowerCase() === user?.email?.toLowerCase()
+      )
+      
+      if (!currentUserEmployee?.id) {
+        toast({
+          title: "Error",
+          description: "Unable to identify approver. Please contact support.",
+          variant: "destructive"
+        })
+        return
+      }
+
       // Try to update in database
       try {
-        await apiService.updateLeaveRequest(requestId, newStatus)
+        await apiService.updateLeaveRequest(
+          requestId, 
+          newStatus === "Approved" ? "approved" : "rejected",
+          currentUserEmployee.id,
+          notes
+        )
         
         // Refresh leave requests from database
         await fetchLeaveRequests()
+        
+        // Close approval dialog if open
+        setShowApprovalDialog(false)
+        setApprovalNotes("")
         
         toast({
           title: "Success",
           description: `Leave request ${newStatus.toLowerCase()} successfully`,
         })
-      } catch (dbError) {
+      } catch (dbError: any) {
         console.error('Database update failed:', dbError)
         
-        // Fallback to local state and localStorage
-        const updatedRequests = leaveRequests.map(request => 
-          request.id === requestId 
-            ? { ...request, status: newStatus }
-            : request
-        )
-        
-        setLeaveRequests(updatedRequests)
-        saveLeaveRequestsToStorage(updatedRequests)
-        
+        const errorMessage = dbError?.response?.data?.message || dbError?.message || 'Failed to update leave status'
         toast({
-          title: "Success (Local)",
-          description: `Leave request ${newStatus.toLowerCase()} successfully`,
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive"
         })
       }
     } catch (error) {
@@ -912,6 +946,20 @@ export default function Attendance() {
         description: "Failed to update leave status",
         variant: "destructive"
       })
+    }
+  }
+
+  const handleApproveRejectClick = (requestId: number, action: 'approve' | 'reject') => {
+    setSelectedLeaveRequest(leaveRequests.find(req => req.id === requestId))
+    setApprovalAction(action)
+    setApprovalNotes("")
+    setShowApprovalDialog(true)
+  }
+
+  const handleConfirmApproval = () => {
+    if (selectedLeaveRequest) {
+      const status = approvalAction === 'approve' ? 'Approved' : 'Rejected'
+      handleUpdateLeaveStatus(selectedLeaveRequest.id, status, approvalNotes)
     }
   }
 
@@ -1477,6 +1525,130 @@ export default function Attendance() {
             </CardTitle>
           </CardHeader>
           <CardContent>
+            {/* Filters for Managers and HR */}
+            {(user?.role === 'hr_manager' || user?.role === 'line_manager' || user?.role === 'corporate_hr' || user?.role === 'executive') && (
+              <div className="mb-4 p-4 bg-muted/50 rounded-lg space-y-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-semibold">Filters</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {/* Status Filter */}
+                  <div className="space-y-1">
+                    <Label className="text-xs">Status</Label>
+                    <Select value={leaveFilterStatus} onValueChange={setLeaveFilterStatus}>
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder="All Statuses" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Statuses</SelectItem>
+                        <SelectItem value="pending">Pending</SelectItem>
+                        <SelectItem value="approved">Approved</SelectItem>
+                        <SelectItem value="rejected">Rejected</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Employee Filter - Only for HR/Execs */}
+                  {(user?.role === 'hr_manager' || user?.role === 'corporate_hr' || user?.role === 'executive') && (
+                    <div className="space-y-1">
+                      <Label className="text-xs">Employee</Label>
+                      <Select value={leaveFilterEmployee} onValueChange={setLeaveFilterEmployee}>
+                        <SelectTrigger className="h-9">
+                          <SelectValue placeholder="All Employees" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Employees</SelectItem>
+                          {employees.map((emp) => (
+                            <SelectItem key={emp.id} value={emp.id?.toString() || ''}>
+                              {emp.first_name} {emp.last_name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  {/* Department Filter - Only for HR/Execs */}
+                  {(user?.role === 'hr_manager' || user?.role === 'corporate_hr' || user?.role === 'executive') && (
+                    <div className="space-y-1">
+                      <Label className="text-xs">Department</Label>
+                      <Select value={leaveFilterDepartment} onValueChange={setLeaveFilterDepartment}>
+                        <SelectTrigger className="h-9">
+                          <SelectValue placeholder="All Departments" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Departments</SelectItem>
+                          {Array.from(new Set(employees.map(emp => emp.department).filter(Boolean))).map((dept) => (
+                            <SelectItem key={dept} value={dept || ''}>
+                              {dept}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  {/* Leave Type Filter */}
+                  <div className="space-y-1">
+                    <Label className="text-xs">Leave Type</Label>
+                    <Select value={leaveFilterType} onValueChange={setLeaveFilterType}>
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder="All Types" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Types</SelectItem>
+                        {leaveTypes.map((lt) => (
+                          <SelectItem key={lt.id} value={lt.id?.toString() || ''}>
+                            {lt.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Date From Filter */}
+                  <div className="space-y-1">
+                    <Label className="text-xs">From Date</Label>
+                    <Input
+                      type="date"
+                      value={leaveFilterDateFrom}
+                      onChange={(e) => setLeaveFilterDateFrom(e.target.value)}
+                      className="h-9"
+                    />
+                  </div>
+
+                  {/* Date To Filter */}
+                  <div className="space-y-1">
+                    <Label className="text-xs">To Date</Label>
+                    <Input
+                      type="date"
+                      value={leaveFilterDateTo}
+                      onChange={(e) => setLeaveFilterDateTo(e.target.value)}
+                      className="h-9"
+                    />
+                  </div>
+                </div>
+
+                {/* Clear Filters Button */}
+                <div className="flex justify-end pt-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setLeaveFilterStatus("all")
+                      setLeaveFilterEmployee("all")
+                      setLeaveFilterType("all")
+                      setLeaveFilterDateFrom("")
+                      setLeaveFilterDateTo("")
+                      setLeaveFilterDepartment("all")
+                    }}
+                  >
+                    Clear Filters
+                  </Button>
+                </div>
+              </div>
+            )}
             <div className="space-y-4">
               {(() => {
                 // Ensure leaveRequests is always an array
@@ -1492,6 +1664,57 @@ export default function Attendance() {
                   filteredRequests = safeLeaveRequests.filter(req => 
                     req.employee_id === user?.id || req.employee?.id === user?.id
                   )
+                }
+
+                // Apply frontend filters for managers and HR
+                if (user?.role === 'hr_manager' || user?.role === 'line_manager' || user?.role === 'corporate_hr' || user?.role === 'executive') {
+                  // Status filter
+                  if (leaveFilterStatus !== "all") {
+                    filteredRequests = filteredRequests.filter(req => 
+                      req.status?.toLowerCase() === leaveFilterStatus.toLowerCase()
+                    )
+                  }
+
+                  // Employee filter
+                  if (leaveFilterEmployee !== "all") {
+                    filteredRequests = filteredRequests.filter(req => 
+                      req.employee_id?.toString() === leaveFilterEmployee || 
+                      req.employee?.id?.toString() === leaveFilterEmployee
+                    )
+                  }
+
+                  // Department filter
+                  if (leaveFilterDepartment !== "all") {
+                    filteredRequests = filteredRequests.filter(req => 
+                      req.employee?.department === leaveFilterDepartment ||
+                      req.department === leaveFilterDepartment
+                    )
+                  }
+
+                  // Leave type filter
+                  if (leaveFilterType !== "all") {
+                    filteredRequests = filteredRequests.filter(req => 
+                      req.leave_type_id?.toString() === leaveFilterType ||
+                      req.leaveType?.id?.toString() === leaveFilterType
+                    )
+                  }
+
+                  // Date range filters
+                  if (leaveFilterDateFrom) {
+                    filteredRequests = filteredRequests.filter(req => {
+                      const startDate = new Date(req.start_date)
+                      const filterFrom = new Date(leaveFilterDateFrom)
+                      return startDate >= filterFrom
+                    })
+                  }
+
+                  if (leaveFilterDateTo) {
+                    filteredRequests = filteredRequests.filter(req => {
+                      const endDate = new Date(req.end_date)
+                      const filterTo = new Date(leaveFilterDateTo)
+                      return endDate <= filterTo
+                    })
+                  }
                 }
                 
                 return filteredRequests.length > 0 ? (
@@ -1525,7 +1748,7 @@ export default function Attendance() {
                                   : `Employee ${request.employee_id}`}
                               </TableCell>
                             )}
-                            <TableCell>{request.leave_type}</TableCell>
+                            <TableCell>{request.leave_type || request.leaveType?.name || 'N/A'}</TableCell>
                             <TableCell>{format(new Date(request.start_date), "MMM dd, yyyy")}</TableCell>
                             <TableCell>{format(new Date(request.end_date), "MMM dd, yyyy")}</TableCell>
                             <TableCell>{days} day{days > 1 ? 's' : ''}</TableCell>
@@ -1564,7 +1787,7 @@ export default function Attendance() {
                                       <Button 
                                         size="sm" 
                                         variant="outline"
-                                        onClick={() => handleUpdateLeaveStatus(request.id, "Approved")}
+                                        onClick={() => handleApproveRejectClick(request.id, 'approve')}
                                         className="text-xs"
                                       >
                                         Approve
@@ -1572,7 +1795,7 @@ export default function Attendance() {
                                       <Button 
                                         size="sm" 
                                         variant="outline"
-                                        onClick={() => handleUpdateLeaveStatus(request.id, "Rejected")}
+                                        onClick={() => handleApproveRejectClick(request.id, 'reject')}
                                         className="text-xs"
                                       >
                                         Reject
@@ -1631,6 +1854,74 @@ export default function Attendance() {
           </CardContent>
         </Card>
       </RoleBasedComponent>
+
+      {/* Approval/Rejection Dialog */}
+      <Dialog open={showApprovalDialog} onOpenChange={setShowApprovalDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {approvalAction === 'approve' ? 'Approve Leave Request' : 'Reject Leave Request'}
+            </DialogTitle>
+            <DialogDescription>
+              {approvalAction === 'approve' 
+                ? 'Are you sure you want to approve this leave request? You can add optional notes below.'
+                : 'Are you sure you want to reject this leave request? Please provide a reason below.'}
+            </DialogDescription>
+          </DialogHeader>
+          {selectedLeaveRequest && (
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <Label className="text-xs text-muted-foreground">Employee</Label>
+                  <p className="font-medium">{selectedLeaveRequest.employee_name || `Employee ${selectedLeaveRequest.employee_id}`}</p>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Leave Type</Label>
+                  <p className="font-medium">{selectedLeaveRequest.leave_type || selectedLeaveRequest.leaveType?.name || 'N/A'}</p>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Start Date</Label>
+                  <p className="font-medium">{format(new Date(selectedLeaveRequest.start_date), "MMM dd, yyyy")}</p>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Days</Label>
+                  <p className="font-medium">{selectedLeaveRequest.days_requested || 'N/A'} day{(selectedLeaveRequest.days_requested || 0) !== 1 ? 's' : ''}</p>
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="approvalNotes" className="text-sm">
+                  {approvalAction === 'approve' ? 'Approval Notes (Optional)' : 'Rejection Reason *'}
+                </Label>
+                <Textarea
+                  id="approvalNotes"
+                  value={approvalNotes}
+                  onChange={(e) => setApprovalNotes(e.target.value)}
+                  placeholder={approvalAction === 'approve' 
+                    ? 'Optional notes about this approval...'
+                    : 'Please provide a reason for rejection...'}
+                  rows={3}
+                  className="mt-1"
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setShowApprovalDialog(false)
+              setApprovalNotes("")
+            }}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleConfirmApproval}
+              variant={approvalAction === 'approve' ? 'default' : 'destructive'}
+              disabled={approvalAction === 'reject' && !approvalNotes.trim()}
+            >
+              {approvalAction === 'approve' ? 'Approve' : 'Reject'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Leave Request Details Dialog */}
       <Dialog open={showLeaveDetailsDialog} onOpenChange={setShowLeaveDetailsDialog}>

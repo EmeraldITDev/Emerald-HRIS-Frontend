@@ -446,10 +446,21 @@ class ApiService {
     });
   }
 
-  async updateLeaveRequest(requestId: number, status: string): Promise<{ message: string }> {
+  async updateLeaveRequest(requestId: number, status: string, approvedBy?: number, notes?: string): Promise<{ message: string }> {
+    const payload: any = { status };
+    if (approvedBy) {
+      payload.approved_by = approvedBy;
+    }
+    if (notes) {
+      if (status === 'approved') {
+        payload.approval_notes = notes;
+      } else if (status === 'rejected') {
+        payload.rejection_reason = notes;
+      }
+    }
     return this.request<{ message: string }>(`/leave/${requestId}/status`, {
       method: 'PUT',
-      body: JSON.stringify({ status }),
+      body: JSON.stringify(payload),
     });
   }
 

@@ -585,14 +585,40 @@ export default function Attendance() {
       
       // Try to submit to database
       try {
-        const leaveRequestWithTypeId = {
-          employee_id: parseInt(selectedEmployee),
-          leave_type_id: selectedLeaveType.id, // Use the actual leave type ID from database
-          start_date: startDate,
-          end_date: endDate,
-          reason: reason || 'Leave request submitted', // Provide default if empty
+        // Create FormData to handle file uploads
+        const formData = new FormData()
+        formData.append('employee_id', selectedEmployee)
+        formData.append('leave_type_id', selectedLeaveType.id.toString())
+        formData.append('start_date', startDate)
+        formData.append('end_date', endDate)
+        formData.append('reason', reason || 'Leave request submitted')
+        
+        // Add contact during leave if provided
+        if (contactDuringLeave) {
+          formData.append('contact_during_leave', contactDuringLeave)
         }
-        await apiService.createLeaveRequest(leaveRequestWithTypeId)
+        
+        // Add document files if provided
+        if (medicalCertificate) {
+          formData.append('medical_certificate', medicalCertificate)
+        }
+        if (birthCertificate) {
+          formData.append('birth_certificate', birthCertificate)
+        }
+        if (deathCertificate) {
+          formData.append('death_certificate', deathCertificate)
+        }
+        if (admissionLetter) {
+          formData.append('admission_letter', admissionLetter)
+        }
+        if (otherDocument) {
+          formData.append('other_document', otherDocument)
+          if (otherDocumentType) {
+            formData.append('other_document_type', otherDocumentType)
+          }
+        }
+        
+        await apiService.createLeaveRequest(formData)
         
         // Refresh leave requests from database
         await fetchLeaveRequests()

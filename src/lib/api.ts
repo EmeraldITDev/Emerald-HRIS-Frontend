@@ -432,6 +432,14 @@ class ApiService {
   }
 
   async createLeaveRequest(leaveData: any): Promise<{ message: string }> {
+    // Check if leaveData contains files (FormData)
+    if (leaveData instanceof FormData) {
+      return this.request<{ message: string }>('/leave/', {
+        method: 'POST',
+        body: leaveData,
+      });
+    }
+    // Otherwise send as JSON
     return this.request<{ message: string }>('/leave/', {
       method: 'POST',
       body: JSON.stringify(leaveData),

@@ -1,7 +1,10 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
 import { apiService } from '../lib/api';
 
-export type UserRole = 
+// Inactivity timeout in milliseconds (30 minutes)
+const INACTIVITY_TIMEOUT = 30 * 60 * 1000;
+
+export type UserRole =
   | 'executive' 
   | 'hr_manager' 
   | 'corporate_hr' 
@@ -128,6 +131,71 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const savedUser = localStorage.getItem('hris_user');
     return savedUser ? JSON.parse(savedUser) : null;
   });
+  
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastActivityRef = useRef<number>(Date.now());
+
+  const resetInactivityTimer = useCallback(() => {
+    lastActivityRef.current = Date.now();
+    localStorage.setItem('last_activity', Date.now().toString());
+  }, []);
+
+  const performLogout = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      if (token) {
+        await apiService.logout();
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+    
+    setUser(null);
+    localStorage.removeItem('hris_user');
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('last_activity');
+  }, []);
+
+  // Check for inactivity
+  useEffect(() => {
+    if (!user) return;
+
+    const checkInactivity = () => {
+      const lastActivity = parseInt(localStorage.getItem('last_activity') || Date.now().toString(), 10);
+      const now = Date.now();
+      
+      if (now - lastActivity >= INACTIVITY_TIMEOUT) {
+        console.log('User inactive for 30 minutes, logging out...');
+        performLogout();
+      }
+    };
+
+    // Set up activity listeners
+    const activityEvents = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart', 'click'];
+    
+    const handleActivity = () => {
+      resetInactivityTimer();
+    };
+
+    activityEvents.forEach(event => {
+      window.addEventListener(event, handleActivity, { passive: true });
+    });
+
+    // Initialize last activity
+    resetInactivityTimer();
+
+    // Check inactivity every minute
+    timeoutRef.current = setInterval(checkInactivity, 60 * 1000);
+
+    return () => {
+      activityEvents.forEach(event => {
+        window.removeEventListener(event, handleActivity);
+      });
+      if (timeoutRef.current) {
+        clearInterval(timeoutRef.current);
+      }
+    };
+  }, [user, performLogout, resetInactivityTimer]);
 
   const login = async (email: string, password: string): Promise<{ success: boolean; requires2FA?: boolean; tempToken?: string }> => {
     try {
@@ -202,19 +270,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const logout = async () => {
-    try {
-      // Try backend logout if we have a token
-      const token = localStorage.getItem('auth_token');
-      if (token) {
-        await apiService.logout();
-      }
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
-    
-    setUser(null);
-    localStorage.removeItem('hris_user');
-    localStorage.removeItem('auth_token');
+    await performLogout();
   };
 
   const hasPermission = (permission: string): boolean => {

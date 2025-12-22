@@ -27,7 +27,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Calendar, Plus, Clock, CalendarDays, LogIn, LogOut, Bell, ChevronDown, ChevronUp, Download, FileText, User, Phone, Building, Users, Upload } from "lucide-react"
+import { Calendar, Plus, Clock, CalendarDays, LogIn, LogOut, Bell, ChevronDown, ChevronUp, Download, FileText, User, Phone, Building, Users, Upload, Eye, File } from "lucide-react"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { useToast } from "@/hooks/use-toast"
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
@@ -126,6 +126,8 @@ export default function Attendance() {
   const [showClockOutDialog, setShowClockOutDialog] = useState(false);
   const [clockOutReason, setClockOutReason] = useState("");
   const [isLunchBreak, setIsLunchBreak] = useState(false);
+  const [selectedLeaveRequest, setSelectedLeaveRequest] = useState<any>(null);
+  const [showLeaveDetailsDialog, setShowLeaveDetailsDialog] = useState(false);
   const [showWeeklyAttendance, setShowWeeklyAttendance] = useState(true);
   const [showTodayAttendance, setShowTodayAttendance] = useState(true);
   const [currentEmployeeId, setCurrentEmployeeId] = useState<number | null>(null);
@@ -1516,11 +1518,23 @@ export default function Attendance() {
                               {getStatusBadge(request.status)}
                             </TableCell>
                             <TableCell>
-                              <RoleBasedComponent 
-                                allowedRoles={['hr_manager']}
-                                fallback={<span className="text-xs text-muted-foreground">-</span>}
-                              >
-                                <div className="flex space-x-2">
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => {
+                                    setSelectedLeaveRequest(request)
+                                    setShowLeaveDetailsDialog(true)
+                                  }}
+                                  className="h-8 w-8 p-0"
+                                  title="View Details"
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                                <RoleBasedComponent 
+                                  allowedRoles={['hr_manager']}
+                                  fallback={null}
+                                >
                                   {request.status === "Pending" && (
                                     <>
                                       <Button 
@@ -1541,13 +1555,8 @@ export default function Attendance() {
                                       </Button>
                                     </>
                                   )}
-                                  {request.status !== "Pending" && (
-                                    <span className="text-xs text-muted-foreground">
-                                      {request.status}
-                                    </span>
-                                  )}
-                                </div>
-                              </RoleBasedComponent>
+                                </RoleBasedComponent>
+                              </div>
                             </TableCell>
                           </TableRow>
                         )
@@ -1599,6 +1608,116 @@ export default function Attendance() {
           </CardContent>
         </Card>
       </RoleBasedComponent>
+
+      {/* Leave Request Details Dialog */}
+      <Dialog open={showLeaveDetailsDialog} onOpenChange={setShowLeaveDetailsDialog}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Leave Request Details</DialogTitle>
+            <DialogDescription>
+              View complete information about this leave request
+            </DialogDescription>
+          </DialogHeader>
+          {selectedLeaveRequest && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm text-muted-foreground">Employee</Label>
+                  <p className="font-medium">{selectedLeaveRequest.employee_name || `Employee ${selectedLeaveRequest.employee_id}`}</p>
+                </div>
+                <div>
+                  <Label className="text-sm text-muted-foreground">Leave Type</Label>
+                  <p className="font-medium">{selectedLeaveRequest.leave_type || selectedLeaveRequest.leaveType?.name || 'N/A'}</p>
+                </div>
+                <div>
+                  <Label className="text-sm text-muted-foreground">Start Date</Label>
+                  <p className="font-medium">{format(new Date(selectedLeaveRequest.start_date), "MMM dd, yyyy")}</p>
+                </div>
+                <div>
+                  <Label className="text-sm text-muted-foreground">End Date</Label>
+                  <p className="font-medium">{format(new Date(selectedLeaveRequest.end_date), "MMM dd, yyyy")}</p>
+                </div>
+                <div>
+                  <Label className="text-sm text-muted-foreground">Days Requested</Label>
+                  <p className="font-medium">{selectedLeaveRequest.days_requested || 'N/A'} day{(selectedLeaveRequest.days_requested || 0) !== 1 ? 's' : ''}</p>
+                </div>
+                <div>
+                  <Label className="text-sm text-muted-foreground">Status</Label>
+                  <div>{getStatusBadge(selectedLeaveRequest.status)}</div>
+                </div>
+              </div>
+
+              {selectedLeaveRequest.reason && (
+                <div>
+                  <Label className="text-sm text-muted-foreground">Reason</Label>
+                  <p className="mt-1 p-3 bg-muted rounded-lg">{selectedLeaveRequest.reason}</p>
+                </div>
+              )}
+
+              {selectedLeaveRequest.contact_during_leave && (
+                <div>
+                  <Label className="text-sm text-muted-foreground flex items-center gap-2">
+                    <Phone className="h-4 w-4" />
+                    Contact During Leave
+                  </Label>
+                  <p className="mt-1 p-3 bg-muted rounded-lg">{selectedLeaveRequest.contact_during_leave}</p>
+                </div>
+              )}
+
+              {selectedLeaveRequest.documents && Array.isArray(selectedLeaveRequest.documents) && selectedLeaveRequest.documents.length > 0 && (
+                <div>
+                  <Label className="text-sm text-muted-foreground flex items-center gap-2 mb-2">
+                    <File className="h-4 w-4" />
+                    Documents ({selectedLeaveRequest.documents.length})
+                  </Label>
+                  <div className="space-y-2">
+                    {selectedLeaveRequest.documents.map((doc: any, index: number) => (
+                      <div key={index} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm truncate">{doc.filename || `Document ${index + 1}`}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {doc.type && <span className="capitalize">{doc.type.replace('_', ' ')}</span>}
+                            {doc.size && ` • ${(doc.size / 1024).toFixed(2)} KB`}
+                          </p>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            // Construct download URL
+                            const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+                            // Remove 'public/' prefix if present, as Laravel storage serves from /storage
+                            const cleanPath = doc.path?.replace('public/', '') || doc.path
+                            const fileUrl = `${baseUrl}/storage/${cleanPath}`
+                            window.open(fileUrl, '_blank')
+                          }}
+                          className="ml-2"
+                        >
+                          <Download className="h-4 w-4 mr-1" />
+                          Download
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {(!selectedLeaveRequest.documents || !Array.isArray(selectedLeaveRequest.documents) || selectedLeaveRequest.documents.length === 0) && 
+               !selectedLeaveRequest.contact_during_leave && 
+               !selectedLeaveRequest.reason && (
+                <div className="text-center py-4 text-muted-foreground text-sm">
+                  No additional information available
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowLeaveDetailsDialog(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Clock Out Confirmation Dialog */}
       <Dialog open={showClockOutDialog} onOpenChange={setShowClockOutDialog}>

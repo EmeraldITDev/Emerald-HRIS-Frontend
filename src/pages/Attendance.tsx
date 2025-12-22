@@ -1478,10 +1478,17 @@ export default function Attendance() {
                 // Ensure leaveRequests is always an array
                 const safeLeaveRequests = Array.isArray(leaveRequests) ? leaveRequests : []
                 
-                // Filter leave requests based on user role
-                const filteredRequests = user?.role === 'hr_manager'
-                  ? safeLeaveRequests // HR Manager sees all leave requests
-                  : safeLeaveRequests.filter(req => req.employee_id === user?.id) // Others see only their own
+                // Backend already filters by role, but add frontend safety check
+                // HR managers and line managers see filtered results from backend
+                // General employees see only their own
+                let filteredRequests = safeLeaveRequests
+                
+                // Additional frontend filtering for safety (backend is primary filter)
+                if (user?.role === 'general_employee' || user?.role === 'finance') {
+                  filteredRequests = safeLeaveRequests.filter(req => 
+                    req.employee_id === user?.id || req.employee?.id === user?.id
+                  )
+                }
                 
                 return filteredRequests.length > 0 ? (
                   <Table>
@@ -1505,9 +1512,11 @@ export default function Attendance() {
                         
                         return (
                           <TableRow key={request.id}>
-                            {user?.role === 'hr_manager' && (
+                            {(user?.role === 'hr_manager' || user?.role === 'line_manager' || user?.role === 'corporate_hr' || user?.role === 'executive') && (
                               <TableCell className="font-medium">
-                                {request.employee_name || `Employee ${request.employee_id}`}
+                                {request.employee_name || request.employee?.first_name && request.employee?.last_name 
+                                  ? `${request.employee.first_name} ${request.employee.last_name}`
+                                  : `Employee ${request.employee_id}`}
                               </TableCell>
                             )}
                             <TableCell>{request.leave_type}</TableCell>
@@ -1519,23 +1528,32 @@ export default function Attendance() {
                             </TableCell>
                             <TableCell>
                               <div className="flex items-center gap-2">
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => {
-                                    setSelectedLeaveRequest(request)
-                                    setShowLeaveDetailsDialog(true)
-                                  }}
-                                  className="h-8 w-8 p-0"
-                                  title="View Details"
-                                >
-                                  <Eye className="h-4 w-4" />
-                                </Button>
-                                <RoleBasedComponent 
-                                  allowedRoles={['hr_manager']}
-                                  fallback={null}
-                                >
-                                  {request.status === "Pending" && (
+                                {/* View Details button - only for HR managers, line managers, and the employee themselves */}
+                                {(user?.role === 'hr_manager' || 
+                                  user?.role === 'line_manager' || 
+                                  user?.role === 'corporate_hr' ||
+                                  user?.role === 'executive' ||
+                                  request.employee_id === user?.id || 
+                                  request.employee?.id === user?.id) && (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => {
+                                      setSelectedLeaveRequest(request)
+                                      setShowLeaveDetailsDialog(true)
+                                    }}
+                                    className="h-8 w-8 p-0"
+                                    title="View Details"
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                  </Button>
+                                )}
+                                {/* Approve/Reject buttons - only for HR managers and line managers */}
+                                {(user?.role === 'hr_manager' || 
+                                  user?.role === 'line_manager' || 
+                                  user?.role === 'corporate_hr' || 
+                                  user?.role === 'executive') && 
+                                  request.status === "Pending" && (
                                     <>
                                       <Button 
                                         size="sm" 
@@ -1555,7 +1573,6 @@ export default function Attendance() {
                                       </Button>
                                     </>
                                   )}
-                                </RoleBasedComponent>
                               </div>
                             </TableCell>
                           </TableRow>

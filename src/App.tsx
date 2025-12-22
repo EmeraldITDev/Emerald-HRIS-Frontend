@@ -29,20 +29,9 @@ import { PasswordChangeModal } from "./components/PasswordChangeModal";
 
 const queryClient = new QueryClient();
 
-// Protected Route Component
-const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated } = useAuth();
-  
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-  
-  return <>{children}</>;
-};
-
 // Create a wrapper component that uses useAuth
 const AppContent = () => {
-  const { user, refreshUser } = useAuth();
+  const { user, refreshUser, isAuthenticated } = useAuth();
   const [showPasswordChange, setShowPasswordChange] = useState(false);
 
   useEffect(() => {
@@ -52,6 +41,15 @@ const AppContent = () => {
       setShowPasswordChange(false);
     }
   }, [user]);
+
+  // Protected Route Component - defined inside AppContent to ensure it's within AuthProvider
+  const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+    if (!isAuthenticated) {
+      return <Navigate to="/login" replace />;
+    }
+    
+    return <>{children}</>;
+  };
 
   return (
     <>

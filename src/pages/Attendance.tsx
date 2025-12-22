@@ -147,11 +147,14 @@ export default function Attendance() {
         if (Array.isArray(response)) {
           // Direct array response
           attendanceArray = response;
-        } else if (response.data) {
+        } else {
           // Paginated response - extract the data array
-          attendanceArray = Array.isArray(response.data) 
-            ? response.data 
-            : (response.data.data || []);
+          const responseObj = response as { data?: any };
+          if (responseObj.data) {
+            attendanceArray = Array.isArray(responseObj.data) 
+              ? responseObj.data 
+              : (responseObj.data.data || []);
+          }
         }
       }
       
@@ -293,7 +296,8 @@ export default function Attendance() {
       setIsLoadingLeaveTypes(true)
       const response = await apiService.getLeaveTypes()
       // Handle response structure: could be direct array or { success: true, data: [...] }
-      const types = Array.isArray(response) ? response : (response?.data || [])
+      const responseObj = response as { data?: any } | any[];
+      const types = Array.isArray(response) ? response : ((responseObj as { data?: any })?.data || [])
       
       // If no leave types from backend, use fallback
       if (types.length === 0) {

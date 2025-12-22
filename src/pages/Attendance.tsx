@@ -282,10 +282,11 @@ export default function Attendance() {
         requests = response
       } else if (response && typeof response === 'object') {
         // Handle paginated response: { success: true, data: { data: [...], current_page: 1, ... } }
-        if (response.data) {
-          requests = Array.isArray(response.data) 
-            ? response.data 
-            : (response.data.data || [])
+        const responseObj = response as { data?: any }
+        if (responseObj.data) {
+          requests = Array.isArray(responseObj.data) 
+            ? responseObj.data 
+            : (responseObj.data.data || [])
         }
       }
       setLeaveRequests(requests)

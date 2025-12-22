@@ -598,25 +598,36 @@ export default function Attendance() {
           formData.append('contact_during_leave', contactDuringLeave)
         }
         
-        // Add document files if provided
+        // Collect all documents into an array
+        const documents: File[] = []
+        const documentTypes: string[] = []
+        
         if (medicalCertificate) {
-          formData.append('medical_certificate', medicalCertificate)
+          documents.push(medicalCertificate)
+          documentTypes.push('medical_certificate')
         }
         if (birthCertificate) {
-          formData.append('birth_certificate', birthCertificate)
+          documents.push(birthCertificate)
+          documentTypes.push('birth_certificate')
         }
         if (deathCertificate) {
-          formData.append('death_certificate', deathCertificate)
+          documents.push(deathCertificate)
+          documentTypes.push('death_certificate')
         }
         if (admissionLetter) {
-          formData.append('admission_letter', admissionLetter)
+          documents.push(admissionLetter)
+          documentTypes.push('admission_letter')
         }
         if (otherDocument) {
-          formData.append('other_document', otherDocument)
-          if (otherDocumentType) {
-            formData.append('other_document_type', otherDocumentType)
-          }
+          documents.push(otherDocument)
+          documentTypes.push(otherDocumentType || 'other')
         }
+        
+        // Add all documents to FormData
+        documents.forEach((file, index) => {
+          formData.append('documents[]', file)
+          formData.append(`document_types[${index}]`, documentTypes[index])
+        })
         
         await apiService.createLeaveRequest(formData)
         

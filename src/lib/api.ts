@@ -419,7 +419,7 @@ class ApiService {
 
   // Leave methods
   async getLeaveRequests(): Promise<LeaveRequest[]> {
-    return this.request<LeaveRequest[]>('/leave/');
+    return this.request<LeaveRequest[]>('/leave');
   }
 
   async getLeaveTypes(): Promise<LeaveType[]> {
@@ -434,13 +434,13 @@ class ApiService {
   async createLeaveRequest(leaveData: any): Promise<{ message: string }> {
     // Check if leaveData contains files (FormData)
     if (leaveData instanceof FormData) {
-      return this.request<{ message: string }>('/leave/', {
+      return this.request<{ message: string }>('/leave', {
         method: 'POST',
         body: leaveData,
       });
     }
     // Otherwise send as JSON
-    return this.request<{ message: string }>('/leave/', {
+    return this.request<{ message: string }>('/leave', {
       method: 'POST',
       body: JSON.stringify(leaveData),
     });

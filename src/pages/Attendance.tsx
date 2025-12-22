@@ -1494,7 +1494,9 @@ export default function Attendance() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        {user?.role === 'hr_manager' && <TableHead>Employee</TableHead>}
+                        {(user?.role === 'hr_manager' || user?.role === 'line_manager' || user?.role === 'corporate_hr' || user?.role === 'executive') && (
+                          <TableHead>Employee</TableHead>
+                        )}
                         <TableHead>Leave Type</TableHead>
                         <TableHead>Start Date</TableHead>
                         <TableHead>End Date</TableHead>

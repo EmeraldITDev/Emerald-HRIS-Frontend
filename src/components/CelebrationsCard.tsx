@@ -83,14 +83,16 @@ export function CelebrationsCard({
   return (
     <>
       <Card className={cn("border-border/50 shadow-sm overflow-hidden", className)}>
-        <CardHeader className="bg-gradient-to-r from-pink-500/10 via-amber-500/10 to-purple-500/10 border-b border-border/30">
-          <CardTitle className="flex items-center gap-2 text-foreground">
-            <div className="p-2 rounded-lg bg-gradient-to-br from-pink-500 to-amber-500 text-white">
-              <PartyPopper className="h-4 w-4" />
-            </div>
-            {title}
-          </CardTitle>
-        </CardHeader>
+        {title && (
+          <CardHeader className="bg-gradient-to-r from-pink-500/10 via-amber-500/10 to-purple-500/10 border-b border-border/30">
+            <CardTitle className="flex items-center gap-2 text-foreground">
+              <div className="p-2 rounded-lg bg-gradient-to-br from-pink-500 to-amber-500 text-white">
+                <PartyPopper className="h-4 w-4" />
+              </div>
+              {title}
+            </CardTitle>
+          </CardHeader>
+        )}
         <CardContent className="p-0">
           {isLoading ? (
             <div className="p-4 space-y-3">

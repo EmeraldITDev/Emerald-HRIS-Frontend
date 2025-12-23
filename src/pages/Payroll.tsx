@@ -320,6 +320,93 @@ export default function Payroll() {
 
   const calculations = calculatePayroll()
   
+  // Calculate payroll from financial details (for preview when no payroll record exists)
+  const calculatePayrollFromFinancialDetails = (employee: Employee): PayrollRecord | null => {
+    if (!employee) return null
+    
+    const basicSalary = employee.basic_salary || employee.gross_salary || 0
+    const housingAllowance = employee.housing_allowance || 0
+    const transportAllowance = employee.transport_allowance || 0
+    const mealAllowance = employee.meal_allowance || 0
+    const otherAllowance = employee.other_allowance || 0
+    
+    if (basicSalary === 0) return null
+    
+    // Calculate totals
+    const totalAllowances = housingAllowance + transportAllowance + mealAllowance + otherAllowance
+    const grossPay = basicSalary + totalAllowances
+    
+    // Calculate annual gross for tax calculation
+    const annualGross = grossPay * 12
+    
+    // Calculate PAYE (Nigerian tax bands - matches backend calculation)
+    const taxableIncome = annualGross - 200000 // Minimum tax-free allowance + CRA
+    let payeTax = 0
+    if (taxableIncome > 0) {
+      // 7% on first ₦300,000
+      if (taxableIncome > 0) {
+        payeTax += Math.min(taxableIncome, 300000) * 0.07
+      }
+      // 11% on next ₦300,000
+      if (taxableIncome > 300000) {
+        payeTax += Math.min(taxableIncome - 300000, 300000) * 0.11
+      }
+      // 15% on next ₦500,000
+      if (taxableIncome > 600000) {
+        payeTax += Math.min(taxableIncome - 600000, 500000) * 0.15
+      }
+      // 19% on next ₦500,000
+      if (taxableIncome > 1100000) {
+        payeTax += Math.min(taxableIncome - 1100000, 500000) * 0.19
+      }
+      // 21% on next ₦1,600,000
+      if (taxableIncome > 1600000) {
+        payeTax += Math.min(taxableIncome - 1600000, 1600000) * 0.21
+      }
+      // 24% on amounts above ₦3,200,000
+      if (taxableIncome > 3200000) {
+        payeTax += (taxableIncome - 3200000) * 0.24
+      }
+    }
+    // Convert annual tax to monthly (already divided by 12 in backend)
+    payeTax = Math.round(payeTax / 12 * 100) / 100
+    
+    // Calculate pension (8% of basic + housing + transport)
+    const pensionEmployee = Math.round((basicSalary + housingAllowance + transportAllowance) * 0.08 * 100) / 100
+    
+    // Calculate NHF (2.5% of basic salary)
+    const nhf = Math.round(basicSalary * 0.025 * 100) / 100
+    
+    // Total deductions
+    const totalDeductions = payeTax + pensionEmployee + nhf
+    const netPay = grossPay - totalDeductions
+    
+    // Return a preview payroll record
+    return {
+      employee_id: employee.id || 0,
+      pay_period: new Date().toISOString().slice(0, 7), // Current month
+      basic_salary: basicSalary,
+      housing_allowance: housingAllowance,
+      transport_allowance: transportAllowance,
+      meal_allowance: mealAllowance,
+      other_allowance: otherAllowance,
+      overtime: 0,
+      bonus: 0,
+      commission: 0,
+      gross_pay: grossPay,
+      total_allowances: totalAllowances,
+      taxable_income: annualGross,
+      paye_tax: payeTax,
+      pension_employee: pensionEmployee,
+      pension_employer: 0,
+      nhf: nhf,
+      other_deductions: 0,
+      total_deductions: totalDeductions,
+      net_pay: netPay,
+      status: 'pending' as const,
+    }
+  }
+
   // Get current user's latest payroll record for display
   const getCurrentUserPayrollRecord = () => {
     if (!user) return null
@@ -331,20 +418,29 @@ export default function Payroll() {
       
       // Get the most recent payroll record for this employee
       const userRecords = payrollRecords.filter(record => record.employee_id === currentEmployee.id)
-      if (userRecords.length === 0) return null
       
-      // Sort by pay_period descending and get the latest
-      return userRecords.sort((a, b) => {
-        const dateA = new Date(a.pay_period || '')
-        const dateB = new Date(b.pay_period || '')
-        return dateB.getTime() - dateA.getTime()
-      })[0]
+      // If there's a payroll record, return it
+      if (userRecords.length > 0) {
+        // Sort by pay_period descending and get the latest
+        return userRecords.sort((a, b) => {
+          const dateA = new Date(a.pay_period || '')
+          const dateB = new Date(b.pay_period || '')
+          return dateB.getTime() - dateA.getTime()
+        })[0]
+      }
+      
+      // If no payroll record exists, calculate from financial details
+      return calculatePayrollFromFinancialDetails(currentEmployee)
     }
     
     return null
   }
   
   const currentPayrollRecord = getCurrentUserPayrollRecord()
+  const isPreviewFromFinancialDetails = currentPayrollRecord && !payrollRecords.some(record => 
+    record.employee_id === currentPayrollRecord.employee_id && 
+    record.pay_period === currentPayrollRecord.pay_period
+  )
 
   const handleTaxSettings = () => {
     toast({
@@ -1096,7 +1192,9 @@ export default function Payroll() {
             </CardTitle>
             <p className="text-sm text-muted-foreground mt-1">
               {currentPayrollRecord 
-                ? `Pay Period: ${currentPayrollRecord.pay_period}` 
+                ? isPreviewFromFinancialDetails
+                  ? `Preview based on your base salary information (No payroll record generated yet)`
+                  : `Pay Period: ${currentPayrollRecord.pay_period}`
                 : "Detailed breakdown of earnings, deductions, and employer costs"}
             </p>
           </CardHeader>
@@ -1125,10 +1223,17 @@ export default function Payroll() {
 
               {/* Salary Components - From Database */}
               <div className="border rounded-lg p-4 bg-card">
-                <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
-                  <span className="w-2 h-2 bg-success rounded-full"></span>
-                  Salary Components
-                </h3>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-semibold text-lg flex items-center gap-2">
+                    <span className="w-2 h-2 bg-success rounded-full"></span>
+                    Salary Components
+                  </h3>
+                  {isPreviewFromFinancialDetails && (
+                    <Badge variant="outline" className="text-xs">
+                      Preview
+                    </Badge>
+                  )}
+                </div>
                 <div className="space-y-3">
                   <div className="flex justify-between text-sm">
                     <span className="font-medium">Basic Salary:</span>
@@ -1214,9 +1319,11 @@ export default function Payroll() {
               <div className="text-center py-12 space-y-3">
                 <div className="text-5xl text-muted-foreground/20">💰</div>
                 <div>
-                  <p className="font-medium text-muted-foreground">No Payroll Record Available</p>
+                  <p className="font-medium text-muted-foreground">No Payroll Information Available</p>
                   <p className="text-sm text-muted-foreground/70 mt-1">
-                    Your payroll information will appear here once it's been processed by HR.
+                    {employees.find(emp => emp.email === user?.email)?.gross_salary || employees.find(emp => emp.email === user?.email)?.basic_salary
+                      ? "Your payroll information will appear here once it's been processed by HR."
+                      : "No salary information found. Please contact HR to set up your payroll details."}
                   </p>
                 </div>
               </div>

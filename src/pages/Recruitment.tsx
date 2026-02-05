@@ -16,6 +16,7 @@ import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
 import apiService, { type JobPosting, type Candidate as APICandidate, type Application } from "@/lib/api"
+import { DEPARTMENTS } from "@/constants/departments"
 
 interface Candidate {
   id: string
@@ -265,19 +266,8 @@ export default function Recruitment() {
     return matchesSearch && matchesJobTitle && matchesDepartment && matchesHiringManager && matchesDateFrom && matchesDateTo
   })
 
-  const departments = [
-    'Executive',
-    'Human Resources',
-    'Technical Operations',
-    'Business Development',
-    'Finance',
-    'IT',
-    'Operations',
-    'Marketing',
-    'Sales',
-    'Customer Service',
-    'Procurement'
-  ]
+  // Use centralized departments constant
+  const departments = [...DEPARTMENTS]
 
   const hiringManagers = [
     'Adebayo Johnson',

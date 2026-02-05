@@ -48,6 +48,7 @@ import { downloadCSVTemplate, downloadTemplateGuide } from "@/utils/csvTemplate"
 import { validateCSVData, CSVValidationResult, ValidatedRow, getRoleValue } from "@/utils/csvValidation";
 import { CSVValidationPreview } from "@/components/CSVValidationPreview";
 import Papa from "papaparse";
+import { DEPARTMENTS } from "@/constants/departments";
 import jsPDF from "jspdf";
 import * as XLSX from "xlsx";
 import apiService, { Employee } from "@/lib/api";
@@ -168,20 +169,8 @@ export default function Employees() {
     lastCompanyAsset: null as File | null,
   });
 
-  // Import from constants for consistency
-  const departments = [
-    "Executive",
-    "Human Resources",
-    "Technical Operations",
-    "Business Development",
-    "Finance",
-    "IT",
-    "Operations",
-    "Marketing",
-    "Sales",
-    "Customer Service",
-    "Procurement",
-  ];
+  // Use centralized departments constant
+  const departments = [...DEPARTMENTS];
   const gradeLevels = ["Junior", "Middle", "Senior", "Executive"];
 
   const nationalities = [

@@ -1201,6 +1201,46 @@ export default function Employees() {
       description: `${employee.firstName} ${employee.lastName}'s profile has been downloaded as PDF.`,
     });
   };
+
+  const handleDownloadDocuments = (employee: any) => {
+    const documents = employee.supportingDocuments || employee.supporting_documents || [];
+    
+    if (!documents || documents.length === 0) {
+      toast({
+        title: "No Documents",
+        description: `${employee.firstName} ${employee.lastName} has no uploaded documents.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Download each document
+    let downloadCount = 0;
+    documents.forEach((doc: any) => {
+      if (doc.url || doc.data) {
+        const link = document.createElement("a");
+        link.href = doc.url || doc.data;
+        link.download = doc.name || doc.fileName || `document_${downloadCount + 1}`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        downloadCount++;
+      }
+    });
+
+    if (downloadCount > 0) {
+      toast({
+        title: "Documents Downloaded",
+        description: `Downloaded ${downloadCount} document(s) for ${employee.firstName} ${employee.lastName}.`,
+      });
+    } else {
+      toast({
+        title: "Download Failed",
+        description: "Could not download documents. Files may not be available.",
+        variant: "destructive",
+      });
+    }
+  };
   const handleExportData = () => {
     const exportData = employeeList.map((emp: any) => ({
       // Personal Information
@@ -2673,6 +2713,10 @@ export default function Employees() {
                               <DropdownMenuItem onClick={() => handleDownloadProfile(employee)}>
                                 <Download className="mr-2 h-4 w-4" />
                                 Download Profile
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleDownloadDocuments(employee)}>
+                                <FileText className="mr-2 h-4 w-4" />
+                                Download Documents
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={() => handleResignEmployee(employee)}

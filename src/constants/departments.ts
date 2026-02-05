@@ -10,9 +10,7 @@ export const DEPARTMENTS = [
   "Finance",
   "IT",
   "Operations",
-  "Marketing",
-  "Sales",
-  "Customer Service",
+   "Supply Chain",
   "Procurement"
 ] as const;
 

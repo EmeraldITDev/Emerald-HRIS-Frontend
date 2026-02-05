@@ -8,13 +8,17 @@ export const ALLOWED_VALUES = {
   employmentType: ['Full-time', 'Part-time', 'Contract', 'Intern'],
   employmentStatus: ['Active', 'On Leave', 'Suspended', 'Terminated'],
   gradeLevel: ['Entry', 'Junior', 'Mid-Level', 'Senior', 'Lead', 'Manager', 'Director', 'Executive'],
-  relationship: ['Spouse', 'Parent', 'Sibling', 'Child', 'Brother', 'Sister', 'Friend', 'Other'],
+   relationship: ['Spouse', 'Parent', 'Mother', 'Father', 'Sibling', 'Child', 'Brother', 'Sister', 'Son', 'Daughter', 'Uncle', 'Aunt', 'Cousin', 'Friend', 'Other'],
   bankNames: [
-    'Access Bank', 'GT Bank', 'GTBank', 'Guaranty Trust Bank', 'First Bank', 'UBA', 'Zenith Bank', 
+     'Access Bank', 'Access Bank PLC', 'GT Bank', 'GTBank', 'GTBank PLC', 'Guaranty Trust Bank', 'Guaranty Trust Bank PLC',
+     'First Bank', 'First Bank PLC', 'First Bank of Nigeria', 'UBA', 'United Bank for Africa', 'UBA PLC',
+     'Zenith Bank', 'Zenith Bank PLC', 'ZENITH BANK PLC',
     'Fidelity Bank', 'Union Bank', 'Sterling Bank', 'Stanbic IBTC', 
-    'Ecobank', 'FCMB', 'Polaris Bank', 'Wema Bank', 'Keystone Bank'
+     'Ecobank', 'Ecobank PLC', 'FCMB', 'FCMB PLC', 'Polaris Bank', 'Polaris Bank PLC',
+     'Wema Bank', 'Wema Bank PLC', 'Keystone Bank', 'Keystone Bank PLC',
+     'Heritage Bank', 'Heritage Bank PLC', 'Jaiz Bank', 'Providus Bank', 'Titan Trust Bank'
   ],
-  probationPeriod: ['3 months', '6 months', '9 months', '12 months'],
+   probationPeriod: ['3', '6', '9', '12', '3 months', '6 months', '9 months', '12 months'],
   systemRole: ['executive', 'hr_manager', 'corporate_hr', 'line_manager', 'finance', 'it_power_user', 'contract_employee', 'general_employee']
 } as const;
 

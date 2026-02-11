@@ -1123,7 +1123,9 @@ class ApiService {
       headers = uploadData.headers;
       key = uploadData.key;
     } catch (err) {
-      throw new Error(`Could not get upload URL from server. The document API may not be configured. (${err instanceof Error ? err.message : err})`);
+      const msg = `[S3 Upload Step 1] Could not get upload URL from server. The document API may not be configured. (${err instanceof Error ? err.message : err})`;
+      console.error(msg, { employeeId, documentType, fileName: file.name, error: err });
+      throw new Error(msg);
     }
 
     // Step 2: Upload file directly to S3
@@ -1131,11 +1133,15 @@ class ApiService {
     try {
       await this.uploadFileToS3(url, file, headers);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('CORS')) {
-        throw new Error(`File upload to storage failed due to a network/CORS error. Check S3 CORS configuration.`);
+      const errMsg = err instanceof Error ? err.message : String(err);
+      if (errMsg.includes('Failed to fetch') || errMsg.includes('NetworkError') || errMsg.includes('CORS')) {
+        const msg = `[S3 Upload Step 2] File upload to storage failed due to a network/CORS error. Check S3 CORS configuration.`;
+        console.error(msg, { url, fileName: file.name, error: err });
+        throw new Error(msg);
       }
-      throw new Error(`File upload to storage failed. Check file size and format. (${msg})`);
+      const msg = `[S3 Upload Step 2] File upload to storage failed. Check file size and format. (${errMsg})`;
+      console.error(msg, { url, fileName: file.name, error: err });
+      throw new Error(msg);
     }
 
     // Step 3: Attach the S3 key to employee record
@@ -1145,7 +1151,9 @@ class ApiService {
       onProgress?.(100);
       return { message: result.message, key };
     } catch (err) {
-      throw new Error(`File uploaded to S3 but could not link to employee record. (${err instanceof Error ? err.message : err})`);
+      const msg = `[S3 Upload Step 3] File uploaded to S3 but could not link to employee record. (${err instanceof Error ? err.message : err})`;
+      console.error(msg, { employeeId, documentType, key, fileName: file.name, error: err });
+      throw new Error(msg);
     }
   }
 }

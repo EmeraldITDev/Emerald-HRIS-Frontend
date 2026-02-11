@@ -193,7 +193,8 @@ export function EmployeeEditDialog({ employee, open, onOpenChange, onSuccess }: 
       toast({ title: "Document Uploaded", description: `${file.name} uploaded successfully.` })
       onSuccess()
     } catch (error) {
-      console.error('Upload failed:', error)
+      const errMsg = error instanceof Error ? error.message : String(error)
+      console.error(`[EditDialog] Upload failed for ${file.name}:`, errMsg, error)
       toast({ title: "Upload Failed", description: "Could not upload document.", variant: "destructive" })
     } finally {
       setIsUploading(false)
@@ -622,7 +623,8 @@ export function EmployeeEditDialog({ employee, open, onOpenChange, onSuccess }: 
                           setUploadProgress(Math.round(((i) / files.length) * 100))
                           await apiService.uploadDocument(employee.id, 'supporting_docs', file)
                           toast({ title: "Uploaded", description: `${file.name} uploaded successfully.` })
-                        } catch {
+                        } catch (err) {
+                          console.error(`[EditDialog Bulk] Upload failed for ${file.name}:`, err instanceof Error ? err.message : err, err)
                           toast({ title: "Upload Failed", description: `Failed to upload ${file.name}.`, variant: "destructive" })
                         }
                       }

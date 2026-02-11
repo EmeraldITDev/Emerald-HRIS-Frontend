@@ -843,7 +843,8 @@ export default function Employees() {
           try {
             await apiService.uploadDocument(createdId, type, file);
           } catch (err) {
-            console.error(`Failed to upload ${file.name}:`, err);
+            const errMsg = err instanceof Error ? err.message : String(err);
+            console.error(`[AddEmployee] Failed to upload ${file.name} (type: ${type}):`, errMsg, err);
             toast({
               title: "Document Upload Warning",
               description: `Employee created but failed to upload ${file.name}. You can upload it later from the edit dialog.`,
@@ -3966,7 +3967,8 @@ export default function Employees() {
                                 await apiService.uploadDocument(editEmployee.id, docType, file);
                                 toast({ title: "Uploaded", description: `${file.name} uploaded successfully.` });
                               } catch (err) {
-                                console.error('Upload failed:', err);
+                                const errMsg = err instanceof Error ? err.message : String(err);
+                                console.error(`[EditEmployee] Upload failed for ${file.name} (type: ${docType}):`, errMsg, err);
                                 toast({ title: "Upload Failed", description: `Failed to upload ${file.name}.`, variant: "destructive" });
                               }
                             }

@@ -827,6 +827,33 @@ export default function Employees() {
       // Refresh the employee list from the database
       await fetchEmployees();
 
+      // Upload documents to S3 if any were selected
+      const createdId = response.employee?.id;
+      if (createdId) {
+        const docUploads: { file: File; type: string }[] = [];
+
+        if (newEmployee.ninDocument) docUploads.push({ file: newEmployee.ninDocument, type: 'national_id' });
+        if (newEmployee.passportPhoto) docUploads.push({ file: newEmployee.passportPhoto, type: 'passport' });
+        if (newEmployee.cv) docUploads.push({ file: newEmployee.cv, type: 'onboarding' });
+        if (newEmployee.educationCertificate) docUploads.push({ file: newEmployee.educationCertificate, type: 'certificate' });
+        newEmployee.certifications.forEach(f => docUploads.push({ file: f, type: 'certificate' }));
+        newEmployee.otherDocuments.forEach(f => docUploads.push({ file: f, type: 'supporting_docs' }));
+        newEmployee.companyAssets.forEach(f => docUploads.push({ file: f, type: 'contract' }));
+
+        for (const { file, type } of docUploads) {
+          try {
+            await apiService.uploadDocument(createdId, type, file);
+          } catch (err) {
+            console.error(`Failed to upload ${file.name}:`, err);
+            toast({
+              title: "Document Upload Warning",
+              description: `Employee created but failed to upload ${file.name}. You can upload it later from the edit dialog.`,
+              variant: "destructive",
+            });
+          }
+        }
+      }
+
       // If user credentials were created, show them to HR
       if (response.user_credentials) {
         setNewEmployeeCredentials(response.user_credentials);
@@ -1023,7 +1050,8 @@ export default function Employees() {
       apiService.getEmployeeDocuments(employee.id).then(({ documents }) => {
         setEditEmployee((prev: any) => prev?.id === employee.id ? { ...prev, _documents: documents || [], _loadingDocs: false } : prev);
       }).catch(() => {
-        setEditEmployee((prev: any) => prev?.id === employee.id ? { ...prev, _loadingDocs: false } : prev);
+        // Gracefully handle - employee may have no documents yet
+        setEditEmployee((prev: any) => prev?.id === employee.id ? { ...prev, _documents: [], _loadingDocs: false } : prev);
       });
     }
   };
@@ -1220,13 +1248,19 @@ export default function Employees() {
     }
 
     try {
-      const { documents } = await apiService.getEmployeeDocuments(employee.id);
+      let documents: any[] = [];
+      try {
+        const response = await apiService.getEmployeeDocuments(employee.id);
+        documents = response.documents || [];
+      } catch {
+        // Endpoint may return 404 for employees with no documents
+        documents = [];
+      }
 
-      if (!documents || documents.length === 0) {
+      if (documents.length === 0) {
         toast({
           title: "No Documents",
           description: `${employee.first_name || employee.firstName} ${employee.last_name || employee.lastName} has no uploaded documents.`,
-          variant: "destructive",
         });
         return;
       }
@@ -2442,26 +2476,10 @@ export default function Employees() {
 
                   <TabsContent value="additional" className="space-y-4">
                     <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="companyAssets">Company Asset Documents</Label>
-                        <Input
-                          id="companyAssets"
-                          type="file"
-                          multiple
-                          accept=".pdf,.doc,.docx,.jpg,.png"
-                          onChange={(e) => {
-                            const files = Array.from(e.target.files || []);
-                            setNewEmployee({
-                              ...newEmployee,
-                              companyAssets: files,
-                            });
-                          }}
-                        />
-                        <p className="text-sm text-muted-foreground">
-                          Upload laptop agreements, asset submission forms, etc. (PDF, DOC, DOCX, JPG, PNG)
-                        </p>
-                      </div>
                       <h3 className="text-lg font-medium">Document Uploads</h3>
+                      <p className="text-sm text-muted-foreground">
+                        All documents will be uploaded to secure S3 storage after the employee is created.
+                      </p>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
@@ -2472,12 +2490,10 @@ export default function Employees() {
                             accept=".pdf,.jpg,.jpeg,.png"
                             onChange={(e) => {
                               const file = e.target.files?.[0] || null;
-                              setNewEmployee({
-                                ...newEmployee,
-                                ninDocument: file,
-                              });
+                              setNewEmployee({ ...newEmployee, ninDocument: file });
                             }}
                           />
+                          <p className="text-xs text-muted-foreground">Uploaded as: National ID</p>
                         </div>
 
                         <div className="space-y-2">
@@ -2488,12 +2504,10 @@ export default function Employees() {
                             accept=".jpg,.jpeg,.png"
                             onChange={(e) => {
                               const file = e.target.files?.[0] || null;
-                              setNewEmployee({
-                                ...newEmployee,
-                                passportPhoto: file,
-                              });
+                              setNewEmployee({ ...newEmployee, passportPhoto: file });
                             }}
                           />
+                          <p className="text-xs text-muted-foreground">Uploaded as: Passport</p>
                         </div>
 
                         <div className="space-y-2">
@@ -2504,12 +2518,10 @@ export default function Employees() {
                             accept=".pdf,.doc,.docx"
                             onChange={(e) => {
                               const file = e.target.files?.[0] || null;
-                              setNewEmployee({
-                                ...newEmployee,
-                                cv: file,
-                              });
+                              setNewEmployee({ ...newEmployee, cv: file });
                             }}
                           />
+                          <p className="text-xs text-muted-foreground">Uploaded as: Onboarding</p>
                         </div>
 
                         <div className="space-y-2">
@@ -2520,12 +2532,10 @@ export default function Employees() {
                             accept=".pdf,.jpg,.jpeg,.png"
                             onChange={(e) => {
                               const file = e.target.files?.[0] || null;
-                              setNewEmployee({
-                                ...newEmployee,
-                                educationCertificate: file,
-                              });
+                              setNewEmployee({ ...newEmployee, educationCertificate: file });
                             }}
                           />
+                          <p className="text-xs text-muted-foreground">Uploaded as: Certificate</p>
                         </div>
                       </div>
 
@@ -2538,13 +2548,27 @@ export default function Employees() {
                           accept=".pdf,.jpg,.jpeg,.png"
                           onChange={(e) => {
                             const files = Array.from(e.target.files || []);
-                            setNewEmployee({
-                              ...newEmployee,
-                              certifications: files,
-                            });
+                            setNewEmployee({ ...newEmployee, certifications: files });
                           }}
                         />
-                        <p className="text-sm text-muted-foreground">Upload multiple certification documents</p>
+                        <p className="text-sm text-muted-foreground">Upload multiple certification documents → Stored as: Certificate</p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="companyAssets">Company Asset Documents</Label>
+                        <Input
+                          id="companyAssets"
+                          type="file"
+                          multiple
+                          accept=".pdf,.doc,.docx,.jpg,.png"
+                          onChange={(e) => {
+                            const files = Array.from(e.target.files || []);
+                            setNewEmployee({ ...newEmployee, companyAssets: files });
+                          }}
+                        />
+                        <p className="text-sm text-muted-foreground">
+                          Laptop agreements, asset forms, etc. → Stored as: Contract / Asset Doc
+                        </p>
                       </div>
 
                       <div className="space-y-2">
@@ -2556,14 +2580,11 @@ export default function Employees() {
                           accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
                           onChange={(e) => {
                             const files = Array.from(e.target.files || []);
-                            setNewEmployee({
-                              ...newEmployee,
-                              otherDocuments: files,
-                            });
+                            setNewEmployee({ ...newEmployee, otherDocuments: files });
                           }}
                         />
                         <p className="text-sm text-muted-foreground">
-                          Upload any other relevant documents (contracts, references, etc.)
+                          Any other relevant documents (references, etc.) → Stored as: Supporting Documents
                         </p>
                       </div>
                     </div>
@@ -3876,16 +3897,41 @@ export default function Employees() {
                       )}
                     </div>
 
-                    {/* Upload New Documents - multiple */}
+                    {/* Upload New Documents - with type selector */}
                     <div className="border-2 border-dashed rounded-lg p-4">
                       <Label className="text-sm font-medium mb-2 block">Add Documents</Label>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-end gap-3">
+                        <div className="w-full sm:w-[200px]">
+                          <label className="text-xs text-muted-foreground mb-1 block">Document Type</label>
+                          <Select
+                            value={editEmployee._uploadDocType || 'supporting_docs'}
+                            onValueChange={(val) => setEditEmployee((prev: any) => ({ ...prev, _uploadDocType: val }))}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="national_id">National ID</SelectItem>
+                              <SelectItem value="passport">Passport</SelectItem>
+                              <SelectItem value="bvn_doc">BVN Document</SelectItem>
+                              <SelectItem value="tin_doc">TIN Document</SelectItem>
+                              <SelectItem value="pension_doc">Pension Document</SelectItem>
+                              <SelectItem value="nhf_doc">NHF Document</SelectItem>
+                              <SelectItem value="contract">Contract / Asset Doc</SelectItem>
+                              <SelectItem value="certificate">Certificate</SelectItem>
+                              <SelectItem value="onboarding">Onboarding / CV</SelectItem>
+                              <SelectItem value="profile_picture">Profile Picture</SelectItem>
+                              <SelectItem value="supporting_docs">Supporting Documents</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
                         <Input
                           type="file"
                           multiple
                           onChange={async (e) => {
                             const files = e.target.files;
                             if (!files || files.length === 0 || !editEmployee.id) return;
+                            const docType = editEmployee._uploadDocType || 'supporting_docs';
                             
                             for (let i = 0; i < files.length; i++) {
                               const file = files[i];
@@ -3895,7 +3941,7 @@ export default function Employees() {
                               }
                               try {
                                 toast({ title: "Uploading...", description: `Uploading ${file.name} (${i + 1}/${files.length})` });
-                                await apiService.uploadDocument(editEmployee.id, 'supporting_docs', file);
+                                await apiService.uploadDocument(editEmployee.id, docType, file);
                                 toast({ title: "Uploaded", description: `${file.name} uploaded successfully.` });
                               } catch (err) {
                                 console.error('Upload failed:', err);
@@ -3906,14 +3952,14 @@ export default function Employees() {
                             try {
                               const { documents } = await apiService.getEmployeeDocuments(editEmployee.id);
                               setEditEmployee((prev: any) => ({ ...prev, _documents: documents || [] }));
-                            } catch (err) { /* ignore */ }
+                            } catch { /* ignore */ }
                             e.target.value = '';
                           }}
                           accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp"
                           className="flex-1"
                         />
                       </div>
-                      <p className="text-xs text-muted-foreground mt-2">Select multiple files. Accepted: PDF, DOC, DOCX, JPG, PNG, WEBP • Max 10MB each</p>
+                      <p className="text-xs text-muted-foreground mt-2">Select document type, then choose files. Max 10MB each</p>
                     </div>
                   </div>
 

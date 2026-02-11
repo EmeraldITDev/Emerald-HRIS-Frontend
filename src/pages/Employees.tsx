@@ -158,15 +158,14 @@ export default function Employees() {
     bvn: "", // Add this missing property
     // Additional Fields
     vacationDays: "",
-    // Document uploads
-    ninDocument: null as File | null,
-    passportPhoto: null as File | null,
+    // Document uploads (all arrays for multi-file support)
+    ninDocuments: [] as File[],
+    passportPhotos: [] as File[],
     certifications: [] as File[],
-    cv: null as File | null,
-    educationCertificate: null as File | null,
+    cvFiles: [] as File[],
+    educationCertificates: [] as File[],
     otherDocuments: [] as File[],
     companyAssets: [] as File[],
-    lastCompanyAsset: null as File | null,
   });
 
   // Use centralized departments constant
@@ -832,10 +831,10 @@ export default function Employees() {
       if (createdId) {
         const docUploads: { file: File; type: string }[] = [];
 
-        if (newEmployee.ninDocument) docUploads.push({ file: newEmployee.ninDocument, type: 'national_id' });
-        if (newEmployee.passportPhoto) docUploads.push({ file: newEmployee.passportPhoto, type: 'passport' });
-        if (newEmployee.cv) docUploads.push({ file: newEmployee.cv, type: 'onboarding' });
-        if (newEmployee.educationCertificate) docUploads.push({ file: newEmployee.educationCertificate, type: 'certificate' });
+        newEmployee.ninDocuments.forEach(f => docUploads.push({ file: f, type: 'national_id' }));
+        newEmployee.passportPhotos.forEach(f => docUploads.push({ file: f, type: 'passport' }));
+        newEmployee.cvFiles.forEach(f => docUploads.push({ file: f, type: 'onboarding' }));
+        newEmployee.educationCertificates.forEach(f => docUploads.push({ file: f, type: 'certificate' }));
         newEmployee.certifications.forEach(f => docUploads.push({ file: f, type: 'certificate' }));
         newEmployee.otherDocuments.forEach(f => docUploads.push({ file: f, type: 'supporting_docs' }));
         newEmployee.companyAssets.forEach(f => docUploads.push({ file: f, type: 'contract' }));
@@ -914,14 +913,13 @@ export default function Employees() {
         bvn: "",
         contractAmount: "",
         vacationDays: "",
-        ninDocument: null,
-        passportPhoto: null,
+        ninDocuments: [],
+        passportPhotos: [],
         certifications: [],
-        cv: null,
-        educationCertificate: null,
+        cvFiles: [],
+        educationCertificates: [],
         otherDocuments: [],
         companyAssets: [],
-        lastCompanyAsset: null,
       });
 
       // Reset system role
@@ -1289,7 +1287,7 @@ export default function Employees() {
       } else {
         toast({
           title: "Download Failed",
-          description: "Could not download any documents.",
+          description: "Could not download any documents. Try using the Documents tab on the employee profile instead.",
           variant: "destructive",
         });
       }
@@ -1297,7 +1295,7 @@ export default function Employees() {
       console.error("Failed to fetch documents:", error);
       toast({
         title: "Error",
-        description: "Failed to retrieve documents from storage.",
+        description: "Failed to retrieve documents. The documents endpoint may not be available. Try viewing documents from the employee profile instead.",
         variant: "destructive",
       });
     }
@@ -2483,59 +2481,83 @@ export default function Employees() {
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label htmlFor="ninDocument">NIN Document</Label>
+                          <Label htmlFor="ninDocument">NIN Document(s)</Label>
                           <Input
                             id="ninDocument"
                             type="file"
+                            multiple
                             accept=".pdf,.jpg,.jpeg,.png"
                             onChange={(e) => {
-                              const file = e.target.files?.[0] || null;
-                              setNewEmployee({ ...newEmployee, ninDocument: file });
+                              const files = Array.from(e.target.files || []);
+                              setNewEmployee({ ...newEmployee, ninDocuments: files });
                             }}
                           />
-                          <p className="text-xs text-muted-foreground">Uploaded as: National ID</p>
+                          {newEmployee.ninDocuments.length > 0 && (
+                            <p className="text-xs text-muted-foreground">{newEmployee.ninDocuments.length} file(s) selected → National ID</p>
+                          )}
+                          {newEmployee.ninDocuments.length === 0 && (
+                            <p className="text-xs text-muted-foreground">Uploaded as: National ID</p>
+                          )}
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="passportPhoto">Passport Photo</Label>
+                          <Label htmlFor="passportPhoto">Passport Photo(s)</Label>
                           <Input
                             id="passportPhoto"
                             type="file"
+                            multiple
                             accept=".jpg,.jpeg,.png"
                             onChange={(e) => {
-                              const file = e.target.files?.[0] || null;
-                              setNewEmployee({ ...newEmployee, passportPhoto: file });
+                              const files = Array.from(e.target.files || []);
+                              setNewEmployee({ ...newEmployee, passportPhotos: files });
                             }}
                           />
-                          <p className="text-xs text-muted-foreground">Uploaded as: Passport</p>
+                          {newEmployee.passportPhotos.length > 0 && (
+                            <p className="text-xs text-muted-foreground">{newEmployee.passportPhotos.length} file(s) selected → Passport</p>
+                          )}
+                          {newEmployee.passportPhotos.length === 0 && (
+                            <p className="text-xs text-muted-foreground">Uploaded as: Passport</p>
+                          )}
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="cv">CV/Resume</Label>
+                          <Label htmlFor="cv">CV/Resume(s)</Label>
                           <Input
                             id="cv"
                             type="file"
+                            multiple
                             accept=".pdf,.doc,.docx"
                             onChange={(e) => {
-                              const file = e.target.files?.[0] || null;
-                              setNewEmployee({ ...newEmployee, cv: file });
+                              const files = Array.from(e.target.files || []);
+                              setNewEmployee({ ...newEmployee, cvFiles: files });
                             }}
                           />
-                          <p className="text-xs text-muted-foreground">Uploaded as: Onboarding</p>
+                          {newEmployee.cvFiles.length > 0 && (
+                            <p className="text-xs text-muted-foreground">{newEmployee.cvFiles.length} file(s) selected → Onboarding</p>
+                          )}
+                          {newEmployee.cvFiles.length === 0 && (
+                            <p className="text-xs text-muted-foreground">Uploaded as: Onboarding</p>
+                          )}
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="educationCertificate">Certificate of Highest Educational Level</Label>
+                          <Label htmlFor="educationCertificate">Education Certificate(s)</Label>
                           <Input
                             id="educationCertificate"
                             type="file"
+                            multiple
                             accept=".pdf,.jpg,.jpeg,.png"
                             onChange={(e) => {
-                              const file = e.target.files?.[0] || null;
-                              setNewEmployee({ ...newEmployee, educationCertificate: file });
+                              const files = Array.from(e.target.files || []);
+                              setNewEmployee({ ...newEmployee, educationCertificates: files });
                             }}
                           />
-                          <p className="text-xs text-muted-foreground">Uploaded as: Certificate</p>
+                          {newEmployee.educationCertificates.length > 0 && (
+                            <p className="text-xs text-muted-foreground">{newEmployee.educationCertificates.length} file(s) selected → Certificate</p>
+                          )}
+                          {newEmployee.educationCertificates.length === 0 && (
+                            <p className="text-xs text-muted-foreground">Uploaded as: Certificate</p>
+                          )}
                         </div>
                       </div>
 

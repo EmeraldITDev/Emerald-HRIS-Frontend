@@ -1,14 +1,15 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Progress } from "@/components/ui/progress"
 import { useToast } from "@/hooks/use-toast"
 import apiService, { Employee } from "@/lib/api"
 import { DEPARTMENTS } from "@/constants/departments"
-import { Download, Trash2, Upload } from "lucide-react"
+import { Download, Trash2, Upload, Loader2 } from "lucide-react"
 
 interface EmployeeEditDialogProps {
   employee: Employee | null
@@ -106,37 +107,59 @@ export function EmployeeEditDialog({ employee, open, onOpenChange, onSuccess }: 
     setFormData(prev => ({ ...prev, [field]: value }))
   }
 
-  const handleDocumentDownload = (docUrl: string, filename: string) => {
-    // Create a temporary link to download
-    const a = document.createElement('a')
-    a.href = docUrl
-    a.download = filename
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    
-    toast({
-      title: "Download Started",
-      description: `Downloading ${filename}`
-    })
+  const [isUploading, setIsUploading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState(0)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const handleDocumentDownload = async (docType: string, filename: string) => {
+    if (!employee?.id) return
+    try {
+      const { url } = await apiService.getDocumentUrl(employee.id, docType, true)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = filename
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      toast({ title: "Download Started", description: `Downloading ${filename}` })
+    } catch (error) {
+      console.error('Download failed:', error)
+      toast({ title: "Download Failed", description: "Could not download document.", variant: "destructive" })
+    }
   }
 
-  const handleDocumentRemove = (field: keyof Employee) => {
-    handleChange(field, null)
-    toast({
-      title: "Document Removed",
-      description: "Document will be removed when you save."
-    })
+  const handleDocumentRemove = async (docType: string, filename: string) => {
+    if (!employee?.id) return
+    try {
+      await apiService.deleteDocument(employee.id, docType, filename)
+      toast({ title: "Document Removed", description: "Document has been deleted." })
+      // Refresh supporting_documents field
+      handleChange('supporting_documents', null)
+      onSuccess()
+    } catch (error) {
+      console.error('Delete failed:', error)
+      toast({ title: "Delete Failed", description: "Could not delete document.", variant: "destructive" })
+    }
   }
 
-  const handleDocumentUpload = (field: keyof Employee, file: File) => {
-    // In a real app, you'd upload to your backend/storage
-    // For now, we'll just store the file name
-    handleChange(field, file.name)
-    toast({
-      title: "Document Selected",
-      description: "Document will be uploaded when you save."
-    })
+  const handleDocumentUpload = async (file: File) => {
+    if (!employee?.id) return
+    setIsUploading(true)
+    setUploadProgress(0)
+    try {
+      await apiService.uploadDocument(employee.id, 'supporting_docs', file, (percent) => {
+        setUploadProgress(percent)
+      })
+      toast({ title: "Document Uploaded", description: `${file.name} uploaded successfully.` })
+      onSuccess()
+    } catch (error) {
+      console.error('Upload failed:', error)
+      toast({ title: "Upload Failed", description: "Could not upload document.", variant: "destructive" })
+    } finally {
+      setIsUploading(false)
+      setUploadProgress(0)
+      if (fileInputRef.current) fileInputRef.current.value = ""
+    }
   }
 
   if (!employee) return null
@@ -470,7 +493,7 @@ export function EmployeeEditDialog({ employee, open, onOpenChange, onSuccess }: 
             {/* Supporting Documents Section */}
             <div className="border rounded-lg p-4 bg-card">
               <h3 className="text-base font-semibold mb-2">Supporting Documents</h3>
-              <p className="text-sm text-muted-foreground mb-4">Upload employee documents such as certificates, contracts, or ID copies.</p>
+              <p className="text-sm text-muted-foreground mb-4">Upload employee documents directly to secure storage.</p>
               
               {/* Current Documents List */}
               <div className="mb-4">
@@ -484,7 +507,7 @@ export function EmployeeEditDialog({ employee, open, onOpenChange, onSuccess }: 
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => handleDocumentDownload(doc.trim(), doc.trim())}
+                            onClick={() => handleDocumentDownload('supporting_docs', doc.trim())}
                           >
                             <Download className="h-4 w-4 mr-1" />
                             Download
@@ -492,14 +515,7 @@ export function EmployeeEditDialog({ employee, open, onOpenChange, onSuccess }: 
                           <Button
                             size="sm"
                             variant="destructive"
-                            onClick={() => {
-                              const docs = formData.supporting_documents?.split(',').filter(d => d.trim() !== doc.trim()).join(',')
-                              handleChange('supporting_documents', docs || null)
-                              toast({
-                                title: "Document Removed",
-                                description: "Document will be removed when you save."
-                              })
-                            }}
+                            onClick={() => handleDocumentRemove('supporting_docs', doc.trim())}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -519,28 +535,27 @@ export function EmployeeEditDialog({ employee, open, onOpenChange, onSuccess }: 
                 <Label className="text-sm font-medium mb-2 block">Add New Document</Label>
                 <div className="flex items-center gap-2">
                   <Input
+                    ref={fileInputRef}
                     type="file"
                     onChange={(e) => {
                       const file = e.target.files?.[0]
-                      if (file) {
-                        const currentDocs = formData.supporting_documents || ''
-                        const newDocs = currentDocs ? `${currentDocs},${file.name}` : file.name
-                        handleChange('supporting_documents', newDocs)
-                        toast({
-                          title: "Document Added",
-                          description: `${file.name} will be uploaded when you save.`
-                        })
-                      }
+                      if (file) handleDocumentUpload(file)
                     }}
-                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp"
                     className="flex-1"
+                    disabled={isUploading}
                   />
-                  <Button size="sm" variant="outline" type="button">
-                    <Upload className="h-4 w-4 mr-1" />
-                    Upload
-                  </Button>
                 </div>
-                <p className="text-xs text-muted-foreground mt-2">Accepted formats: PDF, DOC, DOCX, JPG, PNG</p>
+                {isUploading && (
+                  <div className="mt-2 space-y-1">
+                    <Progress value={uploadProgress} className="h-2" />
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      Uploading... {uploadProgress}%
+                    </p>
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground mt-2">Accepted: PDF, DOC, DOCX, JPG, PNG, WEBP • Max 10MB</p>
               </div>
             </div>
           </TabsContent>

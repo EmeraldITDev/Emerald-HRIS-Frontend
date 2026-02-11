@@ -1017,6 +1017,118 @@ class ApiService {
       method: 'PUT',
     });
   }
+  // ========== Document Management (S3 Presigned URLs) ==========
+
+  // Document types supported by the backend
+  static DOCUMENT_TYPES = [
+    'national_id',
+    'passport',
+    'bvn_doc',
+    'tin_doc',
+    'pension_doc',
+    'nhf_doc',
+    'contract',
+    'certificate',
+    'onboarding',
+    'profile_picture',
+    'supporting_docs',
+  ] as const;
+
+  // Get presigned URL for viewing or downloading a document
+  async getDocumentUrl(employeeId: number, documentType: string, download: boolean = false): Promise<{ url: string; expires_in: number }> {
+    const query = download ? '?download=true' : '?download=false';
+    return this.request<{ url: string; expires_in: number }>(`/employees-full/${employeeId}/documents/${documentType}/url${query}`);
+  }
+
+  // Get presigned upload URL for direct-to-S3 upload
+  async getDocumentUploadUrl(employeeId: number, documentType: string, filename: string, contentType: string): Promise<{ url: string; headers: Record<string, string>; key: string }> {
+    return this.request<{ url: string; headers: Record<string, string>; key: string }>(`/employees-full/${employeeId}/documents/${documentType}/upload-url`, {
+      method: 'POST',
+      body: JSON.stringify({ filename, content_type: contentType }),
+    });
+  }
+
+  // Upload file directly to S3 using presigned URL
+  async uploadFileToS3(url: string, file: File, headers: Record<string, string>): Promise<void> {
+    const response = await fetch(url, {
+      method: 'PUT',
+      headers: {
+        ...headers,
+        'Content-Type': file.type,
+      },
+      body: file,
+    });
+    if (!response.ok) {
+      throw new Error(`S3 upload failed: ${response.status}`);
+    }
+  }
+
+  // Attach uploaded S3 key to employee record
+  async attachDocument(employeeId: number, documentType: string, key: string, filename?: string): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/employees-full/${employeeId}/documents/${documentType}/attach`, {
+      method: 'POST',
+      body: JSON.stringify({ key, filename }),
+    });
+  }
+
+  // Delete a document
+  async deleteDocument(employeeId: number, documentType: string, filename?: string): Promise<{ message: string }> {
+    const query = filename ? `?filename=${encodeURIComponent(filename)}` : '';
+    return this.request<{ message: string }>(`/employees-full/${employeeId}/documents/${documentType}${query}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // List all documents for an employee
+  async getEmployeeDocuments(employeeId: number): Promise<{
+    documents: Array<{
+      type: string;
+      filename: string;
+      size?: number;
+      uploaded_by?: string;
+      uploaded_at?: string;
+      key: string;
+    }>;
+  }> {
+    return this.request<{
+      documents: Array<{
+        type: string;
+        filename: string;
+        size?: number;
+        uploaded_by?: string;
+        uploaded_at?: string;
+        key: string;
+      }>;
+    }>(`/employees-full/${employeeId}/documents`);
+  }
+
+  // Full upload flow: get presigned URL → upload to S3 → attach to employee
+  async uploadDocument(
+    employeeId: number,
+    documentType: string,
+    file: File,
+    onProgress?: (percent: number) => void
+  ): Promise<{ message: string; key: string }> {
+    // Step 1: Get presigned upload URL
+    onProgress?.(10);
+    const { url, headers, key } = await this.getDocumentUploadUrl(
+      employeeId,
+      documentType,
+      file.name,
+      file.type
+    );
+
+    // Step 2: Upload file directly to S3
+    onProgress?.(30);
+    await this.uploadFileToS3(url, file, headers);
+
+    // Step 3: Attach the S3 key to employee record
+    onProgress?.(80);
+    const result = await this.attachDocument(employeeId, documentType, key, file.name);
+
+    onProgress?.(100);
+    return { message: result.message, key };
+  }
 }
 
 export const apiService = new ApiService();

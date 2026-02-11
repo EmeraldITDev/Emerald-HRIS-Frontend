@@ -40,6 +40,7 @@ import { getWorkAnniversaryDate, getYearsOfService } from "@/utils/celebrations"
 import apiService, { Employee } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
 import { EmployeeEditDialog } from "@/components/EmployeeEditDialog"
+import { EmployeeDocumentsPanel } from "@/components/EmployeeDocumentsPanel"
 
 export default function EmployeeProfile() {
   const { id } = useParams<{ id: string }>()
@@ -440,7 +441,7 @@ export default function EmployeeProfile() {
 
       {/* Detailed Information Tabs */}
       <Tabs defaultValue="personal" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-5">
+        <TabsList className="grid w-full grid-cols-3 lg:grid-cols-6">
           <TabsTrigger value="personal" className="flex items-center space-x-2">
             <User className="h-4 w-4" />
             <span className="hidden sm:inline">Personal</span>
@@ -456,6 +457,10 @@ export default function EmployeeProfile() {
           <TabsTrigger value="government" className="flex items-center space-x-2">
             <Shield className="h-4 w-4" />
             <span className="hidden sm:inline">Gov IDs</span>
+          </TabsTrigger>
+          <TabsTrigger value="documents" className="flex items-center space-x-2">
+            <FileText className="h-4 w-4" />
+            <span className="hidden sm:inline">Documents</span>
           </TabsTrigger>
           <TabsTrigger value="performance" className="flex items-center space-x-2">
             <TrendingUp className="h-4 w-4" />
@@ -721,6 +726,13 @@ export default function EmployeeProfile() {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        <TabsContent value="documents" className="space-y-4">
+          <EmployeeDocumentsPanel
+            employeeId={employee.id!}
+            employeeName={`${employee.first_name} ${employee.last_name}`}
+          />
         </TabsContent>
 
         <TabsContent value="performance" className="space-y-4">

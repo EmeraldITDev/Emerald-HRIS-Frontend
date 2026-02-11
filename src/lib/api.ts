@@ -1111,23 +1111,42 @@ class ApiService {
   ): Promise<{ message: string; key: string }> {
     // Step 1: Get presigned upload URL
     onProgress?.(10);
-    const { url, headers, key } = await this.getDocumentUploadUrl(
-      employeeId,
-      documentType,
-      file.name,
-      file.type
-    );
+    let url: string, headers: Record<string, string>, key: string;
+    try {
+      const uploadData = await this.getDocumentUploadUrl(
+        employeeId,
+        documentType,
+        file.name,
+        file.type
+      );
+      url = uploadData.url;
+      headers = uploadData.headers;
+      key = uploadData.key;
+    } catch (err) {
+      throw new Error(`Could not get upload URL from server. The document API may not be configured. (${err instanceof Error ? err.message : err})`);
+    }
 
     // Step 2: Upload file directly to S3
     onProgress?.(30);
-    await this.uploadFileToS3(url, file, headers);
+    try {
+      await this.uploadFileToS3(url, file, headers);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('CORS')) {
+        throw new Error(`File upload to storage failed due to a network/CORS error. Check S3 CORS configuration.`);
+      }
+      throw new Error(`File upload to storage failed. Check file size and format. (${msg})`);
+    }
 
     // Step 3: Attach the S3 key to employee record
     onProgress?.(80);
-    const result = await this.attachDocument(employeeId, documentType, key, file.name);
-
-    onProgress?.(100);
-    return { message: result.message, key };
+    try {
+      const result = await this.attachDocument(employeeId, documentType, key, file.name);
+      onProgress?.(100);
+      return { message: result.message, key };
+    } catch (err) {
+      throw new Error(`File uploaded to S3 but could not link to employee record. (${err instanceof Error ? err.message : err})`);
+    }
   }
 }
 

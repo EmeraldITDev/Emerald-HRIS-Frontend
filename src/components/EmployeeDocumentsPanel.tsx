@@ -93,13 +93,18 @@ export function EmployeeDocumentsPanel({ employeeId, employeeName }: EmployeeDoc
     try {
       const response = await apiService.getEmployeeDocuments(employeeId)
       setDocuments(response.documents || [])
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to fetch documents:", error)
-      toast({
-        title: "Error",
-        description: "Failed to load documents. Please try again.",
-        variant: "destructive",
-      })
+      // Gracefully handle - employee may have no documents yet (404)
+      if (error?.message?.includes("404")) {
+        setDocuments([])
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to load documents. Please try again.",
+          variant: "destructive",
+        })
+      }
     } finally {
       setIsLoading(false)
     }

@@ -60,8 +60,10 @@ export function EmployeeEditDialog({ employee, open, onOpenChange, onSuccess }: 
     try {
       const response = await apiService.getEmployeeDocuments(employee.id)
       setDocuments(response.documents || [])
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to fetch documents:", error)
+      // Gracefully handle 404 - employee may have no documents
+      setDocuments([])
     } finally {
       setLoadingDocs(false)
     }

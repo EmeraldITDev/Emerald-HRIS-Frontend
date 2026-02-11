@@ -6,10 +6,30 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Progress } from "@/components/ui/progress"
+import { Badge } from "@/components/ui/badge"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast"
 import apiService, { Employee } from "@/lib/api"
 import { DEPARTMENTS } from "@/constants/departments"
-import { Download, Trash2, Upload, Loader2 } from "lucide-react"
+import { Download, Trash2, Upload, Loader2, FileText, File } from "lucide-react"
+
+interface EmployeeDocument {
+  type: string
+  filename: string
+  size?: number
+  uploaded_by?: string
+  uploaded_at?: string
+  key: string
+}
 
 interface EmployeeEditDialogProps {
   employee: Employee | null
@@ -22,12 +42,30 @@ export function EmployeeEditDialog({ employee, open, onOpenChange, onSuccess }: 
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
   const [formData, setFormData] = useState<Partial<Employee>>({})
+  const [documents, setDocuments] = useState<EmployeeDocument[]>([])
+  const [loadingDocs, setLoadingDocs] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<EmployeeDocument | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   useEffect(() => {
     if (employee) {
       setFormData(employee)
+      fetchDocuments()
     }
   }, [employee])
+
+  const fetchDocuments = async () => {
+    if (!employee?.id) return
+    setLoadingDocs(true)
+    try {
+      const response = await apiService.getEmployeeDocuments(employee.id)
+      setDocuments(response.documents || [])
+    } catch (error) {
+      console.error("Failed to fetch documents:", error)
+    } finally {
+      setLoadingDocs(false)
+    }
+  }
 
   const handleSubmit = async () => {
     if (!employee?.id) return
@@ -165,6 +203,7 @@ export function EmployeeEditDialog({ employee, open, onOpenChange, onSuccess }: 
   if (!employee) return null
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -490,32 +529,59 @@ export function EmployeeEditDialog({ employee, open, onOpenChange, onSuccess }: 
               </div>
             </div>
 
-            {/* Supporting Documents Section */}
+            {/* Supporting Documents Section - S3 backed */}
             <div className="border rounded-lg p-4 bg-card">
-              <h3 className="text-base font-semibold mb-2">Supporting Documents</h3>
-              <p className="text-sm text-muted-foreground mb-4">Upload employee documents directly to secure storage.</p>
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-base font-semibold">Supporting Documents</h3>
+                <Badge variant="secondary">{documents.length}</Badge>
+              </div>
+              <p className="text-sm text-muted-foreground mb-4">Upload employee documents directly to secure S3 storage.</p>
               
-              {/* Current Documents List */}
+              {/* Documents List from API */}
               <div className="mb-4">
                 <Label className="text-sm font-medium mb-2 block">Current Documents</Label>
-                {formData.supporting_documents ? (
+                {loadingDocs ? (
+                  <div className="flex items-center justify-center py-6">
+                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                  </div>
+                ) : documents.length > 0 ? (
                   <div className="space-y-2">
-                    {formData.supporting_documents.split(',').filter(Boolean).map((doc, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                        <span className="text-sm font-medium truncate flex-1">{doc.trim()}</span>
-                        <div className="flex gap-2 ml-2">
+                    {documents.map((doc, index) => (
+                      <div key={`${doc.key}-${index}`} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium truncate">{doc.filename}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {doc.type}{doc.size ? ` • ${(doc.size / 1024).toFixed(1)} KB` : ''}{doc.uploaded_at ? ` • ${new Date(doc.uploaded_at).toLocaleDateString()}` : ''}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex gap-1 ml-2 shrink-0">
                           <Button
                             size="sm"
-                            variant="outline"
-                            onClick={() => handleDocumentDownload('supporting_docs', doc.trim())}
+                            variant="ghost"
+                            onClick={async () => {
+                              try {
+                                const { url } = await apiService.getDocumentUrl(employee!.id!, doc.type, true)
+                                const a = document.createElement('a')
+                                a.href = url
+                                a.download = doc.filename
+                                document.body.appendChild(a)
+                                a.click()
+                                document.body.removeChild(a)
+                              } catch {
+                                toast({ title: "Download Failed", description: "Could not download document.", variant: "destructive" })
+                              }
+                            }}
                           >
-                            <Download className="h-4 w-4 mr-1" />
-                            Download
+                            <Download className="h-4 w-4" />
                           </Button>
                           <Button
                             size="sm"
-                            variant="destructive"
-                            onClick={() => handleDocumentRemove('supporting_docs', doc.trim())}
+                            variant="ghost"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => setDeleteTarget(doc)}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -530,16 +596,39 @@ export function EmployeeEditDialog({ employee, open, onOpenChange, onSuccess }: 
                 )}
               </div>
 
-              {/* Upload New Document */}
+              {/* Upload New Documents - multiple files */}
               <div className="border-2 border-dashed rounded-lg p-4">
-                <Label className="text-sm font-medium mb-2 block">Add New Document</Label>
+                <Label className="text-sm font-medium mb-2 block">Add Documents</Label>
                 <div className="flex items-center gap-2">
                   <Input
                     ref={fileInputRef}
                     type="file"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0]
-                      if (file) handleDocumentUpload(file)
+                    multiple
+                    onChange={async (e) => {
+                      const files = e.target.files
+                      if (!files || files.length === 0 || !employee?.id) return
+                      setIsUploading(true)
+                      setUploadProgress(0)
+
+                      for (let i = 0; i < files.length; i++) {
+                        const file = files[i]
+                        if (file.size > 10 * 1024 * 1024) {
+                          toast({ title: "File Too Large", description: `${file.name} exceeds 10MB.`, variant: "destructive" })
+                          continue
+                        }
+                        try {
+                          setUploadProgress(Math.round(((i) / files.length) * 100))
+                          await apiService.uploadDocument(employee.id, 'supporting_docs', file)
+                          toast({ title: "Uploaded", description: `${file.name} uploaded successfully.` })
+                        } catch {
+                          toast({ title: "Upload Failed", description: `Failed to upload ${file.name}.`, variant: "destructive" })
+                        }
+                      }
+                      setUploadProgress(100)
+                      setIsUploading(false)
+                      if (fileInputRef.current) fileInputRef.current.value = ""
+                      await fetchDocuments()
+                      onSuccess()
                     }}
                     accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp"
                     className="flex-1"
@@ -555,7 +644,7 @@ export function EmployeeEditDialog({ employee, open, onOpenChange, onSuccess }: 
                     </p>
                   </div>
                 )}
-                <p className="text-xs text-muted-foreground mt-2">Accepted: PDF, DOC, DOCX, JPG, PNG, WEBP • Max 10MB</p>
+                <p className="text-xs text-muted-foreground mt-2">Select multiple files. Accepted: PDF, DOC, DOCX, JPG, PNG, WEBP • Max 10MB each</p>
               </div>
             </div>
           </TabsContent>
@@ -571,5 +660,42 @@ export function EmployeeEditDialog({ employee, open, onOpenChange, onSuccess }: 
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    {/* Delete Confirmation Dialog */}
+    <AlertDialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete Document</AlertDialogTitle>
+          <AlertDialogDescription>
+            Are you sure you want to delete <strong>{deleteTarget?.filename}</strong>? This action cannot be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={async () => {
+              if (!deleteTarget || !employee?.id) return
+              setIsDeleting(true)
+              try {
+                await apiService.deleteDocument(employee.id, deleteTarget.type, deleteTarget.filename)
+                toast({ title: "Document Deleted", description: `${deleteTarget.filename} has been removed.` })
+                await fetchDocuments()
+                onSuccess()
+              } catch {
+                toast({ title: "Delete Failed", description: "Could not delete document.", variant: "destructive" })
+              } finally {
+                setIsDeleting(false)
+                setDeleteTarget(null)
+              }
+            }}
+            disabled={isDeleting}
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          >
+            {isDeleting ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" />Deleting...</> : "Delete"}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   )
 }

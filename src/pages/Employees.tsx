@@ -1004,17 +1004,28 @@ export default function Employees() {
       contract_duration: "",
       contract_terms: "",
 
-      // Document fields (set to null for now)
+      // Document fields
       ninDocument: null,
       passportPhoto: null,
       certifications: [],
       cv: null,
+      _documents: [],
+      _loadingDocs: true,
     });
 
     // Set the edit system role based on existing user role
     setEditSystemRole("");
 
     setShowEditEmployee(true);
+
+    // Fetch documents from API asynchronously
+    if (employee.id) {
+      apiService.getEmployeeDocuments(employee.id).then(({ documents }) => {
+        setEditEmployee((prev: any) => prev?.id === employee.id ? { ...prev, _documents: documents || [], _loadingDocs: false } : prev);
+      }).catch(() => {
+        setEditEmployee((prev: any) => prev?.id === employee.id ? { ...prev, _loadingDocs: false } : prev);
+      });
+    }
   };
   const handleUpdateEmployee = async () => {
     try {
@@ -1202,41 +1213,57 @@ export default function Employees() {
     });
   };
 
-  const handleDownloadDocuments = (employee: any) => {
-    const documents = employee.supportingDocuments || employee.supporting_documents || [];
-    
-    if (!documents || documents.length === 0) {
-      toast({
-        title: "No Documents",
-        description: `${employee.firstName} ${employee.lastName} has no uploaded documents.`,
-        variant: "destructive",
-      });
+  const handleDownloadDocuments = async (employee: any) => {
+    if (!employee.id) {
+      toast({ title: "Error", description: "Employee ID not found.", variant: "destructive" });
       return;
     }
 
-    // Download each document
-    let downloadCount = 0;
-    documents.forEach((doc: any) => {
-      if (doc.url || doc.data) {
-        const link = document.createElement("a");
-        link.href = doc.url || doc.data;
-        link.download = doc.name || doc.fileName || `document_${downloadCount + 1}`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        downloadCount++;
-      }
-    });
+    try {
+      const { documents } = await apiService.getEmployeeDocuments(employee.id);
 
-    if (downloadCount > 0) {
+      if (!documents || documents.length === 0) {
+        toast({
+          title: "No Documents",
+          description: `${employee.first_name || employee.firstName} ${employee.last_name || employee.lastName} has no uploaded documents.`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      let downloadCount = 0;
+      for (const doc of documents) {
+        try {
+          const { url } = await apiService.getDocumentUrl(employee.id, doc.type, true);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = doc.filename || `document_${downloadCount + 1}`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          downloadCount++;
+        } catch (err) {
+          console.error(`Failed to download ${doc.filename}:`, err);
+        }
+      }
+
+      if (downloadCount > 0) {
+        toast({
+          title: "Documents Downloaded",
+          description: `Downloaded ${downloadCount} document(s).`,
+        });
+      } else {
+        toast({
+          title: "Download Failed",
+          description: "Could not download any documents.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Failed to fetch documents:", error);
       toast({
-        title: "Documents Downloaded",
-        description: `Downloaded ${downloadCount} document(s) for ${employee.firstName} ${employee.lastName}.`,
-      });
-    } else {
-      toast({
-        title: "Download Failed",
-        description: "Could not download documents. Files may not be available.",
+        title: "Error",
+        description: "Failed to retrieve documents from storage.",
         variant: "destructive",
       });
     }
@@ -3780,34 +3807,42 @@ export default function Employees() {
                 </TabsContent>
 
                 <TabsContent value="additional" className="space-y-4">
-                  {/* Supporting Documents Section */}
+                  {/* Supporting Documents Section - S3 backed */}
                   <div className="border rounded-lg p-4 bg-card">
                     <h3 className="text-base font-semibold mb-2">Supporting Documents</h3>
                     <p className="text-sm text-muted-foreground mb-4">Upload employee documents such as certificates, contracts, or ID copies.</p>
                     
-                    {/* Current Documents List */}
+                    {/* Loaded Documents from API */}
                     <div className="mb-4">
                       <Label className="text-sm font-medium mb-2 block">Current Documents</Label>
-                      {editEmployee.supporting_documents ? (
+                      {editEmployee._loadingDocs ? (
+                        <div className="p-4 text-center text-sm text-muted-foreground">Loading documents...</div>
+                      ) : editEmployee._documents && editEmployee._documents.length > 0 ? (
                         <div className="space-y-2">
-                          {editEmployee.supporting_documents.split(',').filter(Boolean).map((doc: string, index: number) => (
-                            <div key={index} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                              <span className="text-sm font-medium truncate flex-1">{doc.trim()}</span>
+                          {editEmployee._documents.map((doc: any, index: number) => (
+                            <div key={`${doc.key}-${index}`} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                              <div className="min-w-0 flex-1">
+                                <p className="text-sm font-medium truncate">{doc.filename}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {doc.type} {doc.size ? `• ${(doc.size / 1024).toFixed(1)} KB` : ''} {doc.uploaded_at ? `• ${new Date(doc.uploaded_at).toLocaleDateString()}` : ''}
+                                </p>
+                              </div>
                               <div className="flex gap-2 ml-2">
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  onClick={() => {
-                                    const a = document.createElement('a');
-                                    a.href = doc.trim();
-                                    a.download = doc.trim();
-                                    document.body.appendChild(a);
-                                    a.click();
-                                    document.body.removeChild(a);
-                                    toast({
-                                      title: "Download Started",
-                                      description: `Downloading ${doc.trim()}`
-                                    });
+                                  onClick={async () => {
+                                    try {
+                                      const { url } = await apiService.getDocumentUrl(editEmployee.id, doc.type, true);
+                                      const a = document.createElement('a');
+                                      a.href = url;
+                                      a.download = doc.filename;
+                                      document.body.appendChild(a);
+                                      a.click();
+                                      document.body.removeChild(a);
+                                    } catch (err) {
+                                      toast({ title: "Download Failed", description: "Could not download document.", variant: "destructive" });
+                                    }
                                   }}
                                 >
                                   <Download className="h-4 w-4 mr-1" />
@@ -3816,16 +3851,16 @@ export default function Employees() {
                                 <Button
                                   size="sm"
                                   variant="destructive"
-                                  onClick={() => {
-                                    const docs = editEmployee.supporting_documents?.split(',').filter((d: string) => d.trim() !== doc.trim()).join(',');
-                                    setEditEmployee({
-                                      ...editEmployee,
-                                      supporting_documents: docs || null
-                                    });
-                                    toast({
-                                      title: "Document Removed",
-                                      description: "Document will be removed when you save."
-                                    });
+                                  onClick={async () => {
+                                    try {
+                                      await apiService.deleteDocument(editEmployee.id, doc.type, doc.filename);
+                                      toast({ title: "Document Deleted", description: `${doc.filename} has been removed.` });
+                                      // Refresh docs list
+                                      const { documents } = await apiService.getEmployeeDocuments(editEmployee.id);
+                                      setEditEmployee((prev: any) => ({ ...prev, _documents: documents || [] }));
+                                    } catch (err) {
+                                      toast({ title: "Delete Failed", description: "Could not delete document.", variant: "destructive" });
+                                    }
                                   }}
                                 >
                                   <Trash2 className="h-4 w-4" />
@@ -3841,36 +3876,44 @@ export default function Employees() {
                       )}
                     </div>
 
-                    {/* Upload New Document */}
+                    {/* Upload New Documents - multiple */}
                     <div className="border-2 border-dashed rounded-lg p-4">
-                      <Label className="text-sm font-medium mb-2 block">Add New Document</Label>
+                      <Label className="text-sm font-medium mb-2 block">Add Documents</Label>
                       <div className="flex items-center gap-2">
                         <Input
                           type="file"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) {
-                              const currentDocs = editEmployee.supporting_documents || '';
-                              const newDocs = currentDocs ? `${currentDocs},${file.name}` : file.name;
-                              setEditEmployee({
-                                ...editEmployee,
-                                supporting_documents: newDocs
-                              });
-                              toast({
-                                title: "Document Added",
-                                description: `${file.name} will be uploaded when you save.`
-                              });
+                          multiple
+                          onChange={async (e) => {
+                            const files = e.target.files;
+                            if (!files || files.length === 0 || !editEmployee.id) return;
+                            
+                            for (let i = 0; i < files.length; i++) {
+                              const file = files[i];
+                              if (file.size > 10 * 1024 * 1024) {
+                                toast({ title: "File Too Large", description: `${file.name} exceeds 10MB limit.`, variant: "destructive" });
+                                continue;
+                              }
+                              try {
+                                toast({ title: "Uploading...", description: `Uploading ${file.name} (${i + 1}/${files.length})` });
+                                await apiService.uploadDocument(editEmployee.id, 'supporting_docs', file);
+                                toast({ title: "Uploaded", description: `${file.name} uploaded successfully.` });
+                              } catch (err) {
+                                console.error('Upload failed:', err);
+                                toast({ title: "Upload Failed", description: `Failed to upload ${file.name}.`, variant: "destructive" });
+                              }
                             }
+                            // Refresh docs list
+                            try {
+                              const { documents } = await apiService.getEmployeeDocuments(editEmployee.id);
+                              setEditEmployee((prev: any) => ({ ...prev, _documents: documents || [] }));
+                            } catch (err) { /* ignore */ }
+                            e.target.value = '';
                           }}
-                          accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                          accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp"
                           className="flex-1"
                         />
-                        <Button size="sm" variant="outline" type="button">
-                          <Upload className="h-4 w-4 mr-1" />
-                          Upload
-                        </Button>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-2">Accepted formats: PDF, DOC, DOCX, JPG, PNG</p>
+                      <p className="text-xs text-muted-foreground mt-2">Select multiple files. Accepted: PDF, DOC, DOCX, JPG, PNG, WEBP • Max 10MB each</p>
                     </div>
                   </div>
 

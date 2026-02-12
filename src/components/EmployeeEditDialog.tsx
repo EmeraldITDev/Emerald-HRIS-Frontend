@@ -54,15 +54,21 @@ export function EmployeeEditDialog({ employee, open, onOpenChange, onSuccess }: 
     }
   }, [employee])
 
+  const [docsFetchError, setDocsFetchError] = useState<string | null>(null)
+
   const fetchDocuments = async () => {
     if (!employee?.id) return
     setLoadingDocs(true)
+    setDocsFetchError(null)
     try {
+      console.log(`[EditDialog] Fetching documents for employee ${employee.id}...`)
       const response = await apiService.getEmployeeDocuments(employee.id)
+      console.log(`[EditDialog] Documents response:`, response)
       setDocuments(response.documents || [])
     } catch (error: any) {
-      console.error("Failed to fetch documents:", error)
-      // Gracefully handle 404 - employee may have no documents
+      const errMsg = error instanceof Error ? error.message : String(error)
+      console.error(`[EditDialog] ❌ Failed to fetch documents for employee ${employee.id}:`, errMsg, error)
+      setDocsFetchError(errMsg)
       setDocuments([])
     } finally {
       setLoadingDocs(false)
@@ -547,7 +553,17 @@ export function EmployeeEditDialog({ employee, open, onOpenChange, onSuccess }: 
                   <div className="flex items-center justify-center py-6">
                     <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                   </div>
-                ) : documents.length > 0 ? (
+              ) : docsFetchError ? (
+                  <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+                    <p className="text-sm font-medium text-destructive">Failed to load documents</p>
+                    <p className="text-xs text-muted-foreground mt-1">Backend error: {docsFetchError}</p>
+                    <p className="text-xs text-muted-foreground mt-1">Documents may exist in S3 but the listing endpoint returned an error. Check the backend logs.</p>
+                    <Button variant="outline" size="sm" className="mt-2" onClick={fetchDocuments}>
+                      <Loader2 className={`h-3 w-3 mr-1 ${loadingDocs ? 'animate-spin' : ''}`} />
+                      Retry
+                    </Button>
+                  </div>
+              ) : documents.length > 0 ? (
                   <div className="space-y-2">
                     {documents.map((doc, index) => (
                       <div key={`${doc.key}-${index}`} className="flex items-center justify-between p-3 bg-muted rounded-lg">

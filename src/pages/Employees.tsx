@@ -1249,10 +1249,18 @@ export default function Employees() {
     try {
       let documents: any[] = [];
       try {
+        console.log(`[DownloadDocs] Fetching documents for employee ${employee.id}...`);
         const response = await apiService.getEmployeeDocuments(employee.id);
+        console.log(`[DownloadDocs] Documents response:`, response);
         documents = response.documents || [];
-      } catch {
-        // Endpoint may return 404 for employees with no documents
+      } catch (listErr: any) {
+        const errMsg = listErr instanceof Error ? listErr.message : String(listErr);
+        console.error(`[DownloadDocs] ❌ Failed to list documents for employee ${employee.id}:`, errMsg, listErr);
+        toast({
+          title: "Cannot List Documents",
+          description: `The backend document listing endpoint returned an error: ${errMsg}. Check console for details.`,
+          variant: "destructive",
+        });
         documents = [];
       }
 

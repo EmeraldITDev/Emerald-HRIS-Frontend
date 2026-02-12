@@ -583,14 +583,17 @@ export function EmployeeEditDialog({ employee, open, onOpenChange, onSuccess }: 
                             onClick={async () => {
                               try {
                                 const { url } = await apiService.getDocumentUrl(employee!.id!, doc.type, true)
+                                console.log(`[EditDialog] Got download URL for type="${doc.type}":`, url?.substring(0, 100))
                                 const a = document.createElement('a')
                                 a.href = url
                                 a.download = doc.filename
                                 document.body.appendChild(a)
                                 a.click()
                                 document.body.removeChild(a)
-                              } catch {
-                                toast({ title: "Download Failed", description: "Could not download document.", variant: "destructive" })
+                              } catch (err: any) {
+                                const errMsg = err instanceof Error ? err.message : String(err)
+                                console.error(`[EditDialog] ❌ Download failed for type="${doc.type}":`, errMsg, err)
+                                toast({ title: "Download Failed", description: `Could not download: ${errMsg}`, variant: "destructive" })
                               }
                             }}
                           >
@@ -701,8 +704,10 @@ export function EmployeeEditDialog({ employee, open, onOpenChange, onSuccess }: 
                 toast({ title: "Document Deleted", description: `${deleteTarget.filename} has been removed.` })
                 await fetchDocuments()
                 onSuccess()
-              } catch {
-                toast({ title: "Delete Failed", description: "Could not delete document.", variant: "destructive" })
+              } catch (err: any) {
+                const errMsg = err instanceof Error ? err.message : String(err)
+                console.error(`[EditDialog] ❌ Delete failed:`, errMsg, err)
+                toast({ title: "Delete Failed", description: `Could not delete: ${errMsg}`, variant: "destructive" })
               } finally {
                 setIsDeleting(false)
                 setDeleteTarget(null)

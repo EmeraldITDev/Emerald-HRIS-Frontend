@@ -3885,15 +3885,19 @@ export default function Employees() {
                                   variant="outline"
                                   onClick={async () => {
                                     try {
+                                      console.log(`[Docs] Downloading doc type="${doc.type}" filename="${doc.filename}" for employee ${editEmployee.id}`);
                                       const { url } = await apiService.getDocumentUrl(editEmployee.id, doc.type, true);
+                                      console.log(`[Docs] Got presigned URL for download:`, url?.substring(0, 100));
                                       const a = document.createElement('a');
                                       a.href = url;
                                       a.download = doc.filename;
                                       document.body.appendChild(a);
                                       a.click();
                                       document.body.removeChild(a);
-                                    } catch (err) {
-                                      toast({ title: "Download Failed", description: "Could not download document.", variant: "destructive" });
+                                    } catch (err: any) {
+                                      const errMsg = err instanceof Error ? err.message : String(err);
+                                      console.error(`[Docs] ❌ Download failed for type="${doc.type}":`, errMsg, err);
+                                      toast({ title: "Download Failed", description: `Could not download document: ${errMsg}`, variant: "destructive" });
                                     }
                                   }}
                                 >
@@ -3905,13 +3909,16 @@ export default function Employees() {
                                   variant="destructive"
                                   onClick={async () => {
                                     try {
+                                      console.log(`[Docs] Deleting doc type="${doc.type}" filename="${doc.filename}" for employee ${editEmployee.id}`);
                                       await apiService.deleteDocument(editEmployee.id, doc.type, doc.filename);
                                       toast({ title: "Document Deleted", description: `${doc.filename} has been removed.` });
                                       // Refresh docs list
                                       const { documents } = await apiService.getEmployeeDocuments(editEmployee.id);
                                       setEditEmployee((prev: any) => ({ ...prev, _documents: documents || [] }));
-                                    } catch (err) {
-                                      toast({ title: "Delete Failed", description: "Could not delete document.", variant: "destructive" });
+                                    } catch (err: any) {
+                                      const errMsg = err instanceof Error ? err.message : String(err);
+                                      console.error(`[Docs] ❌ Delete failed for type="${doc.type}":`, errMsg, err);
+                                      toast({ title: "Delete Failed", description: `Could not delete document: ${errMsg}`, variant: "destructive" });
                                     }
                                   }}
                                 >

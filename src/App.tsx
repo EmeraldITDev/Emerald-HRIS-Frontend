@@ -23,7 +23,7 @@ import Security from "./pages/Security";
 import Announcements from "./pages/Announcements";
 import Policies from "./pages/Policies";
 import MyProfile from "./pages/MyProfile";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { getUsers } from "./api";
 import { PasswordChangeModal } from "./components/PasswordChangeModal";
 

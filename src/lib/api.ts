@@ -285,7 +285,20 @@ class ApiService {
       if (!response.ok) {
         const errorText = await response.text();
         console.error('❌ API Error Response:', errorText);
-        throw new Error(`HTTP error! status: ${response.status}`);
+        // Try to parse the error body to get a meaningful message
+        let errorMessage = `HTTP error! status: ${response.status}`;
+        try {
+          const errorJson = JSON.parse(errorText);
+          if (errorJson.message) errorMessage = errorJson.message;
+          else if (errorJson.error) errorMessage = errorJson.error;
+          else if (errorJson.errors) {
+            const fieldErrors = Object.entries(errorJson.errors)
+              .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
+              .join('; ');
+            errorMessage = fieldErrors || errorMessage;
+          }
+        } catch {}
+        throw new Error(errorMessage);
       }
       
       const data = await response.json();

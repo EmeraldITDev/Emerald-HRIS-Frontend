@@ -703,7 +703,8 @@ export default function Employees() {
             lastEmployeeName = `${row.data["First Name"] || ""} ${row.data["Last Name"] || ""}`.trim();
           }
         } catch (rowError) {
-          console.error(`Failed to import row ${row.rowNumber}:`, rowError);
+          const msg = rowError instanceof Error ? rowError.message : String(rowError);
+          console.error(`❌ Row ${row.rowNumber} skipped — backend error: ${msg}`);
           errorCount++;
         }
       }

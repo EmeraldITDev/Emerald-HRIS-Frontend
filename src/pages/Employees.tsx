@@ -578,22 +578,38 @@ export default function Employees() {
     try {
       setImportFileName(file.name);
 
+      // Read file text first so we can strip comment lines before parsing
+      const fileText = await file.text();
+
+      // Strip lines beginning with '#' (template instruction comments)
+      const cleanedLines = fileText
+        .split("\n")
+        .filter((line) => !line.trimStart().startsWith("#"));
+      const cleanedText = cleanedLines.join("\n");
+
       // Parse CSV and validate
-      Papa.parse(file, {
+      Papa.parse(cleanedText, {
         header: true,
         skipEmptyLines: true,
         complete: (results) => {
-          // Filter out instruction rows (rows starting with # or containing REQUIRED/CHOOSE/FORMAT)
-          const dataRows = results.data.filter((row: any) => {
-            const firstValue = Object.values(row)[0] as string;
-            if (!firstValue) return false;
-            if (firstValue.startsWith("#")) return false;
-            if (firstValue.includes("REQUIRED") || firstValue.includes("CHOOSE") || firstValue.includes("FORMAT"))
-              return false;
+          // Filter out instruction/example rows (rows containing REQUIRED, CHOOSE, FORMAT, or * markers)
+          const dataRows = (results.data as Record<string, string>[]).filter((row) => {
+            const values = Object.values(row);
+            const firstValue = values[0] ?? "";
+            if (firstValue.trim().startsWith("*")) return false;
+            if (values.some((v) => typeof v === "string" && (
+              v.includes("REQUIRED") || v.includes("CHOOSE") || v.includes("FORMAT") || v.startsWith("[")
+            ))) return false;
+            // Skip rows where all values are empty
+            if (values.every((v) => !v || v.trim() === "")) return false;
             return true;
           });
 
-          const validationResult = validateCSVData(dataRows as Record<string, string>[]);
+          // Log headers for debugging
+          console.log("📋 CSV Headers detected:", results.meta.fields);
+          console.log("📊 Filtered data rows:", dataRows.length, dataRows[0]);
+
+          const validationResult = validateCSVData(dataRows);
           setValidationResult(validationResult);
           setShowValidationPreview(true);
         },
@@ -712,6 +728,19 @@ export default function Employees() {
             system_role: getRoleValue(getField("Role", "System Role")) || "general_employee",
           };
 
+          // Guard: skip rows missing required fields
+          if (!employeeData.email || !employeeData.first_name || !employeeData.last_name) {
+            console.error(`❌ Row ${row.rowNumber} skipped — missing required fields:`, {
+              email: employeeData.email,
+              first_name: employeeData.first_name,
+              last_name: employeeData.last_name,
+              availableKeys: Object.keys(row.data),
+            });
+            errorCount++;
+            continue;
+          }
+
+          console.log(`📤 Sending row ${row.rowNumber} payload:`, JSON.stringify(employeeData, null, 2));
           const response = await apiService.createEmployee(employeeData);
           successCount++;
 

@@ -18,7 +18,7 @@ export const ALLOWED_VALUES = {
      'Wema Bank', 'Wema Bank PLC', 'Keystone Bank', 'Keystone Bank PLC',
      'Heritage Bank', 'Heritage Bank PLC', 'Jaiz Bank', 'Providus Bank', 'Titan Trust Bank'
   ],
-   probationPeriod: ['0', '3', '6', '9', '12', '0 months', '3 months', '6 months', '9 months', '12 months'],
+   probationPeriod: ['3', '6', '9', '12', '3 months', '6 months', '9 months', '12 months'],
   systemRole: ['executive', 'hr_manager', 'corporate_hr', 'line_manager', 'finance', 'it_power_user', 'contract_employee', 'general_employee']
 } as const;
 

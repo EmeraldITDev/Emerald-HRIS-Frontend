@@ -44,7 +44,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { parseCSVFile, formatDataForPHP, type EmployeeData } from "@/utils/csvImport";
-import { downloadCSVTemplate, downloadTemplateGuide, ALLOWED_VALUES } from "@/utils/csvTemplate";
+import { downloadCSVTemplate, downloadTemplateGuide } from "@/utils/csvTemplate";
 import { validateCSVData, CSVValidationResult, ValidatedRow, getRoleValue } from "@/utils/csvValidation";
 import { CSVValidationPreview } from "@/components/CSVValidationPreview";
 import Papa from "papaparse";
@@ -459,7 +459,7 @@ export default function Employees() {
 
   // Calculate confirmation date based on hire date and probation period
   const calculateConfirmationDate = (hireDate: Date | undefined, probationMonths: string) => {
-    if (!hireDate || probationMonths === undefined || probationMonths === null || probationMonths === "") return undefined;
+    if (!hireDate || !probationMonths) return undefined;
 
     const months = parseInt(probationMonths);
     if (isNaN(months)) return undefined;
@@ -529,7 +529,7 @@ export default function Employees() {
       if (!newEmployee.supervisorName.trim()) errors.supervisorName = true;
       if (!newEmployee.workLocation.trim()) errors.workLocation = true;
       if (!newEmployee.hireDate) errors.hireDate = true;
-      if (newEmployee.probationPeriod === "" || newEmployee.probationPeriod === undefined) errors.probationPeriod = true;
+      if (!newEmployee.probationPeriod.trim()) errors.probationPeriod = true;
     } else if (tab === "government") {
       if (!newEmployee.nationalId.trim()) errors.nationalId = true;
       // Passport Number is now optional
@@ -578,38 +578,22 @@ export default function Employees() {
     try {
       setImportFileName(file.name);
 
-      // Read file text first so we can strip comment lines before parsing
-      const fileText = await file.text();
-
-      // Strip lines beginning with '#' (template instruction comments)
-      const cleanedLines = fileText
-        .split("\n")
-        .filter((line) => !line.trimStart().startsWith("#"));
-      const cleanedText = cleanedLines.join("\n");
-
       // Parse CSV and validate
-      Papa.parse(cleanedText, {
+      Papa.parse(file, {
         header: true,
         skipEmptyLines: true,
         complete: (results) => {
-          // Filter out instruction/example rows (rows containing REQUIRED, CHOOSE, FORMAT, or * markers)
-          const dataRows = (results.data as Record<string, string>[]).filter((row) => {
-            const values = Object.values(row);
-            const firstValue = values[0] ?? "";
-            if (firstValue.trim().startsWith("*")) return false;
-            if (values.some((v) => typeof v === "string" && (
-              v.includes("REQUIRED") || v.includes("CHOOSE") || v.includes("FORMAT") || v.startsWith("[")
-            ))) return false;
-            // Skip rows where all values are empty
-            if (values.every((v) => !v || v.trim() === "")) return false;
+          // Filter out instruction rows (rows starting with # or containing REQUIRED/CHOOSE/FORMAT)
+          const dataRows = results.data.filter((row: any) => {
+            const firstValue = Object.values(row)[0] as string;
+            if (!firstValue) return false;
+            if (firstValue.startsWith("#")) return false;
+            if (firstValue.includes("REQUIRED") || firstValue.includes("CHOOSE") || firstValue.includes("FORMAT"))
+              return false;
             return true;
           });
 
-          // Log headers for debugging
-          console.log("📋 CSV Headers detected:", results.meta.fields);
-          console.log("📊 Filtered data rows:", dataRows.length, dataRows[0]);
-
-          const validationResult = validateCSVData(dataRows);
+          const validationResult = validateCSVData(dataRows as Record<string, string>[]);
           setValidationResult(validationResult);
           setShowValidationPreview(true);
         },
@@ -647,13 +631,6 @@ export default function Employees() {
     return null;
   };
 
-  // Normalize a CSV field value to correct casing from allowed values (case-smart)
-  const normalizeCsvField = (value: string, allowedValues: string[]): string => {
-    if (!value || value.trim() === '') return value;
-    const match = allowedValues.find(v => v.toLowerCase() === value.trim().toLowerCase());
-    return match ?? value;
-  };
-
   const handleConfirmImport = async (validRows: ValidatedRow[]) => {
     try {
       let successCount = 0;
@@ -663,91 +640,67 @@ export default function Employees() {
 
       for (const row of validRows) {
         try {
-          // Case-insensitive field lookup — handles header casing variations in user CSVs
-          const getField = (...keys: string[]): string => {
-            for (const key of keys) {
-              const match = Object.keys(row.data).find(
-                k => k.trim().toLowerCase() === key.trim().toLowerCase()
-              );
-              if (match && row.data[match]) return row.data[match];
-            }
-            return "";
-          };
-
           // Map CSV fields to API payload - using the same structure as handleAddEmployee
           const employeeData = {
-            first_name: getField("First Name"),
-            last_name: getField("Last Name"),
-            middle_name: getField("Middle Name"),
-            email: getField("Email Address", "Email"),
-            dob: convertDateFormat(getField("Date of Birth")),
-            job_title: getField("Job Title"),
-            gross_salary: parseInt(getField("Gross Salary").replace(/[₦,]/g, "") || "0") || 0,
-            department: normalizeCsvField(getField("Department"), [...DEPARTMENTS]),
-            employment_type: normalizeCsvField(getField("Employment Type"), [...ALLOWED_VALUES.employmentType]),
-            employment_status: normalizeCsvField(getField("Employment Status") || "Active", [...ALLOWED_VALUES.employmentStatus]),
-            hire_date: convertDateFormat(getField("Hire Date")) || new Date().toISOString().split("T")[0],
-            phone: getField("Phone Number", "Phone"),
-            address: getField("Home Address", "Address"),
-            gender: normalizeCsvField(getField("Gender"), [...ALLOWED_VALUES.gender]),
-            marital_status: normalizeCsvField(getField("Marital Status"), [...ALLOWED_VALUES.maritalStatus]),
-            nationality: getField("Nationality"),
-            grade_level: normalizeCsvField(getField("Grade Level"), [...ALLOWED_VALUES.gradeLevel]),
-            supervisor_name: getField("Supervisor Name"),
-            work_location: getField("Work Location"),
-            probation_period: getField("Probation Period (in months)", "Probation Period"),
-            confirmation_date: convertDateFormat(getField("Confirmation Date")),
-            vacation_days: parseInt(getField("Vacation Days (7-30 days)", "Vacation Days") || "20") || 20,
+            first_name: row.data["First Name"] || "",
+            last_name: row.data["Last Name"] || "",
+            middle_name: row.data["Middle Name"] || "",
+            email: row.data["Email Address"] || row.data["Email"] || "",
+            dob: convertDateFormat(row.data["Date of Birth"]),
+            job_title: row.data["Job Title"] || "",
+            gross_salary: parseInt(row.data["Gross Salary"]?.replace(/[₦,]/g, "") || "0") || 0,
+            department: row.data["Department"] || "",
+            employment_type: row.data["Employment Type"] || "",
+            employment_status: row.data["Employment Status"] || "Active",
+            hire_date: convertDateFormat(row.data["Hire Date"]) || new Date().toISOString().split("T")[0],
+            phone: row.data["Phone Number"] || "",
+            address: row.data["Home Address"] || "",
+            gender: row.data["Gender"] || "",
+            marital_status: row.data["Marital Status"] || "",
+            nationality: row.data["Nationality"] || "",
+            grade_level: row.data["Grade Level"] || "",
+            supervisor_name: row.data["Supervisor Name"] || "",
+            work_location: row.data["Work Location"] || "",
+            probation_period: row.data["Probation Period (in months)"] || "",
+            confirmation_date: convertDateFormat(row.data["Confirmation Date"]),
+            vacation_days: parseInt(row.data["Vacation Days (7-30 days)"] || row.data["Vacation Days"] || "20") || 20,
 
             // Emergency contact
-            emergency_contact: getField("Emergency Contact Name"),
-            emergency_phone: getField("Emergency Contact Phone"),
+            emergency_contact: row.data["Emergency Contact Name"] || "",
+            emergency_phone: row.data["Emergency Contact Phone"] || "",
 
             // Next of Kin
-            next_of_kin_name: getField("Next of Kin Name"),
-            next_of_kin_relationship: normalizeCsvField(getField("Next of Kin Relationship"), [...ALLOWED_VALUES.relationship]),
-            next_of_kin_phone: getField("Next of Kin Phone"),
-            next_of_kin_address: getField("Next of Kin Address"),
-            next_of_kin_email: getField("Next of Kin Email"),
+            next_of_kin_name: row.data["Next of Kin Name"] || "",
+            next_of_kin_relationship: row.data["Next of Kin Relationship"] || "",
+            next_of_kin_phone: row.data["Next of Kin Phone"] || "",
+            next_of_kin_address: row.data["Next of Kin Address"] || "",
+            next_of_kin_email: row.data["Next of Kin Email"] || "",
 
             // Banking Information
-            bank_name: getField("Bank Name"),
-            account_number: getField("Account Number"),
-            nuban: getField("NUBAN"),
-            sort_code: getField("Sort Code"),
+            bank_name: row.data["Bank Name"] || "",
+            account_number: row.data["Account Number"] || "",
+            nuban: row.data["NUBAN"] || "",
+            sort_code: row.data["Sort Code"] || "",
 
             // Government IDs
-            national_id: getField("National ID (NIN)", "National ID"),
-            passport_number: getField("Passport Number"),
-            bvn: getField("BVN"),
-            tin: getField("Tax Identification Number (TIN)", "TIN"),
-            pension_pin: getField("Pension PIN"),
-            nhf_number: getField("NHF Number"),
+            national_id: row.data["National ID (NIN)"] || "",
+            passport_number: row.data["Passport Number"] || "",
+            bvn: row.data["BVN"] || "",
+            tin: row.data["Tax Identification Number (TIN)"] || row.data["TIN"] || "",
+            pension_pin: row.data["Pension PIN"] || "",
+            nhf_number: row.data["NHF Number"] || "",
 
             // System Role - convert label to value (e.g., "Finance Manager" -> "finance_manager")
-            system_role: getRoleValue(getField("Role", "System Role")) || "general_employee",
+            system_role: getRoleValue(row.data["Role"] || row.data["System Role"] || "") || "general_employee",
           };
 
-          // Guard: skip rows missing required fields
-          if (!employeeData.email || !employeeData.first_name || !employeeData.last_name) {
-            console.error(`❌ Row ${row.rowNumber} skipped — missing required fields:`, {
-              email: employeeData.email,
-              first_name: employeeData.first_name,
-              last_name: employeeData.last_name,
-              availableKeys: Object.keys(row.data),
-            });
-            errorCount++;
-            continue;
-          }
-
-          console.log(`📤 Sending row ${row.rowNumber} payload:`, JSON.stringify(employeeData, null, 2));
           const response = await apiService.createEmployee(employeeData);
           successCount++;
 
           // Store last credentials to show to HR
           if (response.user_credentials) {
             lastCredentials = response.user_credentials;
-            lastEmployeeName = `${employeeData.first_name} ${employeeData.last_name}`.trim();
+            lastEmployeeName = `${row.data["First Name"] || ""} ${row.data["Last Name"] || ""}`.trim();
           }
         } catch (rowError) {
           console.error(`Failed to import row ${row.rowNumber}:`, rowError);
@@ -2057,7 +2010,6 @@ export default function Employees() {
                             <SelectValue placeholder="Select probation period" />
                           </SelectTrigger>
                           <SelectContent className="bg-popover border shadow-lg">
-                            <SelectItem value="0">0 months (No Probation)</SelectItem>
                             <SelectItem value="1">1 month</SelectItem>
                             <SelectItem value="2">2 months</SelectItem>
                             <SelectItem value="3">3 months</SelectItem>

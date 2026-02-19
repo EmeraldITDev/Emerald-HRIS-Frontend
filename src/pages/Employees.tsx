@@ -459,7 +459,7 @@ export default function Employees() {
 
   // Calculate confirmation date based on hire date and probation period
   const calculateConfirmationDate = (hireDate: Date | undefined, probationMonths: string) => {
-    if (!hireDate || !probationMonths) return undefined;
+    if (!hireDate || probationMonths === undefined || probationMonths === null || probationMonths === "") return undefined;
 
     const months = parseInt(probationMonths);
     if (isNaN(months)) return undefined;
@@ -529,7 +529,7 @@ export default function Employees() {
       if (!newEmployee.supervisorName.trim()) errors.supervisorName = true;
       if (!newEmployee.workLocation.trim()) errors.workLocation = true;
       if (!newEmployee.hireDate) errors.hireDate = true;
-      if (!newEmployee.probationPeriod.trim()) errors.probationPeriod = true;
+      if (newEmployee.probationPeriod === "" || newEmployee.probationPeriod === undefined) errors.probationPeriod = true;
     } else if (tab === "government") {
       if (!newEmployee.nationalId.trim()) errors.nationalId = true;
       // Passport Number is now optional
@@ -2017,6 +2017,7 @@ export default function Employees() {
                             <SelectValue placeholder="Select probation period" />
                           </SelectTrigger>
                           <SelectContent className="bg-popover border shadow-lg">
+                            <SelectItem value="0">0 months (No Probation)</SelectItem>
                             <SelectItem value="1">1 month</SelectItem>
                             <SelectItem value="2">2 months</SelectItem>
                             <SelectItem value="3">3 months</SelectItem>

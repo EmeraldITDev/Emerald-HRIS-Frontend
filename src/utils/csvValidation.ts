@@ -36,7 +36,7 @@ const fieldValidationMap: Record<string, readonly string[] | string[]> = {
   'next of kin relationship': ALLOWED_VALUES.relationship,
   'bank name': ALLOWED_VALUES.bankNames,
   'department': [...DEPARTMENTS],
-  'probation period (in months)': ALLOWED_VALUES.probationPeriod,
+  'probation period (in months)': [...ALLOWED_VALUES.probationPeriod],
 };
 
 // Role label to value mapping (accepts both label and value)

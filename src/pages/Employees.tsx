@@ -44,7 +44,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { parseCSVFile, formatDataForPHP, type EmployeeData } from "@/utils/csvImport";
-import { downloadCSVTemplate, downloadTemplateGuide } from "@/utils/csvTemplate";
+import { downloadCSVTemplate, downloadTemplateGuide, ALLOWED_VALUES } from "@/utils/csvTemplate";
 import { validateCSVData, CSVValidationResult, ValidatedRow, getRoleValue } from "@/utils/csvValidation";
 import { CSVValidationPreview } from "@/components/CSVValidationPreview";
 import Papa from "papaparse";
@@ -631,6 +631,13 @@ export default function Employees() {
     return null;
   };
 
+  // Normalize a CSV field value to correct casing from allowed values (case-smart)
+  const normalizeCsvField = (value: string, allowedValues: string[]): string => {
+    if (!value || value.trim() === '') return value;
+    const match = allowedValues.find(v => v.toLowerCase() === value.trim().toLowerCase());
+    return match ?? value;
+  };
+
   const handleConfirmImport = async (validRows: ValidatedRow[]) => {
     try {
       let successCount = 0;
@@ -649,16 +656,16 @@ export default function Employees() {
             dob: convertDateFormat(row.data["Date of Birth"]),
             job_title: row.data["Job Title"] || "",
             gross_salary: parseInt(row.data["Gross Salary"]?.replace(/[₦,]/g, "") || "0") || 0,
-            department: row.data["Department"] || "",
-            employment_type: row.data["Employment Type"] || "",
-            employment_status: row.data["Employment Status"] || "Active",
+            department: normalizeCsvField(row.data["Department"] || "", [...DEPARTMENTS]),
+            employment_type: normalizeCsvField(row.data["Employment Type"] || "", [...ALLOWED_VALUES.employmentType]),
+            employment_status: normalizeCsvField(row.data["Employment Status"] || "Active", [...ALLOWED_VALUES.employmentStatus]),
             hire_date: convertDateFormat(row.data["Hire Date"]) || new Date().toISOString().split("T")[0],
             phone: row.data["Phone Number"] || "",
             address: row.data["Home Address"] || "",
-            gender: row.data["Gender"] || "",
-            marital_status: row.data["Marital Status"] || "",
+            gender: normalizeCsvField(row.data["Gender"] || "", [...ALLOWED_VALUES.gender]),
+            marital_status: normalizeCsvField(row.data["Marital Status"] || "", [...ALLOWED_VALUES.maritalStatus]),
             nationality: row.data["Nationality"] || "",
-            grade_level: row.data["Grade Level"] || "",
+            grade_level: normalizeCsvField(row.data["Grade Level"] || "", [...ALLOWED_VALUES.gradeLevel]),
             supervisor_name: row.data["Supervisor Name"] || "",
             work_location: row.data["Work Location"] || "",
             probation_period: row.data["Probation Period (in months)"] || "",
@@ -671,7 +678,7 @@ export default function Employees() {
 
             // Next of Kin
             next_of_kin_name: row.data["Next of Kin Name"] || "",
-            next_of_kin_relationship: row.data["Next of Kin Relationship"] || "",
+            next_of_kin_relationship: normalizeCsvField(row.data["Next of Kin Relationship"] || "", [...ALLOWED_VALUES.relationship]),
             next_of_kin_phone: row.data["Next of Kin Phone"] || "",
             next_of_kin_address: row.data["Next of Kin Address"] || "",
             next_of_kin_email: row.data["Next of Kin Email"] || "",

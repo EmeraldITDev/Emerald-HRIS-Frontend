@@ -36,7 +36,7 @@ const fieldValidationMap: Record<string, readonly string[] | string[]> = {
   'next of kin relationship': ALLOWED_VALUES.relationship,
   'bank name': ALLOWED_VALUES.bankNames,
   'department': [...DEPARTMENTS],
-  'probation period (in months)': [...ALLOWED_VALUES.probationPeriod],
+  // probation period is handled specially below — not listed here to avoid duplicate errors
 };
 
 // Role label to value mapping (accepts both label and value)
@@ -105,6 +105,13 @@ const isValidValue = (value: string, allowedValues: readonly string[] | string[]
   return allowedValues.some(allowed => allowed.toLowerCase() === normalizedValue);
 };
 
+// Check if probation period value is valid — accepts any non-negative integer or "<n> months"
+const isValidProbationPeriod = (value: string): boolean => {
+  if (!value || value.trim() === '') return true;
+  const normalized = value.trim().toLowerCase();
+  return /^\d+(\s*months?)?$/.test(normalized);
+};
+
 // Get the correct case version of a value
 export const getCorrectCaseValue = (value: string, allowedValues: readonly string[] | string[]): string | null => {
   const normalizedValue = value.trim().toLowerCase();
@@ -125,6 +132,21 @@ const validateRow = (rowData: Record<string, string>, rowNumber: number): Valida
   
   Object.entries(rowData).forEach(([header, value]) => {
     const normalizedHeader = normalizeHeader(header);
+
+    // Special validation for probation period — accepts 0 and any non-negative integer
+    if (normalizedHeader === 'probation period (in months)') {
+      if (value && value.trim() !== '' && !isValidProbationPeriod(value)) {
+        errors.push({
+          row: rowNumber,
+          column: header,
+          value: value,
+          expectedValues: ['0', '3', '6', '9', '12', '0 months', '3 months', '6 months', '9 months', '12 months'],
+          message: `"${value}" is not a valid option for ${header}. Use a number like 0, 3, 6, 12 or "6 months"`
+        });
+      }
+      return;
+    }
+
     const allowedValues = fieldValidationMap[normalizedHeader];
     
     if (allowedValues && value && value.trim() !== '') {

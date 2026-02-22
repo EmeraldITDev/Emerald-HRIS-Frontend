@@ -640,22 +640,32 @@ export default function Employees() {
 
       for (const row of validRows) {
         try {
-          // Normalize a header string for comparison: lowercase, trim, strip special chars
+          // Normalize a header string for comparison: lowercase, trim, strip all non-alphanumeric
           const normalize = (s: string): string =>
             s.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+
+          // Build a lookup map from normalized keys to original keys (once per row)
+          const dataKeys = Object.keys(row.data);
+          const normalizedKeyMap: Record<string, string> = {};
+          for (const k of dataKeys) {
+            normalizedKeyMap[normalize(k)] = k;
+          }
 
           // Case-insensitive, whitespace/special-char-tolerant field lookup helper
           const getField = (keys: string[]): string => {
             for (const key of keys) {
-              const normalizedKey = normalize(key);
-              const match = Object.keys(row.data).find(k => normalize(k) === normalizedKey);
-              if (match && row.data[match]?.trim()) return row.data[match].trim();
+              const nk = normalize(key);
+              const originalKey = normalizedKeyMap[nk];
+              if (originalKey && row.data[originalKey]?.trim()) {
+                return row.data[originalKey].trim();
+              }
             }
             return "";
           };
 
-          console.log("📋 Row data keys:", Object.keys(row.data));
-          console.log("📋 Row data values:", row.data);
+          console.log("📋 Row data keys:", dataKeys);
+          console.log("📋 Normalized key map:", normalizedKeyMap);
+          console.log("📋 Raw row.data:", JSON.stringify(row.data));
 
           // Map CSV fields to API payload - using the same structure as handleAddEmployee
           const employeeData = {
@@ -711,7 +721,28 @@ export default function Employees() {
             system_role: getRoleValue(getField(["Role", "System Role"])) || "general_employee",
           };
 
+          // Pre-send validation: log and skip if critical fields are empty
+          const missingFields = [];
+          if (!employeeData.first_name) missingFields.push('first_name');
+          if (!employeeData.last_name) missingFields.push('last_name');
+          if (!employeeData.email) missingFields.push('email');
+          if (!employeeData.job_title) missingFields.push('job_title');
+          
           console.log("📋 Mapped employeeData being sent:", JSON.stringify(employeeData, null, 2));
+          
+          if (missingFields.length > 0) {
+            console.error("❌ MISSING REQUIRED FIELDS:", missingFields.join(', '));
+            console.error("❌ Available row.data keys:", Object.keys(row.data));
+            console.error("❌ row.data values:", JSON.stringify(row.data));
+            errorCount++;
+            toast({
+              title: `Row ${row.rowNumber} Skipped`,
+              description: `Missing fields: ${missingFields.join(', ')}. Check console for debug info.`,
+              variant: "destructive",
+            });
+            continue;
+          }
+
           const response = await apiService.createEmployee(employeeData);
           successCount++;
 

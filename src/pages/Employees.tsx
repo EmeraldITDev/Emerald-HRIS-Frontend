@@ -640,58 +640,69 @@ export default function Employees() {
 
       for (const row of validRows) {
         try {
+          // Case-insensitive field lookup helper
+          const getField = (keys: string[]): string => {
+            for (const key of keys) {
+              const match = Object.keys(row.data).find(k => k.trim().toLowerCase() === key.toLowerCase());
+              if (match && row.data[match]?.trim()) return row.data[match].trim();
+            }
+            return "";
+          };
+
+          console.log("📋 Row data keys:", Object.keys(row.data));
+
           // Map CSV fields to API payload - using the same structure as handleAddEmployee
           const employeeData = {
-            first_name: row.data["First Name"] || "",
-            last_name: row.data["Last Name"] || "",
-            middle_name: row.data["Middle Name"] || "",
-            email: row.data["Email Address"] || row.data["Email"] || "",
-            dob: convertDateFormat(row.data["Date of Birth"]),
-            job_title: row.data["Job Title"] || "",
-            gross_salary: parseInt(row.data["Gross Salary"]?.replace(/[₦,]/g, "") || "0") || 0,
-            department: row.data["Department"] || "",
-            employment_type: row.data["Employment Type"] || "",
-            employment_status: row.data["Employment Status"] || "Active",
-            hire_date: convertDateFormat(row.data["Hire Date"]) || new Date().toISOString().split("T")[0],
-            phone: row.data["Phone Number"] || "",
-            address: row.data["Home Address"] || "",
-            gender: row.data["Gender"] || "",
-            marital_status: row.data["Marital Status"] || "",
-            nationality: row.data["Nationality"] || "",
-            grade_level: row.data["Grade Level"] || "",
-            supervisor_name: row.data["Supervisor Name"] || "",
-            work_location: row.data["Work Location"] || "",
-            probation_period: row.data["Probation Period (in months)"] || "",
-            confirmation_date: convertDateFormat(row.data["Confirmation Date"]),
-            vacation_days: parseInt(row.data["Vacation Days (7-30 days)"] || row.data["Vacation Days"] || "20") || 20,
+            first_name: getField(["First Name"]),
+            last_name: getField(["Last Name"]),
+            middle_name: getField(["Middle Name"]),
+            email: getField(["Email Address", "Email"]),
+            dob: convertDateFormat(getField(["Date of Birth"])),
+            job_title: getField(["Job Title"]),
+            gross_salary: parseInt(getField(["Gross Salary"]).replace(/[₦,]/g, "") || "0") || 0,
+            department: getField(["Department"]),
+            employment_type: getField(["Employment Type"]),
+            employment_status: getField(["Employment Status"]) || "Active",
+            hire_date: convertDateFormat(getField(["Hire Date"])) || new Date().toISOString().split("T")[0],
+            phone: getField(["Phone Number", "Phone"]),
+            address: getField(["Home Address", "Address"]),
+            gender: getField(["Gender"]),
+            marital_status: getField(["Marital Status"]),
+            nationality: getField(["Nationality"]),
+            grade_level: getField(["Grade Level"]),
+            supervisor_name: getField(["Supervisor Name"]),
+            work_location: getField(["Work Location"]),
+            probation_period: getField(["Probation Period (in months)", "Probation Period"]),
+            confirmation_date: convertDateFormat(getField(["Confirmation Date"])),
+            vacation_days: parseInt(getField(["Vacation Days (7-30 days)", "Vacation Days"]) || "20") || 20,
 
             // Emergency contact
-            emergency_contact: row.data["Emergency Contact Name"] || "",
-            emergency_phone: row.data["Emergency Contact Phone"] || "",
+            emergency_contact: getField(["Emergency Contact Name"]),
+            emergency_phone: getField(["Emergency Contact Phone"]),
 
             // Next of Kin
-            next_of_kin_name: row.data["Next of Kin Name"] || "",
-            next_of_kin_relationship: row.data["Next of Kin Relationship"] || "",
-            next_of_kin_phone: row.data["Next of Kin Phone"] || "",
-            next_of_kin_address: row.data["Next of Kin Address"] || "",
-            next_of_kin_email: row.data["Next of Kin Email"] || "",
+            next_of_kin_name: getField(["Next of Kin Name"]),
+            next_of_kin_relationship: getField(["Next of Kin Relationship"]),
+            next_of_kin_phone: getField(["Next of Kin Phone"]),
+            next_of_kin_address: getField(["Next of Kin Address"]),
+            next_of_kin_email: getField(["Next of Kin Email"]),
 
             // Banking Information
-            bank_name: row.data["Bank Name"] || "",
-            account_number: row.data["Account Number"] || "",
-            nuban: row.data["NUBAN"] || "",
-            sort_code: row.data["Sort Code"] || "",
+            bank_name: getField(["Bank Name"]),
+            account_number: getField(["Account Number"]),
+            nuban: getField(["NUBAN"]),
+            sort_code: getField(["Sort Code"]),
 
             // Government IDs
-            national_id: row.data["National ID (NIN)"] || "",
-            passport_number: row.data["Passport Number"] || "",
-            bvn: row.data["BVN"] || "",
-            tin: row.data["Tax Identification Number (TIN)"] || row.data["TIN"] || "",
-            pension_pin: row.data["Pension PIN"] || "",
-            nhf_number: row.data["NHF Number"] || "",
+            national_id: getField(["National ID (NIN)", "National ID"]),
+            passport_number: getField(["Passport Number"]),
+            bvn: getField(["BVN"]),
+            tin: getField(["Tax Identification Number (TIN)", "TIN"]),
+            pension_pin: getField(["Pension PIN"]),
+            nhf_number: getField(["NHF Number"]),
 
-            // System Role - convert label to value (e.g., "Finance Manager" -> "finance_manager")
-            system_role: getRoleValue(row.data["Role"] || row.data["System Role"] || "") || "general_employee",
+            // System Role
+            system_role: getRoleValue(getField(["Role", "System Role"])) || "general_employee",
           };
 
           const response = await apiService.createEmployee(employeeData);

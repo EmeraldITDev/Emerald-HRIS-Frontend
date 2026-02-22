@@ -640,16 +640,22 @@ export default function Employees() {
 
       for (const row of validRows) {
         try {
-          // Case-insensitive field lookup helper
+          // Normalize a header string for comparison: lowercase, trim, strip special chars
+          const normalize = (s: string): string =>
+            s.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+
+          // Case-insensitive, whitespace/special-char-tolerant field lookup helper
           const getField = (keys: string[]): string => {
             for (const key of keys) {
-              const match = Object.keys(row.data).find(k => k.trim().toLowerCase() === key.toLowerCase());
+              const normalizedKey = normalize(key);
+              const match = Object.keys(row.data).find(k => normalize(k) === normalizedKey);
               if (match && row.data[match]?.trim()) return row.data[match].trim();
             }
             return "";
           };
 
           console.log("📋 Row data keys:", Object.keys(row.data));
+          console.log("📋 Row data values:", row.data);
 
           // Map CSV fields to API payload - using the same structure as handleAddEmployee
           const employeeData = {
@@ -705,6 +711,7 @@ export default function Employees() {
             system_role: getRoleValue(getField(["Role", "System Role"])) || "general_employee",
           };
 
+          console.log("📋 Mapped employeeData being sent:", JSON.stringify(employeeData, null, 2));
           const response = await apiService.createEmployee(employeeData);
           successCount++;
 

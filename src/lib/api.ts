@@ -54,6 +54,9 @@ export interface Employee {
   supporting_documents?: string;
   performance_history?: string;
   asset_allocation_history?: string;
+  // New compensation source fields (Requirement 7)
+  baseSalary?: number;
+  salaryType?: 'monthly' | 'annual' | 'hourly';
   created_at?: string;
   updated_at?: string;
 }

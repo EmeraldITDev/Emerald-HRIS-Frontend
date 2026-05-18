@@ -1093,8 +1093,9 @@ export default function Employees() {
       _loadingDocs: true,
     });
 
-    // Set the edit system role based on existing user role
-    setEditSystemRole("");
+    // Set the edit system role based on existing user role so the dropdown
+    // reflects the employee's current role instead of appearing empty.
+    setEditSystemRole(employee.user_role || "");
 
     setShowEditEmployee(true);
 

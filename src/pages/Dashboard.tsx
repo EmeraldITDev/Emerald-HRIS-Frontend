@@ -526,6 +526,13 @@ export default function Dashboard() {
   const isTestMode = user?.email === 'bunmi.babajide@emeraldcfze.com'
   
   const handleClockIn = () => {
+    toast({
+      title: "Attendance Module Unavailable",
+      description: "The attendance module is currently under maintenance.",
+      variant: "destructive",
+    })
+    return
+    // eslint-disable-next-line no-unreachable
     if (!user) {
       toast({ title: "Error", description: "No user logged in.", variant: "destructive" })
       return

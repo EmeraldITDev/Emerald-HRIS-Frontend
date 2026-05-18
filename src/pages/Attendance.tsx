@@ -39,6 +39,7 @@ import { RoleBasedComponent } from "@/components/RoleBasedComponent"
 import apiService, { Employee } from "@/lib/api"
 import { getCurrentMonthCelebrations, type Celebration } from "@/utils/celebrations"
 import { CelebrationsCard } from "@/components/CelebrationsCard"
+import { LeaveBalanceCard } from "@/components/LeaveBalanceCard"
 
 // Sample attendance records
 const attendanceRecords = [

@@ -1486,20 +1486,6 @@ export default function Payroll() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="meal_allowance">Meal Allowance</Label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₦</span>
-                    <Input
-                      id="meal_allowance"
-                      type="number"
-                      value={editingValues.meal_allowance || ''}
-                      onChange={(e) => setEditingValues({...editingValues, meal_allowance: e.target.value === '' ? undefined : Number(e.target.value)})}
-                      className="pl-8"
-                      placeholder="Enter amount"
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
                   <Label htmlFor="other_allowance">Other Allowance</Label>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₦</span>

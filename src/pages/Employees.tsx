@@ -2136,7 +2136,7 @@ export default function Employees() {
                           <SelectContent className="bg-popover border shadow-lg">
                             {Array.from(
                               {
-                                length: 24,
+                                length: 14,
                               },
                               (_, i) => i + 7,
                             ).map((days) => (

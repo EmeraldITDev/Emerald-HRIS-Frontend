@@ -852,6 +852,16 @@ export default function Payroll() {
       return
     }
 
+    // Requirement 4: Only Corporate HR or HR Manager may generate payroll
+    if (user?.role !== 'hr_manager' && user?.role !== 'corporate_hr') {
+      toast({
+        title: "Insufficient Permissions",
+        description: "Only Corporate HR or HR Manager can generate payroll.",
+        variant: "destructive"
+      })
+      return
+    }
+
     const selectedEmp = employees.find(emp => emp.id?.toString() === selectedEmployee)
     if (!selectedEmp) return
 

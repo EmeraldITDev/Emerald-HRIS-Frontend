@@ -3096,15 +3096,6 @@ export default function Employees() {
                       </p>
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium text-muted-foreground">Meal Allowance</Label>
-                      <p className="text-base">
-                        ₦{selectedEmployee.financial_details?.meal_allowance?.toLocaleString() || "N/A"}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div className="space-y-2">
                       <Label className="text-sm font-medium text-muted-foreground">Housing Allowance</Label>
                       <p className="text-base">
                         ₦{selectedEmployee.financial_details?.housing_allowance?.toLocaleString() || "N/A"}
@@ -3710,21 +3701,6 @@ export default function Employees() {
                   </div>
 
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="editMealAllowance">Meal Allowance</Label>
-                      <Input
-                        id="editMealAllowance"
-                        type="number"
-                        value={editEmployee.meal_allowance || ""}
-                        onChange={(e) =>
-                          setEditEmployee({
-                            ...editEmployee,
-                            meal_allowance: parseFloat(e.target.value) || 0,
-                          })
-                        }
-                        placeholder="₦0.00"
-                      />
-                    </div>
                     <div className="space-y-2">
                       <Label htmlFor="editOtherAllowance">Other Allowance</Label>
                       <Input

@@ -1243,6 +1243,10 @@ export default function Attendance() {
               </CardTitle>
             </CardHeader>
             <CardContent>
+              {/* Requirement 1: Annual Leave Balance */}
+              <div className="mb-4">
+                <LeaveBalanceCard employeeId={currentEmployeeId ?? undefined} />
+              </div>
               <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Section A: Employee Information */}
                 <div className="space-y-4">

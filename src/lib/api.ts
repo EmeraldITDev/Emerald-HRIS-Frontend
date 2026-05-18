@@ -54,6 +54,9 @@ export interface Employee {
   supporting_documents?: string;
   performance_history?: string;
   asset_allocation_history?: string;
+  // New compensation source fields (Requirement 7)
+  baseSalary?: number;
+  salaryType?: 'monthly' | 'annual' | 'hourly';
   created_at?: string;
   updated_at?: string;
 }
@@ -287,8 +290,10 @@ class ApiService {
         console.error('❌ API Error Response:', errorText);
         // Try to parse the error body to get a meaningful message
         let errorMessage = `HTTP error! status: ${response.status}`;
+        let errorData: any = null;
         try {
           const errorJson = JSON.parse(errorText);
+          errorData = errorJson;
           if (errorJson.message) errorMessage = errorJson.message;
           else if (errorJson.error) errorMessage = errorJson.error;
           else if (errorJson.errors) {
@@ -298,7 +303,10 @@ class ApiService {
             errorMessage = fieldErrors || errorMessage;
           }
         } catch {}
-        throw new Error(errorMessage);
+        const err: any = new Error(errorMessage);
+        err.status = response.status;
+        err.data = errorData;
+        throw err;
       }
       
       const data = await response.json();
@@ -343,6 +351,52 @@ class ApiService {
   // Get all employees
   async getEmployees(): Promise<Employee[]> {
     return this.request<Employee[]>('/employees-full');
+  }
+
+  // Get employees with optional hire-date range filter (Requirement 2)
+  async getEmployeesFiltered(params?: {
+    startDateFrom?: string;
+    startDateTo?: string;
+    page?: number;
+    department?: string;
+    status?: string;
+  }): Promise<any> {
+    const qp = new URLSearchParams();
+    if (params?.startDateFrom) qp.append('startDateFrom', params.startDateFrom);
+    if (params?.startDateTo) qp.append('startDateTo', params.startDateTo);
+    if (params?.page) qp.append('page', String(params.page));
+    if (params?.department) qp.append('department', params.department);
+    if (params?.status) qp.append('status', params.status);
+    const q = qp.toString();
+    return this.request<any>(`/employees-full${q ? `?${q}` : ''}`);
+  }
+
+  // Upcoming work anniversaries (Requirement 3)
+  async getUpcomingAnniversaries(days: number = 7): Promise<Array<{
+    employeeId: string;
+    name: string;
+    avatarUrl: string | null;
+    startDate: string;
+    yearsOfService: number;
+    anniversaryDate: string;
+    daysUntil: number;
+  }>> {
+    return this.request(`/employees/anniversaries?days=${days}`);
+  }
+
+  // Leave annual balance (Requirement 1)
+  async getLeaveBalance(employeeId: number | string): Promise<{
+    used: number;
+    limit: number;
+    remaining: number;
+    year: number;
+  }> {
+    return this.request(`/leave/balance/${employeeId}`);
+  }
+
+  // Detailed payslip (Requirement 4)
+  async getPayslipDetail(employeeId: number | string, payPeriod: string): Promise<any> {
+    return this.request(`/payroll/payslip/${employeeId}/${payPeriod}`);
   }
 
   // Get current user's employee profile

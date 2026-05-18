@@ -852,6 +852,16 @@ export default function Payroll() {
       return
     }
 
+    // Requirement 4: Only Corporate HR or HR Manager may generate payroll
+    if (user?.role !== 'hr_manager' && user?.role !== 'corporate_hr') {
+      toast({
+        title: "Insufficient Permissions",
+        description: "Only Corporate HR or HR Manager can generate payroll.",
+        variant: "destructive"
+      })
+      return
+    }
+
     const selectedEmp = employees.find(emp => emp.id?.toString() === selectedEmployee)
     if (!selectedEmp) return
 
@@ -870,7 +880,8 @@ export default function Payroll() {
 
       // Refresh payroll records to show the new one
       const filters: any = {}
-      if (user?.role === 'general_employee' || user?.role === 'finance') {
+      const role = (user?.role as string) || ''
+      if (role === 'general_employee' || role === 'finance') {
         const currentEmployee = employees.find(emp => emp.email === user.email)
         if (currentEmployee?.id) {
           filters.employee_id = currentEmployee.id
@@ -1248,10 +1259,6 @@ export default function Payroll() {
                     <span>{formatCurrency(currentPayrollRecord.transport_allowance || 0)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span>Meal Allowance:</span>
-                    <span>{formatCurrency(currentPayrollRecord.meal_allowance || 0)}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
                     <span>Other Allowance:</span>
                     <span>{formatCurrency(currentPayrollRecord.other_allowance || 0)}</span>
                   </div>
@@ -1473,20 +1480,6 @@ export default function Payroll() {
                       type="number"
                       value={editingValues.transport_allowance || ''}
                       onChange={(e) => setEditingValues({...editingValues, transport_allowance: e.target.value === '' ? undefined : Number(e.target.value)})}
-                      className="pl-8"
-                      placeholder="Enter amount"
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="meal_allowance">Meal Allowance</Label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₦</span>
-                    <Input
-                      id="meal_allowance"
-                      type="number"
-                      value={editingValues.meal_allowance || ''}
-                      onChange={(e) => setEditingValues({...editingValues, meal_allowance: e.target.value === '' ? undefined : Number(e.target.value)})}
                       className="pl-8"
                       placeholder="Enter amount"
                     />

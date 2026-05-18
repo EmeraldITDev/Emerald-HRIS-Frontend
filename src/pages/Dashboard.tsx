@@ -66,6 +66,7 @@ import { useAuth } from "@/contexts/AuthContext"
 import RoleBasedComponent from "@/components/RoleBasedComponent"
 import { getCurrentMonthCelebrations, getUpcomingCelebrations, type Celebration } from "@/utils/celebrations"
 import { CelebrationsCard } from "@/components/CelebrationsCard"
+import { UpcomingAnniversariesCard } from "@/components/UpcomingAnniversariesCard"
 
 interface UserActivity {
   id: string
@@ -1537,6 +1538,9 @@ export default function Dashboard() {
           celebrations={currentMonthCelebrations} 
           isLoading={isLoading}
         />
+
+        {/* Upcoming Work Anniversaries (Requirement 3) */}
+        <UpcomingAnniversariesCard days={7} />
       </div>
 
       {/* Test/Debug Component for IT Power Users */}

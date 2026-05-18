@@ -39,6 +39,7 @@ import { RoleBasedComponent } from "@/components/RoleBasedComponent"
 import apiService, { Employee } from "@/lib/api"
 import { getCurrentMonthCelebrations, type Celebration } from "@/utils/celebrations"
 import { CelebrationsCard } from "@/components/CelebrationsCard"
+import { LeaveBalanceCard } from "@/components/LeaveBalanceCard"
 
 // Sample attendance records
 const attendanceRecords = [
@@ -668,7 +669,20 @@ export default function Attendance() {
         // Show backend validation errors if available
         const errorMessage = dbError?.message || 'Failed to submit leave request';
         const backendErrors = dbError?.response?.data?.errors || dbError?.errors;
-        
+
+        // Requirement 1: Annual leave cap exceeded
+        const errCode = dbError?.data?.error || (errorMessage === 'LEAVE_LIMIT_REACHED' ? 'LEAVE_LIMIT_REACHED' : null);
+        if (errCode === 'LEAVE_LIMIT_REACHED') {
+          const used = dbError?.data?.used ?? '?';
+          const limit = dbError?.data?.limit ?? 20;
+          toast({
+            title: "Leave Quota Exceeded",
+            description: `You have used ${used} of ${limit} days this year.`,
+            variant: "destructive",
+          });
+          return;
+        }
+
         if (backendErrors) {
           const errorDetails = Object.values(backendErrors).flat().join(', ');
           toast({
@@ -735,6 +749,13 @@ export default function Attendance() {
   }
 
   const handleClockIn = async () => {
+    toast({
+      title: "Attendance Module Unavailable",
+      description: "The attendance module is currently under maintenance.",
+      variant: "destructive",
+    });
+    return;
+    // eslint-disable-next-line no-unreachable
     if (!user || !currentEmployeeId) {
       toast({ title: "Error", description: "No user logged in or employee ID not found.", variant: "destructive" });
       return;
@@ -772,6 +793,13 @@ export default function Attendance() {
   };
 
   const handleClockOut = () => {
+    toast({
+      title: "Attendance Module Unavailable",
+      description: "The attendance module is currently under maintenance.",
+      variant: "destructive",
+    });
+    return;
+    // eslint-disable-next-line no-unreachable
     if (!user) {
       toast({ title: "Error", description: "No user logged in.", variant: "destructive" });
       return;
@@ -930,7 +958,19 @@ export default function Attendance() {
         })
       } catch (dbError: any) {
         console.error('Database update failed:', dbError)
-        
+
+        // Requirement 1: leave cap reached at approval
+        if (dbError?.data?.error === 'LEAVE_LIMIT_REACHED' || dbError?.message === 'LEAVE_LIMIT_REACHED') {
+          const used = dbError?.data?.used ?? '?';
+          const limit = dbError?.data?.limit ?? 20;
+          toast({
+            title: "Cannot Approve",
+            description: `Employee has reached annual leave limit (${used}/${limit}).`,
+            variant: "destructive"
+          });
+          return;
+        }
+
         const errorMessage = dbError?.response?.data?.message || dbError?.message || 'Failed to update leave status'
         toast({
           title: "Error",
@@ -1204,6 +1244,10 @@ export default function Attendance() {
               </CardTitle>
             </CardHeader>
             <CardContent>
+              {/* Requirement 1: Annual Leave Balance */}
+              <div className="mb-4">
+                <LeaveBalanceCard employeeId={currentEmployeeId ?? undefined} />
+              </div>
               <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Section A: Employee Information */}
                 <div className="space-y-4">

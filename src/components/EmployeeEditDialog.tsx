@@ -107,7 +107,9 @@ export function EmployeeEditDialog({ employee, open, onOpenChange, onSuccess }: 
         gross_salary: formData.gross_salary,
         housing_allowance: formData.housing_allowance,
         transport_allowance: formData.transport_allowance,
-        meal_allowance: formData.meal_allowance,
+        // meal_allowance removed (Requirement 6 – no longer used in new payroll runs)
+        baseSalary: formData.baseSalary,
+        salaryType: formData.salaryType,
         bank_account: formData.bank_account,
         bank_name: formData.bank_name,
         account_number: formData.account_number,
@@ -433,13 +435,38 @@ export function EmployeeEditDialog({ employee, open, onOpenChange, onSuccess }: 
                 />
               </div>
               <div>
-                <Label htmlFor="meal_allowance">Meal Allowance (₦)</Label>
+                <Label htmlFor="baseSalary">Base Salary (₦)</Label>
                 <Input
-                  id="meal_allowance"
+                  id="baseSalary"
                   type="number"
-                  value={formData.meal_allowance || ''}
-                  onChange={(e) => handleChange('meal_allowance', Number(e.target.value))}
+                  min={0}
+                  step="0.01"
+                  value={formData.baseSalary ?? ''}
+                  onChange={(e) => handleChange('baseSalary', e.target.value === '' ? undefined : Number(e.target.value))}
                 />
+                {formData.baseSalary !== undefined && formData.salaryType && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {formData.salaryType === 'monthly' && `Monthly Gross: ₦${Number(formData.baseSalary).toLocaleString()}`}
+                    {formData.salaryType === 'annual' && `Monthly Gross: ₦${(Number(formData.baseSalary) / 12).toFixed(2)}`}
+                    {formData.salaryType === 'hourly' && 'Hourly type — not yet supported in payroll'}
+                  </p>
+                )}
+              </div>
+              <div>
+                <Label htmlFor="salaryType">Salary Type</Label>
+                <Select
+                  value={formData.salaryType || ''}
+                  onValueChange={(value) => handleChange('salaryType', value as 'monthly' | 'annual' | 'hourly')}
+                >
+                  <SelectTrigger id="salaryType">
+                    <SelectValue placeholder="Select salary type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="monthly">Monthly</SelectItem>
+                    <SelectItem value="annual">Annual</SelectItem>
+                    <SelectItem value="hourly">Hourly</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <Label htmlFor="bank_account">Bank Account</Label>

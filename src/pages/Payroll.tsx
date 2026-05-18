@@ -1259,10 +1259,6 @@ export default function Payroll() {
                     <span>{formatCurrency(currentPayrollRecord.transport_allowance || 0)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span>Meal Allowance:</span>
-                    <span>{formatCurrency(currentPayrollRecord.meal_allowance || 0)}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
                     <span>Other Allowance:</span>
                     <span>{formatCurrency(currentPayrollRecord.other_allowance || 0)}</span>
                   </div>

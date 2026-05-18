@@ -290,8 +290,10 @@ class ApiService {
         console.error('❌ API Error Response:', errorText);
         // Try to parse the error body to get a meaningful message
         let errorMessage = `HTTP error! status: ${response.status}`;
+        let errorData: any = null;
         try {
           const errorJson = JSON.parse(errorText);
+          errorData = errorJson;
           if (errorJson.message) errorMessage = errorJson.message;
           else if (errorJson.error) errorMessage = errorJson.error;
           else if (errorJson.errors) {
@@ -301,7 +303,10 @@ class ApiService {
             errorMessage = fieldErrors || errorMessage;
           }
         } catch {}
-        throw new Error(errorMessage);
+        const err: any = new Error(errorMessage);
+        err.status = response.status;
+        err.data = errorData;
+        throw err;
       }
       
       const data = await response.json();

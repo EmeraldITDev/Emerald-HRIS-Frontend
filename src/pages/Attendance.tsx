@@ -957,7 +957,19 @@ export default function Attendance() {
         })
       } catch (dbError: any) {
         console.error('Database update failed:', dbError)
-        
+
+        // Requirement 1: leave cap reached at approval
+        if (dbError?.data?.error === 'LEAVE_LIMIT_REACHED' || dbError?.message === 'LEAVE_LIMIT_REACHED') {
+          const used = dbError?.data?.used ?? '?';
+          const limit = dbError?.data?.limit ?? 20;
+          toast({
+            title: "Cannot Approve",
+            description: `Employee has reached annual leave limit (${used}/${limit}).`,
+            variant: "destructive"
+          });
+          return;
+        }
+
         const errorMessage = dbError?.response?.data?.message || dbError?.message || 'Failed to update leave status'
         toast({
           title: "Error",

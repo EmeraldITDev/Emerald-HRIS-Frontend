@@ -211,12 +211,11 @@ export default function EmployeeProfile() {
       yPos += 12
 
       doc.setFontSize(10)
-      const totalSalary = (employee.gross_salary || 0) + (employee.meal_allowance || 0) + 
+      const totalSalary = (employee.gross_salary || 0) + 
                           (employee.housing_allowance || 0) + (employee.transport_allowance || 0)
       
       const financialInfo = [
         ['Basic Salary', formatCurrency(employee.gross_salary)],
-        ['Meal Allowance', formatCurrency(employee.meal_allowance)],
         ['Housing Allowance', formatCurrency(employee.housing_allowance)],
         ['Transport Allowance', formatCurrency(employee.transport_allowance)],
         ['Total Monthly Salary', formatCurrency(totalSalary)],
@@ -318,7 +317,6 @@ export default function EmployeeProfile() {
   const calculateTotalSalary = () => {
     if (!employee) return 0
     return (employee.gross_salary || 0) + 
-           (employee.meal_allowance || 0) + 
            (employee.housing_allowance || 0) + 
            (employee.transport_allowance || 0)
   }
@@ -648,10 +646,6 @@ export default function EmployeeProfile() {
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium">Basic Salary:</span>
                     <span className="text-sm font-medium">{formatCurrency(employee.gross_salary)}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">Meal Allowance:</span>
-                    <span className="text-sm">{formatCurrency(employee.meal_allowance)}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium">Housing Allowance:</span>

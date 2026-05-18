@@ -348,6 +348,52 @@ class ApiService {
     return this.request<Employee[]>('/employees-full');
   }
 
+  // Get employees with optional hire-date range filter (Requirement 2)
+  async getEmployeesFiltered(params?: {
+    startDateFrom?: string;
+    startDateTo?: string;
+    page?: number;
+    department?: string;
+    status?: string;
+  }): Promise<any> {
+    const qp = new URLSearchParams();
+    if (params?.startDateFrom) qp.append('startDateFrom', params.startDateFrom);
+    if (params?.startDateTo) qp.append('startDateTo', params.startDateTo);
+    if (params?.page) qp.append('page', String(params.page));
+    if (params?.department) qp.append('department', params.department);
+    if (params?.status) qp.append('status', params.status);
+    const q = qp.toString();
+    return this.request<any>(`/employees-full${q ? `?${q}` : ''}`);
+  }
+
+  // Upcoming work anniversaries (Requirement 3)
+  async getUpcomingAnniversaries(days: number = 7): Promise<Array<{
+    employeeId: string;
+    name: string;
+    avatarUrl: string | null;
+    startDate: string;
+    yearsOfService: number;
+    anniversaryDate: string;
+    daysUntil: number;
+  }>> {
+    return this.request(`/employees/anniversaries?days=${days}`);
+  }
+
+  // Leave annual balance (Requirement 1)
+  async getLeaveBalance(employeeId: number | string): Promise<{
+    used: number;
+    limit: number;
+    remaining: number;
+    year: number;
+  }> {
+    return this.request(`/leave/balance/${employeeId}`);
+  }
+
+  // Detailed payslip (Requirement 4)
+  async getPayslipDetail(employeeId: number | string, payPeriod: string): Promise<any> {
+    return this.request(`/payroll/payslip/${employeeId}/${payPeriod}`);
+  }
+
   // Get current user's employee profile
   async getMyProfile(): Promise<Employee> {
     return this.request<Employee>('/employees-full/my-profile');

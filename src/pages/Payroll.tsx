@@ -880,7 +880,8 @@ export default function Payroll() {
 
       // Refresh payroll records to show the new one
       const filters: any = {}
-      if (user?.role === 'general_employee' || user?.role === 'finance') {
+      const role = (user?.role as string) || ''
+      if (role === 'general_employee' || role === 'finance') {
         const currentEmployee = employees.find(emp => emp.email === user.email)
         if (currentEmployee?.id) {
           filters.employee_id = currentEmployee.id

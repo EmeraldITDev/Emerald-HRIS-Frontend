@@ -80,6 +80,7 @@ export default function Employees() {
   const [filterDepartment, setFilterDepartment] = useState("");
   const [filterEmploymentType, setFilterEmploymentType] = useState("");
   const [filterStartDate, setFilterStartDate] = useState("");
+  const [filterStartDateTo, setFilterStartDateTo] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const { user } = useAuth();
@@ -429,7 +430,10 @@ export default function Employees() {
       !filterEmploymentType ||
       filterEmploymentType === "all" ||
       (employee.employment_type && employee.employment_type === filterEmploymentType);
-    const matchesStartDate = !filterStartDate || (employee.hire_date && employee.hire_date === filterStartDate);
+    const hireDate = employee.hire_date ? employee.hire_date.slice(0, 10) : "";
+    const matchesStartDateFrom = !filterStartDate || (hireDate && hireDate >= filterStartDate);
+    const matchesStartDateTo = !filterStartDateTo || (hireDate && hireDate <= filterStartDateTo);
+    const matchesStartDate = matchesStartDateFrom && matchesStartDateTo;
 
     // Department-aware filtering for line managers
     const matchesDepartmentAccess =
@@ -2745,13 +2749,23 @@ export default function Employees() {
 
                 <div className="flex items-center space-x-2">
                   <Label htmlFor="startDate" className="text-sm whitespace-nowrap">
-                    Start Date From:
+                    Hired From:
                   </Label>
                   <Input
                     id="startDate"
                     type="date"
                     value={filterStartDate}
                     onChange={(e) => setFilterStartDate(e.target.value)}
+                    className="w-[150px]"
+                  />
+                  <Label htmlFor="startDateTo" className="text-sm whitespace-nowrap">
+                    Hired Until:
+                  </Label>
+                  <Input
+                    id="startDateTo"
+                    type="date"
+                    value={filterStartDateTo}
+                    onChange={(e) => setFilterStartDateTo(e.target.value)}
                     className="w-[150px]"
                   />
                 </div>

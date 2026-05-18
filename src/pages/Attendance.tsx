@@ -668,7 +668,20 @@ export default function Attendance() {
         // Show backend validation errors if available
         const errorMessage = dbError?.message || 'Failed to submit leave request';
         const backendErrors = dbError?.response?.data?.errors || dbError?.errors;
-        
+
+        // Requirement 1: Annual leave cap exceeded
+        const errCode = dbError?.data?.error || (errorMessage === 'LEAVE_LIMIT_REACHED' ? 'LEAVE_LIMIT_REACHED' : null);
+        if (errCode === 'LEAVE_LIMIT_REACHED') {
+          const used = dbError?.data?.used ?? '?';
+          const limit = dbError?.data?.limit ?? 20;
+          toast({
+            title: "Leave Quota Exceeded",
+            description: `You have used ${used} of ${limit} days this year.`,
+            variant: "destructive",
+          });
+          return;
+        }
+
         if (backendErrors) {
           const errorDetails = Object.values(backendErrors).flat().join(', ');
           toast({

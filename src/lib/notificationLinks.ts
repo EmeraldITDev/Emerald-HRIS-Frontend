@@ -16,9 +16,20 @@ export function resolveNotificationLink(
   const type = (n?.type || "").toLowerCase();
   const isAdminPayroll = role === "hr_manager" || role === "corporate_hr";
 
+  // Approved leave notifications → /attendance
+  const isApprovedLeave =
+    type.includes("leave") && /approve/i.test(type);
+
   // Normalize backend-provided link if it points at obsolete routes.
   const raw = n?.link || "";
+  if (isApprovedLeave) {
+    return "/attendance";
+  }
   if (raw) {
+    // /leaves/{id} (approved leave detail) → /attendance
+    if (/^\/leaves\/\d+/i.test(raw)) {
+      return "/attendance";
+    }
     // Old leave-approvals paths → /approvals/leave
     if (/^\/leave-approvals(\/|$|\?)/i.test(raw)) {
       const stage = /pending-manager/i.test(raw)

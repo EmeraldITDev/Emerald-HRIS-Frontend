@@ -528,8 +528,9 @@ export default function Payroll() {
     return null
   }
   
-  const currentPayrollRecord = getCurrentUserPayrollRecord()
-    ? normalizePayrollRecord(getCurrentUserPayrollRecord() as PayrollRecord)
+  const rawCurrentPayrollRecord = getCurrentUserPayrollRecord()
+  const currentPayrollRecord = rawCurrentPayrollRecord
+    ? normalizePayrollRecord(rawCurrentPayrollRecord as PayrollRecord)
     : null
   const visiblePayrollRecords = getVisiblePayrollRecords().map(normalizePayrollRecord)
   const isPreviewFromFinancialDetails = currentPayrollRecord && !payrollRecords.some(record => 
@@ -1505,7 +1506,7 @@ export default function Payroll() {
                     } catch (e: any) {
                       // Backend failed — fall back to a client-side CSV from the rows already loaded
                       try {
-                        const rows = (payrollRecords || []).filter((r: any) => r.pay_period === selectedPeriod)
+                        const rows = visiblePayrollRecords.filter((r: any) => r.pay_period === selectedPeriod)
                         if (!rows.length) throw e
                         const headers = ['Employee','Period','Basic Salary','Bonus','Gross Pay','Net Pay','Status']
                         const csv = [

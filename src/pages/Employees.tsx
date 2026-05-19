@@ -2168,7 +2168,7 @@ export default function Employees() {
                             }
                             placeholder="2500000"
                           />
-                          <p className="text-xs text-muted-foreground">Enter amount in Naira (₦).</p>
+                          <p className="text-xs text-muted-foreground">Enter gross monthly salary in Naira (₦).</p>
                         </div>
 
                         <div className="space-y-2">

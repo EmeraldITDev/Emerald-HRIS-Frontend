@@ -617,7 +617,13 @@ class ApiService {
       });
     }
     const query = queryParams.toString();
-    return this.request<PayrollRecord[]>(`/payroll${query ? `?${query}` : ''}`);
+    const response = await this.request<any>(`/payroll${query ? `?${query}` : ''}`);
+    if (Array.isArray(response)) return response;
+    if (Array.isArray(response?.data)) return response.data;
+    if (Array.isArray(response?.data?.data)) return response.data.data;
+    if (Array.isArray(response?.payroll)) return response.payroll;
+    if (Array.isArray(response?.records)) return response.records;
+    return [];
   }
 
   async generatePayroll(data: {

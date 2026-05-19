@@ -620,6 +620,11 @@ class ApiService {
     other_deductions?: number;
     deduction_notes?: string;
     auto_approve?: boolean;
+    basic_salary?: number;
+    housing_allowance?: number;
+    transport_allowance?: number;
+    meal_allowance?: number;
+    other_allowance?: number;
   }): Promise<{ success: boolean; message: string; payroll?: PayrollRecord }> {
     return this.request<{ success: boolean; message: string; payroll?: PayrollRecord }>('/payroll/generate', {
       method: 'POST',

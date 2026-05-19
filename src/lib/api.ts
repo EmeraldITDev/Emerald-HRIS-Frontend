@@ -592,6 +592,7 @@ class ApiService {
     commission?: number;
     other_deductions?: number;
     deduction_notes?: string;
+    auto_approve?: boolean;
   }): Promise<{ success: boolean; message: string; payroll?: PayrollRecord }> {
     return this.request<{ success: boolean; message: string; payroll?: PayrollRecord }>('/payroll/generate', {
       method: 'POST',
@@ -602,6 +603,7 @@ class ApiService {
   async bulkGeneratePayroll(data: {
     pay_period: string;
     employee_ids?: number[];
+    auto_approve?: boolean;
   }): Promise<{ success: boolean; message: string; summary: any; details: any }> {
     return this.request<{ success: boolean; message: string; summary: any; details: any }>('/payroll/bulk-generate', {
       method: 'POST',

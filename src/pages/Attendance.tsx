@@ -117,7 +117,6 @@ export default function Attendance() {
   const { user } = useAuth()
   const [employees, setEmployees] = useState<Employee[]>([])
   const [isLoadingEmployees, setIsLoadingEmployees] = useState(false)
-  const [leaveBalances, setLeaveBalances] = useState<Record<string, { used: number; limit: number; remaining: number }>>({})
   const [leaveRequests, setLeaveRequests] = useState<any[]>([])
   const [isLoadingLeaveRequests, setIsLoadingLeaveRequests] = useState(false)
   const [leaveFilterStatus, setLeaveFilterStatus] = useState<string>("all")
@@ -280,25 +279,6 @@ export default function Attendance() {
       // HR managers and executives see all employees
       
       setEmployees(filteredData)
-      // Fetch live leave balances for the visible employees so the
-      // "Employee Leave Balances" card reflects real usage instead of
-      // the static vacation_days field on the employee record.
-      const balances: Record<string, { used: number; limit: number; remaining: number }> = {}
-      await Promise.all(
-        filteredData.map(async (emp) => {
-          try {
-            const b: any = await apiService.getLeaveBalance(emp.id)
-            balances[String(emp.id)] = {
-              used: Number(b?.used ?? 0),
-              limit: Number(b?.limit ?? emp.vacation_days ?? 0),
-              remaining: Number(b?.remaining ?? emp.vacation_days ?? 0),
-            }
-          } catch {
-            /* leave balance unavailable for this employee */
-          }
-        })
-      )
-      setLeaveBalances(balances)
     } catch (error) {
       console.error('Error fetching employees:', error)
       toast({
@@ -1946,32 +1926,26 @@ export default function Attendance() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {employees.map((emp) => {
-                const bal = leaveBalances[String(emp.id)]
-                const total = bal?.limit ?? emp.vacation_days ?? 0
-                const used = bal?.used ?? 0
-                const remaining = bal?.remaining ?? total
-                return (
-                  <div key={emp.id} className="p-4 border rounded-lg bg-card">
-                    <div className="font-medium text-sm">{emp.first_name} {emp.last_name}</div>
-                    <div className="text-xs text-muted-foreground">{emp.employee_code || emp.id}</div>
-                    <div className="mt-2 space-y-1">
-                      <div className="flex justify-between text-xs">
-                        <span>Total:</span>
-                        <span>{total} days</span>
-                      </div>
-                      <div className="flex justify-between text-xs">
-                        <span>Used:</span>
-                        <span>{used} days</span>
-                      </div>
-                      <div className="flex justify-between text-xs font-medium">
-                        <span>Remaining:</span>
-                        <span className="text-primary">{remaining} days</span>
-                      </div>
+              {employees.map((emp) => (
+                <div key={emp.id} className="p-4 border rounded-lg bg-card">
+                  <div className="font-medium text-sm">{emp.first_name} {emp.last_name}</div>
+                  <div className="text-xs text-muted-foreground">{emp.employee_code || emp.id}</div>
+                  <div className="mt-2 space-y-1">
+                    <div className="flex justify-between text-xs">
+                      <span>Total:</span>
+                      <span>{emp.vacation_days || 0} days</span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span>Used:</span>
+                      <span>0 days</span>
+                    </div>
+                    <div className="flex justify-between text-xs font-medium">
+                      <span>Remaining:</span>
+                      <span className="text-primary">{emp.vacation_days || 0} days</span>
                     </div>
                   </div>
-                )
-              })}
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>

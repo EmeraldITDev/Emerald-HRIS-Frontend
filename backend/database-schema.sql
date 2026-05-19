@@ -41,13 +41,15 @@ CREATE TABLE IF NOT EXISTS `leave_requests` (
   `approved_by` INT DEFAULT NULL,
   `approved_at` DATETIME DEFAULT NULL,
   `comments` TEXT DEFAULT NULL,
+  `routed_to` INT DEFAULT NULL COMMENT 'Resolved supervisor (line manager) responsible for first-level approval',
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   
   INDEX idx_employee (`employee_id`),
   INDEX idx_status (`status`),
   INDEX idx_dates (`start_date`, `end_date`),
-  INDEX idx_approved_by (`approved_by`)
+  INDEX idx_approved_by (`approved_by`),
+  INDEX idx_routed_to (`routed_to`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ================================================================

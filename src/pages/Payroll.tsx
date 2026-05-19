@@ -1046,31 +1046,11 @@ export default function Payroll() {
         deductionRemarks: "",
       })
       setSelectedEmployee("")
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to generate payroll:', error)
-      const errorMessage = error?.message || 'Failed to generate payroll record.'
-      const alreadyExists = /already exists|duplicate|exists for this period/i.test(errorMessage)
-
-      if (alreadyExists) {
-        const filters: any = {}
-        const role = (user?.role as string) || ''
-        if (role === 'general_employee' || role === 'finance') {
-          const currentEmployee = employees.find(emp => emp.email === user.email)
-          if (currentEmployee?.id) filters.employee_id = currentEmployee.id
-        }
-        try {
-          const data = await apiService.getPayrollRecords(filters)
-          setPayrollRecords(Array.isArray(data) ? data : [])
-        } catch (refreshError) {
-          console.error('Failed to refresh payroll records after duplicate response:', refreshError)
-        }
-      }
-
       toast({
-        title: alreadyExists ? "Payroll Already Exists" : "Generation Failed",
-        description: alreadyExists
-          ? `Payroll for ${selectedEmp.first_name} ${selectedEmp.last_name} in ${selectedPeriod} already exists, so I reloaded the history records.`
-          : errorMessage,
+        title: "Generation Failed",
+        description: "Failed to generate payroll record. It may already exist for this period.",
         variant: "destructive"
       })
     }

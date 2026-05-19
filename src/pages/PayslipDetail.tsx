@@ -25,7 +25,6 @@ export default function PayslipDetail() {
   const { user } = useAuth();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -37,48 +36,14 @@ export default function PayslipDetail() {
         ]);
         setData(normalizePayslipDetail(res, profile));
       } catch (e: any) {
-        const msg = e?.message || "Unable to load payslip.";
-        setErrorMsg(msg);
-        toast({ title: "Failed to load payslip", description: msg, variant: "destructive" });
+        toast({ title: "Failed to load payslip", description: e?.message, variant: "destructive" });
       } finally { setLoading(false); }
     };
     load();
   }, [period, user?.employee_id]);
 
   if (loading) return <p className="text-sm text-muted-foreground p-6">Loading…</p>;
-  if (!data) {
-    const isMissingSalary = /gross_salary/i.test(errorMsg || "");
-    return (
-      <div className="max-w-3xl mx-auto p-6 space-y-4">
-        <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
-          <ArrowLeft className="h-4 w-4 mr-2" />Back
-        </Button>
-        <Card>
-          <CardHeader>
-            <CardTitle>Payslip unavailable</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            {isMissingSalary ? (
-              <>
-                <p className="text-destructive font-medium">
-                  Your gross salary has not been configured yet.
-                </p>
-                <p className="text-muted-foreground">
-                  Payroll cannot be generated until HR sets a gross salary on your
-                  employee record. Please contact your HR Manager to update this,
-                  then refresh this page.
-                </p>
-              </>
-            ) : (
-              <p className="text-muted-foreground">
-                {errorMsg || `No payslip found for the period ${period}.`}
-              </p>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  if (!data) return <p className="text-sm text-muted-foreground p-6">Payslip not found.</p>;
 
   const e = data.earnings || {};
   const d = data.deductions || {};

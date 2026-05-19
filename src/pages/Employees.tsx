@@ -2776,7 +2776,7 @@ export default function Employees() {
           <CardContent>
             {/* Mobile-responsive table wrapper */}
             <div className="overflow-x-auto -mx-3 md:mx-0">
-              <Table className="min-w-full">
+              <Table className="min-w-full text-xs md:text-sm">
                 <TableHeader>
                   <TableRow>
                     <TableHead className="text-xs md:text-sm">Employee ID</TableHead>
@@ -2809,23 +2809,31 @@ export default function Employees() {
                   ) : (
                     filteredEmployees.map((employee) => (
                       <TableRow key={employee.id}>
-                        <TableCell className="font-medium">
+                        <TableCell className="font-medium whitespace-nowrap">
                           {employee.employee_code || `EMP${employee.id?.toString().padStart(3, "0")}`}
                         </TableCell>
-                        <TableCell>
-                          {employee.first_name} {employee.last_name}
+                        <TableCell className="max-w-[160px]">
+                          <div className="truncate font-medium">
+                            {employee.first_name} {employee.last_name}
+                          </div>
+                          <div className="sm:hidden truncate text-[11px] text-muted-foreground">
+                            {employee.email}
+                          </div>
+                          <div className="md:hidden truncate text-[11px] text-muted-foreground">
+                            {employee.department}
+                          </div>
                         </TableCell>
-                        <TableCell>{employee.email}</TableCell>
-                        <TableCell>{employee.department}</TableCell>
-                        <TableCell>{employee.job_title}</TableCell>
-                        <TableCell>
+                        <TableCell className="hidden sm:table-cell max-w-[220px] truncate">{employee.email}</TableCell>
+                        <TableCell className="hidden md:table-cell">{employee.department}</TableCell>
+                        <TableCell className="hidden lg:table-cell">{employee.job_title}</TableCell>
+                        <TableCell className="hidden lg:table-cell">
                           <Badge variant={employee.employment_status === "Active" ? "default" : "secondary"}>
                             {employee.employment_status}
                           </Badge>
                         </TableCell>
-                        <TableCell>{employee.employment_type}</TableCell>
-                        <TableCell>{employee.vacation_days || 0}</TableCell>
-                        <TableCell>
+                        <TableCell className="hidden lg:table-cell">{employee.employment_type}</TableCell>
+                        <TableCell className="hidden lg:table-cell">{employee.vacation_days || 0}</TableCell>
+                        <TableCell className="text-right">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" className="h-8 w-8 p-0">

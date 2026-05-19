@@ -33,6 +33,7 @@ import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/contexts/AuthContext"
 import { RoleBasedComponent } from "@/components/RoleBasedComponent"
 import { canHrPayroll } from "@/lib/permissions"
+import { getEmployeePayrollPackage, normalizePayrollRecord, roundMoney, toMoneyNumber } from "@/lib/payrollCalc"
 import {
   Dialog,
   DialogContent,
@@ -66,91 +67,6 @@ export default function Payroll() {
   const [selectedRecord, setSelectedRecord] = useState<PayrollRecord | null>(null)
   const { toast } = useToast()
   const { user } = useAuth()
-
-  const toMoneyNumber = (value: unknown) => {
-    if (value === null || value === undefined || value === '') return 0
-    const normalized = typeof value === 'string' ? value.replace(/[₦,\s]/g, '') : value
-    const parsed = Number(normalized)
-    return Number.isFinite(parsed) ? parsed : 0
-  }
-
-  const roundMoney = (value: number) => Math.round(value * 100) / 100
-
-  const calculateAnnualPaye = (annualGross: number, annualPension: number, annualNhf: number) => {
-    const grossForCra = Math.max(annualGross - annualPension - annualNhf, 0)
-    const cra = grossForCra * 0.2 + Math.max(grossForCra * 0.01, 200000)
-    const taxableIncome = Math.max(annualGross - cra - annualPension - annualNhf, 0)
-    const bands = [
-      [300000, 0.07],
-      [300000, 0.11],
-      [500000, 0.15],
-      [500000, 0.19],
-      [1600000, 0.21],
-      [Infinity, 0.24],
-    ] as const
-    let remaining = taxableIncome
-    let annualTax = 0
-    for (const [band, rate] of bands) {
-      if (remaining <= 0) break
-      const taxableAtRate = Math.min(remaining, band)
-      annualTax += taxableAtRate * rate
-      remaining -= taxableAtRate
-    }
-    return { annualTax, taxableIncome }
-  }
-
-  const getEmployeePayrollPackage = (employee?: Employee | null) => {
-    const employmentType = (employee?.employment_type || '').toLowerCase()
-    const isContract = employmentType === 'contract'
-    const annualGrossFromProfile = toMoneyNumber(employee?.gross_salary ?? employee?.baseSalary)
-    let annualBasic = toMoneyNumber(employee?.basic_salary)
-    let annualHousing = toMoneyNumber(employee?.housing_allowance)
-    let annualTransport = toMoneyNumber(employee?.transport_allowance)
-    let annualMeal = toMoneyNumber(employee?.meal_allowance)
-    let annualOther = toMoneyNumber(employee?.other_allowance)
-
-    if (annualGrossFromProfile > 0) {
-      if (isContract) {
-        annualBasic = annualBasic || annualGrossFromProfile
-        annualHousing = annualTransport = annualMeal = annualOther = 0
-      } else {
-        annualBasic = annualBasic || annualGrossFromProfile * 0.4
-        annualHousing = annualHousing || annualGrossFromProfile * 0.2
-        annualTransport = annualTransport || annualGrossFromProfile * 0.09
-        annualOther = annualOther || annualGrossFromProfile * 0.31
-      }
-    }
-
-    const annualAllowances = annualHousing + annualTransport + annualMeal + annualOther
-    const annualGross = annualGrossFromProfile || annualBasic + annualAllowances
-    const annualPension = isContract ? 0 : (annualBasic + annualHousing + annualTransport) * 0.08
-    const annualNhf = isContract ? 0 : annualBasic * 0.025
-    const { annualTax, taxableIncome } = isContract
-      ? { annualTax: annualGross * 0.05, taxableIncome: annualGross }
-      : calculateAnnualPaye(annualGross, annualPension, annualNhf)
-
-    return {
-      annualGross: roundMoney(annualGross),
-      annualBasic: roundMoney(annualBasic),
-      annualHousing: roundMoney(annualHousing),
-      annualTransport: roundMoney(annualTransport),
-      annualMeal: roundMoney(annualMeal),
-      annualOther: roundMoney(annualOther),
-      annualPension: roundMoney(annualPension),
-      annualNhf: roundMoney(annualNhf),
-      annualTax: roundMoney(annualTax),
-      annualTaxableIncome: roundMoney(taxableIncome),
-      monthlyBasic: roundMoney(annualBasic / 12),
-      monthlyHousing: roundMoney(annualHousing / 12),
-      monthlyTransport: roundMoney(annualTransport / 12),
-      monthlyMeal: roundMoney(annualMeal / 12),
-      monthlyOther: roundMoney(annualOther / 12),
-      monthlyGross: roundMoney(annualGross / 12),
-      monthlyPension: roundMoney(annualPension / 12),
-      monthlyNhf: roundMoney(annualNhf / 12),
-      monthlyPaye: roundMoney(annualTax / 12),
-    }
-  }
 
   useEffect(() => {
     const fetchEmployees = async () => {

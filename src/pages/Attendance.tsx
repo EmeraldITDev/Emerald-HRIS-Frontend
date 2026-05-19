@@ -1398,17 +1398,19 @@ export default function Attendance() {
                     )}
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-2 min-w-0">
                       <Label htmlFor="startDate">Start Date *</Label>
                       <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
                         <PopoverTrigger asChild>
                           <Button
                             variant={"outline"}
-                            className="w-full justify-start text-left font-normal"
+                            className="w-full justify-start text-left font-normal min-w-0"
                           >
-                            <Calendar className="mr-2 h-4 w-4" />
-                            {startDate ? format(new Date(startDate), "PPP") : <span>Pick start date</span>}
+                            <Calendar className="mr-2 h-4 w-4 flex-shrink-0" />
+                            <span className="truncate">
+                              {startDate ? format(new Date(startDate), "PPP") : "Pick start date"}
+                            </span>
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0" align="start">
@@ -1427,16 +1429,18 @@ export default function Attendance() {
                         </PopoverContent>
                       </Popover>
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-2 min-w-0">
                       <Label htmlFor="endDate">End Date *</Label>
                       <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
                         <PopoverTrigger asChild>
                           <Button
                             variant={"outline"}
-                            className="w-full justify-start text-left font-normal"
+                            className="w-full justify-start text-left font-normal min-w-0"
                           >
-                            <Calendar className="mr-2 h-4 w-4" />
-                            {endDate ? format(new Date(endDate), "PPP") : <span>Pick end date</span>}
+                            <Calendar className="mr-2 h-4 w-4 flex-shrink-0" />
+                            <span className="truncate">
+                              {endDate ? format(new Date(endDate), "PPP") : "Pick end date"}
+                            </span>
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0" align="start">

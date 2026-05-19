@@ -529,6 +529,8 @@ export default function Payroll() {
   }
   
   const currentPayrollRecord = getCurrentUserPayrollRecord()
+    ? normalizePayrollRecord(getCurrentUserPayrollRecord() as PayrollRecord)
+    : null
   const isPreviewFromFinancialDetails = currentPayrollRecord && !payrollRecords.some(record => 
     record.employee_id === currentPayrollRecord.employee_id && 
     record.pay_period === currentPayrollRecord.pay_period
@@ -961,19 +963,33 @@ export default function Payroll() {
       console.log('💰 Generating payroll for employee:', selectedEmployee);
       console.log('💰 Pay period:', selectedPeriod);
 
-      // Pull the actual financial details for the selected employee so the
-      // backend uses THIS employee's salary instead of falling back to
-      // defaults (which caused every staff member to show identical figures).
-      const manualBasic = parseFloat(payrollData.basicSalary) || 0
-      const empBasic = Number(selectedEmp.basic_salary) || Number(selectedEmp.gross_salary) || 0
-      const basicSalary = manualBasic > 0 ? manualBasic : empBasic
+      const payrollPackage = getEmployeePayrollPackage(selectedEmp)
+      const manualAnnualBasic = toMoneyNumber(payrollData.basicSalary)
+      const basicSalary = manualAnnualBasic > 0
+        ? roundMoney(manualAnnualBasic / 12)
+        : payrollPackage.monthlyBasic
+      const annualGross = manualAnnualBasic > 0
+        ? roundMoney(manualAnnualBasic / 0.4)
+        : payrollPackage.annualGross
+      const monthlyGross = manualAnnualBasic > 0
+        ? roundMoney(annualGross / 12)
+        : payrollPackage.monthlyGross
+      const overtime = toMoneyNumber(payrollData.earnings)
+      const otherDeductions = toMoneyNumber(payrollData.deduction)
+      const grossPay = roundMoney(monthlyGross + overtime)
+      const totalAllowances = roundMoney(payrollPackage.monthlyHousing + payrollPackage.monthlyTransport + payrollPackage.monthlyMeal + payrollPackage.monthlyOther)
+      const totalDeductions = roundMoney(payrollPackage.monthlyPaye + payrollPackage.monthlyPension + payrollPackage.monthlyNhf + otherDeductions)
+      const netPay = roundMoney(grossPay - totalDeductions)
 
       console.log('💰 Employee financials:', {
         basic_salary: basicSalary,
-        housing_allowance: selectedEmp.housing_allowance,
-        transport_allowance: selectedEmp.transport_allowance,
-        meal_allowance: selectedEmp.meal_allowance,
-        other_allowance: selectedEmp.other_allowance,
+        housing_allowance: payrollPackage.monthlyHousing,
+        transport_allowance: payrollPackage.monthlyTransport,
+        meal_allowance: payrollPackage.monthlyMeal,
+        other_allowance: payrollPackage.monthlyOther,
+        gross_pay: grossPay,
+        total_deductions: totalDeductions,
+        net_pay: netPay,
       })
 
       // Generate payroll record via backend API – pass employee-specific
@@ -982,12 +998,24 @@ export default function Payroll() {
         employee_id: parseInt(selectedEmployee),
         pay_period: selectedPeriod,
         basic_salary: basicSalary,
-        housing_allowance: Number(selectedEmp.housing_allowance) || 0,
-        transport_allowance: Number(selectedEmp.transport_allowance) || 0,
-        meal_allowance: Number(selectedEmp.meal_allowance) || 0,
-        other_allowance: Number(selectedEmp.other_allowance) || 0,
-        overtime: parseFloat(payrollData.earnings) || 0,
-        other_deductions: parseFloat(payrollData.deduction) || 0,
+        base_salary: basicSalary,
+        gross_salary: annualGross,
+        housing_allowance: payrollPackage.monthlyHousing,
+        transport_allowance: payrollPackage.monthlyTransport,
+        meal_allowance: payrollPackage.monthlyMeal,
+        other_allowance: payrollPackage.monthlyOther,
+        overtime,
+        other_deductions: otherDeductions,
+        gross_pay: grossPay,
+        total_allowances: totalAllowances,
+        taxable_income: roundMoney(payrollPackage.annualTaxableIncome / 12),
+        paye_tax: payrollPackage.monthlyPaye,
+        income_tax: payrollPackage.monthlyPaye,
+        pension_employee: payrollPackage.monthlyPension,
+        pension_employer: roundMoney((annualGross * 0.1) / 12),
+        nhf: payrollPackage.monthlyNhf,
+        total_deductions: totalDeductions,
+        net_pay: netPay,
       })
 
       // Refresh payroll records to show the new one

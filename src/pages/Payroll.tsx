@@ -13,7 +13,7 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table"
-import { Pencil, Save, X, Trash2, FileDown, RotateCcw } from "lucide-react"
+import { Pencil, Save, X, Trash2 } from "lucide-react"
 import {
   Select,
   SelectContent,

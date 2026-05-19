@@ -1496,7 +1496,7 @@ export default function Payroll() {
                                 }}>Export CSV</DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
-                            {(record.status === 'pending') && (canHrPayroll(user) || user?.role === 'corporate_hr') && (
+                            {canHrPayroll(user) && (
                               <Button
                                 size="sm"
                                 variant="outline"

@@ -2034,6 +2034,20 @@ export default function Attendance() {
                   <Label className="text-sm text-muted-foreground">Status</Label>
                   <div>{getStatusBadge(selectedLeaveRequest.status)}</div>
                 </div>
+                <div className="col-span-2">
+                  <Label className="text-sm text-muted-foreground">Routed To (First-level Approver)</Label>
+                  <p className="font-medium">
+                    {selectedLeaveRequest.routed_to_name
+                      || selectedLeaveRequest.supervisor_name
+                      || selectedLeaveRequest.line_manager_name
+                      || 'Pending supervisor resolution'}
+                    {selectedLeaveRequest.routed_to_email && (
+                      <span className="text-xs text-muted-foreground ml-2">
+                        ({selectedLeaveRequest.routed_to_email})
+                      </span>
+                    )}
+                  </p>
+                </div>
               </div>
 
               {selectedLeaveRequest.reason && (

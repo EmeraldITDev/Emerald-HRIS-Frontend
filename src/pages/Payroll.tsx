@@ -436,87 +436,66 @@ export default function Payroll() {
   // Calculate payroll from financial details (for preview when no payroll record exists)
   const calculatePayrollFromFinancialDetails = (employee: Employee): PayrollRecord | null => {
     if (!employee) return null
-    
-    const basicSalary = employee.basic_salary || employee.gross_salary || 0
-    const housingAllowance = employee.housing_allowance || 0
-    const transportAllowance = employee.transport_allowance || 0
-    const mealAllowance = employee.meal_allowance || 0
-    const otherAllowance = employee.other_allowance || 0
-    
-    if (basicSalary === 0) return null
-    
-    // Calculate totals
-    const totalAllowances = housingAllowance + transportAllowance + mealAllowance + otherAllowance
-    const grossPay = basicSalary + totalAllowances
-    
-    // Calculate annual gross for tax calculation
-    const annualGross = grossPay * 12
-    
-    // Calculate PAYE (Nigerian tax bands - matches backend calculation)
-    const taxableIncome = annualGross - 200000 // Minimum tax-free allowance + CRA
-    let payeTax = 0
-    if (taxableIncome > 0) {
-      // 7% on first ₦300,000
-      if (taxableIncome > 0) {
-        payeTax += Math.min(taxableIncome, 300000) * 0.07
-      }
-      // 11% on next ₦300,000
-      if (taxableIncome > 300000) {
-        payeTax += Math.min(taxableIncome - 300000, 300000) * 0.11
-      }
-      // 15% on next ₦500,000
-      if (taxableIncome > 600000) {
-        payeTax += Math.min(taxableIncome - 600000, 500000) * 0.15
-      }
-      // 19% on next ₦500,000
-      if (taxableIncome > 1100000) {
-        payeTax += Math.min(taxableIncome - 1100000, 500000) * 0.19
-      }
-      // 21% on next ₦1,600,000
-      if (taxableIncome > 1600000) {
-        payeTax += Math.min(taxableIncome - 1600000, 1600000) * 0.21
-      }
-      // 24% on amounts above ₦3,200,000
-      if (taxableIncome > 3200000) {
-        payeTax += (taxableIncome - 3200000) * 0.24
-      }
-    }
-    // Convert annual tax to monthly (already divided by 12 in backend)
-    payeTax = Math.round(payeTax / 12 * 100) / 100
-    
-    // Calculate pension (8% of basic + housing + transport)
-    const pensionEmployee = Math.round((basicSalary + housingAllowance + transportAllowance) * 0.08 * 100) / 100
-    
-    // Calculate NHF (2.5% of basic salary)
-    const nhf = Math.round(basicSalary * 0.025 * 100) / 100
-    
-    // Total deductions
-    const totalDeductions = payeTax + pensionEmployee + nhf
-    const netPay = grossPay - totalDeductions
+    const payrollPackage = getEmployeePayrollPackage(employee)
+    if (payrollPackage.annualGross === 0) return null
+    const totalAllowances = payrollPackage.monthlyHousing + payrollPackage.monthlyTransport + payrollPackage.monthlyMeal + payrollPackage.monthlyOther
+    const totalDeductions = payrollPackage.monthlyPaye + payrollPackage.monthlyPension + payrollPackage.monthlyNhf
+    const netPay = payrollPackage.monthlyGross - totalDeductions
     
     // Return a preview payroll record
     return {
       employee_id: employee.id || 0,
       pay_period: new Date().toISOString().slice(0, 7), // Current month
-      basic_salary: basicSalary,
-      housing_allowance: housingAllowance,
-      transport_allowance: transportAllowance,
-      meal_allowance: mealAllowance,
-      other_allowance: otherAllowance,
+      basic_salary: payrollPackage.monthlyBasic,
+      housing_allowance: payrollPackage.monthlyHousing,
+      transport_allowance: payrollPackage.monthlyTransport,
+      meal_allowance: payrollPackage.monthlyMeal,
+      other_allowance: payrollPackage.monthlyOther,
       overtime: 0,
       bonus: 0,
       commission: 0,
-      gross_pay: grossPay,
+      gross_pay: payrollPackage.monthlyGross,
       total_allowances: totalAllowances,
-      taxable_income: annualGross,
-      paye_tax: payeTax,
-      pension_employee: pensionEmployee,
+      taxable_income: roundMoney(payrollPackage.annualTaxableIncome / 12),
+      paye_tax: payrollPackage.monthlyPaye,
+      pension_employee: payrollPackage.monthlyPension,
       pension_employer: 0,
-      nhf: nhf,
+      nhf: payrollPackage.monthlyNhf,
       other_deductions: 0,
       total_deductions: totalDeductions,
-      net_pay: netPay,
+      net_pay: roundMoney(netPay),
       status: 'pending' as const,
+    }
+  }
+
+  const normalizePayrollRecord = (record: PayrollRecord): PayrollRecord => {
+    const employee = employees.find(emp => emp.id === record.employee_id) || record.employee
+    const payrollPackage = getEmployeePayrollPackage(employee)
+    if (!employee || payrollPackage.annualGross === 0) return record
+
+    const overtime = toMoneyNumber(record.overtime)
+    const bonus = toMoneyNumber(record.bonus)
+    const commission = toMoneyNumber(record.commission)
+    const otherDeductions = toMoneyNumber(record.other_deductions)
+    const grossPay = payrollPackage.monthlyGross + overtime + bonus + commission
+    const totalAllowances = payrollPackage.monthlyHousing + payrollPackage.monthlyTransport + payrollPackage.monthlyMeal + payrollPackage.monthlyOther
+    const totalDeductions = payrollPackage.monthlyPaye + payrollPackage.monthlyPension + payrollPackage.monthlyNhf + otherDeductions
+
+    return {
+      ...record,
+      basic_salary: payrollPackage.monthlyBasic,
+      housing_allowance: payrollPackage.monthlyHousing,
+      transport_allowance: payrollPackage.monthlyTransport,
+      meal_allowance: payrollPackage.monthlyMeal,
+      other_allowance: payrollPackage.monthlyOther,
+      total_allowances: roundMoney(totalAllowances),
+      taxable_income: roundMoney(payrollPackage.annualTaxableIncome / 12),
+      paye_tax: payrollPackage.monthlyPaye,
+      pension_employee: payrollPackage.monthlyPension,
+      nhf: payrollPackage.monthlyNhf,
+      gross_pay: roundMoney(grossPay),
+      total_deductions: roundMoney(totalDeductions),
+      net_pay: roundMoney(grossPay - totalDeductions),
     }
   }
 

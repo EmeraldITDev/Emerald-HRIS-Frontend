@@ -88,25 +88,27 @@ export default function LeaveApprovals() {
         if (dialog.action === "approve") await apiService.approveLeaveByHR(id, notes);
         else await apiService.rejectLeaveByHR(id, notes);
       }
-      // On FINAL approval (HR stage), deduct the requested days from the
-      // employee's vacation_days balance so all employee views reflect it.
+      // On FINAL approval (HR stage) the backend automatically deducts the
+      // requested days from EmployeeLeaveBalance AND syncs the value back to
+      // employees.vacation_days (see HRIS doc § Leave balance).
+      // Hit /leave/balance/{id} once so the server recalculates and so we can
+      // surface the new remaining figure in the toast and refresh views.
       let balanceMsg: string | undefined;
       if (stage === "hr" && dialog.action === "approve") {
         try {
           const empId = Number(dialog.row.employee_id);
-          const days = Number(
-            dialog.row.days_requested ?? dialog.row.days ?? 0
-          ) || 0;
-          if (empId && days > 0) {
-            const employees = await apiService.getEmployees();
-            const emp = employees.find((e: any) => Number(e.id) === empId);
-            const current = Number(emp?.vacation_days ?? 0);
-            const next = Math.max(0, current - days);
-            await apiService.updateEmployee(empId, { vacation_days: next } as any);
-            balanceMsg = `Balance: ${current} → ${next} days`;
+          if (empId) {
+            const bal: any = await apiService.getLeaveBalance(empId);
+            const remaining =
+              bal?.remaining ??
+              bal?.summary?.vacation_days_remaining ??
+              bal?.vacation_days_remaining;
+            if (typeof remaining === "number") {
+              balanceMsg = `Remaining balance: ${remaining} days`;
+            }
           }
         } catch (err: any) {
-          balanceMsg = `Balance not updated: ${err?.message || "unknown error"}`;
+          balanceMsg = `Balance sync failed: ${err?.message || "unknown error"}`;
         }
       }
       toast({

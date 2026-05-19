@@ -30,6 +30,7 @@ export function NotificationBell() {
   const [items, setItems] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const fetchCount = useCallback(async () => {
     try {
@@ -71,7 +72,7 @@ export function NotificationBell() {
       }
     } catch {}
     setOpen(false);
-    const target = resolveNotificationLink(n);
+    const target = resolveNotificationLink(n, user?.role);
     if (target) navigate(target);
   };
 

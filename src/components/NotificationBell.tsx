@@ -12,6 +12,7 @@ import { apiService } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import { resolveNotificationLink } from "@/lib/notificationLinks";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Notification {
   id: number;

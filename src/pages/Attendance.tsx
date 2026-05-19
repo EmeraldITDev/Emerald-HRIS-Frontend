@@ -117,6 +117,7 @@ export default function Attendance() {
   const { user } = useAuth()
   const [employees, setEmployees] = useState<Employee[]>([])
   const [isLoadingEmployees, setIsLoadingEmployees] = useState(false)
+  const [leaveBalances, setLeaveBalances] = useState<Record<string, { used: number; limit: number; remaining: number }>>({})
   const [leaveRequests, setLeaveRequests] = useState<any[]>([])
   const [isLoadingLeaveRequests, setIsLoadingLeaveRequests] = useState(false)
   const [leaveFilterStatus, setLeaveFilterStatus] = useState<string>("all")
@@ -279,6 +280,25 @@ export default function Attendance() {
       // HR managers and executives see all employees
       
       setEmployees(filteredData)
+      // Fetch live leave balances for the visible employees so the
+      // "Employee Leave Balances" card reflects real usage instead of
+      // the static vacation_days field on the employee record.
+      const balances: Record<string, { used: number; limit: number; remaining: number }> = {}
+      await Promise.all(
+        filteredData.map(async (emp) => {
+          try {
+            const b: any = await apiService.getLeaveBalance(emp.id)
+            balances[String(emp.id)] = {
+              used: Number(b?.used ?? 0),
+              limit: Number(b?.limit ?? emp.vacation_days ?? 0),
+              remaining: Number(b?.remaining ?? emp.vacation_days ?? 0),
+            }
+          } catch {
+            /* leave balance unavailable for this employee */
+          }
+        })
+      )
+      setLeaveBalances(balances)
     } catch (error) {
       console.error('Error fetching employees:', error)
       toast({

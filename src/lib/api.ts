@@ -712,7 +712,23 @@ class ApiService {
         ...(token && { Authorization: `Bearer ${token}` }),
       },
     });
-    if (!res.ok) throw new Error(`Download failed: ${res.status}`);
+    if (!res.ok) {
+      // Try to surface the actual backend error (PHP/JSON message) instead of just "500"
+      let detail = '';
+      try {
+        const text = await res.text();
+        try {
+          const j = JSON.parse(text);
+          detail = j?.message || j?.error || j?.detail || text;
+        } catch {
+          detail = text;
+        }
+      } catch {}
+      const trimmed = (detail || '').toString().slice(0, 300).trim();
+      throw new Error(
+        `Download failed: ${res.status}${res.statusText ? ` ${res.statusText}` : ''}${trimmed ? ` — ${trimmed}` : ''}`
+      );
+    }
     return await res.blob();
   }
 

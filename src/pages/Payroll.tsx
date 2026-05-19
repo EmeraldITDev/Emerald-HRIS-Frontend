@@ -1388,7 +1388,32 @@ export default function Payroll() {
                       const blob = await apiService.exportPayrollBulkCsv(selectedPeriod)
                       const url = URL.createObjectURL(blob); const a = document.createElement('a')
                       a.href = url; a.download = `Payroll_${selectedPeriod}.csv`; a.click(); URL.revokeObjectURL(url)
-                    } catch (e: any) { toast({ title: 'Bulk CSV failed', description: e?.message, variant: 'destructive' }) }
+                    } catch (e: any) {
+                      // Backend failed — fall back to a client-side CSV from the rows already loaded
+                      try {
+                        const rows = (payrollRecords || []).filter((r: any) => r.pay_period === selectedPeriod)
+                        if (!rows.length) throw e
+                        const headers = ['Employee','Period','Basic Salary','Bonus','Gross Pay','Net Pay','Status']
+                        const csv = [
+                          headers.join(','),
+                          ...rows.map((r: any) => [
+                            JSON.stringify(r.employee_display || r.employee_name || `Employee ${r.employee_id}`),
+                            r.pay_period,
+                            r.basic_salary ?? 0,
+                            r.bonus ?? 0,
+                            r.gross_pay ?? 0,
+                            r.net_pay ?? 0,
+                            r.status ?? '',
+                          ].join(',')),
+                        ].join('\n')
+                        const blob = new Blob([csv], { type: 'text/csv' })
+                        const url = URL.createObjectURL(blob); const a = document.createElement('a')
+                        a.href = url; a.download = `Payroll_${selectedPeriod}.csv`; a.click(); URL.revokeObjectURL(url)
+                        toast({ title: 'Used local fallback', description: 'Server bulk export failed — exported on-screen rows instead.' })
+                      } catch {
+                        toast({ title: 'Bulk CSV failed', description: e?.message, variant: 'destructive' })
+                      }
+                    }
                   }}>CSV</DropdownMenuItem>
                   <DropdownMenuItem onClick={async () => {
                     try {

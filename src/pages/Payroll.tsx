@@ -531,6 +531,7 @@ export default function Payroll() {
   const currentPayrollRecord = getCurrentUserPayrollRecord()
     ? normalizePayrollRecord(getCurrentUserPayrollRecord() as PayrollRecord)
     : null
+  const visiblePayrollRecords = getVisiblePayrollRecords().map(normalizePayrollRecord)
   const isPreviewFromFinancialDetails = currentPayrollRecord && !payrollRecords.some(record => 
     record.employee_id === currentPayrollRecord.employee_id && 
     record.pay_period === currentPayrollRecord.pay_period
@@ -1564,7 +1565,7 @@ export default function Payroll() {
                         </div>
                       </TableCell>
                     </TableRow>
-                  ) : getVisiblePayrollRecords().length === 0 ? (
+                  ) : visiblePayrollRecords.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={8} className="text-center py-12">
                         <div className="flex flex-col items-center space-y-3">
@@ -1581,7 +1582,7 @@ export default function Payroll() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    getVisiblePayrollRecords().map((record) => (
+                    visiblePayrollRecords.map((record) => (
                       <TableRow key={record.id}>
                         <TableCell className="font-medium text-xs md:text-sm">
                           {record.employee ? `${record.employee.first_name} ${record.employee.last_name}` : '-'}

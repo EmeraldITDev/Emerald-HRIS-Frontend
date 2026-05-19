@@ -9,7 +9,7 @@ export const toMoneyNumber = (value: unknown): number => {
 
 export const roundMoney = (value: number): number => Math.round(value * 100) / 100
 
-const calculateAnnualPaye = (annualGross: number, annualPension: number, annualNhf: number) => {
+export const calculateAnnualPaye = (annualGross: number, annualPension: number, annualNhf: number) => {
   const grossForCra = Math.max(annualGross - annualPension - annualNhf, 0)
   const cra = grossForCra * 0.2 + Math.max(grossForCra * 0.01, 200000)
   const taxableIncome = Math.max(annualGross - cra - annualPension - annualNhf, 0)

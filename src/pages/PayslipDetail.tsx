@@ -9,6 +9,7 @@ import { apiService } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import { generatePayslipPdf, toPayslipLike } from "@/utils/payslipPdf";
+import { normalizePayslipDetail } from "@/lib/payrollCalc";
 
 function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
@@ -29,8 +30,11 @@ export default function PayslipDetail() {
     const load = async () => {
       if (!period || !user?.employee_id) { setLoading(false); return; }
       try {
-        const res = await apiService.getPayslipDetail(user.employee_id, period);
-        setData(res);
+        const [res, profile] = await Promise.all([
+          apiService.getPayslipDetail(user.employee_id, period),
+          apiService.getMyProfile().catch(() => null),
+        ]);
+        setData(normalizePayslipDetail(res, profile));
       } catch (e: any) {
         toast({ title: "Failed to load payslip", description: e?.message, variant: "destructive" });
       } finally { setLoading(false); }

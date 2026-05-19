@@ -1946,26 +1946,32 @@ export default function Attendance() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {employees.map((emp) => (
-                <div key={emp.id} className="p-4 border rounded-lg bg-card">
-                  <div className="font-medium text-sm">{emp.first_name} {emp.last_name}</div>
-                  <div className="text-xs text-muted-foreground">{emp.employee_code || emp.id}</div>
-                  <div className="mt-2 space-y-1">
-                    <div className="flex justify-between text-xs">
-                      <span>Total:</span>
-                      <span>{emp.vacation_days || 0} days</span>
-                    </div>
-                    <div className="flex justify-between text-xs">
-                      <span>Used:</span>
-                      <span>0 days</span>
-                    </div>
-                    <div className="flex justify-between text-xs font-medium">
-                      <span>Remaining:</span>
-                      <span className="text-primary">{emp.vacation_days || 0} days</span>
+              {employees.map((emp) => {
+                const bal = leaveBalances[String(emp.id)]
+                const total = bal?.limit ?? emp.vacation_days ?? 0
+                const used = bal?.used ?? 0
+                const remaining = bal?.remaining ?? total
+                return (
+                  <div key={emp.id} className="p-4 border rounded-lg bg-card">
+                    <div className="font-medium text-sm">{emp.first_name} {emp.last_name}</div>
+                    <div className="text-xs text-muted-foreground">{emp.employee_code || emp.id}</div>
+                    <div className="mt-2 space-y-1">
+                      <div className="flex justify-between text-xs">
+                        <span>Total:</span>
+                        <span>{total} days</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span>Used:</span>
+                        <span>{used} days</span>
+                      </div>
+                      <div className="flex justify-between text-xs font-medium">
+                        <span>Remaining:</span>
+                        <span className="text-primary">{remaining} days</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </CardContent>
         </Card>

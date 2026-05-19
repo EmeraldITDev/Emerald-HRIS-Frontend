@@ -447,8 +447,8 @@ export default function EmployeeProfile() {
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{employee.vacation_days || 0}</div>
-            <p className="text-xs text-muted-foreground">Annual leave allowance</p>
+            <div className="text-2xl font-bold">{leaveRemaining ?? employee.vacation_days ?? 0}</div>
+            <p className="text-xs text-muted-foreground">Annual leave remaining</p>
           </CardContent>
         </Card>
       </div>
@@ -615,7 +615,7 @@ export default function EmployeeProfile() {
                   </div>
                   <div>
                     <label className="text-sm font-medium text-muted-foreground">Vacation Days</label>
-                    <p className="text-sm">{employee.vacation_days || 0} days</p>
+                    <p className="text-sm">{leaveRemaining ?? employee.vacation_days ?? 0} days remaining</p>
                   </div>
                 </div>
               </CardContent>

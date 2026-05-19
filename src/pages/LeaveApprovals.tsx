@@ -88,7 +88,31 @@ export default function LeaveApprovals() {
         if (dialog.action === "approve") await apiService.approveLeaveByHR(id, notes);
         else await apiService.rejectLeaveByHR(id, notes);
       }
-      toast({ title: `Leave ${dialog.action === "approve" ? "approved" : "rejected"}` });
+      // On FINAL approval (HR stage), deduct the requested days from the
+      // employee's vacation_days balance so all employee views reflect it.
+      let balanceMsg: string | undefined;
+      if (stage === "hr" && dialog.action === "approve") {
+        try {
+          const empId = Number(dialog.row.employee_id);
+          const days = Number(
+            dialog.row.days_requested ?? dialog.row.days ?? 0
+          ) || 0;
+          if (empId && days > 0) {
+            const employees = await apiService.getEmployees();
+            const emp = employees.find((e: any) => Number(e.id) === empId);
+            const current = Number(emp?.vacation_days ?? 0);
+            const next = Math.max(0, current - days);
+            await apiService.updateEmployee(empId, { vacation_days: next } as any);
+            balanceMsg = `Balance: ${current} → ${next} days`;
+          }
+        } catch (err: any) {
+          balanceMsg = `Balance not updated: ${err?.message || "unknown error"}`;
+        }
+      }
+      toast({
+        title: `Leave ${dialog.action === "approve" ? "approved" : "rejected"}`,
+        description: balanceMsg,
+      });
       setDialog({ open: false, action: "approve", row: null });
       load();
     } catch (e: any) {

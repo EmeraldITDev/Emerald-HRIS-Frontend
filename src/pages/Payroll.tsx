@@ -1435,15 +1435,60 @@ export default function Payroll() {
                         </TableCell>
                         <TableCell>{getStatusBadge(record.status || 'pending')}</TableCell>
                         <TableCell>
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            className="h-7 px-2"
-                            onClick={() => startEditing(record)}
-                          >
-                            <Pencil className="h-3 w-3 mr-1" />
-                            Edit
-                          </Button>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 px-2"
+                              onClick={() => startEditing(record)}
+                            >
+                              <Pencil className="h-3 w-3 mr-1" />
+                              Edit
+                            </Button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button size="sm" variant="outline" className="h-7 px-2">
+                                  <Download className="h-3 w-3" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={async () => {
+                                  try {
+                                    const blob = await apiService.exportPayrollRecordPdf(record.id!)
+                                    const url = URL.createObjectURL(blob); const a = document.createElement('a')
+                                    a.href = url; a.download = `Payslip_${record.id}_${record.pay_period}.pdf`; a.click(); URL.revokeObjectURL(url)
+                                  } catch (e: any) { toast({ title: 'PDF export failed', description: e?.message, variant: 'destructive' }) }
+                                }}>Export PDF</DropdownMenuItem>
+                                <DropdownMenuItem onClick={async () => {
+                                  try {
+                                    const blob = await apiService.exportPayrollRecordCsv(record.id!)
+                                    const url = URL.createObjectURL(blob); const a = document.createElement('a')
+                                    a.href = url; a.download = `Payslip_${record.id}_${record.pay_period}.csv`; a.click(); URL.revokeObjectURL(url)
+                                  } catch (e: any) { toast({ title: 'CSV export failed', description: e?.message, variant: 'destructive' }) }
+                                }}>Export CSV</DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                            {(record.status === 'pending') && (user?.role === 'hr_manager' || user?.role === 'corporate_hr') && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 px-2 text-destructive hover:bg-destructive/10"
+                                onClick={async () => {
+                                  const reason = window.prompt('Reason for deletion (optional):') || undefined
+                                  if (!window.confirm('Delete this payroll record?')) return
+                                  try {
+                                    await apiService.deletePayrollWithReason(record.id!, reason)
+                                    toast({ title: 'Payroll deleted' })
+                                    setPayrollRecords(prev => prev.filter(r => r.id !== record.id))
+                                  } catch (e: any) {
+                                    toast({ title: 'Delete failed', description: e?.message, variant: 'destructive' })
+                                  }
+                                }}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))

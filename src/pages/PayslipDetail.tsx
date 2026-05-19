@@ -8,6 +8,7 @@ import { Download, ArrowLeft, Printer } from "lucide-react";
 import { apiService } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
+import { generatePayslipPdf, toPayslipLike } from "@/utils/payslipPdf";
 
 function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
@@ -59,7 +60,14 @@ export default function PayslipDetail() {
             try {
               const blob = await apiService.exportMyPayslipPdf(period!);
               downloadBlob(blob, `Payslip_${period}.pdf`);
-            } catch (err: any) { toast({ title: "PDF failed", description: err?.message, variant: "destructive" }); }
+            } catch (err: any) {
+              try {
+                generatePayslipPdf(toPayslipLike(data), `Payslip_${period}.pdf`);
+                toast({ title: "PDF generated locally", description: "Server export failed; built from this payslip." });
+              } catch {
+                toast({ title: "PDF failed", description: err?.message, variant: "destructive" });
+              }
+            }
           }}>
             <Download className="h-4 w-4 mr-2" />PDF
           </Button>

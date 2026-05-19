@@ -69,7 +69,8 @@ export function NotificationBell() {
       }
     } catch {}
     setOpen(false);
-    if (n.link) navigate(n.link);
+    const target = resolveNotificationLink(n);
+    if (target) navigate(target);
   };
 
   const handleMarkAll = async () => {

@@ -1266,7 +1266,7 @@ export default function Attendance() {
                               .filter(emp => emp.employment_type !== 'Contract')
                               .map((emp) => (
                                 <SelectItem key={emp.id} value={emp.id?.toString() || '0'}>
-                                  {emp.employee_code} - {emp.first_name} {emp.last_name}
+                                  {emp.employee_display || `${emp.employee_code ? emp.employee_code + ' - ' : ''}${emp.first_name} ${emp.last_name}`}
                                 </SelectItem>
                               ))
                           ) : (
@@ -1289,7 +1289,7 @@ export default function Attendance() {
                                   emp.email?.toLowerCase() === user?.email?.toLowerCase()
                                 );
                                 return currentEmployee 
-                                  ? `${currentEmployee.employee_code} - ${currentEmployee.first_name} ${currentEmployee.last_name}`
+                                  ? (currentEmployee.employee_display || `${currentEmployee.employee_code ? currentEmployee.employee_code + ' - ' : ''}${currentEmployee.first_name} ${currentEmployee.last_name}`)
                                   : `${user?.firstName} ${user?.lastName}` || "Employee not found";
                               })()
                         }

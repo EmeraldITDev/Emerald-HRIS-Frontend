@@ -1117,10 +1117,11 @@ export default function Payroll() {
                     <SelectValue placeholder="Select period" />
                   </SelectTrigger>
                   <SelectContent className="bg-popover border shadow-lg">
-                    <SelectItem value="2024-01">January 2024</SelectItem>
-                    <SelectItem value="2024-02">February 2024</SelectItem>
-                    <SelectItem value="2024-03">March 2024</SelectItem>
-                    <SelectItem value="2024-04">April 2024</SelectItem>
+                    {allowedPeriods.map((p) => (
+                      <SelectItem key={p.value} value={p.value}>
+                        {p.label}{p.is_current ? ' (current)' : ''}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>

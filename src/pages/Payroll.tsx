@@ -421,9 +421,9 @@ export default function Payroll() {
   
   const rawCurrentPayrollRecord = getCurrentUserPayrollRecord()
   const currentPayrollRecord = rawCurrentPayrollRecord
-    ? normalizePayrollRecord(rawCurrentPayrollRecord as PayrollRecord)
+    ? normalizeRecord(rawCurrentPayrollRecord as PayrollRecord)
     : null
-  const visiblePayrollRecords = getVisiblePayrollRecords().map(normalizePayrollRecord)
+  const visiblePayrollRecords = getVisiblePayrollRecords().map(normalizeRecord)
   const isPreviewFromFinancialDetails = currentPayrollRecord && !payrollRecords.some(record => 
     record.employee_id === currentPayrollRecord.employee_id && 
     record.pay_period === currentPayrollRecord.pay_period

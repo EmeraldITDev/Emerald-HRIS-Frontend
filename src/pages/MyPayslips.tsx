@@ -8,6 +8,7 @@ import { apiService } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { generatePayslipPdf, generatePayslipCsv, toPayslipLike } from "@/utils/payslipPdf";
 
 function triggerDownload(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
@@ -40,17 +41,43 @@ export default function MyPayslips() {
   };
   useEffect(() => { load(); }, []);
 
+  const buildLocal = async (period: string) => {
+    if (!user?.employee_id) return null;
+    try {
+      const detail = await apiService.getPayslipDetail(user.employee_id, period);
+      return toPayslipLike(detail);
+    } catch {
+      const row = items.find((r) => (r.pay_period || r.payPeriod) === period);
+      return row ? toPayslipLike(row) : null;
+    }
+  };
   const handlePdf = async (period: string) => {
     try {
       const blob = await apiService.exportMyPayslipPdf(period);
       triggerDownload(blob, `Payslip_${period}.pdf`);
-    } catch (e: any) { toast({ title: "PDF export failed", description: e?.message, variant: "destructive" }); }
+    } catch (e: any) {
+      const p = await buildLocal(period);
+      if (p) {
+        generatePayslipPdf(p, `Payslip_${period}.pdf`);
+        toast({ title: "PDF generated locally", description: "Server export failed; built from your payslip data." });
+      } else {
+        toast({ title: "PDF export failed", description: e?.message, variant: "destructive" });
+      }
+    }
   };
   const handleCsv = async (period: string) => {
     try {
       const blob = await apiService.exportMyPayslipCsv(period);
       triggerDownload(blob, `Payslip_${period}.csv`);
-    } catch (e: any) { toast({ title: "CSV export failed", description: e?.message, variant: "destructive" }); }
+    } catch (e: any) {
+      const p = await buildLocal(period);
+      if (p) {
+        generatePayslipCsv(p, `Payslip_${period}.csv`);
+        toast({ title: "CSV generated locally", description: "Server export failed; built from your payslip data." });
+      } else {
+        toast({ title: "CSV export failed", description: e?.message, variant: "destructive" });
+      }
+    }
   };
 
   return (

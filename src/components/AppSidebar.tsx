@@ -78,7 +78,8 @@ const navigationItems: NavItem[] = [
     title: "Payroll", 
     url: "/payroll", 
     icon: NairaIcon,
-    permission: "*"
+    permission: "*",
+    roles: ['hr_manager', 'corporate_hr']
   },
   { 
     title: "Performance", 

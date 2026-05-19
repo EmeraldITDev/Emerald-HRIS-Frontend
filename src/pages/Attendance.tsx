@@ -1786,9 +1786,13 @@ export default function Attendance() {
                           <TableRow key={request.id}>
                             {(user?.role === 'hr_manager' || user?.role === 'line_manager' || user?.role === 'corporate_hr' || user?.role === 'executive') && (
                               <TableCell className="font-medium">
-                                {request.employee_name || request.employee?.first_name && request.employee?.last_name 
-                                  ? `${request.employee.first_name} ${request.employee.last_name}`
-                                  : `Employee ${request.employee_id}`}
+                                {request.employee_display
+                                  || (request.employee_code && request.employee_name
+                                        ? `${request.employee_code} - ${request.employee_name}`
+                                        : request.employee_name)
+                                  || (request.employee?.first_name && request.employee?.last_name
+                                        ? `${request.employee.employee_code ? request.employee.employee_code + ' - ' : ''}${request.employee.first_name} ${request.employee.last_name}`
+                                        : `Employee ${request.employee_id}`)}
                               </TableCell>
                             )}
                             <TableCell>{request.leave_type || request.leaveType?.name || 'N/A'}</TableCell>

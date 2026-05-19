@@ -1786,9 +1786,13 @@ export default function Attendance() {
                           <TableRow key={request.id}>
                             {(user?.role === 'hr_manager' || user?.role === 'line_manager' || user?.role === 'corporate_hr' || user?.role === 'executive') && (
                               <TableCell className="font-medium">
-                                {request.employee_name || request.employee?.first_name && request.employee?.last_name 
-                                  ? `${request.employee.first_name} ${request.employee.last_name}`
-                                  : `Employee ${request.employee_id}`}
+                                {request.employee_display
+                                  || (request.employee_code && request.employee_name
+                                        ? `${request.employee_code} - ${request.employee_name}`
+                                        : request.employee_name)
+                                  || (request.employee?.first_name && request.employee?.last_name
+                                        ? `${request.employee.employee_code ? request.employee.employee_code + ' - ' : ''}${request.employee.first_name} ${request.employee.last_name}`
+                                        : `Employee ${request.employee_id}`)}
                               </TableCell>
                             )}
                             <TableCell>{request.leave_type || request.leaveType?.name || 'N/A'}</TableCell>
@@ -1916,7 +1920,7 @@ export default function Attendance() {
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <Label className="text-xs text-muted-foreground">Employee</Label>
-                  <p className="font-medium">{selectedLeaveRequest.employee_name || `Employee ${selectedLeaveRequest.employee_id}`}</p>
+                  <p className="font-medium">{selectedLeaveRequest.employee_display || selectedLeaveRequest.employee_name || `Employee ${selectedLeaveRequest.employee_id}`}</p>
                 </div>
                 <div>
                   <Label className="text-xs text-muted-foreground">Leave Type</Label>
@@ -1980,7 +1984,7 @@ export default function Attendance() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label className="text-sm text-muted-foreground">Employee</Label>
-                  <p className="font-medium">{selectedLeaveRequest.employee_name || `Employee ${selectedLeaveRequest.employee_id}`}</p>
+                  <p className="font-medium">{selectedLeaveRequest.employee_display || selectedLeaveRequest.employee_name || `Employee ${selectedLeaveRequest.employee_id}`}</p>
                 </div>
                 <div>
                   <Label className="text-sm text-muted-foreground">Leave Type</Label>

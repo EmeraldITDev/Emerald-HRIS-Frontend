@@ -13,7 +13,10 @@ import {
   Clock,
   FileText,
   Settings,
-  BookOpen
+  BookOpen,
+  Bell,
+  ShieldCheck,
+  Receipt
 } from "lucide-react"
 import { useAuth } from "@/contexts/AuthContext"
 import RoleBasedComponent from "./RoleBasedComponent"
@@ -94,6 +97,26 @@ const navigationItems: NavItem[] = [
     url: "/benefits", 
     icon: Heart,
     permission: "benefits.view"
+  },
+  {
+    title: "My Payslips",
+    url: "/payroll/my-payslips",
+    icon: Receipt,
+    permission: "*",
+    roles: ['general_employee', 'contract_employee', 'line_manager', 'finance', 'it_power_user']
+  },
+  {
+    title: "Leave Approvals",
+    url: "/approvals/leave",
+    icon: ShieldCheck,
+    permission: "approvals.manage",
+    roles: ['line_manager', 'hr_manager', 'corporate_hr', 'executive']
+  },
+  {
+    title: "Notifications",
+    url: "/notifications",
+    icon: Bell,
+    permission: "*"
   }
 ]
 

@@ -9,6 +9,7 @@ import { ThemeToggle } from "@/components/ThemeToggle"
 import { useAuth } from "@/contexts/AuthContext"
 import { Badge } from "@/components/ui/badge"
 import { PasswordChangeModal } from "@/components/PasswordChangeModal"
+import { NotificationBell } from "@/components/NotificationBell"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -100,6 +101,7 @@ export default function Layout({ children }: LayoutProps) {
               </div>
               
               <ThemeToggle />
+              <NotificationBell />
               
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>

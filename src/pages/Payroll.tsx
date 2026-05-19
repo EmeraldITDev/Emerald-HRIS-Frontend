@@ -13,7 +13,7 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table"
-import { Pencil, Save, X } from "lucide-react"
+import { Pencil, Save, X, Trash2 } from "lucide-react"
 import {
   Select,
   SelectContent,
@@ -49,7 +49,8 @@ export default function Payroll() {
   const [payrollRecords, setPayrollRecords] = useState<PayrollRecord[]>([])
   const [isLoadingPayroll, setIsLoadingPayroll] = useState(true)
   const [selectedEmployee, setSelectedEmployee] = useState("")
-  const [selectedPeriod, setSelectedPeriod] = useState("2024-10")
+  const [selectedPeriod, setSelectedPeriod] = useState(new Date().toISOString().slice(0, 7))
+  const [allowedPeriods, setAllowedPeriods] = useState<Array<{ value: string; label: string; is_current: boolean }>>([])
   const [isPayrollLocked, setIsPayrollLocked] = useState(false)
   const [payrollData, setPayrollData] = useState({
     basicSalary: "1600000",
@@ -83,6 +84,31 @@ export default function Payroll() {
       }
     }
     fetchEmployees()
+  }, [])
+
+  // Fetch allowed pay periods
+  useEffect(() => {
+    const fetchAllowed = async () => {
+      try {
+        const res = await apiService.getAllowedPayPeriods()
+        if (res?.periods?.length) {
+          setAllowedPeriods(res.periods)
+          setSelectedPeriod(res.current_month)
+        }
+      } catch (e) {
+        // Backend may not have endpoint yet — fall back to last 12 months
+        const fallback: Array<{ value: string; label: string; is_current: boolean }> = []
+        const now = new Date()
+        for (let i = 0; i < 24; i++) {
+          const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+          const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+          const label = d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+          fallback.push({ value, label, is_current: i === 0 })
+        }
+        setAllowedPeriods(fallback)
+      }
+    }
+    fetchAllowed()
   }, [])
 
   // Fetch payroll records from database
@@ -1091,10 +1117,11 @@ export default function Payroll() {
                     <SelectValue placeholder="Select period" />
                   </SelectTrigger>
                   <SelectContent className="bg-popover border shadow-lg">
-                    <SelectItem value="2024-01">January 2024</SelectItem>
-                    <SelectItem value="2024-02">February 2024</SelectItem>
-                    <SelectItem value="2024-03">March 2024</SelectItem>
-                    <SelectItem value="2024-04">April 2024</SelectItem>
+                    {allowedPeriods.map((p) => (
+                      <SelectItem key={p.value} value={p.value}>
+                        {p.label}{p.is_current ? ' (current)' : ''}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -1340,11 +1367,38 @@ export default function Payroll() {
       </div>
 
       {/* Payroll History */}
-      <RoleBasedComponent allowedRoles={['hr_manager']}>
+      <RoleBasedComponent allowedRoles={['hr_manager', 'corporate_hr']}>
         <Card className="border-border/50 shadow-sm">
           <CardHeader>
-            <CardTitle className="text-primary">Payroll History - Edit & Update</CardTitle>
-            <p className="text-sm text-muted-foreground mt-1">Click edit to modify payroll records. Changes sync to employee records.</p>
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div>
+                <CardTitle className="text-primary">Payroll History - Edit & Update</CardTitle>
+                <p className="text-sm text-muted-foreground mt-1">Click edit to modify payroll records. Changes sync to employee records.</p>
+              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Download className="h-4 w-4 mr-2" />Bulk export ({selectedPeriod})
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={async () => {
+                    try {
+                      const blob = await apiService.exportPayrollBulkCsv(selectedPeriod)
+                      const url = URL.createObjectURL(blob); const a = document.createElement('a')
+                      a.href = url; a.download = `Payroll_${selectedPeriod}.csv`; a.click(); URL.revokeObjectURL(url)
+                    } catch (e: any) { toast({ title: 'Bulk CSV failed', description: e?.message, variant: 'destructive' }) }
+                  }}>CSV</DropdownMenuItem>
+                  <DropdownMenuItem onClick={async () => {
+                    try {
+                      const blob = await apiService.exportPayrollBulkPdf(selectedPeriod)
+                      const url = URL.createObjectURL(blob); const a = document.createElement('a')
+                      a.href = url; a.download = `Payroll_${selectedPeriod}.pdf`; a.click(); URL.revokeObjectURL(url)
+                    } catch (e: any) { toast({ title: 'Bulk PDF failed', description: e?.message, variant: 'destructive' }) }
+                  }}>PDF Summary</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
@@ -1408,15 +1462,60 @@ export default function Payroll() {
                         </TableCell>
                         <TableCell>{getStatusBadge(record.status || 'pending')}</TableCell>
                         <TableCell>
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            className="h-7 px-2"
-                            onClick={() => startEditing(record)}
-                          >
-                            <Pencil className="h-3 w-3 mr-1" />
-                            Edit
-                          </Button>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 px-2"
+                              onClick={() => startEditing(record)}
+                            >
+                              <Pencil className="h-3 w-3 mr-1" />
+                              Edit
+                            </Button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button size="sm" variant="outline" className="h-7 px-2">
+                                  <Download className="h-3 w-3" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={async () => {
+                                  try {
+                                    const blob = await apiService.exportPayrollRecordPdf(record.id!)
+                                    const url = URL.createObjectURL(blob); const a = document.createElement('a')
+                                    a.href = url; a.download = `Payslip_${record.id}_${record.pay_period}.pdf`; a.click(); URL.revokeObjectURL(url)
+                                  } catch (e: any) { toast({ title: 'PDF export failed', description: e?.message, variant: 'destructive' }) }
+                                }}>Export PDF</DropdownMenuItem>
+                                <DropdownMenuItem onClick={async () => {
+                                  try {
+                                    const blob = await apiService.exportPayrollRecordCsv(record.id!)
+                                    const url = URL.createObjectURL(blob); const a = document.createElement('a')
+                                    a.href = url; a.download = `Payslip_${record.id}_${record.pay_period}.csv`; a.click(); URL.revokeObjectURL(url)
+                                  } catch (e: any) { toast({ title: 'CSV export failed', description: e?.message, variant: 'destructive' }) }
+                                }}>Export CSV</DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                            {(record.status === 'pending') && (user?.role === 'hr_manager' || user?.role === 'corporate_hr') && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 px-2 text-destructive hover:bg-destructive/10"
+                                onClick={async () => {
+                                  const reason = window.prompt('Reason for deletion (optional):') || undefined
+                                  if (!window.confirm('Delete this payroll record?')) return
+                                  try {
+                                    await apiService.deletePayrollWithReason(record.id!, reason)
+                                    toast({ title: 'Payroll deleted' })
+                                    setPayrollRecords(prev => prev.filter(r => r.id !== record.id))
+                                  } catch (e: any) {
+                                    toast({ title: 'Delete failed', description: e?.message, variant: 'destructive' })
+                                  }
+                                }}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))

@@ -44,6 +44,7 @@ export interface Employee {
   nuban?: string;
   sort_code?: string;
   employee_code?: string;
+  employee_display?: string;
   national_id?: string;
   passport_number?: string;
   bvn?: string;

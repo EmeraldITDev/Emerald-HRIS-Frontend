@@ -1220,7 +1220,7 @@ export default function Payroll() {
               </Button>
             </CardContent>
           </Card>
-        </RoleBasedComponent>
+        )}
 
         {/* Payroll Breakdown */}
         <Card className="lg:col-span-2 border-border/50 shadow-sm">
@@ -1368,7 +1368,7 @@ export default function Payroll() {
       </div>
 
       {/* Payroll History */}
-      <RoleBasedComponent allowedRoles={['hr_manager', 'corporate_hr']}>
+      {(canHrPayroll(user) || user?.role === 'corporate_hr') && (
         <Card className="border-border/50 shadow-sm">
           <CardHeader>
             <div className="flex items-center justify-between flex-wrap gap-2">
@@ -1526,7 +1526,7 @@ export default function Payroll() {
             </div>
           </CardContent>
         </Card>
-      </RoleBasedComponent>
+      )}
 
       {/* Edit Payroll Dialog */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>

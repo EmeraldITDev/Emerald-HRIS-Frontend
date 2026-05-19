@@ -600,8 +600,11 @@ export default function Attendance() {
       return
     }
 
-    // All users (including HR Manager) can only submit leave requests for themselves
-    if (user && selectedEmployee !== user.id?.toString()) {
+    // All users (including HR Manager) can only submit leave requests for themselves.
+    // Compare against the employee record id (user.employee_id), NOT the auth user id (user.id) —
+    // they are different identifiers and `selectedEmployee` holds the employee id.
+    const ownEmployeeId = user?.employee_id?.toString()
+    if (ownEmployeeId && selectedEmployee !== ownEmployeeId) {
       toast({
         title: "Access Denied",
         description: "You can only submit leave requests for yourself",

@@ -2155,7 +2155,7 @@ export default function Employees() {
                     {newEmployee.employmentType === "Full-time" ? (
                       <>
                         <div className="space-y-2">
-                          <Label htmlFor="grossSalary">Gross Salary *</Label>
+                          <Label htmlFor="grossSalary">Gross Monthly Salary *</Label>
                           <Input
                             id="grossSalary"
                             type="number"
@@ -2168,7 +2168,7 @@ export default function Employees() {
                             }
                             placeholder="2500000"
                           />
-                          <p className="text-xs text-muted-foreground">Enter amount in Naira (₦).</p>
+                          <p className="text-xs text-muted-foreground">Enter gross monthly salary in Naira (₦).</p>
                         </div>
 
                         <div className="space-y-2">
@@ -2234,7 +2234,7 @@ export default function Employees() {
                     ) : newEmployee.employmentType === "Contract" ? (
                       <>
                         <div className="space-y-2">
-                          <Label htmlFor="grossSalary">Gross Salary *</Label>
+                          <Label htmlFor="grossSalary">Gross Monthly Salary *</Label>
                           <Input
                             id="grossSalary"
                             type="number"
@@ -2247,7 +2247,7 @@ export default function Employees() {
                             }
                             placeholder="1500000"
                           />
-                          <p className="text-xs text-muted-foreground">Enter gross salary amount in Naira (₦).</p>
+                          <p className="text-xs text-muted-foreground">Enter gross monthly salary in Naira (₦).</p>
                         </div>
                       </>
                     ) : (

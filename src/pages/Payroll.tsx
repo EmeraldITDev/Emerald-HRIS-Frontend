@@ -13,7 +13,7 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table"
-import { Pencil, Save, X } from "lucide-react"
+import { Pencil, Save, X, Trash2, FileDown, RotateCcw } from "lucide-react"
 import {
   Select,
   SelectContent,
@@ -49,7 +49,8 @@ export default function Payroll() {
   const [payrollRecords, setPayrollRecords] = useState<PayrollRecord[]>([])
   const [isLoadingPayroll, setIsLoadingPayroll] = useState(true)
   const [selectedEmployee, setSelectedEmployee] = useState("")
-  const [selectedPeriod, setSelectedPeriod] = useState("2024-10")
+  const [selectedPeriod, setSelectedPeriod] = useState(new Date().toISOString().slice(0, 7))
+  const [allowedPeriods, setAllowedPeriods] = useState<Array<{ value: string; label: string; is_current: boolean }>>([])
   const [isPayrollLocked, setIsPayrollLocked] = useState(false)
   const [payrollData, setPayrollData] = useState({
     basicSalary: "1600000",

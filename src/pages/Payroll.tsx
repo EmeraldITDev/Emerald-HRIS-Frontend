@@ -33,7 +33,7 @@ import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/contexts/AuthContext"
 import { RoleBasedComponent } from "@/components/RoleBasedComponent"
 import { canHrPayroll } from "@/lib/permissions"
-import { getEmployeePayrollPackage, normalizePayrollRecord, roundMoney, toMoneyNumber } from "@/lib/payrollCalc"
+import { calculateAnnualPaye, getEmployeePayrollPackage, normalizePayrollRecord, roundMoney, toMoneyNumber } from "@/lib/payrollCalc"
 import {
   Dialog,
   DialogContent,
@@ -384,36 +384,11 @@ export default function Payroll() {
     }
   }
 
-  const normalizePayrollRecord = (record: PayrollRecord): PayrollRecord => {
-    const employee = employees.find(emp => emp.id?.toString() === record.employee_id?.toString()) || record.employee
-    const payrollPackage = getEmployeePayrollPackage(employee)
-    if (!employee || payrollPackage.annualGross === 0) return record
-
-    const overtime = toMoneyNumber(record.overtime)
-    const bonus = toMoneyNumber(record.bonus)
-    const commission = toMoneyNumber(record.commission)
-    const otherDeductions = toMoneyNumber(record.other_deductions)
-    const grossPay = payrollPackage.monthlyGross + overtime + bonus + commission
-    const totalAllowances = payrollPackage.monthlyHousing + payrollPackage.monthlyTransport + payrollPackage.monthlyMeal + payrollPackage.monthlyOther
-    const totalDeductions = payrollPackage.monthlyPaye + payrollPackage.monthlyPension + payrollPackage.monthlyNhf + otherDeductions
-
-    return {
-      ...record,
-      basic_salary: payrollPackage.monthlyBasic,
-      housing_allowance: payrollPackage.monthlyHousing,
-      transport_allowance: payrollPackage.monthlyTransport,
-      meal_allowance: payrollPackage.monthlyMeal,
-      other_allowance: payrollPackage.monthlyOther,
-      total_allowances: roundMoney(totalAllowances),
-      taxable_income: roundMoney(payrollPackage.annualTaxableIncome / 12),
-      paye_tax: payrollPackage.monthlyPaye,
-      pension_employee: payrollPackage.monthlyPension,
-      nhf: payrollPackage.monthlyNhf,
-      gross_pay: roundMoney(grossPay),
-      total_deductions: roundMoney(totalDeductions),
-      net_pay: roundMoney(grossPay - totalDeductions),
-    }
-  }
+  const normalizeRecord = (record: PayrollRecord): PayrollRecord =>
+    normalizePayrollRecord(
+      record,
+      employees.find(emp => emp.id?.toString() === record.employee_id?.toString()) || record.employee
+    )
 
   // Get current user's latest payroll record for display
   const getCurrentUserPayrollRecord = () => {

@@ -1948,9 +1948,23 @@ export default function Attendance() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {employees.map((emp) => {
                 const bal = leaveBalances[String(emp.id)]
-                const total = bal?.limit ?? emp.vacation_days ?? 0
-                const used = bal?.used ?? 0
-                const remaining = bal?.remaining ?? total
+                // Fallback: derive "used" from approved leave requests on this page
+                // so cards stay accurate even if /leave/balance has no row yet for
+                // this employee (the backend only creates one on first usage).
+                const safeRequests = Array.isArray(leaveRequests) ? leaveRequests : []
+                const derivedUsed = safeRequests
+                  .filter((r: any) => {
+                    const rid = String(r.employee_id ?? r.employee?.id ?? '')
+                    const matches = rid === String(emp.id) || rid === String((emp as any).employee_code)
+                    const status = String(r.status || '').toLowerCase()
+                    return matches && (status === 'approved' || status === 'hr_approved')
+                  })
+                  .reduce((sum: number, r: any) => sum + Number(r.days_requested || r.total_days || 0), 0)
+                const total = bal?.limit ?? emp.vacation_days ?? 20
+                const used = Math.max(bal?.used ?? 0, derivedUsed)
+                const remaining = bal?.remaining !== undefined && used === bal?.used
+                  ? bal.remaining
+                  : Math.max(total - used, 0)
                 return (
                   <div key={emp.id} className="p-4 border rounded-lg bg-card">
                     <div className="font-medium text-sm">{emp.first_name} {emp.last_name}</div>

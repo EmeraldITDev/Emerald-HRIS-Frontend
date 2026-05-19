@@ -12,6 +12,7 @@ import { apiService } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import { resolveNotificationLink } from "@/lib/notificationLinks";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Notification {
   id: number;
@@ -29,6 +30,7 @@ export function NotificationBell() {
   const [items, setItems] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const fetchCount = useCallback(async () => {
     try {
@@ -70,7 +72,7 @@ export function NotificationBell() {
       }
     } catch {}
     setOpen(false);
-    const target = resolveNotificationLink(n);
+    const target = resolveNotificationLink(n, user?.role);
     if (target) navigate(target);
   };
 

@@ -9,12 +9,14 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
 import { resolveNotificationLink } from "@/lib/notificationLinks";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function NotificationsPage() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<"all" | "unread">("all");
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const load = async () => {
     setLoading(true);
@@ -36,7 +38,7 @@ export default function NotificationsPage() {
     try {
       if (n.is_unread || !n.read_at) await apiService.markNotificationRead(n.id);
     } catch {}
-    const target = resolveNotificationLink(n);
+    const target = resolveNotificationLink(n, user?.role);
     if (target) navigate(target);
     load();
   };

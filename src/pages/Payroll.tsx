@@ -1506,18 +1506,36 @@ export default function Payroll() {
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
                                 <DropdownMenuItem onClick={async () => {
+                                  const filename = `Payslip_${record.id}_${record.pay_period}.pdf`
                                   try {
                                     const blob = await apiService.exportPayrollRecordPdf(record.id!)
                                     const url = URL.createObjectURL(blob); const a = document.createElement('a')
-                                    a.href = url; a.download = `Payslip_${record.id}_${record.pay_period}.pdf`; a.click(); URL.revokeObjectURL(url)
-                                  } catch (e: any) { toast({ title: 'PDF export failed', description: e?.message, variant: 'destructive' }) }
+                                    a.href = url; a.download = filename; a.click(); URL.revokeObjectURL(url)
+                                  } catch (e: any) {
+                                    try {
+                                      const { generatePayslipPdf, toPayslipLike } = await import('@/utils/payslipPdf')
+                                      generatePayslipPdf(toPayslipLike(record), filename)
+                                      toast({ title: 'PDF generated locally', description: 'Server export failed; built from displayed data.' })
+                                    } catch (err: any) {
+                                      toast({ title: 'PDF export failed', description: e?.message, variant: 'destructive' })
+                                    }
+                                  }
                                 }}>Export PDF</DropdownMenuItem>
                                 <DropdownMenuItem onClick={async () => {
+                                  const filename = `Payslip_${record.id}_${record.pay_period}.csv`
                                   try {
                                     const blob = await apiService.exportPayrollRecordCsv(record.id!)
                                     const url = URL.createObjectURL(blob); const a = document.createElement('a')
-                                    a.href = url; a.download = `Payslip_${record.id}_${record.pay_period}.csv`; a.click(); URL.revokeObjectURL(url)
-                                  } catch (e: any) { toast({ title: 'CSV export failed', description: e?.message, variant: 'destructive' }) }
+                                    a.href = url; a.download = filename; a.click(); URL.revokeObjectURL(url)
+                                  } catch (e: any) {
+                                    try {
+                                      const { generatePayslipCsv, toPayslipLike } = await import('@/utils/payslipPdf')
+                                      generatePayslipCsv(toPayslipLike(record), filename)
+                                      toast({ title: 'CSV generated locally', description: 'Server export failed; built from displayed data.' })
+                                    } catch (err: any) {
+                                      toast({ title: 'CSV export failed', description: e?.message, variant: 'destructive' })
+                                    }
+                                  }
                                 }}>Export CSV</DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>

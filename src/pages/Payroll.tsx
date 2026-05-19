@@ -1367,11 +1367,38 @@ export default function Payroll() {
       </div>
 
       {/* Payroll History */}
-      <RoleBasedComponent allowedRoles={['hr_manager']}>
+      <RoleBasedComponent allowedRoles={['hr_manager', 'corporate_hr']}>
         <Card className="border-border/50 shadow-sm">
           <CardHeader>
-            <CardTitle className="text-primary">Payroll History - Edit & Update</CardTitle>
-            <p className="text-sm text-muted-foreground mt-1">Click edit to modify payroll records. Changes sync to employee records.</p>
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div>
+                <CardTitle className="text-primary">Payroll History - Edit & Update</CardTitle>
+                <p className="text-sm text-muted-foreground mt-1">Click edit to modify payroll records. Changes sync to employee records.</p>
+              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Download className="h-4 w-4 mr-2" />Bulk export ({selectedPeriod})
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={async () => {
+                    try {
+                      const blob = await apiService.exportPayrollBulkCsv(selectedPeriod)
+                      const url = URL.createObjectURL(blob); const a = document.createElement('a')
+                      a.href = url; a.download = `Payroll_${selectedPeriod}.csv`; a.click(); URL.revokeObjectURL(url)
+                    } catch (e: any) { toast({ title: 'Bulk CSV failed', description: e?.message, variant: 'destructive' }) }
+                  }}>CSV</DropdownMenuItem>
+                  <DropdownMenuItem onClick={async () => {
+                    try {
+                      const blob = await apiService.exportPayrollBulkPdf(selectedPeriod)
+                      const url = URL.createObjectURL(blob); const a = document.createElement('a')
+                      a.href = url; a.download = `Payroll_${selectedPeriod}.pdf`; a.click(); URL.revokeObjectURL(url)
+                    } catch (e: any) { toast({ title: 'Bulk PDF failed', description: e?.message, variant: 'destructive' }) }
+                  }}>PDF Summary</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">

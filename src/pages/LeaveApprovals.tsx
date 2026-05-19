@@ -13,12 +13,13 @@ import { Check, X, ShieldCheck, UserCheck } from "lucide-react";
 import { apiService } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
+import { canHrApproveLeave } from "@/lib/permissions";
 
 type Stage = "manager" | "hr";
 
 export default function LeaveApprovals() {
   const { user } = useAuth();
-  const isHR = user?.role === "hr_manager" || user?.role === "corporate_hr";
+  const isHR = canHrApproveLeave(user);
   const isLineManager = user?.role === "line_manager";
   const defaultStage: Stage = isLineManager && !isHR ? "manager" : "hr";
 

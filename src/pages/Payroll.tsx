@@ -857,6 +857,14 @@ export default function Payroll() {
       console.log('💰 Pay period:', selectedPeriod);
 
       const payrollPackage = getEmployeePayrollPackage(selectedEmp)
+      if (payrollPackage.annualGross <= 0) {
+        toast({
+          title: "Generation Failed",
+          description: `No gross salary found for ${selectedEmp.first_name} ${selectedEmp.last_name}. Please confirm the employee financial details before generating payroll.`,
+          variant: "destructive"
+        })
+        return
+      }
       const manualAnnualBasic = toMoneyNumber(payrollData.basicSalary)
       const basicSalary = manualAnnualBasic > 0
         ? roundMoney(manualAnnualBasic / 12)
@@ -887,6 +895,14 @@ export default function Payroll() {
 
       // Generate payroll record via backend API – pass employee-specific
       // earnings so each staff member's payroll reflects their own package.
+      try {
+        await apiService.updateEmployee(parseInt(selectedEmployee), {
+          gross_salary: payrollPackage.annualGross,
+        })
+      } catch (syncError) {
+        console.warn('Could not pre-sync employee gross_salary before payroll generation:', syncError)
+      }
+
       await apiService.generatePayroll({
         employee_id: parseInt(selectedEmployee),
         pay_period: selectedPeriod,
@@ -941,7 +957,7 @@ export default function Payroll() {
       console.error('Failed to generate payroll:', error)
       toast({
         title: "Generation Failed",
-        description: "Failed to generate payroll record. It may already exist for this period.",
+        description: error instanceof Error ? error.message : "Failed to generate payroll record. It may already exist for this period.",
         variant: "destructive"
       })
     }

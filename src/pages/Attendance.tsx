@@ -223,6 +223,27 @@ export default function Attendance() {
     }
   }, [user, employees])
 
+  // Fallback: ask backend for the authenticated user's leave submit context
+  // so selectedEmployee binds even if the employees list lookup misses.
+  useEffect(() => {
+    if (!user) return
+    if (selectedEmployee) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const ctx = await apiService.getLeaveSubmitContext()
+        const eid = ctx?.employee_id
+        if (!cancelled && eid && !selectedEmployee) {
+          setSelectedEmployee(eid.toString())
+          setCurrentEmployeeId(Number(eid))
+        }
+      } catch (e) {
+        // non-fatal — form still works via employees lookup
+      }
+    })()
+    return () => { cancelled = true }
+  }, [user, selectedEmployee])
+
   // Update celebrations when all employees are loaded
   useEffect(() => {
     const fetchCelebrations = async () => {

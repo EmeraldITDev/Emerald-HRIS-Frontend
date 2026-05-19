@@ -514,6 +514,33 @@ class ApiService {
     });
   }
 
+  // Self-service leave submit — no employee_id needed; backend uses authed user.
+  async submitLeaveSelf(data: {
+    leave_type_id: number;
+    start_date: string;
+    end_date: string;
+    reason?: string;
+    contact_during_leave?: string;
+  }): Promise<{ message: string }> {
+    return this.request<{ message: string }>('/leave/submit-self', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // Defaults for the leave submit form (employee_id, leave_types, balances).
+  async getLeaveSubmitContext(): Promise<{
+    employee_id?: number;
+    employee_code?: string;
+    employee_display?: string;
+    leave_types?: any[];
+    balances?: any[];
+    [key: string]: any;
+  }> {
+    const res: any = await this.request('/leave/submit-context');
+    return res?.data ?? res;
+  }
+
   async updateLeaveRequest(requestId: number, status: string, approvedBy?: number, notes?: string): Promise<{ message: string }> {
     const payload: any = { status };
     if (approvedBy) {
@@ -592,6 +619,7 @@ class ApiService {
     commission?: number;
     other_deductions?: number;
     deduction_notes?: string;
+    auto_approve?: boolean;
   }): Promise<{ success: boolean; message: string; payroll?: PayrollRecord }> {
     return this.request<{ success: boolean; message: string; payroll?: PayrollRecord }>('/payroll/generate', {
       method: 'POST',
@@ -602,6 +630,7 @@ class ApiService {
   async bulkGeneratePayroll(data: {
     pay_period: string;
     employee_ids?: number[];
+    auto_approve?: boolean;
   }): Promise<{ success: boolean; message: string; summary: any; details: any }> {
     return this.request<{ success: boolean; message: string; summary: any; details: any }>('/payroll/bulk-generate', {
       method: 'POST',

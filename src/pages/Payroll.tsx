@@ -54,10 +54,10 @@ export default function Payroll() {
   const [allowedPeriods, setAllowedPeriods] = useState<Array<{ value: string; label: string; is_current: boolean }>>([])
   const [isPayrollLocked, setIsPayrollLocked] = useState(false)
   const [payrollData, setPayrollData] = useState({
-    basicSalary: "1600000",
-    earnings: "50000",
+    basicSalary: "",
+    earnings: "",
     earningsRemarks: "",
-    deduction: "25000",
+    deduction: "",
     deductionRemarks: "",
   })
   const [editingRecordId, setEditingRecordId] = useState<number | null>(null)
@@ -66,6 +66,91 @@ export default function Payroll() {
   const [selectedRecord, setSelectedRecord] = useState<PayrollRecord | null>(null)
   const { toast } = useToast()
   const { user } = useAuth()
+
+  const toMoneyNumber = (value: unknown) => {
+    if (value === null || value === undefined || value === '') return 0
+    const normalized = typeof value === 'string' ? value.replace(/[₦,\s]/g, '') : value
+    const parsed = Number(normalized)
+    return Number.isFinite(parsed) ? parsed : 0
+  }
+
+  const roundMoney = (value: number) => Math.round(value * 100) / 100
+
+  const calculateAnnualPaye = (annualGross: number, annualPension: number, annualNhf: number) => {
+    const grossForCra = Math.max(annualGross - annualPension - annualNhf, 0)
+    const cra = grossForCra * 0.2 + Math.max(grossForCra * 0.01, 200000)
+    const taxableIncome = Math.max(annualGross - cra - annualPension - annualNhf, 0)
+    const bands = [
+      [300000, 0.07],
+      [300000, 0.11],
+      [500000, 0.15],
+      [500000, 0.19],
+      [1600000, 0.21],
+      [Infinity, 0.24],
+    ] as const
+    let remaining = taxableIncome
+    let annualTax = 0
+    for (const [band, rate] of bands) {
+      if (remaining <= 0) break
+      const taxableAtRate = Math.min(remaining, band)
+      annualTax += taxableAtRate * rate
+      remaining -= taxableAtRate
+    }
+    return { annualTax, taxableIncome }
+  }
+
+  const getEmployeePayrollPackage = (employee?: Employee | null) => {
+    const employmentType = (employee?.employment_type || '').toLowerCase()
+    const isContract = employmentType === 'contract'
+    const annualGrossFromProfile = toMoneyNumber(employee?.gross_salary ?? employee?.baseSalary)
+    let annualBasic = toMoneyNumber(employee?.basic_salary)
+    let annualHousing = toMoneyNumber(employee?.housing_allowance)
+    let annualTransport = toMoneyNumber(employee?.transport_allowance)
+    let annualMeal = toMoneyNumber(employee?.meal_allowance)
+    let annualOther = toMoneyNumber(employee?.other_allowance)
+
+    if (annualGrossFromProfile > 0) {
+      if (isContract) {
+        annualBasic = annualBasic || annualGrossFromProfile
+        annualHousing = annualTransport = annualMeal = annualOther = 0
+      } else {
+        annualBasic = annualBasic || annualGrossFromProfile * 0.4
+        annualHousing = annualHousing || annualGrossFromProfile * 0.2
+        annualTransport = annualTransport || annualGrossFromProfile * 0.09
+        annualOther = annualOther || annualGrossFromProfile * 0.31
+      }
+    }
+
+    const annualAllowances = annualHousing + annualTransport + annualMeal + annualOther
+    const annualGross = annualGrossFromProfile || annualBasic + annualAllowances
+    const annualPension = isContract ? 0 : (annualBasic + annualHousing + annualTransport) * 0.08
+    const annualNhf = isContract ? 0 : annualBasic * 0.025
+    const { annualTax, taxableIncome } = isContract
+      ? { annualTax: annualGross * 0.05, taxableIncome: annualGross }
+      : calculateAnnualPaye(annualGross, annualPension, annualNhf)
+
+    return {
+      annualGross: roundMoney(annualGross),
+      annualBasic: roundMoney(annualBasic),
+      annualHousing: roundMoney(annualHousing),
+      annualTransport: roundMoney(annualTransport),
+      annualMeal: roundMoney(annualMeal),
+      annualOther: roundMoney(annualOther),
+      annualPension: roundMoney(annualPension),
+      annualNhf: roundMoney(annualNhf),
+      annualTax: roundMoney(annualTax),
+      annualTaxableIncome: roundMoney(taxableIncome),
+      monthlyBasic: roundMoney(annualBasic / 12),
+      monthlyHousing: roundMoney(annualHousing / 12),
+      monthlyTransport: roundMoney(annualTransport / 12),
+      monthlyMeal: roundMoney(annualMeal / 12),
+      monthlyOther: roundMoney(annualOther / 12),
+      monthlyGross: roundMoney(annualGross / 12),
+      monthlyPension: roundMoney(annualPension / 12),
+      monthlyNhf: roundMoney(annualNhf / 12),
+      monthlyPaye: roundMoney(annualTax / 12),
+    }
+  }
 
   useEffect(() => {
     const fetchEmployees = async () => {
@@ -147,10 +232,11 @@ export default function Payroll() {
   useEffect(() => {
     if (selectedEmployee && employees.length > 0) {
       const selectedEmp = employees.find(emp => emp.id?.toString() === selectedEmployee)
-      if (selectedEmp && selectedEmp.gross_salary) {
+      if (selectedEmp) {
+        const payrollPackage = getEmployeePayrollPackage(selectedEmp)
         setPayrollData(prev => ({
           ...prev,
-          basicSalary: selectedEmp.gross_salary?.toString() || prev.basicSalary
+          basicSalary: payrollPackage.annualBasic ? payrollPackage.annualBasic.toString() : ""
         }))
       }
     }
@@ -159,7 +245,7 @@ export default function Payroll() {
   const onboardEmployees = employees.map(emp => ({
     id: emp.id?.toString() || '',
     name: `${emp.first_name} ${emp.last_name}`,
-    basicSalary: emp.gross_salary || 0,
+    basicSalary: getEmployeePayrollPackage(emp).annualBasic,
     pensionId: emp.pension_pin || '',
     taxId: emp.tax_id || '',
     employmentType: emp.employment_type || 'Full-time',
@@ -185,7 +271,7 @@ export default function Payroll() {
     else {
       const currentEmployee = employees.find(emp => emp.email === user.email)
       return payrollRecords.filter(record => 
-        record.employee_id === currentEmployee?.id
+        record.employee_id?.toString() === currentEmployee?.id?.toString()
       )
     }
   }
@@ -350,87 +436,66 @@ export default function Payroll() {
   // Calculate payroll from financial details (for preview when no payroll record exists)
   const calculatePayrollFromFinancialDetails = (employee: Employee): PayrollRecord | null => {
     if (!employee) return null
-    
-    const basicSalary = employee.basic_salary || employee.gross_salary || 0
-    const housingAllowance = employee.housing_allowance || 0
-    const transportAllowance = employee.transport_allowance || 0
-    const mealAllowance = employee.meal_allowance || 0
-    const otherAllowance = employee.other_allowance || 0
-    
-    if (basicSalary === 0) return null
-    
-    // Calculate totals
-    const totalAllowances = housingAllowance + transportAllowance + mealAllowance + otherAllowance
-    const grossPay = basicSalary + totalAllowances
-    
-    // Calculate annual gross for tax calculation
-    const annualGross = grossPay * 12
-    
-    // Calculate PAYE (Nigerian tax bands - matches backend calculation)
-    const taxableIncome = annualGross - 200000 // Minimum tax-free allowance + CRA
-    let payeTax = 0
-    if (taxableIncome > 0) {
-      // 7% on first ₦300,000
-      if (taxableIncome > 0) {
-        payeTax += Math.min(taxableIncome, 300000) * 0.07
-      }
-      // 11% on next ₦300,000
-      if (taxableIncome > 300000) {
-        payeTax += Math.min(taxableIncome - 300000, 300000) * 0.11
-      }
-      // 15% on next ₦500,000
-      if (taxableIncome > 600000) {
-        payeTax += Math.min(taxableIncome - 600000, 500000) * 0.15
-      }
-      // 19% on next ₦500,000
-      if (taxableIncome > 1100000) {
-        payeTax += Math.min(taxableIncome - 1100000, 500000) * 0.19
-      }
-      // 21% on next ₦1,600,000
-      if (taxableIncome > 1600000) {
-        payeTax += Math.min(taxableIncome - 1600000, 1600000) * 0.21
-      }
-      // 24% on amounts above ₦3,200,000
-      if (taxableIncome > 3200000) {
-        payeTax += (taxableIncome - 3200000) * 0.24
-      }
-    }
-    // Convert annual tax to monthly (already divided by 12 in backend)
-    payeTax = Math.round(payeTax / 12 * 100) / 100
-    
-    // Calculate pension (8% of basic + housing + transport)
-    const pensionEmployee = Math.round((basicSalary + housingAllowance + transportAllowance) * 0.08 * 100) / 100
-    
-    // Calculate NHF (2.5% of basic salary)
-    const nhf = Math.round(basicSalary * 0.025 * 100) / 100
-    
-    // Total deductions
-    const totalDeductions = payeTax + pensionEmployee + nhf
-    const netPay = grossPay - totalDeductions
+    const payrollPackage = getEmployeePayrollPackage(employee)
+    if (payrollPackage.annualGross === 0) return null
+    const totalAllowances = payrollPackage.monthlyHousing + payrollPackage.monthlyTransport + payrollPackage.monthlyMeal + payrollPackage.monthlyOther
+    const totalDeductions = payrollPackage.monthlyPaye + payrollPackage.monthlyPension + payrollPackage.monthlyNhf
+    const netPay = payrollPackage.monthlyGross - totalDeductions
     
     // Return a preview payroll record
     return {
       employee_id: employee.id || 0,
       pay_period: new Date().toISOString().slice(0, 7), // Current month
-      basic_salary: basicSalary,
-      housing_allowance: housingAllowance,
-      transport_allowance: transportAllowance,
-      meal_allowance: mealAllowance,
-      other_allowance: otherAllowance,
+      basic_salary: payrollPackage.monthlyBasic,
+      housing_allowance: payrollPackage.monthlyHousing,
+      transport_allowance: payrollPackage.monthlyTransport,
+      meal_allowance: payrollPackage.monthlyMeal,
+      other_allowance: payrollPackage.monthlyOther,
       overtime: 0,
       bonus: 0,
       commission: 0,
-      gross_pay: grossPay,
+      gross_pay: payrollPackage.monthlyGross,
       total_allowances: totalAllowances,
-      taxable_income: annualGross,
-      paye_tax: payeTax,
-      pension_employee: pensionEmployee,
+      taxable_income: roundMoney(payrollPackage.annualTaxableIncome / 12),
+      paye_tax: payrollPackage.monthlyPaye,
+      pension_employee: payrollPackage.monthlyPension,
       pension_employer: 0,
-      nhf: nhf,
+      nhf: payrollPackage.monthlyNhf,
       other_deductions: 0,
       total_deductions: totalDeductions,
-      net_pay: netPay,
+      net_pay: roundMoney(netPay),
       status: 'pending' as const,
+    }
+  }
+
+  const normalizePayrollRecord = (record: PayrollRecord): PayrollRecord => {
+    const employee = employees.find(emp => emp.id?.toString() === record.employee_id?.toString()) || record.employee
+    const payrollPackage = getEmployeePayrollPackage(employee)
+    if (!employee || payrollPackage.annualGross === 0) return record
+
+    const overtime = toMoneyNumber(record.overtime)
+    const bonus = toMoneyNumber(record.bonus)
+    const commission = toMoneyNumber(record.commission)
+    const otherDeductions = toMoneyNumber(record.other_deductions)
+    const grossPay = payrollPackage.monthlyGross + overtime + bonus + commission
+    const totalAllowances = payrollPackage.monthlyHousing + payrollPackage.monthlyTransport + payrollPackage.monthlyMeal + payrollPackage.monthlyOther
+    const totalDeductions = payrollPackage.monthlyPaye + payrollPackage.monthlyPension + payrollPackage.monthlyNhf + otherDeductions
+
+    return {
+      ...record,
+      basic_salary: payrollPackage.monthlyBasic,
+      housing_allowance: payrollPackage.monthlyHousing,
+      transport_allowance: payrollPackage.monthlyTransport,
+      meal_allowance: payrollPackage.monthlyMeal,
+      other_allowance: payrollPackage.monthlyOther,
+      total_allowances: roundMoney(totalAllowances),
+      taxable_income: roundMoney(payrollPackage.annualTaxableIncome / 12),
+      paye_tax: payrollPackage.monthlyPaye,
+      pension_employee: payrollPackage.monthlyPension,
+      nhf: payrollPackage.monthlyNhf,
+      gross_pay: roundMoney(grossPay),
+      total_deductions: roundMoney(totalDeductions),
+      net_pay: roundMoney(grossPay - totalDeductions),
     }
   }
 
@@ -463,7 +528,11 @@ export default function Payroll() {
     return null
   }
   
-  const currentPayrollRecord = getCurrentUserPayrollRecord()
+  const rawCurrentPayrollRecord = getCurrentUserPayrollRecord()
+  const currentPayrollRecord = rawCurrentPayrollRecord
+    ? normalizePayrollRecord(rawCurrentPayrollRecord as PayrollRecord)
+    : null
+  const visiblePayrollRecords = getVisiblePayrollRecords().map(normalizePayrollRecord)
   const isPreviewFromFinancialDetails = currentPayrollRecord && !payrollRecords.some(record => 
     record.employee_id === currentPayrollRecord.employee_id && 
     record.pay_period === currentPayrollRecord.pay_period
@@ -896,19 +965,33 @@ export default function Payroll() {
       console.log('💰 Generating payroll for employee:', selectedEmployee);
       console.log('💰 Pay period:', selectedPeriod);
 
-      // Pull the actual financial details for the selected employee so the
-      // backend uses THIS employee's salary instead of falling back to
-      // defaults (which caused every staff member to show identical figures).
-      const manualBasic = parseFloat(payrollData.basicSalary) || 0
-      const empBasic = Number(selectedEmp.basic_salary) || Number(selectedEmp.gross_salary) || 0
-      const basicSalary = manualBasic > 0 ? manualBasic : empBasic
+      const payrollPackage = getEmployeePayrollPackage(selectedEmp)
+      const manualAnnualBasic = toMoneyNumber(payrollData.basicSalary)
+      const basicSalary = manualAnnualBasic > 0
+        ? roundMoney(manualAnnualBasic / 12)
+        : payrollPackage.monthlyBasic
+      const annualGross = manualAnnualBasic > 0
+        ? roundMoney(manualAnnualBasic / 0.4)
+        : payrollPackage.annualGross
+      const monthlyGross = manualAnnualBasic > 0
+        ? roundMoney(annualGross / 12)
+        : payrollPackage.monthlyGross
+      const overtime = toMoneyNumber(payrollData.earnings)
+      const otherDeductions = toMoneyNumber(payrollData.deduction)
+      const grossPay = roundMoney(monthlyGross + overtime)
+      const totalAllowances = roundMoney(payrollPackage.monthlyHousing + payrollPackage.monthlyTransport + payrollPackage.monthlyMeal + payrollPackage.monthlyOther)
+      const totalDeductions = roundMoney(payrollPackage.monthlyPaye + payrollPackage.monthlyPension + payrollPackage.monthlyNhf + otherDeductions)
+      const netPay = roundMoney(grossPay - totalDeductions)
 
       console.log('💰 Employee financials:', {
         basic_salary: basicSalary,
-        housing_allowance: selectedEmp.housing_allowance,
-        transport_allowance: selectedEmp.transport_allowance,
-        meal_allowance: selectedEmp.meal_allowance,
-        other_allowance: selectedEmp.other_allowance,
+        housing_allowance: payrollPackage.monthlyHousing,
+        transport_allowance: payrollPackage.monthlyTransport,
+        meal_allowance: payrollPackage.monthlyMeal,
+        other_allowance: payrollPackage.monthlyOther,
+        gross_pay: grossPay,
+        total_deductions: totalDeductions,
+        net_pay: netPay,
       })
 
       // Generate payroll record via backend API – pass employee-specific
@@ -917,12 +1000,24 @@ export default function Payroll() {
         employee_id: parseInt(selectedEmployee),
         pay_period: selectedPeriod,
         basic_salary: basicSalary,
-        housing_allowance: Number(selectedEmp.housing_allowance) || 0,
-        transport_allowance: Number(selectedEmp.transport_allowance) || 0,
-        meal_allowance: Number(selectedEmp.meal_allowance) || 0,
-        other_allowance: Number(selectedEmp.other_allowance) || 0,
-        overtime: parseFloat(payrollData.earnings) || 0,
-        other_deductions: parseFloat(payrollData.deduction) || 0,
+        base_salary: basicSalary,
+        gross_salary: annualGross,
+        housing_allowance: payrollPackage.monthlyHousing,
+        transport_allowance: payrollPackage.monthlyTransport,
+        meal_allowance: payrollPackage.monthlyMeal,
+        other_allowance: payrollPackage.monthlyOther,
+        overtime,
+        other_deductions: otherDeductions,
+        gross_pay: grossPay,
+        total_allowances: totalAllowances,
+        taxable_income: roundMoney(payrollPackage.annualTaxableIncome / 12),
+        paye_tax: payrollPackage.monthlyPaye,
+        income_tax: payrollPackage.monthlyPaye,
+        pension_employee: payrollPackage.monthlyPension,
+        pension_employer: roundMoney((annualGross * 0.1) / 12),
+        nhf: payrollPackage.monthlyNhf,
+        total_deductions: totalDeductions,
+        net_pay: netPay,
       })
 
       // Refresh payroll records to show the new one
@@ -1002,6 +1097,25 @@ export default function Payroll() {
     if (!selectedRecord?.id) return
     
     try {
+      const basicSalary = toMoneyNumber(editingValues.basic_salary)
+      const housingAllowance = toMoneyNumber(editingValues.housing_allowance)
+      const transportAllowance = toMoneyNumber(editingValues.transport_allowance)
+      const mealAllowance = toMoneyNumber(editingValues.meal_allowance)
+      const otherAllowance = toMoneyNumber(editingValues.other_allowance)
+      const overtime = toMoneyNumber(editingValues.overtime)
+      const bonus = toMoneyNumber(editingValues.bonus)
+      const commission = toMoneyNumber(editingValues.commission)
+      const otherDeductions = toMoneyNumber(editingValues.other_deductions)
+      const annualGross = (basicSalary + housingAllowance + transportAllowance + mealAllowance + otherAllowance) * 12
+      const annualPension = (basicSalary + housingAllowance + transportAllowance) * 12 * 0.08
+      const annualNhf = basicSalary * 12 * 0.025
+      const { annualTax, taxableIncome } = calculateAnnualPaye(annualGross, annualPension, annualNhf)
+      const payeTax = roundMoney(annualTax / 12)
+      const pensionEmployee = roundMoney(annualPension / 12)
+      const nhf = roundMoney(annualNhf / 12)
+      const grossPay = roundMoney(basicSalary + housingAllowance + transportAllowance + mealAllowance + otherAllowance + overtime + bonus + commission)
+      const totalDeductions = roundMoney(payeTax + pensionEmployee + nhf + otherDeductions)
+
       const updateData = {
         basic_salary: editingValues.basic_salary || 0,
         housing_allowance: editingValues.housing_allowance || 0,
@@ -1012,6 +1126,15 @@ export default function Payroll() {
         bonus: editingValues.bonus || 0,
         commission: editingValues.commission || 0,
         other_deductions: editingValues.other_deductions || 0,
+        gross_pay: grossPay,
+        total_allowances: roundMoney(housingAllowance + transportAllowance + mealAllowance + otherAllowance),
+        taxable_income: roundMoney(taxableIncome / 12),
+        paye_tax: payeTax,
+        income_tax: payeTax,
+        pension_employee: pensionEmployee,
+        nhf,
+        total_deductions: totalDeductions,
+        net_pay: roundMoney(grossPay - totalDeductions),
       };
       
       console.log('💰 Updating payroll record:', selectedRecord.id);
@@ -1411,7 +1534,7 @@ export default function Payroll() {
                     } catch (e: any) {
                       // Backend failed — fall back to a client-side CSV from the rows already loaded
                       try {
-                        const rows = (payrollRecords || []).filter((r: any) => r.pay_period === selectedPeriod)
+                        const rows = visiblePayrollRecords.filter((r: any) => r.pay_period === selectedPeriod)
                         if (!rows.length) throw e
                         const headers = ['Employee','Period','Basic Salary','Bonus','Gross Pay','Net Pay','Status']
                         const csv = [
@@ -1471,7 +1594,7 @@ export default function Payroll() {
                         </div>
                       </TableCell>
                     </TableRow>
-                  ) : getVisiblePayrollRecords().length === 0 ? (
+                  ) : visiblePayrollRecords.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={8} className="text-center py-12">
                         <div className="flex flex-col items-center space-y-3">
@@ -1488,7 +1611,7 @@ export default function Payroll() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    getVisiblePayrollRecords().map((record) => (
+                    visiblePayrollRecords.map((record) => (
                       <TableRow key={record.id}>
                         <TableCell className="font-medium text-xs md:text-sm">
                           {record.employee ? `${record.employee.first_name} ${record.employee.last_name}` : '-'}

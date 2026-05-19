@@ -9,6 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { generatePayslipPdf, generatePayslipCsv, toPayslipLike } from "@/utils/payslipPdf";
+import { normalizePayrollRecord, normalizePayslipDetail } from "@/lib/payrollCalc";
 
 function triggerDownload(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
@@ -29,6 +30,11 @@ export default function MyPayslips() {
   const navigate = useNavigate();
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [employee, setEmployee] = useState<any>(null);
+
+  useEffect(() => {
+    apiService.getMyProfile().then(setEmployee).catch(() => {});
+  }, []);
 
   const load = async () => {
     setLoading(true);
@@ -41,13 +47,15 @@ export default function MyPayslips() {
   };
   useEffect(() => { load(); }, []);
 
+  const normalizedItems = items.map((r) => normalizePayrollRecord(r as any, employee));
+
   const buildLocal = async (period: string) => {
     if (!user?.employee_id) return null;
     try {
       const detail = await apiService.getPayslipDetail(user.employee_id, period);
-      return toPayslipLike(detail);
+      return toPayslipLike(normalizePayslipDetail(detail, employee));
     } catch {
-      const row = items.find((r) => (r.pay_period || r.payPeriod) === period);
+      const row = normalizedItems.find((r: any) => (r.pay_period || r.payPeriod) === period);
       return row ? toPayslipLike(row) : null;
     }
   };
@@ -105,7 +113,7 @@ export default function MyPayslips() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {items.map((r) => {
+                {normalizedItems.map((r: any) => {
                   const period = r.pay_period || r.payPeriod;
                   return (
                     <TableRow key={r.id || period}>

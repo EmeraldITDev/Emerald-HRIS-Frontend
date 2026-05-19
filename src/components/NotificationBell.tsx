@@ -11,6 +11,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { apiService } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
+import { resolveNotificationLink } from "@/lib/notificationLinks";
 
 interface Notification {
   id: number;

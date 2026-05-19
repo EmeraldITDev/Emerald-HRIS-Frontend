@@ -8,6 +8,7 @@ import { apiService } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
+import { resolveNotificationLink } from "@/lib/notificationLinks";
 
 export default function NotificationsPage() {
   const [items, setItems] = useState<any[]>([]);

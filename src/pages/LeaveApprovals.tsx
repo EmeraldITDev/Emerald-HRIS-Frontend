@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,9 +22,18 @@ export default function LeaveApprovals() {
   const { user } = useAuth();
   const isHR = canHrApproveLeave(user);
   const isLineManager = user?.role === "line_manager";
-  const defaultStage: Stage = isLineManager && !isHR ? "manager" : "hr";
+  const [searchParams, setSearchParams] = useSearchParams();
+  const stageParam = searchParams.get("stage") as Stage | null;
+  const focusId = searchParams.get("id");
+  const defaultStage: Stage =
+    stageParam === "manager" || stageParam === "hr"
+      ? stageParam
+      : isLineManager && !isHR
+      ? "manager"
+      : "hr";
 
   const [stage, setStage] = useState<Stage>(defaultStage);
+  const rowRefs = useRef<Record<string, HTMLTableRowElement | null>>({});
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [dialog, setDialog] = useState<{ open: boolean; action: "approve" | "reject"; row: any | null }>({
@@ -48,6 +58,15 @@ export default function LeaveApprovals() {
   };
 
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [stage]);
+
+  // Scroll to / highlight the focused request after items load
+  useEffect(() => {
+    if (!focusId || loading) return;
+    const el = rowRefs.current[String(focusId)];
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [focusId, loading, items]);
 
   const openDialog = (row: any, action: "approve" | "reject") => {
     setNotes("");
@@ -103,7 +122,11 @@ export default function LeaveApprovals() {
             </TableHeader>
             <TableBody>
               {items.map((r) => (
-                <TableRow key={r.id}>
+                <TableRow
+                  key={r.id}
+                  ref={(el) => (rowRefs.current[String(r.id)] = el)}
+                  className={focusId && String(r.id) === String(focusId) ? "bg-primary/10" : undefined}
+                >
                   <TableCell className="font-medium">{r.employee_display || r.employee_name || `Employee ${r.employee_id}`}</TableCell>
                   <TableCell className="text-sm">{r.start_date} → {r.end_date}</TableCell>
                   <TableCell>{r.days_requested}</TableCell>

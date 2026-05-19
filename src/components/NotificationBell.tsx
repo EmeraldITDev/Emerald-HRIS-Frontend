@@ -11,6 +11,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { apiService } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
+import { resolveNotificationLink } from "@/lib/notificationLinks";
 
 interface Notification {
   id: number;
@@ -69,7 +70,8 @@ export function NotificationBell() {
       }
     } catch {}
     setOpen(false);
-    if (n.link) navigate(n.link);
+    const target = resolveNotificationLink(n);
+    if (target) navigate(target);
   };
 
   const handleMarkAll = async () => {

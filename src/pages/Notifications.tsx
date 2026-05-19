@@ -8,6 +8,7 @@ import { apiService } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
+import { resolveNotificationLink } from "@/lib/notificationLinks";
 
 export default function NotificationsPage() {
   const [items, setItems] = useState<any[]>([]);
@@ -35,7 +36,8 @@ export default function NotificationsPage() {
     try {
       if (n.is_unread || !n.read_at) await apiService.markNotificationRead(n.id);
     } catch {}
-    if (n.link) navigate(n.link);
+    const target = resolveNotificationLink(n);
+    if (target) navigate(target);
     load();
   };
 

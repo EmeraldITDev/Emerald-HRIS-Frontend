@@ -119,8 +119,13 @@ function getAllLeaveRequests() {
  */
 function getPendingLeaveRequests() {
     global $pdo;
-    
-    $stmt = $pdo->prepare("
+
+    // Route by the `routed_to` column when present so each line manager only
+    // sees requests assigned to them. HR/admin views ignore this filter by
+    // passing ?action=pending&scope=all (handled separately upstream).
+    $approverId = $_GET['approver_id'] ?? null;
+
+    $query = "
         SELECT 
             lr.*,
             e.first_name,
@@ -128,14 +133,24 @@ function getPendingLeaveRequests() {
             e.email,
             e.department,
             e.job_title,
-            CONCAT(e.first_name, ' ', e.last_name) as employee_name
+            CONCAT(e.first_name, ' ', e.last_name) as employee_name,
+            sup.id as routed_to_id,
+            CONCAT(sup.first_name, ' ', sup.last_name) as routed_to_name,
+            sup.email as routed_to_email
         FROM leave_requests lr
         INNER JOIN employees e ON lr.employee_id = e.id
+        LEFT JOIN employees sup ON lr.routed_to = sup.id
         WHERE lr.status = 'pending'
-        ORDER BY lr.created_at ASC
-    ");
-    
-    $stmt->execute();
+    ";
+    $params = [];
+    if ($approverId) {
+        $query .= " AND lr.routed_to = ?";
+        $params[] = $approverId;
+    }
+    $query .= " ORDER BY lr.created_at ASC";
+
+    $stmt = $pdo->prepare($query);
+    $stmt->execute($params);
     $requests = $stmt->fetchAll();
     
     sendResponse([

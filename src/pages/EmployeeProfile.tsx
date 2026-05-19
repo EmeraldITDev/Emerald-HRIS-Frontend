@@ -49,6 +49,7 @@ export default function EmployeeProfile() {
   const [employee, setEmployee] = useState<Employee | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [leaveRemaining, setLeaveRemaining] = useState<number | null>(null)
 
   useEffect(() => {
     const fetchEmployee = async () => {
@@ -60,6 +61,21 @@ export default function EmployeeProfile() {
         
         if (foundEmployee) {
           setEmployee(foundEmployee)
+          // Trigger backend recalc and pick up the latest annual-leave
+          // remaining days (backend also syncs employees.vacation_days here).
+          try {
+            const bal: any = await apiService.getLeaveBalance(foundEmployee.id as any)
+            const remaining =
+              bal?.remaining ??
+              bal?.summary?.vacation_days_remaining ??
+              bal?.vacation_days_remaining
+            if (typeof remaining === "number") {
+              setLeaveRemaining(remaining)
+              setEmployee(prev => prev ? { ...prev, vacation_days: remaining } : prev)
+            }
+          } catch (e) {
+            console.warn("Leave balance sync failed", e)
+          }
         } else {
           toast({
             title: "Employee Not Found",

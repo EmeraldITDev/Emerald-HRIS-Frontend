@@ -113,25 +113,34 @@ export interface PayrollRecord {
   employee_id: number;
   pay_period: string;
   pay_date?: string;
+  base_salary?: number;
+  baseSalary?: number;
   basic_salary: number;
   housing_allowance: number;
+  housingAllowance?: number;
   transport_allowance: number;
+  transportAllowance?: number;
   meal_allowance: number;
   other_allowance: number;
+  otherAllowance?: number;
   overtime: number;
   bonus: number;
   commission: number;
   gross_pay: number;
+  grossPay?: number;
   total_allowances: number;
   taxable_income: number;
   paye_tax: number;
+  income_tax?: number;
   pension_employee: number;
+  pension?: number;
   pension_employer: number;
   nhf: number;
   other_deductions: number;
   deduction_notes?: string;
   total_deductions: number;
   net_pay: number;
+  netPay?: number;
   status: 'pending' | 'processed' | 'paid' | 'cancelled';
   payment_method?: string;
   payment_reference?: string;
@@ -625,6 +634,18 @@ class ApiService {
     transport_allowance?: number;
     meal_allowance?: number;
     other_allowance?: number;
+    base_salary?: number;
+    gross_salary?: number;
+    gross_pay?: number;
+    total_allowances?: number;
+    taxable_income?: number;
+    paye_tax?: number;
+    income_tax?: number;
+    pension_employee?: number;
+    pension_employer?: number;
+    nhf?: number;
+    total_deductions?: number;
+    net_pay?: number;
   }): Promise<{ success: boolean; message: string; payroll?: PayrollRecord }> {
     return this.request<{ success: boolean; message: string; payroll?: PayrollRecord }>('/payroll/generate', {
       method: 'POST',
@@ -644,11 +665,27 @@ class ApiService {
   }
 
   async updatePayroll(id: number, data: {
+    basic_salary?: number;
+    base_salary?: number;
+    housing_allowance?: number;
+    transport_allowance?: number;
+    meal_allowance?: number;
+    other_allowance?: number;
     overtime?: number;
     bonus?: number;
     commission?: number;
     other_deductions?: number;
     deduction_notes?: string;
+    gross_pay?: number;
+    total_allowances?: number;
+    taxable_income?: number;
+    paye_tax?: number;
+    income_tax?: number;
+    pension_employee?: number;
+    pension_employer?: number;
+    nhf?: number;
+    total_deductions?: number;
+    net_pay?: number;
   }): Promise<{ success: boolean; message: string; payroll?: PayrollRecord }> {
     return this.request<{ success: boolean; message: string; payroll?: PayrollRecord }>(`/payroll/${id}`, {
       method: 'PUT',

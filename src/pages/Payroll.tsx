@@ -895,12 +895,32 @@ export default function Payroll() {
     try {
       console.log('💰 Generating payroll for employee:', selectedEmployee);
       console.log('💰 Pay period:', selectedPeriod);
-      
-      // Generate payroll record via backend API
+
+      // Pull the actual financial details for the selected employee so the
+      // backend uses THIS employee's salary instead of falling back to
+      // defaults (which caused every staff member to show identical figures).
+      const manualBasic = parseFloat(payrollData.basicSalary) || 0
+      const empBasic = Number(selectedEmp.basic_salary) || Number(selectedEmp.gross_salary) || 0
+      const basicSalary = manualBasic > 0 ? manualBasic : empBasic
+
+      console.log('💰 Employee financials:', {
+        basic_salary: basicSalary,
+        housing_allowance: selectedEmp.housing_allowance,
+        transport_allowance: selectedEmp.transport_allowance,
+        meal_allowance: selectedEmp.meal_allowance,
+        other_allowance: selectedEmp.other_allowance,
+      })
+
+      // Generate payroll record via backend API – pass employee-specific
+      // earnings so each staff member's payroll reflects their own package.
       await apiService.generatePayroll({
         employee_id: parseInt(selectedEmployee),
         pay_period: selectedPeriod,
-        // Optional: override with manual values if entered
+        basic_salary: basicSalary,
+        housing_allowance: Number(selectedEmp.housing_allowance) || 0,
+        transport_allowance: Number(selectedEmp.transport_allowance) || 0,
+        meal_allowance: Number(selectedEmp.meal_allowance) || 0,
+        other_allowance: Number(selectedEmp.other_allowance) || 0,
         overtime: parseFloat(payrollData.earnings) || 0,
         other_deductions: parseFloat(payrollData.deduction) || 0,
       })

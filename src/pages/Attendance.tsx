@@ -707,6 +707,27 @@ export default function Attendance() {
           return;
         }
 
+        // Supervisor / line-manager routing failures from backend
+        if (errCode === 'NO_LINE_MANAGER_FOUND') {
+          toast({
+            title: "No line manager assigned",
+            description:
+              dbError?.data?.debug_info?.message ||
+              "This employee has no resolvable supervisor. Ask HR to set 'Supervisor Name' on the employee profile (matching an existing employee's full name or firstname.lastname@emeraldcfze.com).",
+            variant: "destructive",
+          });
+          return;
+        }
+        if (errCode === 'CIRCULAR_ROUTING_DETECTED') {
+          toast({
+            title: "Circular approval routing",
+            description:
+              "The resolved supervisor is the requester themselves. HR must correct the 'Supervisor Name' on this employee's profile.",
+            variant: "destructive",
+          });
+          return;
+        }
+
         if (backendErrors) {
           const errorDetails = Object.values(backendErrors).flat().join(', ');
           toast({
@@ -2037,13 +2058,13 @@ export default function Attendance() {
                 <div className="col-span-2">
                   <Label className="text-sm text-muted-foreground">Routed To (First-level Approver)</Label>
                   <p className="font-medium">
-                    {selectedLeaveRequest.routed_to_name
+                    {selectedLeaveRequest.line_manager_name
+                      || selectedLeaveRequest.routed_to_name
                       || selectedLeaveRequest.supervisor_name
-                      || selectedLeaveRequest.line_manager_name
                       || 'Pending supervisor resolution'}
-                    {selectedLeaveRequest.routed_to_email && (
+                    {(selectedLeaveRequest.line_manager_email || selectedLeaveRequest.routed_to_email) && (
                       <span className="text-xs text-muted-foreground ml-2">
-                        ({selectedLeaveRequest.routed_to_email})
+                        ({selectedLeaveRequest.line_manager_email || selectedLeaveRequest.routed_to_email})
                       </span>
                     )}
                   </p>

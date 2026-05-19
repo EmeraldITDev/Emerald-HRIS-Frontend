@@ -15,6 +15,7 @@ export function canHrPayroll(user: (User & Record<string, any>) | null | undefin
   if (Array.isArray(u.permissions) && u.permissions.includes("payroll.manage")) return true;
   if (Array.isArray(u.equivalent_hr_roles) && u.equivalent_hr_roles.includes(user.role)) return true;
   if (user.role === "hr_manager") return true;
+  if (user.role === "corporate_hr") return true;
   return false;
 }
 

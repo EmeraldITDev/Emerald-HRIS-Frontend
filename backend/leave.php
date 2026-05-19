@@ -218,51 +218,126 @@ function getLeaveRequest($requestId) {
 }
 
 /**
+ * Resolve the supervisor employee id for a given employee using the
+ * `supervisor_name` field on the employees table as the single source of
+ * truth. Falls back to deriving the canonical company email
+ * (firstname.lastname@emeraldcfze.com) when a name match fails.
+ *
+ * Returns the supervisor's employee id, or null if no supervisor can be
+ * resolved (e.g. top-level executives). NEVER returns the submitting
+ * employee's own id — that would route a request back to the requester.
+ */
+function resolveSupervisorId($employeeId) {
+    global $pdo;
+
+    $stmt = $pdo->prepare("SELECT id, first_name, last_name, supervisor_name FROM employees WHERE id = ?");
+    $stmt->execute([$employeeId]);
+    $emp = $stmt->fetch();
+    if (!$emp) return null;
+
+    $supName = trim((string)($emp['supervisor_name'] ?? ''));
+    if ($supName === '') return null;
+
+    // 1) Try exact match on CONCAT(first_name, ' ', last_name)
+    $stmt = $pdo->prepare("
+        SELECT id FROM employees
+        WHERE LOWER(TRIM(CONCAT(first_name, ' ', last_name))) = LOWER(?)
+        LIMIT 1
+    ");
+    $stmt->execute([$supName]);
+    $row = $stmt->fetch();
+
+    // 2) Fallback: derive canonical email firstname.lastname@emeraldcfze.com
+    if (!$row) {
+        $parts = preg_split('/\s+/', $supName);
+        if (count($parts) >= 2) {
+            $first = strtolower(preg_replace('/[^a-z]/i', '', $parts[0]));
+            $last  = strtolower(preg_replace('/[^a-z]/i', '', end($parts)));
+            if ($first && $last) {
+                $derivedEmail = "$first.$last@emeraldcfze.com";
+                $stmt = $pdo->prepare("SELECT id FROM employees WHERE LOWER(email) = ? LIMIT 1");
+                $stmt->execute([$derivedEmail]);
+                $row = $stmt->fetch();
+            }
+        }
+    }
+
+    if (!$row) return null;
+    $supId = (int)$row['id'];
+
+    // Hard guard: never route a request back to the submitter.
+    if ($supId === (int)$employeeId) return null;
+
+    return $supId;
+}
+
+/**
  * Create new leave request
  */
 function createLeaveRequest() {
     global $pdo;
-    
+
     $data = json_decode(file_get_contents('php://input'), true);
-    
+
     $required = ['employee_id', 'leave_type', 'start_date', 'end_date', 'reason'];
     foreach ($required as $field) {
         if (!isset($data[$field]) || empty($data[$field])) {
             sendResponse(['success' => false, 'message' => "$field is required"], 400);
         }
     }
-    
+
     // Calculate number of days
     $startDate = new DateTime($data['start_date']);
     $endDate = new DateTime($data['end_date']);
     $interval = $startDate->diff($endDate);
     $days = $interval->days + 1;
-    
+
+    // Resolve first-level approver (line manager) from supervisor_name.
+    $supervisorId = resolveSupervisorId($data['employee_id']);
+
+    if ($supervisorId === null) {
+        // No supervisor on file. For non-executive employees this is a data
+        // integrity issue; reject so HR can correct the profile rather than
+        // silently letting the request fall back to the requester.
+        $stmt = $pdo->prepare("SELECT department FROM employees WHERE id = ?");
+        $stmt->execute([$data['employee_id']]);
+        $emp = $stmt->fetch();
+        $dept = strtolower((string)($emp['department'] ?? ''));
+        if ($dept !== 'executive') {
+            sendResponse([
+                'success' => false,
+                'message' => 'No supervisor on file. Ask HR to set your Supervisor Name before submitting leave.'
+            ], 422);
+        }
+    }
+
     $stmt = $pdo->prepare("
         INSERT INTO leave_requests (
-            employee_id, leave_type, start_date, end_date, 
-            days, reason, status, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, 'pending', NOW())
+            employee_id, leave_type, start_date, end_date,
+            days, reason, status, routed_to, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, NOW())
     ");
-    
+
     $stmt->execute([
         $data['employee_id'],
         $data['leave_type'],
         $data['start_date'],
         $data['end_date'],
         $days,
-        $data['reason']
+        $data['reason'],
+        $supervisorId,
     ]);
-    
+
     $requestId = $pdo->lastInsertId();
-    
+
     sendResponse([
         'success' => true,
         'message' => 'Leave request submitted successfully',
         'data' => [
             'id' => $requestId,
             'status' => 'pending',
-            'days' => $days
+            'days' => $days,
+            'routed_to' => $supervisorId,
         ]
     ], 201);
 }

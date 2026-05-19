@@ -33,6 +33,19 @@ export interface Employee {
   employment_status?: string;
   vacation_days?: number;
   gross_salary?: number;
+  financial_details?: {
+    gross_salary?: number | string;
+    basic_salary?: number | string;
+    housing_allowance?: number | string;
+    transport_allowance?: number | string;
+    meal_allowance?: number | string;
+    other_allowance?: number | string;
+    bank_name?: string;
+    account_number?: string;
+    nuban?: string;
+    sort_code?: string;
+    bank_account?: string;
+  };
   meal_allowance?: number;
   housing_allowance?: number;
   transport_allowance?: number;
@@ -264,6 +277,24 @@ class ApiService {
     this.baseUrl = baseUrl;
   }
 
+  private normalizeEmployee(employee: Employee): Employee {
+    const financial = (employee as any)?.financial_details || {};
+    return {
+      ...employee,
+      gross_salary: employee.gross_salary ?? financial.gross_salary,
+      basic_salary: employee.basic_salary ?? financial.basic_salary,
+      housing_allowance: employee.housing_allowance ?? financial.housing_allowance,
+      transport_allowance: employee.transport_allowance ?? financial.transport_allowance,
+      meal_allowance: employee.meal_allowance ?? financial.meal_allowance,
+      other_allowance: employee.other_allowance ?? financial.other_allowance,
+      bank_name: employee.bank_name ?? financial.bank_name,
+      account_number: employee.account_number ?? financial.account_number,
+      nuban: employee.nuban ?? financial.nuban,
+      sort_code: employee.sort_code ?? financial.sort_code,
+      bank_account: employee.bank_account ?? financial.bank_account,
+    } as Employee;
+  }
+
   private async request<T>(
     endpoint: string,
     options: RequestInit = {}
@@ -360,7 +391,8 @@ class ApiService {
 
   // Get all employees
   async getEmployees(): Promise<Employee[]> {
-    return this.request<Employee[]>('/employees-full');
+    const employees = await this.request<Employee[]>('/employees-full');
+    return Array.isArray(employees) ? employees.map((employee) => this.normalizeEmployee(employee)) : employees;
   }
 
   // Get employees with optional hire-date range filter (Requirement 2)
@@ -378,7 +410,12 @@ class ApiService {
     if (params?.department) qp.append('department', params.department);
     if (params?.status) qp.append('status', params.status);
     const q = qp.toString();
-    return this.request<any>(`/employees-full${q ? `?${q}` : ''}`);
+    const response = await this.request<any>(`/employees-full${q ? `?${q}` : ''}`);
+    if (Array.isArray(response)) return response.map((employee) => this.normalizeEmployee(employee));
+    if (Array.isArray(response?.data)) {
+      return { ...response, data: response.data.map((employee: Employee) => this.normalizeEmployee(employee)) };
+    }
+    return response;
   }
 
   // Upcoming work anniversaries (Requirement 3)
@@ -411,7 +448,8 @@ class ApiService {
 
   // Get current user's employee profile
   async getMyProfile(): Promise<Employee> {
-    return this.request<Employee>('/employees-full/my-profile');
+    const employee = await this.request<Employee>('/employees-full/my-profile');
+    return this.normalizeEmployee(employee);
   }
 
   // Create a new employee

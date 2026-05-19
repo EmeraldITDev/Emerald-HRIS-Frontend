@@ -9,7 +9,7 @@ export const toMoneyNumber = (value: unknown): number => {
 
 export const roundMoney = (value: number): number => Math.round(value * 100) / 100
 
-const calculateAnnualPaye = (annualGross: number, annualPension: number, annualNhf: number) => {
+export const calculateAnnualPaye = (annualGross: number, annualPension: number, annualNhf: number) => {
   const grossForCra = Math.max(annualGross - annualPension - annualNhf, 0)
   const cra = grossForCra * 0.2 + Math.max(grossForCra * 0.01, 200000)
   const taxableIncome = Math.max(annualGross - cra - annualPension - annualNhf, 0)
@@ -35,12 +35,15 @@ const calculateAnnualPaye = (annualGross: number, annualPension: number, annualN
 export const getEmployeePayrollPackage = (employee?: Partial<Employee> | null) => {
   const employmentType = (employee?.employment_type || "").toLowerCase()
   const isContract = employmentType === "contract"
-  const annualGrossFromProfile = toMoneyNumber((employee as any)?.gross_salary ?? (employee as any)?.baseSalary)
-  let annualBasic = toMoneyNumber((employee as any)?.basic_salary)
-  let annualHousing = toMoneyNumber((employee as any)?.housing_allowance)
-  let annualTransport = toMoneyNumber((employee as any)?.transport_allowance)
-  let annualMeal = toMoneyNumber((employee as any)?.meal_allowance)
-  let annualOther = toMoneyNumber((employee as any)?.other_allowance)
+  const financial = (employee as any)?.financial_details || {}
+  const annualGrossFromProfile = toMoneyNumber(
+    (employee as any)?.gross_salary ?? financial.gross_salary ?? (employee as any)?.baseSalary
+  )
+  let annualBasic = toMoneyNumber((employee as any)?.basic_salary ?? financial.basic_salary)
+  let annualHousing = toMoneyNumber((employee as any)?.housing_allowance ?? financial.housing_allowance)
+  let annualTransport = toMoneyNumber((employee as any)?.transport_allowance ?? financial.transport_allowance)
+  let annualMeal = toMoneyNumber((employee as any)?.meal_allowance ?? financial.meal_allowance)
+  let annualOther = toMoneyNumber((employee as any)?.other_allowance ?? financial.other_allowance)
 
   if (annualGrossFromProfile > 0) {
     if (isContract) {

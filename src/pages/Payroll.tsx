@@ -33,6 +33,7 @@ import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/contexts/AuthContext"
 import { RoleBasedComponent } from "@/components/RoleBasedComponent"
 import { canHrPayroll } from "@/lib/permissions"
+import { calculateAnnualPaye, getEmployeePayrollPackage, normalizePayrollRecord, roundMoney, toMoneyNumber } from "@/lib/payrollCalc"
 import {
   Dialog,
   DialogContent,
@@ -66,91 +67,6 @@ export default function Payroll() {
   const [selectedRecord, setSelectedRecord] = useState<PayrollRecord | null>(null)
   const { toast } = useToast()
   const { user } = useAuth()
-
-  const toMoneyNumber = (value: unknown) => {
-    if (value === null || value === undefined || value === '') return 0
-    const normalized = typeof value === 'string' ? value.replace(/[₦,\s]/g, '') : value
-    const parsed = Number(normalized)
-    return Number.isFinite(parsed) ? parsed : 0
-  }
-
-  const roundMoney = (value: number) => Math.round(value * 100) / 100
-
-  const calculateAnnualPaye = (annualGross: number, annualPension: number, annualNhf: number) => {
-    const grossForCra = Math.max(annualGross - annualPension - annualNhf, 0)
-    const cra = grossForCra * 0.2 + Math.max(grossForCra * 0.01, 200000)
-    const taxableIncome = Math.max(annualGross - cra - annualPension - annualNhf, 0)
-    const bands = [
-      [300000, 0.07],
-      [300000, 0.11],
-      [500000, 0.15],
-      [500000, 0.19],
-      [1600000, 0.21],
-      [Infinity, 0.24],
-    ] as const
-    let remaining = taxableIncome
-    let annualTax = 0
-    for (const [band, rate] of bands) {
-      if (remaining <= 0) break
-      const taxableAtRate = Math.min(remaining, band)
-      annualTax += taxableAtRate * rate
-      remaining -= taxableAtRate
-    }
-    return { annualTax, taxableIncome }
-  }
-
-  const getEmployeePayrollPackage = (employee?: Employee | null) => {
-    const employmentType = (employee?.employment_type || '').toLowerCase()
-    const isContract = employmentType === 'contract'
-    const annualGrossFromProfile = toMoneyNumber(employee?.gross_salary ?? employee?.baseSalary)
-    let annualBasic = toMoneyNumber(employee?.basic_salary)
-    let annualHousing = toMoneyNumber(employee?.housing_allowance)
-    let annualTransport = toMoneyNumber(employee?.transport_allowance)
-    let annualMeal = toMoneyNumber(employee?.meal_allowance)
-    let annualOther = toMoneyNumber(employee?.other_allowance)
-
-    if (annualGrossFromProfile > 0) {
-      if (isContract) {
-        annualBasic = annualBasic || annualGrossFromProfile
-        annualHousing = annualTransport = annualMeal = annualOther = 0
-      } else {
-        annualBasic = annualBasic || annualGrossFromProfile * 0.4
-        annualHousing = annualHousing || annualGrossFromProfile * 0.2
-        annualTransport = annualTransport || annualGrossFromProfile * 0.09
-        annualOther = annualOther || annualGrossFromProfile * 0.31
-      }
-    }
-
-    const annualAllowances = annualHousing + annualTransport + annualMeal + annualOther
-    const annualGross = annualGrossFromProfile || annualBasic + annualAllowances
-    const annualPension = isContract ? 0 : (annualBasic + annualHousing + annualTransport) * 0.08
-    const annualNhf = isContract ? 0 : annualBasic * 0.025
-    const { annualTax, taxableIncome } = isContract
-      ? { annualTax: annualGross * 0.05, taxableIncome: annualGross }
-      : calculateAnnualPaye(annualGross, annualPension, annualNhf)
-
-    return {
-      annualGross: roundMoney(annualGross),
-      annualBasic: roundMoney(annualBasic),
-      annualHousing: roundMoney(annualHousing),
-      annualTransport: roundMoney(annualTransport),
-      annualMeal: roundMoney(annualMeal),
-      annualOther: roundMoney(annualOther),
-      annualPension: roundMoney(annualPension),
-      annualNhf: roundMoney(annualNhf),
-      annualTax: roundMoney(annualTax),
-      annualTaxableIncome: roundMoney(taxableIncome),
-      monthlyBasic: roundMoney(annualBasic / 12),
-      monthlyHousing: roundMoney(annualHousing / 12),
-      monthlyTransport: roundMoney(annualTransport / 12),
-      monthlyMeal: roundMoney(annualMeal / 12),
-      monthlyOther: roundMoney(annualOther / 12),
-      monthlyGross: roundMoney(annualGross / 12),
-      monthlyPension: roundMoney(annualPension / 12),
-      monthlyNhf: roundMoney(annualNhf / 12),
-      monthlyPaye: roundMoney(annualTax / 12),
-    }
-  }
 
   useEffect(() => {
     const fetchEmployees = async () => {
@@ -468,36 +384,11 @@ export default function Payroll() {
     }
   }
 
-  const normalizePayrollRecord = (record: PayrollRecord): PayrollRecord => {
-    const employee = employees.find(emp => emp.id?.toString() === record.employee_id?.toString()) || record.employee
-    const payrollPackage = getEmployeePayrollPackage(employee)
-    if (!employee || payrollPackage.annualGross === 0) return record
-
-    const overtime = toMoneyNumber(record.overtime)
-    const bonus = toMoneyNumber(record.bonus)
-    const commission = toMoneyNumber(record.commission)
-    const otherDeductions = toMoneyNumber(record.other_deductions)
-    const grossPay = payrollPackage.monthlyGross + overtime + bonus + commission
-    const totalAllowances = payrollPackage.monthlyHousing + payrollPackage.monthlyTransport + payrollPackage.monthlyMeal + payrollPackage.monthlyOther
-    const totalDeductions = payrollPackage.monthlyPaye + payrollPackage.monthlyPension + payrollPackage.monthlyNhf + otherDeductions
-
-    return {
-      ...record,
-      basic_salary: payrollPackage.monthlyBasic,
-      housing_allowance: payrollPackage.monthlyHousing,
-      transport_allowance: payrollPackage.monthlyTransport,
-      meal_allowance: payrollPackage.monthlyMeal,
-      other_allowance: payrollPackage.monthlyOther,
-      total_allowances: roundMoney(totalAllowances),
-      taxable_income: roundMoney(payrollPackage.annualTaxableIncome / 12),
-      paye_tax: payrollPackage.monthlyPaye,
-      pension_employee: payrollPackage.monthlyPension,
-      nhf: payrollPackage.monthlyNhf,
-      gross_pay: roundMoney(grossPay),
-      total_deductions: roundMoney(totalDeductions),
-      net_pay: roundMoney(grossPay - totalDeductions),
-    }
-  }
+  const normalizeRecord = (record: PayrollRecord): PayrollRecord =>
+    normalizePayrollRecord(
+      record,
+      employees.find(emp => emp.id?.toString() === record.employee_id?.toString()) || record.employee
+    )
 
   // Get current user's latest payroll record for display
   const getCurrentUserPayrollRecord = () => {
@@ -530,9 +421,9 @@ export default function Payroll() {
   
   const rawCurrentPayrollRecord = getCurrentUserPayrollRecord()
   const currentPayrollRecord = rawCurrentPayrollRecord
-    ? normalizePayrollRecord(rawCurrentPayrollRecord as PayrollRecord)
+    ? normalizeRecord(rawCurrentPayrollRecord as PayrollRecord)
     : null
-  const visiblePayrollRecords = getVisiblePayrollRecords().map(normalizePayrollRecord)
+  const visiblePayrollRecords = getVisiblePayrollRecords().map(normalizeRecord)
   const isPreviewFromFinancialDetails = currentPayrollRecord && !payrollRecords.some(record => 
     record.employee_id === currentPayrollRecord.employee_id && 
     record.pay_period === currentPayrollRecord.pay_period
@@ -966,6 +857,14 @@ export default function Payroll() {
       console.log('💰 Pay period:', selectedPeriod);
 
       const payrollPackage = getEmployeePayrollPackage(selectedEmp)
+      if (payrollPackage.annualGross <= 0) {
+        toast({
+          title: "Generation Failed",
+          description: `No gross salary found for ${selectedEmp.first_name} ${selectedEmp.last_name}. Please confirm the employee financial details before generating payroll.`,
+          variant: "destructive"
+        })
+        return
+      }
       const manualAnnualBasic = toMoneyNumber(payrollData.basicSalary)
       const basicSalary = manualAnnualBasic > 0
         ? roundMoney(manualAnnualBasic / 12)
@@ -996,6 +895,14 @@ export default function Payroll() {
 
       // Generate payroll record via backend API – pass employee-specific
       // earnings so each staff member's payroll reflects their own package.
+      try {
+        await apiService.updateEmployee(parseInt(selectedEmployee), {
+          gross_salary: payrollPackage.annualGross,
+        })
+      } catch (syncError) {
+        console.warn('Could not pre-sync employee gross_salary before payroll generation:', syncError)
+      }
+
       await apiService.generatePayroll({
         employee_id: parseInt(selectedEmployee),
         pay_period: selectedPeriod,
@@ -1050,7 +957,7 @@ export default function Payroll() {
       console.error('Failed to generate payroll:', error)
       toast({
         title: "Generation Failed",
-        description: "Failed to generate payroll record. It may already exist for this period.",
+        description: error instanceof Error ? error.message : "Failed to generate payroll record. It may already exist for this period.",
         variant: "destructive"
       })
     }

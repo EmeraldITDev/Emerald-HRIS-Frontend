@@ -648,6 +648,115 @@ class ApiService {
     });
   }
 
+  // Soft-delete with optional reason
+  async deletePayrollWithReason(id: number, deletion_reason?: string): Promise<{ success: boolean; message: string; data?: any }> {
+    return this.request(`/payroll/${id}`, {
+      method: 'DELETE',
+      body: JSON.stringify(deletion_reason ? { deletion_reason } : {}),
+    });
+  }
+
+  async restorePayroll(id: number): Promise<{ success: boolean; message: string; data?: any }> {
+    return this.request(`/payroll/${id}/restore`, { method: 'POST' });
+  }
+
+  // Pay-period helpers
+  async getAllowedPayPeriods(): Promise<{
+    current_month: string;
+    periods: Array<{ value: string; label: string; is_current: boolean }>;
+  }> {
+    return this.request('/payroll/allowed-periods');
+  }
+
+  // Employee payslips
+  async getMyPayslips(page: number = 1): Promise<any> {
+    return this.request(`/payroll/employee/payslips?page=${page}`);
+  }
+
+  // Bulk download helpers — return blob for triggered download
+  private async downloadBlob(endpoint: string): Promise<Blob> {
+    const token = localStorage.getItem('auth_token');
+    const res = await fetch(`${this.baseUrl}${endpoint}`, {
+      headers: {
+        Accept: '*/*',
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+    });
+    if (!res.ok) throw new Error(`Download failed: ${res.status}`);
+    return await res.blob();
+  }
+
+  async exportPayrollBulkCsv(pay_period: string): Promise<Blob> {
+    return this.downloadBlob(`/payroll/export/bulk-csv?pay_period=${pay_period}`);
+  }
+  async exportPayrollBulkPdf(pay_period: string): Promise<Blob> {
+    return this.downloadBlob(`/payroll/export/bulk-pdf?pay_period=${pay_period}`);
+  }
+  async exportPayrollRecordPdf(id: number): Promise<Blob> {
+    return this.downloadBlob(`/payroll/${id}/export/pdf`);
+  }
+  async exportPayrollRecordCsv(id: number): Promise<Blob> {
+    return this.downloadBlob(`/payroll/${id}/export/csv`);
+  }
+  async exportMyPayslipPdf(pay_period: string): Promise<Blob> {
+    return this.downloadBlob(`/payroll/employee/payslips/${pay_period}/export/pdf`);
+  }
+  async exportMyPayslipCsv(pay_period: string): Promise<Blob> {
+    return this.downloadBlob(`/payroll/employee/payslips/${pay_period}/export/csv`);
+  }
+
+  // ========== Leave Approval Workflow ==========
+  async getPendingLeaveForLineManager(): Promise<any> {
+    return this.request('/leave-approvals/pending-manager');
+  }
+  async approveLeaveByLineManager(id: number, notes?: string): Promise<any> {
+    return this.request(`/leave-approvals/${id}/approve-manager`, {
+      method: 'POST',
+      body: JSON.stringify({ notes }),
+    });
+  }
+  async rejectLeaveByLineManager(id: number, rejection_reason: string): Promise<any> {
+    return this.request(`/leave-approvals/${id}/reject-manager`, {
+      method: 'POST',
+      body: JSON.stringify({ rejection_reason }),
+    });
+  }
+  async getPendingLeaveForHR(): Promise<any> {
+    return this.request('/leave-approvals/pending-hr');
+  }
+  async approveLeaveByHR(id: number, notes?: string): Promise<any> {
+    return this.request(`/leave-approvals/${id}/approve-hr`, {
+      method: 'POST',
+      body: JSON.stringify({ notes }),
+    });
+  }
+  async rejectLeaveByHR(id: number, rejection_reason: string): Promise<any> {
+    return this.request(`/leave-approvals/${id}/reject-hr`, {
+      method: 'POST',
+      body: JSON.stringify({ rejection_reason }),
+    });
+  }
+  async getLeaveApprovalStatus(id: number): Promise<any> {
+    return this.request(`/leave-approvals/${id}/status`);
+  }
+
+  // ========== Notifications ==========
+  async getNotifications(per_page: number = 15, page: number = 1): Promise<any> {
+    return this.request(`/notifications?per_page=${per_page}&page=${page}`);
+  }
+  async getUnreadNotificationCount(): Promise<{ unread_count: number }> {
+    return this.request('/notifications/unread-count');
+  }
+  async markNotificationRead(id: number): Promise<any> {
+    return this.request(`/notifications/${id}/mark-as-read`, { method: 'POST' });
+  }
+  async markAllNotificationsRead(): Promise<any> {
+    return this.request('/notifications/mark-all-as-read', { method: 'POST' });
+  }
+  async deleteNotification(id: number): Promise<any> {
+    return this.request(`/notifications/${id}`, { method: 'DELETE' });
+  }
+
   // Recruitment - Job Postings
   async getJobPostings(): Promise<JobPosting[]> {
     return this.request<JobPosting[]>('/recruitment/job-postings');

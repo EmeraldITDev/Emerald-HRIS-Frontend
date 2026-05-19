@@ -35,12 +35,15 @@ const calculateAnnualPaye = (annualGross: number, annualPension: number, annualN
 export const getEmployeePayrollPackage = (employee?: Partial<Employee> | null) => {
   const employmentType = (employee?.employment_type || "").toLowerCase()
   const isContract = employmentType === "contract"
-  const annualGrossFromProfile = toMoneyNumber((employee as any)?.gross_salary ?? (employee as any)?.baseSalary)
-  let annualBasic = toMoneyNumber((employee as any)?.basic_salary)
-  let annualHousing = toMoneyNumber((employee as any)?.housing_allowance)
-  let annualTransport = toMoneyNumber((employee as any)?.transport_allowance)
-  let annualMeal = toMoneyNumber((employee as any)?.meal_allowance)
-  let annualOther = toMoneyNumber((employee as any)?.other_allowance)
+  const financial = (employee as any)?.financial_details || {}
+  const annualGrossFromProfile = toMoneyNumber(
+    (employee as any)?.gross_salary ?? financial.gross_salary ?? (employee as any)?.baseSalary
+  )
+  let annualBasic = toMoneyNumber((employee as any)?.basic_salary ?? financial.basic_salary)
+  let annualHousing = toMoneyNumber((employee as any)?.housing_allowance ?? financial.housing_allowance)
+  let annualTransport = toMoneyNumber((employee as any)?.transport_allowance ?? financial.transport_allowance)
+  let annualMeal = toMoneyNumber((employee as any)?.meal_allowance ?? financial.meal_allowance)
+  let annualOther = toMoneyNumber((employee as any)?.other_allowance ?? financial.other_allowance)
 
   if (annualGrossFromProfile > 0) {
     if (isContract) {

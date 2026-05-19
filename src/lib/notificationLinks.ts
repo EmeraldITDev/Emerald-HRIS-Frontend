@@ -15,6 +15,11 @@ export function resolveNotificationLink(
 ): string | null {
   const type = (n?.type || "").toLowerCase();
   const isAdminPayroll = role === "hr_manager" || role === "corporate_hr";
+  const isManager =
+    role === "line_manager" ||
+    role === "hr_manager" ||
+    role === "corporate_hr" ||
+    role === "executive";
 
   // Approved leave notifications → /attendance
   const isApprovedLeave =
@@ -30,7 +35,7 @@ export function resolveNotificationLink(
     if (/^\/leaves\/\d+/i.test(raw)) {
       return "/attendance";
     }
-    // Old leave-approvals paths → /approvals/leave
+    // Backend (Laravel) deep-links → /approvals/leave with correct stage
     if (/^\/leave-approvals(\/|$|\?)/i.test(raw)) {
       const stage = /pending-manager/i.test(raw)
         ? "manager"
@@ -58,7 +63,11 @@ export function resolveNotificationLink(
 
   if (type.includes("leave")) {
     const stage =
-      type.includes("hr") ? "hr" : type.includes("manager") ? "manager" : null;
+      type.includes("hr")
+        ? "hr"
+        : type.includes("manager") || (isManager && /pending|submitted|requested/i.test(type))
+        ? "manager"
+        : null;
     const params = new URLSearchParams();
     if (id != null) params.set("id", String(id));
     if (stage) params.set("stage", stage);

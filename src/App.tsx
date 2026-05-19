@@ -23,6 +23,10 @@ import Security from "./pages/Security";
 import Announcements from "./pages/Announcements";
 import Policies from "./pages/Policies";
 import MyProfile from "./pages/MyProfile";
+import Notifications from "./pages/Notifications";
+import LeaveApprovals from "./pages/LeaveApprovals";
+import MyPayslips from "./pages/MyPayslips";
+import PayslipDetail from "./pages/PayslipDetail";
 import React, { useEffect, useState } from "react";
 import { getUsers } from "./api";
 import { PasswordChangeModal } from "./components/PasswordChangeModal";
@@ -83,6 +87,10 @@ const AppContent = () => {
                   <Route path="/policies" element={<Policies />} />
                   <Route path="/security" element={<Security />} />
                   <Route path="/my-profile" element={<MyProfile />} />
+                  <Route path="/notifications" element={<Notifications />} />
+                  <Route path="/approvals/leave" element={<LeaveApprovals />} />
+                  <Route path="/payroll/my-payslips" element={<MyPayslips />} />
+                  <Route path="/payroll/my-payslips/:period" element={<PayslipDetail />} />
                   <Route
                     path="/settings"
                     element={

@@ -32,6 +32,7 @@ import {
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/contexts/AuthContext"
 import { RoleBasedComponent } from "@/components/RoleBasedComponent"
+import { canHrPayroll } from "@/lib/permissions"
 import {
   Dialog,
   DialogContent,
@@ -170,8 +171,8 @@ export default function Payroll() {
   const getVisiblePayrollRecords = () => {
     if (!user) return []
     
-    // HR Manager can see all payroll records
-    if (user.role === 'hr_manager') {
+    // HR admins (any signal) can see all payroll records
+    if (canHrPayroll(user)) {
       return payrollRecords
     } 
     // Executives see only their department's payroll
@@ -478,8 +479,8 @@ export default function Payroll() {
   const handleExportCSV = () => {
     let selectedEmp;
     
-    // For non-HR Manager users, automatically use their own data
-    if (user?.role !== 'hr_manager') {
+    // For non-HR-admin users, automatically use their own data
+    if (!canHrPayroll(user)) {
       selectedEmp = onboardEmployees.find(emp => 
         emp.name.toLowerCase().includes(user?.email.split('@')[0].toLowerCase() || '')
       )
@@ -617,8 +618,8 @@ export default function Payroll() {
   const handleExportPDF = () => {
     let selectedEmp;
     
-    // For non-HR Manager users, automatically use their own data
-    if (user?.role !== 'hr_manager') {
+    // For non-HR-admin users, automatically use their own data
+    if (!canHrPayroll(user)) {
       selectedEmp = onboardEmployees.find(emp => 
         emp.name.toLowerCase().includes(user?.email.split('@')[0].toLowerCase() || '')
       )
@@ -878,8 +879,8 @@ export default function Payroll() {
       return
     }
 
-    // Requirement 4: Only Corporate HR or HR Manager may generate payroll
-    if (user?.role !== 'hr_manager' && user?.role !== 'corporate_hr') {
+    // Requirement 4: Only Corporate HR or HR admins may generate payroll
+    if (!canHrPayroll(user) && user?.role !== 'corporate_hr') {
       toast({
         title: "Insufficient Permissions",
         description: "Only Corporate HR or HR Manager can generate payroll.",
@@ -1037,12 +1038,12 @@ export default function Payroll() {
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
-          <RoleBasedComponent allowedRoles={['hr_manager', 'executive']}>
+          {(canHrPayroll(user) || user?.role === 'executive') && (
             <Button variant="outline" size="sm" onClick={handleTaxSettings}>
               <Settings className="mr-2 h-4 w-4" />
               Tax Settings
             </Button>
-          </RoleBasedComponent>
+          )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm">
@@ -1060,18 +1061,18 @@ export default function Payroll() {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          <RoleBasedComponent allowedRoles={['hr_manager']}>
+          {canHrPayroll(user) && (
             <Button size="sm" onClick={handleLockPeriod} variant={isPayrollLocked ? "destructive" : "default"}>
               <Lock className="mr-2 h-4 w-4" />
               {isPayrollLocked ? "Unlock Period" : "Lock Period"}
             </Button>
-          </RoleBasedComponent>
+          )}
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
-        {/* Payroll Calculator - For HR Manager only */}
-        <RoleBasedComponent allowedRoles={['hr_manager']}>
+        {/* Payroll Calculator - For HR admins only */}
+        {canHrPayroll(user) && (
           <Card className="lg:col-span-1 border-border/50 shadow-sm">
             <CardHeader>
               <CardTitle className="text-primary flex items-center">

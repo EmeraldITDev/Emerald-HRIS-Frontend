@@ -271,7 +271,7 @@ export default function Payroll() {
     else {
       const currentEmployee = employees.find(emp => emp.email === user.email)
       return payrollRecords.filter(record => 
-        record.employee_id === currentEmployee?.id
+        record.employee_id?.toString() === currentEmployee?.id?.toString()
       )
     }
   }
@@ -469,7 +469,7 @@ export default function Payroll() {
   }
 
   const normalizePayrollRecord = (record: PayrollRecord): PayrollRecord => {
-    const employee = employees.find(emp => emp.id === record.employee_id) || record.employee
+    const employee = employees.find(emp => emp.id?.toString() === record.employee_id?.toString()) || record.employee
     const payrollPackage = getEmployeePayrollPackage(employee)
     if (!employee || payrollPackage.annualGross === 0) return record
 
@@ -1097,6 +1097,25 @@ export default function Payroll() {
     if (!selectedRecord?.id) return
     
     try {
+      const basicSalary = toMoneyNumber(editingValues.basic_salary)
+      const housingAllowance = toMoneyNumber(editingValues.housing_allowance)
+      const transportAllowance = toMoneyNumber(editingValues.transport_allowance)
+      const mealAllowance = toMoneyNumber(editingValues.meal_allowance)
+      const otherAllowance = toMoneyNumber(editingValues.other_allowance)
+      const overtime = toMoneyNumber(editingValues.overtime)
+      const bonus = toMoneyNumber(editingValues.bonus)
+      const commission = toMoneyNumber(editingValues.commission)
+      const otherDeductions = toMoneyNumber(editingValues.other_deductions)
+      const annualGross = (basicSalary + housingAllowance + transportAllowance + mealAllowance + otherAllowance) * 12
+      const annualPension = (basicSalary + housingAllowance + transportAllowance) * 12 * 0.08
+      const annualNhf = basicSalary * 12 * 0.025
+      const { annualTax, taxableIncome } = calculateAnnualPaye(annualGross, annualPension, annualNhf)
+      const payeTax = roundMoney(annualTax / 12)
+      const pensionEmployee = roundMoney(annualPension / 12)
+      const nhf = roundMoney(annualNhf / 12)
+      const grossPay = roundMoney(basicSalary + housingAllowance + transportAllowance + mealAllowance + otherAllowance + overtime + bonus + commission)
+      const totalDeductions = roundMoney(payeTax + pensionEmployee + nhf + otherDeductions)
+
       const updateData = {
         basic_salary: editingValues.basic_salary || 0,
         housing_allowance: editingValues.housing_allowance || 0,
@@ -1107,6 +1126,15 @@ export default function Payroll() {
         bonus: editingValues.bonus || 0,
         commission: editingValues.commission || 0,
         other_deductions: editingValues.other_deductions || 0,
+        gross_pay: grossPay,
+        total_allowances: roundMoney(housingAllowance + transportAllowance + mealAllowance + otherAllowance),
+        taxable_income: roundMoney(taxableIncome / 12),
+        paye_tax: payeTax,
+        income_tax: payeTax,
+        pension_employee: pensionEmployee,
+        nhf,
+        total_deductions: totalDeductions,
+        net_pay: roundMoney(grossPay - totalDeductions),
       };
       
       console.log('💰 Updating payroll record:', selectedRecord.id);

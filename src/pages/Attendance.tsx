@@ -1603,9 +1603,9 @@ export default function Attendance() {
                   </div>
                 </div>
 
-                <Button type="submit" className="w-full">
+                <Button type="submit" className="w-full" disabled={isSubmittingLeave}>
                   <Plus className="mr-2 h-4 w-4" />
-                  Submit Leave Request
+                  {isSubmittingLeave ? "Submitting…" : "Submit Leave Request"}
                 </Button>
               </form>
             </CardContent>

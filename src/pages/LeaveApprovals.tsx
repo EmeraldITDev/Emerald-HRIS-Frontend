@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Check, X, ShieldCheck, UserCheck } from "lucide-react";
+import { Check, X, ShieldCheck, UserCheck, Paperclip } from "lucide-react";
 import { apiService } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
@@ -152,6 +152,7 @@ export default function LeaveApprovals() {
                 <TableHead>Dates</TableHead>
                 <TableHead>Days</TableHead>
                 <TableHead>Reason</TableHead>
+                <TableHead>Attachments</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -167,6 +168,54 @@ export default function LeaveApprovals() {
                   <TableCell className="text-sm">{r.start_date} → {r.end_date}</TableCell>
                   <TableCell>{r.days_requested}</TableCell>
                   <TableCell className="max-w-[240px] truncate text-sm">{r.reason || "—"}</TableCell>
+                  <TableCell className="text-sm">
+                    {(() => {
+                      const docs: any[] =
+                        r.documents ||
+                        r.attachments ||
+                        r.leave_documents ||
+                        [];
+                      if (!Array.isArray(docs) || docs.length === 0) {
+                        return <span className="text-muted-foreground">—</span>;
+                      }
+                      return (
+                        <div className="flex flex-col gap-1 max-w-[200px]">
+                          {docs.map((d: any, i: number) => {
+                            const url =
+                              d.url || d.file_url || d.download_url || d.path || d.s3_url;
+                            const name =
+                              d.name ||
+                              d.file_name ||
+                              d.original_name ||
+                              d.document_type ||
+                              `Attachment ${i + 1}`;
+                            return url ? (
+                              <a
+                                key={i}
+                                href={url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center gap-1 text-primary hover:underline truncate"
+                                title={name}
+                              >
+                                <Paperclip className="h-3 w-3 shrink-0" />
+                                <span className="truncate">{name}</span>
+                              </a>
+                            ) : (
+                              <span
+                                key={i}
+                                className="inline-flex items-center gap-1 text-muted-foreground truncate"
+                                title={name}
+                              >
+                                <Paperclip className="h-3 w-3 shrink-0" />
+                                <span className="truncate">{name}</span>
+                              </span>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
+                  </TableCell>
                   <TableCell>
                     <Badge variant="outline">{r.workflow_status || r.status}</Badge>
                   </TableCell>

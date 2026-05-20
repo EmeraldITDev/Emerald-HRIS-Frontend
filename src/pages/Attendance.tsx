@@ -138,6 +138,7 @@ export default function Attendance() {
   const [showApprovalDialog, setShowApprovalDialog] = useState(false);
   const [approvalAction, setApprovalAction] = useState<'approve' | 'reject'>('approve');
   const [approvalNotes, setApprovalNotes] = useState("");
+  const [isSubmittingLeave, setIsSubmittingLeave] = useState(false);
   const [showWeeklyAttendance, setShowWeeklyAttendance] = useState(true);
   const [showTodayAttendance, setShowTodayAttendance] = useState(true);
   const [currentEmployeeId, setCurrentEmployeeId] = useState<number | null>(null);

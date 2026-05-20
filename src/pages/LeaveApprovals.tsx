@@ -48,7 +48,17 @@ export default function LeaveApprovals() {
         stage === "manager"
           ? await apiService.getPendingLeaveForLineManager()
           : await apiService.getPendingLeaveForHR();
-      setItems(res?.data || []);
+      const raw: any[] = res?.data || [];
+      // Defensive dedupe: backend JOINs (e.g. on leave_documents) can produce
+      // duplicate rows for the same leave request. Collapse by request id.
+      const seen = new Set<string>();
+      const deduped = raw.filter((r) => {
+        const key = String(r?.id ?? `${r?.employee_id}-${r?.start_date}-${r?.end_date}`);
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+      setItems(deduped);
     } catch (e: any) {
       toast({ title: "Failed to load", description: e?.message, variant: "destructive" });
       setItems([]);

@@ -138,6 +138,7 @@ export default function Attendance() {
   const [showApprovalDialog, setShowApprovalDialog] = useState(false);
   const [approvalAction, setApprovalAction] = useState<'approve' | 'reject'>('approve');
   const [approvalNotes, setApprovalNotes] = useState("");
+  const [isSubmittingLeave, setIsSubmittingLeave] = useState(false);
   const [showWeeklyAttendance, setShowWeeklyAttendance] = useState(true);
   const [showTodayAttendance, setShowTodayAttendance] = useState(true);
   const [currentEmployeeId, setCurrentEmployeeId] = useState<number | null>(null);
@@ -565,7 +566,8 @@ export default function Attendance() {
   // Updated handleSubmit function with enhanced leave request data
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+    if (isSubmittingLeave) return
+
     if (!selectedEmployee || !leaveType || !startDate || !endDate) {
       toast({
         title: "Error", 
@@ -634,6 +636,7 @@ export default function Attendance() {
       
       // Try to submit to database
       try {
+        setIsSubmittingLeave(true)
         // Create FormData to handle file uploads
         const formData = new FormData()
         formData.append('employee_id', selectedEmployee)
@@ -790,6 +793,8 @@ export default function Attendance() {
         description: "Failed to submit leave request",
         variant: "destructive"
       })
+    } finally {
+      setIsSubmittingLeave(false)
     }
   }
 
@@ -1598,9 +1603,9 @@ export default function Attendance() {
                   </div>
                 </div>
 
-                <Button type="submit" className="w-full">
+                <Button type="submit" className="w-full" disabled={isSubmittingLeave}>
                   <Plus className="mr-2 h-4 w-4" />
-                  Submit Leave Request
+                  {isSubmittingLeave ? "Submitting…" : "Submit Leave Request"}
                 </Button>
               </form>
             </CardContent>

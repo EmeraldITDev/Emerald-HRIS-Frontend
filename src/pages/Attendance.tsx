@@ -793,6 +793,8 @@ export default function Attendance() {
         description: "Failed to submit leave request",
         variant: "destructive"
       })
+    } finally {
+      setIsSubmittingLeave(false)
     }
   }
 

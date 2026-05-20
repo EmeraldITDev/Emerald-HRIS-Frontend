@@ -566,7 +566,8 @@ export default function Attendance() {
   // Updated handleSubmit function with enhanced leave request data
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+    if (isSubmittingLeave) return
+
     if (!selectedEmployee || !leaveType || !startDate || !endDate) {
       toast({
         title: "Error", 

@@ -636,6 +636,7 @@ export default function Attendance() {
       
       // Try to submit to database
       try {
+        setIsSubmittingLeave(true)
         // Create FormData to handle file uploads
         const formData = new FormData()
         formData.append('employee_id', selectedEmployee)

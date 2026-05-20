@@ -16,6 +16,13 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import { canHrApproveLeave } from "@/lib/permissions";
 
+const API_BASE = (import.meta.env.VITE_API_URL as string) || "";
+
+const formatDocType = (t?: string) =>
+  (t || "document")
+    .replace(/[-_]/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+
 type Stage = "manager" | "hr";
 
 export default function LeaveApprovals() {
@@ -181,14 +188,24 @@ export default function LeaveApprovals() {
                       return (
                         <div className="flex flex-col gap-1 max-w-[200px]">
                           {docs.map((d: any, i: number) => {
+                            const rawPath = d.path || d.s3_path || "";
                             const url =
-                              d.url || d.file_url || d.download_url || d.path || d.s3_url;
-                            const name =
-                              d.name ||
+                              d.url ||
+                              d.file_url ||
+                              d.download_url ||
+                              d.s3_url ||
+                              (rawPath
+                                ? `${API_BASE}/leave-documents/${encodeURIComponent(rawPath)}`
+                                : undefined);
+                            const filename =
+                              d.filename ||
                               d.file_name ||
+                              d.name ||
                               d.original_name ||
-                              d.document_type ||
                               `Attachment ${i + 1}`;
+                            const label = d.type
+                              ? `${formatDocType(d.type)} — ${filename}`
+                              : filename;
                             return url ? (
                               <a
                                 key={i}
@@ -196,19 +213,19 @@ export default function LeaveApprovals() {
                                 target="_blank"
                                 rel="noreferrer"
                                 className="inline-flex items-center gap-1 text-primary hover:underline truncate"
-                                title={name}
+                                title={label}
                               >
                                 <Paperclip className="h-3 w-3 shrink-0" />
-                                <span className="truncate">{name}</span>
+                                <span className="truncate">{label}</span>
                               </a>
                             ) : (
                               <span
                                 key={i}
                                 className="inline-flex items-center gap-1 text-muted-foreground truncate"
-                                title={name}
+                                title={label}
                               >
                                 <Paperclip className="h-3 w-3 shrink-0" />
-                                <span className="truncate">{name}</span>
+                                <span className="truncate">{label}</span>
                               </span>
                             );
                           })}

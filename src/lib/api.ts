@@ -960,7 +960,10 @@ class ApiService {
 
   // Announcements
   async getAnnouncements(): Promise<Announcement[]> {
-    return this.request<Announcement[]>('/announcements');
+    const resp = await this.request<any>('/announcements');
+    if (Array.isArray(resp)) return resp;
+    if (Array.isArray(resp?.data)) return resp.data;
+    return [];
   }
 
   async createAnnouncement(data: Partial<Announcement>): Promise<Announcement> {
@@ -980,6 +983,61 @@ class ApiService {
   async deleteAnnouncement(id: number): Promise<{ message: string }> {
     return this.request<{ message: string }>(`/announcements/${id}`, {
       method: 'DELETE',
+    });
+  }
+
+  // Announcement detail (includes comments thread) + comments + read receipt
+  async getAnnouncement(id: number | string): Promise<any> {
+    const resp = await this.request<any>(`/announcements/${id}`);
+    return resp?.data ?? resp;
+  }
+
+  async addAnnouncementComment(
+    id: number | string,
+    content: string,
+    parent_comment_id?: number | string | null
+  ): Promise<any> {
+    return this.request<any>(`/announcements/${id}/comments`, {
+      method: 'POST',
+      body: JSON.stringify({ content, parent_comment_id: parent_comment_id ?? null }),
+    });
+  }
+
+  async markAnnouncementRead(id: number | string): Promise<any> {
+    return this.request<any>(`/announcements/${id}/read`, { method: 'POST' });
+  }
+
+  // Early clock-out approval workflow
+  async submitEarlyClockoutRequest(payload: {
+    employee_id: number;
+    reason: string;
+    requested_at: string;
+  }): Promise<any> {
+    return this.request<any>('/attendance/early-clockout-request', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async getEarlyClockoutRequests(params?: { status?: string; employee_id?: number }): Promise<any> {
+    const qp = new URLSearchParams();
+    if (params?.status) qp.append('status', params.status);
+    if (params?.employee_id != null) qp.append('employee_id', String(params.employee_id));
+    const q = qp.toString();
+    return this.request<any>(`/attendance/early-clockout-requests${q ? `?${q}` : ''}`);
+  }
+
+  async approveEarlyClockoutRequest(id: number | string, approver_notes?: string): Promise<any> {
+    return this.request<any>(`/attendance/early-clockout-requests/${id}/approve`, {
+      method: 'POST',
+      body: JSON.stringify({ approver_notes: approver_notes ?? '' }),
+    });
+  }
+
+  async rejectEarlyClockoutRequest(id: number | string, approver_notes: string): Promise<any> {
+    return this.request<any>(`/attendance/early-clockout-requests/${id}/reject`, {
+      method: 'POST',
+      body: JSON.stringify({ approver_notes }),
     });
   }
 

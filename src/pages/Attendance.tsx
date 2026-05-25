@@ -2186,22 +2186,22 @@ export default function Attendance() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {isLunchBreak ? "Lunch Break Confirmation" : "Early Departure Confirmation"}
+              {isLunchBreak ? "Lunch Break Confirmation" : "Request Early Clock-Out Approval"}
             </DialogTitle>
             <DialogDescription>
               {isLunchBreak 
                 ? "You're clocking out for lunch break. Please provide a note if needed."
-                : "You are clocking out before 5:00 PM. Please provide a reason for early departure."
+                : "Clocking out before 5:00 PM requires HR approval. Submit a reason below — your request will be routed to HR Manager / Corporate HR. You will remain clocked in until approved."
               }
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
             <Label htmlFor="clockOutReason" className="mb-2 block">
-              {isLunchBreak ? "Note (optional)" : "Reason *"}
+              {isLunchBreak ? "Note (optional)" : "Reason for early clock-out *"}
             </Label>
             <Textarea
               id="clockOutReason"
-              placeholder={isLunchBreak ? "Optional note..." : "Enter reason for early departure..."}
+              placeholder={isLunchBreak ? "Optional note..." : "e.g. medical appointment, family emergency..."}
               value={clockOutReason}
               onChange={(e) => setClockOutReason(e.target.value)}
               rows={3}
@@ -2212,7 +2212,7 @@ export default function Attendance() {
               Cancel
             </Button>
             <Button onClick={handleConfirmClockOut} disabled={isPunching}>
-              {isLunchBreak ? "Start Break" : "Confirm Clock Out"}
+              {isLunchBreak ? "Start Break" : "Submit Approval Request"}
             </Button>
           </DialogFooter>
         </DialogContent>

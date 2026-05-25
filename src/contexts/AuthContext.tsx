@@ -28,7 +28,6 @@ export interface User {
   department: string;
   employee_id?: number;
   mustChangePassword?: boolean;
-  isDummyAccount?: boolean; // Flag to identify test/dummy accounts
 }
 
 interface AuthContextType {
@@ -42,9 +41,6 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-// No demo users - all authentication goes through the backend
-const dummyUsers: Record<string, { user: User; password: string }> = {};
 
 // Role permissions mapping
 const rolePermissions: Record<UserRole, string[]> = {
@@ -215,7 +211,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           department: (response as any).user.department || 'General',
           employee_id: (response as any).user.employee_id,
           mustChangePassword: (response as any).user.must_change_password,
-          isDummyAccount: false, // Real database account
         };
         
         setUser(user);
@@ -224,22 +219,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return { success: true };
       }
     } catch (error) {
-      console.log('Backend login failed, trying dummy users:', error);
+      console.error('Login failed:', error);
     }
-    
-    // Fallback to dummy users if backend fails
-    const userRecord = dummyUsers[email.toLowerCase()];
-    
-    if (userRecord && userRecord.password === password) {
-      const dummyUser: User = {
-        ...userRecord.user,
-        isDummyAccount: true, // Mark as dummy/test account
-      };
-      setUser(dummyUser);
-      localStorage.setItem('hris_user', JSON.stringify(dummyUser));
-      return { success: true };
-    }
-    
+
     return { success: false };
   };
 
@@ -256,7 +238,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           department: (resp as any).user.department || 'General',
           employee_id: (resp as any).user.employee_id,
           mustChangePassword: (resp as any).user.must_change_password,
-          isDummyAccount: false, // Real database account
         };
         setUser(user);
         localStorage.setItem('hris_user', JSON.stringify(user));
@@ -296,7 +277,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           department: response.user.department || 'General',
           employee_id: response.user.employee_id,
           mustChangePassword: response.user.must_change_password,
-          isDummyAccount: false, // Real database account
         };
         
         setUser(updatedUser);

@@ -930,7 +930,7 @@ export default function Attendance() {
     }
   };
 
-  const handleConfirmClockOut = () => {
+  const handleConfirmClockOut = async () => {
     // Lunch break flow — proceed as before (no approval required)
     if (isLunchBreak) {
       performClockOut(clockOutReason, true);
@@ -948,28 +948,29 @@ export default function Attendance() {
     }
 
     try {
-      const queueKey = "early_clockout_requests_v1";
-      const existing = JSON.parse(localStorage.getItem(queueKey) || "[]");
-      existing.push({
-        id: `eco_${Date.now()}`,
-        employee_id: currentEmployeeId,
-        employee_name: user ? `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() || user.email : "",
-        requested_at: new Date().toISOString(),
+      setIsPunching(true);
+      await apiService.submitEarlyClockoutRequest({
+        employee_id: currentEmployeeId as number,
         reason: clockOutReason.trim(),
-        status: "pending",
+        requested_at: new Date().toISOString(),
       });
-      localStorage.setItem(queueKey, JSON.stringify(existing));
-    } catch (e) {
-      console.warn("Failed to queue early clock-out request locally", e);
+      toast({
+        title: "Approval Request Submitted",
+        description:
+          "Your early clock-out request has been sent to HR Manager / Corporate HR. You remain clocked in until it is approved.",
+      });
+      setShowClockOutDialog(false);
+      setClockOutReason("");
+    } catch (error: any) {
+      console.error("Early clock-out request error:", error);
+      toast({
+        title: "Request Failed",
+        description: error?.message || "Could not submit your early clock-out request.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsPunching(false);
     }
-
-    toast({
-      title: "Approval Request Submitted",
-      description:
-        "Your early clock-out request has been sent to HR Manager / Corporate HR. You remain clocked in until it is approved.",
-    });
-    setShowClockOutDialog(false);
-    setClockOutReason("");
   };
 
   // Example helpers (replace your current variants if desired)

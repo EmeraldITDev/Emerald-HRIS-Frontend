@@ -39,21 +39,10 @@ interface Announcement {
 }
 
 interface AnnouncementComment {
-  id: string
+  id: string | number
   author: string
   content: string
   createdAt: string
-}
-
-const COMMENT_STORAGE_KEY = 'announcement_comments_v1'
-
-const loadComments = (): Record<string, AnnouncementComment[]> => {
-  try {
-    return JSON.parse(localStorage.getItem(COMMENT_STORAGE_KEY) || '{}')
-  } catch { return {} }
-}
-const saveComments = (data: Record<string, AnnouncementComment[]>) => {
-  localStorage.setItem(COMMENT_STORAGE_KEY, JSON.stringify(data))
 }
 
 
@@ -63,7 +52,7 @@ export default function Announcements() {
   const [targetMode, setTargetMode] = useState<'all' | 'department' | 'individual'>('all')
   const [targetDepartments, setTargetDepartments] = useState<string[]>([])
   const [targetEmployeeIds, setTargetEmployeeIds] = useState<number[]>([])
-  const [comments, setComments] = useState<Record<string, AnnouncementComment[]>>(() => loadComments())
+  const [comments, setComments] = useState<Record<string, AnnouncementComment[]>>({})
   const [newCommentText, setNewCommentText] = useState<Record<string, string>>({})
   
   const [isCreating, setIsCreating] = useState(false)
@@ -102,6 +91,34 @@ export default function Announcements() {
         recipients: ann.target_audience ? [ann.target_audience] : ['all_employees']
       }))
       setAnnouncements(mappedAnnouncements)
+      // Fetch comment threads for each announcement in parallel
+      const threads = await Promise.all(
+        mappedAnnouncements.map(async (a) => {
+          try {
+            const detail = await apiService.getAnnouncement(a.id)
+            const flat: AnnouncementComment[] = []
+            const walk = (list: any[]) => {
+              if (!Array.isArray(list)) return
+              list.forEach((c) => {
+                flat.push({
+                  id: c.id,
+                  author: c.author?.name || 'User',
+                  content: c.content,
+                  createdAt: c.created_at,
+                })
+                if (Array.isArray(c.replies)) walk(c.replies)
+              })
+            }
+            walk(detail?.comments || [])
+            return [a.id, flat] as [string, AnnouncementComment[]]
+          } catch {
+            return [a.id, [] as AnnouncementComment[]] as [string, AnnouncementComment[]]
+          }
+        })
+      )
+      const map: Record<string, AnnouncementComment[]> = {}
+      threads.forEach(([id, list]) => { map[id] = list })
+      setComments(map)
     } catch (error) {
       console.error('Failed to fetch announcements:', error)
       setAnnouncements([])
@@ -234,20 +251,33 @@ export default function Announcements() {
     setTargetEmployeeIds([])
   }
 
-  const addComment = (announcementId: string) => {
+  const addComment = async (announcementId: string) => {
     const text = (newCommentText[announcementId] || '').trim()
     if (!text) return
-    const newComment: AnnouncementComment = {
-      id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      author: user?.firstName ? `${user.firstName} ${user.lastName}` : 'Anonymous',
-      content: text,
-      createdAt: new Date().toISOString(),
+    try {
+      await apiService.addAnnouncementComment(announcementId, text)
+      // Reload thread for this announcement
+      const detail = await apiService.getAnnouncement(announcementId)
+      const flat: AnnouncementComment[] = []
+      const walk = (list: any[]) => {
+        if (!Array.isArray(list)) return
+        list.forEach((c) => {
+          flat.push({
+            id: c.id,
+            author: c.author?.name || 'User',
+            content: c.content,
+            createdAt: c.created_at,
+          })
+          if (Array.isArray(c.replies)) walk(c.replies)
+        })
+      }
+      walk(detail?.comments || [])
+      setComments((prev) => ({ ...prev, [announcementId]: flat }))
+      setNewCommentText((prev) => ({ ...prev, [announcementId]: '' }))
+      toast({ title: 'Comment posted' })
+    } catch (e: any) {
+      toast({ title: 'Failed to post comment', description: e?.message, variant: 'destructive' })
     }
-    const next = { ...comments, [announcementId]: [...(comments[announcementId] || []), newComment] }
-    setComments(next)
-    saveComments(next)
-    setNewCommentText((prev) => ({ ...prev, [announcementId]: '' }))
-    toast({ title: 'Comment posted' })
   }
 
   const handleImageUpload = () => {

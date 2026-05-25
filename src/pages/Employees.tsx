@@ -2155,7 +2155,7 @@ export default function Employees() {
                     {newEmployee.employmentType === "Full-time" ? (
                       <>
                         <div className="space-y-2">
-                          <Label htmlFor="grossSalary">Gross Salary *</Label>
+                          <Label htmlFor="grossSalary">Gross Salary (Annual) *</Label>
                           <Input
                             id="grossSalary"
                             type="number"
@@ -2168,7 +2168,7 @@ export default function Employees() {
                             }
                             placeholder="2500000"
                           />
-                          <p className="text-xs text-muted-foreground">Enter amount in Naira (₦).</p>
+                          <p className="text-xs text-muted-foreground">Enter annual amount in Naira (₦). Monthly = Annual ÷ 12.</p>
                         </div>
 
                         <div className="space-y-2">
@@ -2234,7 +2234,7 @@ export default function Employees() {
                     ) : newEmployee.employmentType === "Contract" ? (
                       <>
                         <div className="space-y-2">
-                          <Label htmlFor="grossSalary">Gross Salary *</Label>
+                          <Label htmlFor="grossSalary">Gross Salary (Annual) *</Label>
                           <Input
                             id="grossSalary"
                             type="number"
@@ -2247,7 +2247,7 @@ export default function Employees() {
                             }
                             placeholder="1500000"
                           />
-                          <p className="text-xs text-muted-foreground">Enter gross salary amount in Naira (₦).</p>
+                          <p className="text-xs text-muted-foreground">Enter annual gross salary in Naira (₦).</p>
                         </div>
                       </>
                     ) : (
@@ -3645,7 +3645,7 @@ export default function Employees() {
                 <TabsContent value="financial" className="space-y-4">
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <Label htmlFor="editGrossSalary">Gross Salary (Monthly)</Label>
+                      <Label htmlFor="editGrossSalary">Gross Salary (Annual)</Label>
                       <Input
                         id="editGrossSalary"
                         type="number"

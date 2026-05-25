@@ -60,6 +60,9 @@ export default function Payroll() {
     earningsRemarks: "",
     deduction: "",
     deductionRemarks: "",
+    includeNhf: true,
+    rentReliefEnabled: false,
+    annualRent: "",
   })
   const [editingRecordId, setEditingRecordId] = useState<number | null>(null)
   const [editingValues, setEditingValues] = useState<Partial<PayrollRecord>>({})
@@ -152,7 +155,7 @@ export default function Payroll() {
         const payrollPackage = getEmployeePayrollPackage(selectedEmp)
         setPayrollData(prev => ({
           ...prev,
-          basicSalary: payrollPackage.annualBasic ? payrollPackage.annualBasic.toString() : ""
+          basicSalary: payrollPackage.monthlyBasic ? Math.round(payrollPackage.monthlyBasic).toString() : ""
         }))
       }
     }
@@ -161,6 +164,7 @@ export default function Payroll() {
   const onboardEmployees = employees.map(emp => ({
     id: emp.id?.toString() || '',
     name: `${emp.first_name} ${emp.last_name}`,
+    monthlyBasic: getEmployeePayrollPackage(emp).monthlyBasic,
     basicSalary: getEmployeePayrollPackage(emp).annualBasic,
     pensionId: emp.pension_pin || '',
     taxId: emp.tax_id || '',
@@ -204,9 +208,14 @@ export default function Payroll() {
     const selectedEmp = onboardEmployees.find(emp => emp.id === selectedEmployee)
     const employmentType = selectedEmp?.employmentType || "Full-time"
     
-    const basicSalary = parseFloat(payrollData.basicSalary) || 0
+    // UI input is MONTHLY Basic Salary; convert to annual for calc.
+    const monthlyBasicInput = parseFloat(payrollData.basicSalary) || 0
+    const basicSalary = monthlyBasicInput * 12
     const earnings = parseFloat(payrollData.earnings) || 0
     const deduction = parseFloat(payrollData.deduction) || 0
+    const includeNhf = payrollData.includeNhf !== false
+    const annualRent = parseFloat(payrollData.annualRent) || 0
+    const rentRelief = payrollData.rentReliefEnabled ? Math.min(annualRent * 0.2, 500000) : 0
     
     let annualGross, housing, transport, other, pensionEmployee, pensionEmployer, nhf;
     let grossForCRA, cra, totalRelief, taxableIncome, annualTax, annualNet;
@@ -225,8 +234,8 @@ export default function Payroll() {
       pensionEmployee = (housing + transport + basicSalary) * 0.08  // Employee Pension = 8% × (Housing + Transport + Basic)
       pensionEmployer = annualGross * 0.10  // Employer Pension = 10% × Annual Gross
       
-      // NHF based on Basic Salary
-      nhf = basicSalary * 0.025  // NHF = 2.5% × Basic
+      // NHF based on Basic Salary (opt-in via toggle)
+      nhf = includeNhf ? basicSalary * 0.025 : 0
       
       // Gross for CRA calculation
       grossForCRA = annualGross - (pensionEmployee + nhf)
@@ -235,8 +244,9 @@ export default function Payroll() {
       // Formula: 20% of Gross for CRA + MAX(1% of Gross for CRA, 200000)
       cra = (grossForCRA * 0.20) + Math.max(grossForCRA * 0.01, 200000)
       
-      // Total Relief Allowances
-      totalRelief = cra + pensionEmployee + nhf
+      // Total Relief Allowances (incl. rent relief per Nigerian Finance Act 2023:
+      // lesser of 20% of annual rent or NGN 500,000)
+      totalRelief = cra + pensionEmployee + nhf + rentRelief
       
       // Taxable Income
       taxableIncome = annualGross - totalRelief
@@ -467,7 +477,7 @@ export default function Payroll() {
     if (!selectedEmp) return
 
     // Calculate payroll for selected employee
-    const basicSalary = selectedEmp.basicSalary
+    const basicSalary = selectedEmp.basicSalary // ANNUAL basic
     const employmentType = selectedEmp.employmentType
     
     let annualGross, housing, transport, other, pensionEmployee, pensionEmployer, nhf;
@@ -526,6 +536,7 @@ export default function Payroll() {
       'Employee ID': selectedEmp.id,
       'Employee Name': selectedEmp.name,
       'Employment Type': employmentType,
+      'Monthly Basic Salary': Math.round(basicSalary / 12),
       'Annual Basic Salary': basicSalary,
       'Annual Housing Allowance': housing,
       'Annual Transport Allowance': transport,
@@ -865,14 +876,16 @@ export default function Payroll() {
         })
         return
       }
-      const manualAnnualBasic = toMoneyNumber(payrollData.basicSalary)
-      const basicSalary = manualAnnualBasic > 0
-        ? roundMoney(manualAnnualBasic / 12)
+      // UI input is MONTHLY Basic Salary
+      const manualMonthlyBasic = toMoneyNumber(payrollData.basicSalary)
+      const manualAnnualBasic = manualMonthlyBasic * 12
+      const basicSalary = manualMonthlyBasic > 0
+        ? manualMonthlyBasic
         : payrollPackage.monthlyBasic
-      const annualGross = manualAnnualBasic > 0
+      const annualGross = manualMonthlyBasic > 0
         ? roundMoney(manualAnnualBasic / 0.4)
         : payrollPackage.annualGross
-      const monthlyGross = manualAnnualBasic > 0
+      const monthlyGross = manualMonthlyBasic > 0
         ? roundMoney(annualGross / 12)
         : payrollPackage.monthlyGross
       const overtime = toMoneyNumber(payrollData.earnings)
@@ -951,6 +964,9 @@ export default function Payroll() {
         earningsRemarks: "",
         deduction: "",
         deductionRemarks: "",
+        includeNhf: true,
+        rentReliefEnabled: false,
+        annualRent: "",
       })
       setSelectedEmployee("")
     } catch (error) {
@@ -1180,14 +1196,14 @@ export default function Payroll() {
               <div className="space-y-3 border-t pt-3">
                 <div>
                   <Label htmlFor="basicSalary" className="font-semibold">
-                    {calculations.employmentType === "Contract" ? "Contract Amount *" : "Annual Basic Salary *"}
+                    {calculations.employmentType === "Contract" ? "Contract Amount (Monthly) *" : "Monthly Basic Salary *"}
                   </Label>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₦</span>
                     <Input
                       id="basicSalary"
                       type="number"
-                      placeholder="1,600,000"
+                      placeholder="200,000"
                       value={payrollData.basicSalary}
                       onChange={(e) => setPayrollData({...payrollData, basicSalary: e.target.value})}
                       className="pl-8"
@@ -1195,9 +1211,66 @@ export default function Payroll() {
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
                     {calculations.employmentType === "Contract" 
-                      ? "Total annual contract payment" 
-                      : "Annual gross will be calculated (Basic = 40% of Annual Gross)"}
+                      ? "Monthly contract payment"
+                      : "Auto-filled from Gross Salary (Annual) ÷ 12. Basic = 40% of Gross."}
                   </p>
+                </div>
+
+                {/* NHF Toggle */}
+                <div className="flex items-start gap-2 rounded-md border p-3">
+                  <input
+                    id="includeNhf"
+                    type="checkbox"
+                    className="mt-1 h-4 w-4"
+                    checked={payrollData.includeNhf}
+                    onChange={(e) => setPayrollData({...payrollData, includeNhf: e.target.checked})}
+                  />
+                  <div className="flex-1">
+                    <Label htmlFor="includeNhf" className="cursor-pointer font-medium">
+                      Apply NHF Contribution (2.5% of Basic)
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      National Housing Fund deduction. Toggle off for employees who have opted out.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Rent Relief */}
+                <div className="rounded-md border p-3 space-y-2">
+                  <div className="flex items-start gap-2">
+                    <input
+                      id="rentReliefEnabled"
+                      type="checkbox"
+                      className="mt-1 h-4 w-4"
+                      checked={payrollData.rentReliefEnabled}
+                      onChange={(e) => setPayrollData({...payrollData, rentReliefEnabled: e.target.checked})}
+                    />
+                    <div className="flex-1">
+                      <Label htmlFor="rentReliefEnabled" className="cursor-pointer font-medium">
+                        Employee on Rent Relief Plan
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        Nigerian Finance Act 2023: lesser of 20% of annual rent or ₦500,000 reduces taxable income.
+                      </p>
+                    </div>
+                  </div>
+                  {payrollData.rentReliefEnabled && (
+                    <div>
+                      <Label htmlFor="annualRent">Annual Rent (₦)</Label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₦</span>
+                        <Input
+                          id="annualRent"
+                          type="number"
+                          min="0"
+                          placeholder="1,200,000"
+                          value={payrollData.annualRent}
+                          onChange={(e) => setPayrollData({...payrollData, annualRent: e.target.value})}
+                          className="pl-8"
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="border rounded-lg p-3 bg-muted/30 space-y-3">

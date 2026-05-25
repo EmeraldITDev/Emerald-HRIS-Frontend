@@ -68,7 +68,9 @@ export default function Benefits() {
     value: '',
     start_date: '',
     end_date: '',
-    notes: ''
+    notes: '',
+    is_recurring: false,
+    recurrence: 'none' as 'none' | 'monthly' | 'yearly',
   })
   const { toast } = useToast()
   const { user, refreshUser } = useAuth()
@@ -274,6 +276,20 @@ export default function Benefits() {
       return
     }
 
+    // Frontend date validation: end_date must be strictly after start_date
+    if (assignBenefitForm.end_date) {
+      const start = new Date(assignBenefitForm.start_date)
+      const end = new Date(assignBenefitForm.end_date)
+      if (end <= start) {
+        toast({
+          title: "Invalid date range",
+          description: "End date must be after the start date.",
+          variant: "destructive"
+        })
+        return
+      }
+    }
+
     try {
       console.log('Assigning benefit with data:', {
         ...assignBenefitForm,
@@ -299,7 +315,9 @@ export default function Benefits() {
         value: '',
         start_date: '',
         end_date: '',
-        notes: ''
+        notes: '',
+        is_recurring: false,
+        recurrence: 'none',
       })
       setIsAssignDialogOpen(false)
 
@@ -1131,7 +1149,26 @@ export default function Benefits() {
           
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
-              <Label>Select Employees *</Label>
+              <div className="flex items-center justify-between">
+                <Label>Select Employees *</Label>
+                {employees.length > 0 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const allIds = employees.map(e => e.id!).filter(Boolean)
+                      const allSelected = allIds.length > 0 && allIds.every(id => assignBenefitForm.employee_ids.includes(id))
+                      setAssignBenefitForm({
+                        ...assignBenefitForm,
+                        employee_ids: allSelected ? [] : allIds,
+                      })
+                    }}
+                  >
+                    {employees.length > 0 && employees.every(e => assignBenefitForm.employee_ids.includes(e.id!)) ? 'Clear All' : 'Select All'}
+                  </Button>
+                )}
+              </div>
               <div className="border rounded-md p-3 max-h-48 overflow-y-auto">
                 {isLoadingEmployees ? (
                   <div className="text-sm text-muted-foreground text-center py-4">Loading employees...</div>
@@ -1251,10 +1288,54 @@ export default function Benefits() {
                 <Input
                   id="end_date"
                   type="date"
+                  min={assignBenefitForm.start_date || undefined}
                   value={assignBenefitForm.end_date}
                   onChange={(e) => setAssignBenefitForm({...assignBenefitForm, end_date: e.target.value})}
                 />
+                {assignBenefitForm.end_date && assignBenefitForm.start_date && new Date(assignBenefitForm.end_date) <= new Date(assignBenefitForm.start_date) && (
+                  <p className="text-xs text-destructive">End date must be after start date.</p>
+                )}
               </div>
+            </div>
+
+            {/* Recurring Benefit */}
+            <div className="rounded-md border p-3 space-y-2">
+              <div className="flex items-start gap-2">
+                <Checkbox
+                  id="is_recurring"
+                  checked={assignBenefitForm.is_recurring}
+                  onCheckedChange={(checked) =>
+                    setAssignBenefitForm({
+                      ...assignBenefitForm,
+                      is_recurring: !!checked,
+                      recurrence: checked ? (assignBenefitForm.recurrence === 'none' ? 'monthly' : assignBenefitForm.recurrence) : 'none',
+                    })
+                  }
+                />
+                <div className="flex-1">
+                  <Label htmlFor="is_recurring" className="cursor-pointer font-medium">
+                    Recurring Benefit
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Automatically renew this benefit on a schedule.
+                  </p>
+                </div>
+              </div>
+              {assignBenefitForm.is_recurring && (
+                <div>
+                  <Label htmlFor="recurrence">Recurrence</Label>
+                  <Select
+                    value={assignBenefitForm.recurrence}
+                    onValueChange={(v: any) => setAssignBenefitForm({ ...assignBenefitForm, recurrence: v })}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="monthly">Monthly</SelectItem>
+                      <SelectItem value="yearly">Yearly</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">

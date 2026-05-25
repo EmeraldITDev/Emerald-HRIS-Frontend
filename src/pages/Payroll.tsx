@@ -955,6 +955,9 @@ export default function Payroll() {
         earningsRemarks: "",
         deduction: "",
         deductionRemarks: "",
+        includeNhf: true,
+        rentReliefEnabled: false,
+        annualRent: "",
       })
       setSelectedEmployee("")
     } catch (error) {

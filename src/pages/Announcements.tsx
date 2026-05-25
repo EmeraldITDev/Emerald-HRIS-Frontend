@@ -510,6 +510,34 @@ export default function Announcements() {
                   </p>
                 </div>
               )}
+
+              {/* Comments */}
+              <div className="mt-4 pt-4 border-t space-y-3">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <MessageSquare className="h-4 w-4" />
+                  Comments ({(comments[announcement.id] || []).length})
+                </div>
+                <div className="space-y-2">
+                  {(comments[announcement.id] || []).map((c) => (
+                    <div key={c.id} className="rounded-md border bg-muted/30 px-3 py-2 text-sm">
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <span className="font-medium text-foreground">{c.author}</span>
+                        <span>{new Date(c.createdAt).toLocaleString()}</span>
+                      </div>
+                      <p className="mt-1 whitespace-pre-wrap">{c.content}</p>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <Textarea
+                    rows={2}
+                    placeholder="Write a comment…"
+                    value={newCommentText[announcement.id] || ''}
+                    onChange={(e) => setNewCommentText((prev) => ({ ...prev, [announcement.id]: e.target.value }))}
+                  />
+                  <Button size="sm" onClick={() => addComment(announcement.id)}>Post</Button>
+                </div>
+              </div>
             </CardContent>
           </Card>
         ))}

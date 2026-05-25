@@ -477,7 +477,7 @@ export default function Payroll() {
     if (!selectedEmp) return
 
     // Calculate payroll for selected employee
-    const basicSalary = selectedEmp.basicSalary
+    const basicSalary = selectedEmp.basicSalary // ANNUAL basic
     const employmentType = selectedEmp.employmentType
     
     let annualGross, housing, transport, other, pensionEmployee, pensionEmployer, nhf;
@@ -536,6 +536,7 @@ export default function Payroll() {
       'Employee ID': selectedEmp.id,
       'Employee Name': selectedEmp.name,
       'Employment Type': employmentType,
+      'Monthly Basic Salary': Math.round(basicSalary / 12),
       'Annual Basic Salary': basicSalary,
       'Annual Housing Allowance': housing,
       'Annual Transport Allowance': transport,

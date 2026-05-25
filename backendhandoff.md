@@ -19,6 +19,7 @@ Conventions:
   - Lunch break allowed outside 12:00–14:00.
   - Clock-out allowed before 17:00.
 - Bypass actions add a `notes` field flagging the bypass; reason captured for non-bypass exceptions.
+- **Early clock-out approval flow**: regular staff attempting to clock out before 17:00 no longer clock out directly. They must submit a reason via the "Request Early Clock-Out Approval" dialog. The request is queued (currently to `localStorage` key `early_clockout_requests_v1` as a UX bridge) and the employee stays clocked in until an HR Manager / Corporate HR approves it. HR Manager and Corporate HR still bypass entirely.
 
 **Root cause of previous failure**
 - Frontend short-circuit (`toast(...); return`) bypassed the API call, leaving clock-in non-functional even when the backend was healthy.
@@ -29,6 +30,14 @@ Conventions:
   1. Accept `notes` and `approval_reason` fields.
   2. Accept and persist `bypass_by_role` when caller is `hr_manager` or `corporate_hr`.
   3. Skip time-window enforcement when `bypass_by_role` is present and the caller has the right role.
+- **Early clock-out approval endpoints** (new):
+  - `POST /attendance/early-clockout-request` — body: `{ employee_id, reason, requested_at }`. Creates a pending row in `early_clockout_requests`. Notifies HR Manager + Corporate HR.
+  - `GET /attendance/early-clockout-requests?status=pending` — list for approvers.
+  - `POST /attendance/early-clockout-requests/{id}/approve` — body: `{ approver_notes? }`. On approval the server performs the actual `clock_out` write at the originally requested timestamp (or `now()` per policy), marks the request `approved`, writes `attendance_audit_log`, and notifies the employee.
+  - `POST /attendance/early-clockout-requests/{id}/reject` — body: `{ approver_notes }`. Marks `rejected`, notifies the employee, employee remains clocked in.
+  - Schema: `early_clockout_requests (id, employee_id, reason, requested_at, status ENUM('pending','approved','rejected'), approver_user_id NULL, approver_notes NULL, decided_at NULL, created_at)`.
+  - RBAC: only `hr_manager`, `corporate_hr`, `executive` may approve/reject. Self-approval guard: an `hr_manager` or `corporate_hr` who submitted the request cannot approve their own (they shouldn't hit this flow at all since they bypass, but enforce server-side).
+  - Once the approval endpoints ship, remove the `localStorage` bridge and POST the request directly via the API.
 - Audit log table (new): `attendance_audit_log`
   - Columns: `id`, `actor_user_id`, `target_employee_id`, `action`, `bypass`, `reason`, `original_timestamp`, `approved_timestamp`, `created_at`.
 - Server-side timezone: store all timestamps in UTC; compare windows in `Africa/Lagos`.

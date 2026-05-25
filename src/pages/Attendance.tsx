@@ -931,15 +931,45 @@ export default function Attendance() {
   };
 
   const handleConfirmClockOut = () => {
-    if (!clockOutReason.trim() && new Date().getHours() < 17) {
-      toast({ 
-        title: "Reason Required", 
-        description: "Please provide a reason for early departure.", 
-        variant: "destructive" 
+    // Lunch break flow — proceed as before (no approval required)
+    if (isLunchBreak) {
+      performClockOut(clockOutReason, true);
+      return;
+    }
+
+    // Early clock-out (before 5:00 PM) — requires HR approval, do NOT clock out yet.
+    if (!clockOutReason.trim()) {
+      toast({
+        title: "Reason Required",
+        description: "Please provide a reason for the early clock-out approval request.",
+        variant: "destructive",
       });
       return;
     }
-    performClockOut(clockOutReason, isLunchBreak);
+
+    try {
+      const queueKey = "early_clockout_requests_v1";
+      const existing = JSON.parse(localStorage.getItem(queueKey) || "[]");
+      existing.push({
+        id: `eco_${Date.now()}`,
+        employee_id: currentEmployeeId,
+        employee_name: user ? `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() || user.email : "",
+        requested_at: new Date().toISOString(),
+        reason: clockOutReason.trim(),
+        status: "pending",
+      });
+      localStorage.setItem(queueKey, JSON.stringify(existing));
+    } catch (e) {
+      console.warn("Failed to queue early clock-out request locally", e);
+    }
+
+    toast({
+      title: "Approval Request Submitted",
+      description:
+        "Your early clock-out request has been sent to HR Manager / Corporate HR. You remain clocked in until it is approved.",
+    });
+    setShowClockOutDialog(false);
+    setClockOutReason("");
   };
 
   // Example helpers (replace your current variants if desired)
@@ -2156,22 +2186,22 @@ export default function Attendance() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {isLunchBreak ? "Lunch Break Confirmation" : "Early Departure Confirmation"}
+              {isLunchBreak ? "Lunch Break Confirmation" : "Request Early Clock-Out Approval"}
             </DialogTitle>
             <DialogDescription>
               {isLunchBreak 
                 ? "You're clocking out for lunch break. Please provide a note if needed."
-                : "You are clocking out before 5:00 PM. Please provide a reason for early departure."
+                : "Clocking out before 5:00 PM requires HR approval. Submit a reason below — your request will be routed to HR Manager / Corporate HR. You will remain clocked in until approved."
               }
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
             <Label htmlFor="clockOutReason" className="mb-2 block">
-              {isLunchBreak ? "Note (optional)" : "Reason *"}
+              {isLunchBreak ? "Note (optional)" : "Reason for early clock-out *"}
             </Label>
             <Textarea
               id="clockOutReason"
-              placeholder={isLunchBreak ? "Optional note..." : "Enter reason for early departure..."}
+              placeholder={isLunchBreak ? "Optional note..." : "e.g. medical appointment, family emergency..."}
               value={clockOutReason}
               onChange={(e) => setClockOutReason(e.target.value)}
               rows={3}
@@ -2182,7 +2212,7 @@ export default function Attendance() {
               Cancel
             </Button>
             <Button onClick={handleConfirmClockOut} disabled={isPunching}>
-              {isLunchBreak ? "Start Break" : "Confirm Clock Out"}
+              {isLunchBreak ? "Start Break" : "Submit Approval Request"}
             </Button>
           </DialogFooter>
         </DialogContent>

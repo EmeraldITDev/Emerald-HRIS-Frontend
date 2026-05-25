@@ -804,6 +804,21 @@ export default function Attendance() {
       return;
     }
 
+    // Time window enforcement with admin bypass for HR Manager / Corporate HR
+    const now = new Date();
+    const hour = now.getHours();
+    const minute = now.getMinutes();
+    const isAdminBypass = user.role === 'hr_manager' || user.role === 'corporate_hr';
+    const afterNine = hour > 9 || (hour === 9 && minute > 0);
+    if (afterNine && !isAdminBypass) {
+      toast({
+        title: "Clock-in window closed",
+        description: "Clock-in is only allowed before 9:00 AM. Please contact HR Manager or Corporate HR for an admin bypass.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       setIsPunching(true);
       
@@ -812,7 +827,7 @@ export default function Attendance() {
         date: new Date().toISOString().split('T')[0],
         status: 'present',
         location: 'office',
-        notes: ''
+        notes: afterNine && isAdminBypass ? 'Admin bypass clock-in (after 9:00 AM)' : ''
       });
 
       toast({ 
@@ -836,13 +851,6 @@ export default function Attendance() {
   };
 
   const handleClockOut = () => {
-    toast({
-      title: "Attendance Module Unavailable",
-      description: "The attendance module is currently under maintenance.",
-      variant: "destructive",
-    });
-    return;
-    // eslint-disable-next-line no-unreachable
     if (!user) {
       toast({ title: "Error", description: "No user logged in.", variant: "destructive" });
       return;
@@ -850,15 +858,17 @@ export default function Attendance() {
 
     const now = new Date();
     const currentHour = now.getHours();
-    
-    // Check if clocking out before 5pm (17:00) - require reason
-    if (currentHour < 17) {
+    const isAdminBypass = user.role === 'hr_manager' || user.role === 'corporate_hr';
+
+    // Standard clock-out is 5:00 PM. Before that, regular staff need a reason;
+    // HR Manager / Corporate HR get an admin bypass and clock out directly.
+    if (currentHour < 17 && !isAdminBypass) {
       setShowClockOutDialog(true);
       setIsLunchBreak(false);
       return;
     }
-    
-    // After 5pm, clock out directly without requiring reason
+
+    // After 5pm OR admin bypass — clock out directly
     performClockOut();
   };
 
@@ -870,15 +880,15 @@ export default function Attendance() {
 
     const now = new Date();
     const currentHour = now.getHours();
-    
-    // Check if it's around lunch time (11am - 2pm)
-    if (currentHour >= 11 && currentHour < 14) {
-      // Lunch break doesn't require reason, proceed directly without dialog
+    const isAdminBypass = user.role === 'hr_manager' || user.role === 'corporate_hr';
+
+    // Standard lunch window: 12:00 PM – 2:00 PM. HR Manager / Corporate HR bypass.
+    if ((currentHour >= 12 && currentHour < 14) || isAdminBypass) {
       performClockOut("", true);
     } else {
       toast({ 
         title: "Invalid Time", 
-        description: "Lunch break is only available between 11:00 AM and 2:00 PM.", 
+        description: "Lunch break is only available between 12:00 PM and 2:00 PM. Contact HR Manager or Corporate HR for an admin bypass.",
         variant: "destructive" 
       });
     }

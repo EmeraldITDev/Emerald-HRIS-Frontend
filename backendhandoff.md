@@ -3,6 +3,10 @@
 Date: 2026-05-25
 Scope: Companion document to the frontend changes shipped in this PR. Every section below maps directly to one of the 12 items in the product brief. The frontend is now production-ready; the backend tasks listed here must ship for the full feature set to work end-to-end.
 
+> **Status update (backend complete):** The backend team has shipped all endpoints in this document (see `BACKEND_IMPLEMENTATION_COMPLETE.md` / `API_QUICK_REFERENCE.md`). The frontend has been updated to call the live APIs directly:
+> - Early clock-out requests now POST to `/attendance/early-clockout-request` (localStorage bridge removed).
+> - Announcement comments now use `GET /announcements/{id}` + `POST /announcements/{id}/comments` (localStorage bridge removed).
+
 Conventions:
 - Endpoints prefixed with the existing API base `https://hris-backend-to3i.onrender.com`.
 - "FE" = frontend changes already shipped. "BE" = backend work required.

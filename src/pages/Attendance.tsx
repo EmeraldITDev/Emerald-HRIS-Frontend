@@ -953,7 +953,7 @@ export default function Attendance() {
       existing.push({
         id: `eco_${Date.now()}`,
         employee_id: currentEmployeeId,
-        employee_name: user ? `${user.first_name ?? ""} ${user.last_name ?? ""}`.trim() || user.email : "",
+        employee_name: user ? `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() || user.email : "",
         requested_at: new Date().toISOString(),
         reason: clockOutReason.trim(),
         status: "pending",

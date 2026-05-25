@@ -93,11 +93,6 @@ export default function Layout({ children }: LayoutProps) {
                 <Badge variant={getRoleBadgeVariant(user?.role || '')}>
                   {getRoleDisplayName(user?.role || '')}
                 </Badge>
-                {user?.isDummyAccount && (
-                  <Badge variant="destructive" className="animate-pulse">
-                    TEST ACCOUNT
-                  </Badge>
-                )}
               </div>
               
               <ThemeToggle />
@@ -114,11 +109,6 @@ export default function Layout({ children }: LayoutProps) {
                   <div className="px-2 py-1.5">
                     <div className="flex items-center gap-2 mb-1">
                       <div className="text-sm font-medium">{user?.firstName} {user?.lastName}</div>
-                      {user?.isDummyAccount && (
-                        <Badge variant="destructive" className="text-xs animate-pulse">
-                          TEST
-                        </Badge>
-                      )}
                     </div>
                     <div className="text-xs text-muted-foreground">{user?.email}</div>
                     <div className="text-xs text-muted-foreground mt-1">
@@ -127,12 +117,6 @@ export default function Layout({ children }: LayoutProps) {
                     {user?.department && (
                       <div className="text-xs text-muted-foreground">
                         Department: {user.department}
-                      </div>
-                    )}
-                    {user?.isDummyAccount && (
-                      <div className="text-xs text-orange-600 dark:text-orange-400 mt-2 flex items-center gap-1 font-medium">
-                        <AlertCircle className="h-3 w-3" />
-                        This is a test/dummy account
                       </div>
                     )}
                     {user?.mustChangePassword && (
@@ -168,20 +152,6 @@ export default function Layout({ children }: LayoutProps) {
               )}
             </div>
           </header>
-          
-          {/* Test Account Banner */}
-          {user?.isDummyAccount && (
-            <div className="bg-orange-50 dark:bg-orange-950 border-b border-orange-200 dark:border-orange-800 px-4 py-2">
-              <div className="flex items-center justify-center max-w-7xl mx-auto">
-                <div className="flex items-center gap-2 text-sm text-orange-800 dark:text-orange-200 font-medium">
-                  <AlertCircle className="h-4 w-4" />
-                  <span>
-                    ⚠️ TEST ACCOUNT - This is a dummy account for testing purposes only
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
           
           {/* Password Change Reminder Banner */}
           {user?.mustChangePassword && !bannerDismissed && (

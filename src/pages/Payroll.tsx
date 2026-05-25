@@ -876,14 +876,16 @@ export default function Payroll() {
         })
         return
       }
-      const manualAnnualBasic = toMoneyNumber(payrollData.basicSalary)
-      const basicSalary = manualAnnualBasic > 0
-        ? roundMoney(manualAnnualBasic / 12)
+      // UI input is MONTHLY Basic Salary
+      const manualMonthlyBasic = toMoneyNumber(payrollData.basicSalary)
+      const manualAnnualBasic = manualMonthlyBasic * 12
+      const basicSalary = manualMonthlyBasic > 0
+        ? manualMonthlyBasic
         : payrollPackage.monthlyBasic
-      const annualGross = manualAnnualBasic > 0
+      const annualGross = manualMonthlyBasic > 0
         ? roundMoney(manualAnnualBasic / 0.4)
         : payrollPackage.annualGross
-      const monthlyGross = manualAnnualBasic > 0
+      const monthlyGross = manualMonthlyBasic > 0
         ? roundMoney(annualGross / 12)
         : payrollPackage.monthlyGross
       const overtime = toMoneyNumber(payrollData.earnings)

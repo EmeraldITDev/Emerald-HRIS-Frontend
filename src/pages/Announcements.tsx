@@ -5,9 +5,13 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
+import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Checkbox } from "@/components/ui/checkbox"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/contexts/AuthContext"
 import apiService, { type Announcement as APIAnnouncement } from "@/lib/api"
+import { DEPARTMENTS } from "@/constants/departments"
 import { 
   Plus, 
   Save, 
@@ -18,7 +22,8 @@ import {
   ImageIcon,
   LinkIcon,
   Type,
-  Palette
+  Palette,
+  MessageSquare
 } from "lucide-react"
 import ReactQuill from 'react-quill'
 import 'react-quill/dist/quill.snow.css'
@@ -33,19 +38,33 @@ interface Announcement {
   recipients?: string[]
 }
 
+interface AnnouncementComment {
+  id: string
+  author: string
+  content: string
+  createdAt: string
+}
+
+const COMMENT_STORAGE_KEY = 'announcement_comments_v1'
+
+const loadComments = (): Record<string, AnnouncementComment[]> => {
+  try {
+    return JSON.parse(localStorage.getItem(COMMENT_STORAGE_KEY) || '{}')
+  } catch { return {} }
+}
+const saveComments = (data: Record<string, AnnouncementComment[]>) => {
+  localStorage.setItem(COMMENT_STORAGE_KEY, JSON.stringify(data))
+}
+
 
 export default function Announcements() {
-  const [announcements, setAnnouncements] = useState<Announcement[]>([
-    {
-      id: '1',
-      title: 'Company Holiday Schedule',
-      content: '<p>Please be advised of the upcoming holiday schedule...</p>',
-      author: 'HR Department',
-      createdAt: '2024-01-15',
-      status: 'published',
-      recipients: ['all_employees']
-    }
-  ])
+  const [announcements, setAnnouncements] = useState<Announcement[]>([])
+  const [allEmployees, setAllEmployees] = useState<any[]>([])
+  const [targetMode, setTargetMode] = useState<'all' | 'department' | 'individual'>('all')
+  const [targetDepartments, setTargetDepartments] = useState<string[]>([])
+  const [targetEmployeeIds, setTargetEmployeeIds] = useState<number[]>([])
+  const [comments, setComments] = useState<Record<string, AnnouncementComment[]>>(() => loadComments())
+  const [newCommentText, setNewCommentText] = useState<Record<string, string>>({})
   
   const [isCreating, setIsCreating] = useState(false)
   const [currentAnnouncement, setCurrentAnnouncement] = useState<Partial<Announcement>>({
@@ -65,6 +84,7 @@ export default function Announcements() {
   // Fetch announcements from API
   useEffect(() => {
     fetchAnnouncements()
+    apiService.getEmployees().then((d) => setAllEmployees(Array.isArray(d) ? d : [])).catch(() => setAllEmployees([]))
   }, [])
   
   const fetchAnnouncements = async () => {
@@ -84,7 +104,7 @@ export default function Announcements() {
       setAnnouncements(mappedAnnouncements)
     } catch (error) {
       console.error('Failed to fetch announcements:', error)
-      // Keep static data on error
+      setAnnouncements([])
     } finally {
       setIsLoading(false)
     }
@@ -134,13 +154,16 @@ export default function Announcements() {
         title: currentAnnouncement.title!,
         content: currentAnnouncement.content!,
         priority: 'medium' as const,
-        target_audience: 'all_employees'
-      }
+        target_audience: buildTargetAudience(),
+        target_department_ids: targetMode === 'department' ? targetDepartments : undefined,
+        target_employee_ids: targetMode === 'individual' ? targetEmployeeIds : undefined,
+      } as any
       
       await apiService.createAnnouncement(announcementData)
       await fetchAnnouncements()
       
       setCurrentAnnouncement({ title: '', content: '', author: 'HR Department', status: 'draft' })
+      resetTargeting()
       setIsCreating(false)
       
       toast({
@@ -172,13 +195,16 @@ export default function Announcements() {
         title: currentAnnouncement.title!,
         content: currentAnnouncement.content!,
         priority: 'high' as const,
-        target_audience: 'all_employees'
-      }
+        target_audience: buildTargetAudience(),
+        target_department_ids: targetMode === 'department' ? targetDepartments : undefined,
+        target_employee_ids: targetMode === 'individual' ? targetEmployeeIds : undefined,
+      } as any
       
       await apiService.createAnnouncement(announcementData)
       await fetchAnnouncements()
       
       setCurrentAnnouncement({ title: '', content: '', author: 'HR Department', status: 'draft' })
+      resetTargeting()
       setIsCreating(false)
 
       // Simulate sending newsletter to all employees
@@ -194,6 +220,34 @@ export default function Announcements() {
         variant: "destructive"
       })
     }
+  }
+
+  const buildTargetAudience = () => {
+    if (targetMode === 'all') return 'all_employees'
+    if (targetMode === 'department') return targetDepartments.join(',') || 'all_employees'
+    return 'individual'
+  }
+
+  const resetTargeting = () => {
+    setTargetMode('all')
+    setTargetDepartments([])
+    setTargetEmployeeIds([])
+  }
+
+  const addComment = (announcementId: string) => {
+    const text = (newCommentText[announcementId] || '').trim()
+    if (!text) return
+    const newComment: AnnouncementComment = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      author: user?.firstName ? `${user.firstName} ${user.lastName}` : 'Anonymous',
+      content: text,
+      createdAt: new Date().toISOString(),
+    }
+    const next = { ...comments, [announcementId]: [...(comments[announcementId] || []), newComment] }
+    setComments(next)
+    saveComments(next)
+    setNewCommentText((prev) => ({ ...prev, [announcementId]: '' }))
+    toast({ title: 'Comment posted' })
   }
 
   const handleImageUpload = () => {
@@ -270,6 +324,70 @@ export default function Announcements() {
                 value={currentAnnouncement.author}
                 onChange={(e) => setCurrentAnnouncement(prev => ({ ...prev, author: e.target.value }))}
               />
+            </div>
+
+            {/* Recipient Targeting */}
+            <div className="space-y-3 rounded-md border p-4">
+              <Label className="font-semibold">Who should receive this announcement?</Label>
+              <Select value={targetMode} onValueChange={(v: any) => setTargetMode(v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Entire Company</SelectItem>
+                  <SelectItem value="department">Specific Department(s)</SelectItem>
+                  <SelectItem value="individual">Individual Staff</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {targetMode === 'department' && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">{targetDepartments.length} department(s) selected</span>
+                    <Button type="button" size="sm" variant="outline" onClick={() => setTargetDepartments(targetDepartments.length === DEPARTMENTS.length ? [] : [...DEPARTMENTS])}>
+                      {targetDepartments.length === DEPARTMENTS.length ? 'Clear All' : 'Select All'}
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto border rounded-md p-2">
+                    {DEPARTMENTS.map((dept) => (
+                      <label key={dept} className="flex items-center gap-2 text-sm">
+                        <Checkbox
+                          checked={targetDepartments.includes(dept)}
+                          onCheckedChange={(c) =>
+                            setTargetDepartments((prev) => c ? [...prev, dept] : prev.filter((d) => d !== dept))
+                          }
+                        />
+                        {dept}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {targetMode === 'individual' && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">{targetEmployeeIds.length} employee(s) selected</span>
+                    <Button type="button" size="sm" variant="outline" onClick={() => {
+                      const all = allEmployees.map(e => e.id).filter(Boolean)
+                      setTargetEmployeeIds(targetEmployeeIds.length === all.length ? [] : all)
+                    }}>
+                      {targetEmployeeIds.length === allEmployees.length && allEmployees.length > 0 ? 'Clear All' : 'Select All'}
+                    </Button>
+                  </div>
+                  <div className="max-h-48 overflow-y-auto border rounded-md p-2 space-y-1">
+                    {allEmployees.map((emp) => (
+                      <label key={emp.id} className="flex items-center gap-2 text-sm">
+                        <Checkbox
+                          checked={targetEmployeeIds.includes(emp.id)}
+                          onCheckedChange={(c) =>
+                            setTargetEmployeeIds((prev) => c ? [...prev, emp.id] : prev.filter((id) => id !== emp.id))
+                          }
+                        />
+                        {emp.first_name} {emp.last_name} {emp.department ? `— ${emp.department}` : ''}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">

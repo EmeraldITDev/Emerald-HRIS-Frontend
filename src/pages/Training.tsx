@@ -276,7 +276,7 @@ export default function Training() {
     trainingType: a.training?.category || a.training?.title || 'Training',
     notes: a.training?.description || '',
     completionDate: a.completion_deadline?.split('T')[0] || '',
-    cost: 0,
+    cost: Number(a.training?.cost) || 0,
     status: a.status === 'completed' ? 'Completed' : a.status === 'cancelled' ? 'Cancelled' : a.status === 'in_progress' ? 'In Progress' : 'Scheduled',
     certificateName: undefined,
     trainingId: a.training_id,

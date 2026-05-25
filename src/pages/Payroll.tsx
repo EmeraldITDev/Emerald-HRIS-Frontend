@@ -60,6 +60,9 @@ export default function Payroll() {
     earningsRemarks: "",
     deduction: "",
     deductionRemarks: "",
+    includeNhf: true,
+    rentReliefEnabled: false,
+    annualRent: "",
   })
   const [editingRecordId, setEditingRecordId] = useState<number | null>(null)
   const [editingValues, setEditingValues] = useState<Partial<PayrollRecord>>({})
@@ -152,7 +155,7 @@ export default function Payroll() {
         const payrollPackage = getEmployeePayrollPackage(selectedEmp)
         setPayrollData(prev => ({
           ...prev,
-          basicSalary: payrollPackage.annualBasic ? payrollPackage.annualBasic.toString() : ""
+          basicSalary: payrollPackage.monthlyBasic ? Math.round(payrollPackage.monthlyBasic).toString() : ""
         }))
       }
     }
@@ -161,6 +164,7 @@ export default function Payroll() {
   const onboardEmployees = employees.map(emp => ({
     id: emp.id?.toString() || '',
     name: `${emp.first_name} ${emp.last_name}`,
+    monthlyBasic: getEmployeePayrollPackage(emp).monthlyBasic,
     basicSalary: getEmployeePayrollPackage(emp).annualBasic,
     pensionId: emp.pension_pin || '',
     taxId: emp.tax_id || '',

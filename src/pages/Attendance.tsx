@@ -931,15 +931,45 @@ export default function Attendance() {
   };
 
   const handleConfirmClockOut = () => {
-    if (!clockOutReason.trim() && new Date().getHours() < 17) {
-      toast({ 
-        title: "Reason Required", 
-        description: "Please provide a reason for early departure.", 
-        variant: "destructive" 
+    // Lunch break flow — proceed as before (no approval required)
+    if (isLunchBreak) {
+      performClockOut(clockOutReason, true);
+      return;
+    }
+
+    // Early clock-out (before 5:00 PM) — requires HR approval, do NOT clock out yet.
+    if (!clockOutReason.trim()) {
+      toast({
+        title: "Reason Required",
+        description: "Please provide a reason for the early clock-out approval request.",
+        variant: "destructive",
       });
       return;
     }
-    performClockOut(clockOutReason, isLunchBreak);
+
+    try {
+      const queueKey = "early_clockout_requests_v1";
+      const existing = JSON.parse(localStorage.getItem(queueKey) || "[]");
+      existing.push({
+        id: `eco_${Date.now()}`,
+        employee_id: currentEmployeeId,
+        employee_name: user ? `${user.first_name ?? ""} ${user.last_name ?? ""}`.trim() || user.email : "",
+        requested_at: new Date().toISOString(),
+        reason: clockOutReason.trim(),
+        status: "pending",
+      });
+      localStorage.setItem(queueKey, JSON.stringify(existing));
+    } catch (e) {
+      console.warn("Failed to queue early clock-out request locally", e);
+    }
+
+    toast({
+      title: "Approval Request Submitted",
+      description:
+        "Your early clock-out request has been sent to HR Manager / Corporate HR. You remain clocked in until it is approved.",
+    });
+    setShowClockOutDialog(false);
+    setClockOutReason("");
   };
 
   // Example helpers (replace your current variants if desired)

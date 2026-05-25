@@ -110,9 +110,9 @@ export default function Announcements() {
               })
             }
             walk(detail?.comments || [])
-            return [a.id, flat] as const
+            return [a.id, flat] as [string, AnnouncementComment[]]
           } catch {
-            return [a.id, []] as const
+            return [a.id, [] as AnnouncementComment[]] as [string, AnnouncementComment[]]
           }
         })
       )

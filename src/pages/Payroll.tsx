@@ -208,9 +208,14 @@ export default function Payroll() {
     const selectedEmp = onboardEmployees.find(emp => emp.id === selectedEmployee)
     const employmentType = selectedEmp?.employmentType || "Full-time"
     
-    const basicSalary = parseFloat(payrollData.basicSalary) || 0
+    // UI input is MONTHLY Basic Salary; convert to annual for calc.
+    const monthlyBasicInput = parseFloat(payrollData.basicSalary) || 0
+    const basicSalary = monthlyBasicInput * 12
     const earnings = parseFloat(payrollData.earnings) || 0
     const deduction = parseFloat(payrollData.deduction) || 0
+    const includeNhf = payrollData.includeNhf !== false
+    const annualRent = parseFloat(payrollData.annualRent) || 0
+    const rentRelief = payrollData.rentReliefEnabled ? Math.min(annualRent * 0.2, 500000) : 0
     
     let annualGross, housing, transport, other, pensionEmployee, pensionEmployer, nhf;
     let grossForCRA, cra, totalRelief, taxableIncome, annualTax, annualNet;
@@ -229,8 +234,8 @@ export default function Payroll() {
       pensionEmployee = (housing + transport + basicSalary) * 0.08  // Employee Pension = 8% × (Housing + Transport + Basic)
       pensionEmployer = annualGross * 0.10  // Employer Pension = 10% × Annual Gross
       
-      // NHF based on Basic Salary
-      nhf = basicSalary * 0.025  // NHF = 2.5% × Basic
+      // NHF based on Basic Salary (opt-in via toggle)
+      nhf = includeNhf ? basicSalary * 0.025 : 0
       
       // Gross for CRA calculation
       grossForCRA = annualGross - (pensionEmployee + nhf)
@@ -239,8 +244,9 @@ export default function Payroll() {
       // Formula: 20% of Gross for CRA + MAX(1% of Gross for CRA, 200000)
       cra = (grossForCRA * 0.20) + Math.max(grossForCRA * 0.01, 200000)
       
-      // Total Relief Allowances
-      totalRelief = cra + pensionEmployee + nhf
+      // Total Relief Allowances (incl. rent relief per Nigerian Finance Act 2023:
+      // lesser of 20% of annual rent or NGN 500,000)
+      totalRelief = cra + pensionEmployee + nhf + rentRelief
       
       // Taxable Income
       taxableIncome = annualGross - totalRelief

@@ -15,6 +15,8 @@ import { apiService } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import { canHrApproveLeave } from "@/lib/permissions";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const API_BASE = (import.meta.env.VITE_API_URL as string) || "";
 
@@ -47,6 +49,29 @@ export default function LeaveApprovals() {
     open: false, action: "approve", row: null,
   });
   const [notes, setNotes] = useState("");
+
+  // History (approved/rejected) state
+  const [historyTab, setHistoryTab] = useState<"all" | "approved" | "rejected" | "pending">("all");
+  const [history, setHistory] = useState<any[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historySearch, setHistorySearch] = useState("");
+  const [historyPage, setHistoryPage] = useState(1);
+  const HISTORY_PAGE_SIZE = 10;
+
+  const loadHistory = async () => {
+    setHistoryLoading(true);
+    try {
+      const data: any = await apiService.getLeaveRequests();
+      const list: any[] = Array.isArray(data) ? data : (data?.data || []);
+      setHistory(list);
+    } catch (e) {
+      setHistory([]);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  useEffect(() => { if (isHR || isLineManager) loadHistory(); /* eslint-disable-next-line */ }, [isHR, isLineManager]);
 
   const load = async () => {
     setLoading(true);
@@ -255,6 +280,20 @@ export default function LeaveApprovals() {
 
   const showTabs = isLineManager && isHR;
 
+  const filteredHistory = history.filter((r) => {
+    const status = String(r.workflow_status || r.status || "").toLowerCase();
+    if (historyTab === "approved" && !status.includes("approved")) return false;
+    if (historyTab === "rejected" && !status.includes("rejected")) return false;
+    if (historyTab === "pending" && (status.includes("approved") || status.includes("rejected"))) return false;
+    if (historySearch) {
+      const hay = `${r.employee_display || r.employee_name || ""} ${r.reason || ""}`.toLowerCase();
+      if (!hay.includes(historySearch.toLowerCase())) return false;
+    }
+    return true;
+  });
+  const totalPages = Math.max(1, Math.ceil(filteredHistory.length / HISTORY_PAGE_SIZE));
+  const pageItems = filteredHistory.slice((historyPage - 1) * HISTORY_PAGE_SIZE, historyPage * HISTORY_PAGE_SIZE);
+
   return (
     <div className="max-w-6xl mx-auto space-y-4">
       <div className="flex items-center gap-2">
@@ -276,6 +315,87 @@ export default function LeaveApprovals() {
         )
       ) : (
         <Card><CardContent className="py-6 text-sm text-muted-foreground">You don't have access to leave approvals.</CardContent></Card>
+      )}
+
+      {/* Leave History (approved / rejected / pending) */}
+      {(isLineManager || isHR) && (
+        <Card>
+          <CardHeader>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <CardTitle className="text-base">Leave Request History</CardTitle>
+              <div className="flex flex-wrap items-center gap-2">
+                <Input
+                  placeholder="Search employee or reason…"
+                  value={historySearch}
+                  onChange={(e) => { setHistorySearch(e.target.value); setHistoryPage(1); }}
+                  className="h-9 w-56"
+                />
+                <Select value={historyTab} onValueChange={(v: any) => { setHistoryTab(v); setHistoryPage(1); }}>
+                  <SelectTrigger className="h-9 w-40"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="approved">Approved</SelectItem>
+                    <SelectItem value="rejected">Rejected</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button variant="outline" size="sm" onClick={loadHistory}>Refresh</Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {historyLoading ? (
+              <p className="text-sm text-muted-foreground">Loading history…</p>
+            ) : pageItems.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No requests match the current filters.</p>
+            ) : (
+              <>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Employee</TableHead>
+                      <TableHead>Dates</TableHead>
+                      <TableHead>Days</TableHead>
+                      <TableHead>Reason</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Approved By</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {pageItems.map((r: any) => {
+                      const status = String(r.workflow_status || r.status || "").toLowerCase();
+                      const variant = status.includes("approved")
+                        ? "default"
+                        : status.includes("rejected")
+                        ? "destructive"
+                        : "outline";
+                      return (
+                        <TableRow key={r.id}>
+                          <TableCell className="font-medium">{r.employee_display || r.employee_name || `Employee ${r.employee_id}`}</TableCell>
+                          <TableCell className="text-sm">{r.start_date} → {r.end_date}</TableCell>
+                          <TableCell>{r.days_requested}</TableCell>
+                          <TableCell className="max-w-[240px] truncate text-sm">{r.reason || "—"}</TableCell>
+                          <TableCell><Badge variant={variant as any}>{r.workflow_status || r.status}</Badge></TableCell>
+                          <TableCell className="text-sm text-muted-foreground">{r.hr_approver_name || r.manager_approver_name || r.approved_by || "—"}</TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+                <div className="mt-3 flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">
+                    Showing {(historyPage - 1) * HISTORY_PAGE_SIZE + 1}–{Math.min(historyPage * HISTORY_PAGE_SIZE, filteredHistory.length)} of {filteredHistory.length}
+                  </span>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" disabled={historyPage === 1} onClick={() => setHistoryPage((p) => Math.max(1, p - 1))}>Prev</Button>
+                    <span className="px-2 py-1">Page {historyPage} / {totalPages}</span>
+                    <Button variant="outline" size="sm" disabled={historyPage >= totalPages} onClick={() => setHistoryPage((p) => Math.min(totalPages, p + 1))}>Next</Button>
+                  </div>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
       )}
 
       <Dialog open={dialog.open} onOpenChange={(o) => setDialog((d) => ({ ...d, open: o }))}>

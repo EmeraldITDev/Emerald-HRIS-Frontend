@@ -1196,14 +1196,14 @@ export default function Payroll() {
               <div className="space-y-3 border-t pt-3">
                 <div>
                   <Label htmlFor="basicSalary" className="font-semibold">
-                    {calculations.employmentType === "Contract" ? "Contract Amount *" : "Annual Basic Salary *"}
+                    {calculations.employmentType === "Contract" ? "Contract Amount (Monthly) *" : "Monthly Basic Salary *"}
                   </Label>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₦</span>
                     <Input
                       id="basicSalary"
                       type="number"
-                      placeholder="1,600,000"
+                      placeholder="200,000"
                       value={payrollData.basicSalary}
                       onChange={(e) => setPayrollData({...payrollData, basicSalary: e.target.value})}
                       className="pl-8"
@@ -1211,9 +1211,66 @@ export default function Payroll() {
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
                     {calculations.employmentType === "Contract" 
-                      ? "Total annual contract payment" 
-                      : "Annual gross will be calculated (Basic = 40% of Annual Gross)"}
+                      ? "Monthly contract payment"
+                      : "Auto-filled from Gross Salary (Annual) ÷ 12. Basic = 40% of Gross."}
                   </p>
+                </div>
+
+                {/* NHF Toggle */}
+                <div className="flex items-start gap-2 rounded-md border p-3">
+                  <input
+                    id="includeNhf"
+                    type="checkbox"
+                    className="mt-1 h-4 w-4"
+                    checked={payrollData.includeNhf}
+                    onChange={(e) => setPayrollData({...payrollData, includeNhf: e.target.checked})}
+                  />
+                  <div className="flex-1">
+                    <Label htmlFor="includeNhf" className="cursor-pointer font-medium">
+                      Apply NHF Contribution (2.5% of Basic)
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      National Housing Fund deduction. Toggle off for employees who have opted out.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Rent Relief */}
+                <div className="rounded-md border p-3 space-y-2">
+                  <div className="flex items-start gap-2">
+                    <input
+                      id="rentReliefEnabled"
+                      type="checkbox"
+                      className="mt-1 h-4 w-4"
+                      checked={payrollData.rentReliefEnabled}
+                      onChange={(e) => setPayrollData({...payrollData, rentReliefEnabled: e.target.checked})}
+                    />
+                    <div className="flex-1">
+                      <Label htmlFor="rentReliefEnabled" className="cursor-pointer font-medium">
+                        Employee on Rent Relief Plan
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        Nigerian Finance Act 2023: lesser of 20% of annual rent or ₦500,000 reduces taxable income.
+                      </p>
+                    </div>
+                  </div>
+                  {payrollData.rentReliefEnabled && (
+                    <div>
+                      <Label htmlFor="annualRent">Annual Rent (₦)</Label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₦</span>
+                        <Input
+                          id="annualRent"
+                          type="number"
+                          min="0"
+                          placeholder="1,200,000"
+                          value={payrollData.annualRent}
+                          onChange={(e) => setPayrollData({...payrollData, annualRent: e.target.value})}
+                          className="pl-8"
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="border rounded-lg p-3 bg-muted/30 space-y-3">

@@ -61,6 +61,7 @@ export default function Training() {
     instructor: '',
     location: '',
     delivery_method: 'online' as 'online' | 'in_person' | 'hybrid',
+    cost: 0,
   })
   
   const [assignmentData, setAssignmentData] = useState({
@@ -155,6 +156,7 @@ export default function Training() {
         instructor: '',
         location: '',
         delivery_method: 'online',
+        cost: 0,
       })
       setTrainingAttachment(null)
       setIsDialogOpen(false)
@@ -390,6 +392,24 @@ export default function Training() {
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="trainingCost">Training Cost (₦)</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₦</span>
+                  <Input
+                    id="trainingCost"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={newTraining.cost}
+                    onChange={(e) => setNewTraining({ ...newTraining, cost: parseFloat(e.target.value) || 0 })}
+                    placeholder="0.00"
+                    className="pl-8"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">Contributes to Total Investment statistics.</p>
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="training_attachment">Training Materials (Optional)</Label>
                 <div className="flex items-center gap-2">
                   <input
@@ -441,7 +461,26 @@ export default function Training() {
               <h4 className="font-semibold">Assignment Details</h4>
 
               <div className="space-y-2">
-                <Label>Select Employees *</Label>
+                <div className="flex items-center justify-between">
+                  <Label>Select Employees *</Label>
+                  {employees.length > 0 && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const allIds = employees.map(e => e.id!).filter(Boolean)
+                        const allSelected = allIds.length > 0 && allIds.every(id => assignmentData.employee_ids.includes(id))
+                        setAssignmentData({
+                          ...assignmentData,
+                          employee_ids: allSelected ? [] : allIds,
+                        })
+                      }}
+                    >
+                      {employees.length > 0 && employees.every(e => assignmentData.employee_ids.includes(e.id!)) ? 'Clear All' : 'Select All'}
+                    </Button>
+                  )}
+                </div>
                 <div className="border rounded-md p-3 max-h-32 overflow-y-auto">
                   {isLoadingEmployees ? (
                     <div className="text-sm text-muted-foreground">Loading employees...</div>

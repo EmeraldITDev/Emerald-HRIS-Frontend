@@ -1,10 +1,13 @@
 // Use environment variable for flexibility between local and deployed environments
 const API = import.meta.env.VITE_API_URL;
 
+// Ensure the base URL always ends with /api (backend mounts all routes under /api).
+const withApiSuffix = (url: string) => (url.replace(/\/+$/, '').endsWith('/api') ? url.replace(/\/+$/, '') : `${url.replace(/\/+$/, '')}/api`);
+
 const API_BASE_URL =
   (typeof window !== 'undefined' && window.location.hostname === 'localhost')
     ? 'http://localhost:8000/api' // Local backend
-    : API || 'https://hris-backend-to3i.onrender.com/api'; // Fallback to Render if no env var found
+    : withApiSuffix(API || 'https://hris-backend-to3i.onrender.com/api'); // Fallback to Render if no env var found
     
 export interface Employee {
   id?: number;

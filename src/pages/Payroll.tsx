@@ -622,7 +622,8 @@ export default function Payroll() {
     let annualGross, housing, transport, other, pensionEmployee, nhf, annualTax, annualNet;
     
     if (employmentType === "Full-time") {
-      annualGross = Math.round(basicSalary / 0.40)
+      // Monthly Basic = Annual Gross / 12, so annual basic input already equals annual gross
+      annualGross = Math.round(basicSalary)
       housing = Math.round(annualGross * 0.20)
       transport = Math.round(annualGross * 0.09)
       other = Math.round(annualGross * 0.31)

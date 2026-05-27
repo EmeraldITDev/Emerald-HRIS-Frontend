@@ -50,7 +50,8 @@ export const getEmployeePayrollPackage = (employee?: Partial<Employee> | null) =
       annualBasic = annualBasic || annualGrossFromProfile
       annualHousing = annualTransport = annualMeal = annualOther = 0
     } else {
-      annualBasic = annualBasic || annualGrossFromProfile * 0.4
+      // Monthly Basic = Annual Gross / 12 — no percentage-based defaulting
+      annualBasic = annualBasic || annualGrossFromProfile
       annualHousing = annualHousing || annualGrossFromProfile * 0.2
       annualTransport = annualTransport || annualGrossFromProfile * 0.09
       annualOther = annualOther || annualGrossFromProfile * 0.31

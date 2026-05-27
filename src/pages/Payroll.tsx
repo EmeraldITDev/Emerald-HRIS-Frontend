@@ -221,9 +221,8 @@ export default function Payroll() {
     let grossForCRA, cra, totalRelief, taxableIncome, annualTax, annualNet;
     
     if (employmentType === "Full-time") {
-      // Calculate Annual Gross from Basic Salary (rounded to nearest whole number)
-      // Since Basic = 40% of Annual Gross, then Annual Gross = Basic / 0.40
-      annualGross = Math.round(basicSalary / 0.40)
+      // Monthly Basic = Annual Gross / 12, so annual basic input already equals annual gross
+      annualGross = Math.round(basicSalary)
       
       // Calculate allowances as percentages of Annual Gross (rounded to nearest whole number)
       housing = Math.round(annualGross * 0.20)     // Housing Allowance = 20% × Annual Gross
@@ -484,7 +483,8 @@ export default function Payroll() {
     let grossForCRA, cra, totalRelief, taxableIncome, annualTax, annualNet;
     
     if (employmentType === "Full-time") {
-      annualGross = Math.round(basicSalary / 0.40)
+      // Monthly Basic = Annual Gross / 12, so annual basic input already equals annual gross
+      annualGross = Math.round(basicSalary)
       housing = Math.round(annualGross * 0.20)
       transport = Math.round(annualGross * 0.09)
       other = Math.round(annualGross * 0.31)
@@ -623,7 +623,8 @@ export default function Payroll() {
     let annualGross, housing, transport, other, pensionEmployee, nhf, annualTax, annualNet;
     
     if (employmentType === "Full-time") {
-      annualGross = Math.round(basicSalary / 0.40)
+      // Monthly Basic = Annual Gross / 12, so annual basic input already equals annual gross
+      annualGross = Math.round(basicSalary)
       housing = Math.round(annualGross * 0.20)
       transport = Math.round(annualGross * 0.09)
       other = Math.round(annualGross * 0.31)

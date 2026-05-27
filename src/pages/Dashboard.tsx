@@ -553,272 +553,141 @@ export default function Dashboard() {
   // Test mode: bypass time restrictions for specific test users
   const isTestMode = user?.email === 'bunmi.babajide@emeraldcfze.com'
   
-  const handleClockIn = () => {
-    toast({
-      title: "Attendance Module Unavailable",
-      description: "The attendance module is currently under maintenance.",
-      variant: "destructive",
-    })
-    return
-    // eslint-disable-next-line no-unreachable
-    if (!user) {
-      toast({ title: "Error", description: "No user logged in.", variant: "destructive" })
+  const handleClockIn = async () => {
+    if (!user || !currentEmployeeId) {
+      toast({ title: "Error", description: "No user logged in or employee record not found.", variant: "destructive" })
       return
     }
 
-    // Enforce clock-in window (7:00 AM - 9:30 AM) - bypass for test mode
     const nowDate = new Date()
-    const currentHour = nowDate.getHours()
-    const currentMinute = nowDate.getMinutes()
-    const currentTimeInMinutes = currentHour * 60 + currentMinute
-    const clockInStartTime = 7 * 60 // 7:00 AM
-    const clockInEndTime = 9 * 60 + 30 // 9:30 AM
-    console.log('Clock-in (Dashboard):', nowDate.toLocaleTimeString(), 'mins:', currentTimeInMinutes, 'allowed:', clockInStartTime, '-', clockInEndTime)
-
-    if (!isTestMode && (currentTimeInMinutes < clockInStartTime || currentTimeInMinutes > clockInEndTime)) {
+    const hour = nowDate.getHours()
+    const minute = nowDate.getMinutes()
+    const isAdminBypass = user.role === 'hr_manager' || user.role === 'corporate_hr' || isTestMode
+    const afterNine = hour > 9 || (hour === 9 && minute > 0)
+    if (afterNine && !isAdminBypass) {
       toast({
-        title: "Clock In Unavailable",
-        description: `Clock in is only allowed between 7:00 AM and 9:30 AM. Current time: ${nowDate.toLocaleTimeString()}`,
-        variant: "destructive"
+        title: "Clock-in window closed",
+        description: "Clock-in is only allowed before 9:00 AM. Please contact HR Manager or Corporate HR for an admin bypass.",
+        variant: "destructive",
       })
       return
     }
 
     try {
       setIsPunching(true)
-      const today = format(new Date(), 'yyyy-MM-dd')
-      const now = format(new Date(), 'HH:mm:ss')
-      const attendanceRecords = JSON.parse(localStorage.getItem('attendanceRecords') || '[]')
-      
-      const existingRecord = attendanceRecords.find(
-        (record: any) => record.employee_id === user.id && record.date === today
-      )
-      
-      if (existingRecord && existingRecord.clock_in_time) {
-        toast({ title: "Already Clocked In", description: "You have already clocked in today.", variant: "destructive" })
-        setIsPunching(false)
-        return
-      }
-
-      const newRecord = {
-        id: Date.now(),
-        employee_id: user.id,
-        employee_name: `${user.firstName} ${user.lastName}`,
-        date: today,
-        clock_in_time: now,
-        clock_out_time: null,
-        is_clocked_in: true,
-        location: 'office'
-      }
-
-      const updatedRecords = existingRecord 
-        ? attendanceRecords.map((r: any) => r.id === existingRecord.id ? newRecord : r)
-        : [...attendanceRecords, newRecord]
-      
-      localStorage.setItem('attendanceRecords', JSON.stringify(updatedRecords))
-      loadTodayStatus()
-      saveActivity('clock_in', `Clocked in at ${now}`)
-      toast({ title: "Success", description: "Clocked in successfully!" })
-    } catch (error) {
+      const response = await apiService.createAttendance({
+        employee_id: currentEmployeeId,
+        date: new Date().toISOString().split('T')[0],
+        status: 'present',
+        location: 'office',
+        notes: afterNine && isAdminBypass ? 'Admin bypass clock-in (after 9:00 AM)' : ''
+      })
+      toast({ title: "Success", description: response.message || "Clocked in successfully!" })
+      saveActivity('clock_in', `Clocked in at ${format(new Date(), 'HH:mm:ss')}`)
+      await loadTodayStatus()
+    } catch (error: any) {
       console.error('Clock in error:', error)
-      toast({ title: "Error", description: "Failed to clock in.", variant: "destructive" })
+      const msg = error?.response?.data?.message || error?.message || "Failed to clock in."
+      toast({ title: "Error", description: msg, variant: "destructive" })
     } finally {
       setIsPunching(false)
     }
   }
 
   const handleClockOut = () => {
-    toast({
-      title: "Attendance Module Unavailable",
-      description: "The attendance module is currently under maintenance.",
-      variant: "destructive",
-    })
-    return
-    // eslint-disable-next-line no-unreachable
     if (!user) {
       toast({ title: "Error", description: "No user logged in.", variant: "destructive" })
       return
     }
-
-    const now = new Date()
-    const currentHour = now.getHours()
-    
-    if (currentHour < 17) {
-      setShowClockOutDialog(true)
+    const currentHour = new Date().getHours()
+    const isAdminBypass = user.role === 'hr_manager' || user.role === 'corporate_hr' || isTestMode
+    if (currentHour < 17 && !isAdminBypass) {
       setIsLunchBreak(false)
+      setShowClockOutDialog(true)
       return
     }
-    
     performClockOut()
   }
 
   const handleLunchBreak = () => {
-    toast({
-      title: "Attendance Module Unavailable",
-      description: "The attendance module is currently under maintenance.",
-      variant: "destructive",
-    })
-    return
-    // eslint-disable-next-line no-unreachable
     if (!user) {
       toast({ title: "Error", description: "No user logged in.", variant: "destructive" })
       return
     }
-
-    const now = new Date()
-    const currentHour = now.getHours()
-    
-    // Check if already on lunch break
-    if (todayStatus?.lunch_break_start && !todayStatus?.lunch_break_end) {
-      // Return from lunch break
-      performReturnFromLunch()
-      return
-    }
-    
-    // Test mode bypasses time restrictions
-    if (isTestMode || (currentHour >= 11 && currentHour < 14)) {
-      // Start lunch break directly without dialog
-      performLunchBreak()
+    const currentHour = new Date().getHours()
+    const isAdminBypass = user.role === 'hr_manager' || user.role === 'corporate_hr' || isTestMode
+    if ((currentHour >= 12 && currentHour < 14) || isAdminBypass) {
+      performClockOut("", true)
     } else {
-      toast({ 
-        title: "Invalid Time", 
-        description: "Lunch break is only available between 11:00 AM and 2:00 PM.", 
-        variant: "destructive" 
+      toast({
+        title: "Invalid Time",
+        description: "Lunch break is only available between 12:00 PM and 2:00 PM.",
+        variant: "destructive"
       })
     }
   }
 
-  const performLunchBreak = () => {
-    if (!user) return
-    
+  const performClockOut = async (reason?: string, isLunch?: boolean) => {
+    if (!user || !currentEmployeeId) return
     try {
       setIsPunching(true)
-      const today = format(new Date(), 'yyyy-MM-dd')
-      const now = format(new Date(), 'HH:mm:ss')
-      const attendanceRecords = JSON.parse(localStorage.getItem('attendanceRecords') || '[]')
-      
-      const existingRecordIndex = attendanceRecords.findIndex(
-        (record: any) => record.employee_id === user.id && record.date === today
-      )
-      
-      if (existingRecordIndex > -1) {
-        attendanceRecords[existingRecordIndex] = {
-          ...attendanceRecords[existingRecordIndex],
-          lunch_break_start: now,
-          is_clocked_in: false
-        }
-        localStorage.setItem('attendanceRecords', JSON.stringify(attendanceRecords))
-        loadTodayStatus()
-        saveActivity('lunch_start', `Started lunch break at ${now}`)
-        toast({
-          title: "Lunch Break Started",
-          description: "Enjoy your lunch! Click the button again to return.",
-          className: "bg-success text-white"
-        })
-      }
-    } catch (error) {
-      console.error('Lunch break error:', error)
-      toast({ title: "Error", description: "Failed to start lunch break.", variant: "destructive" })
-    } finally {
-      setIsPunching(false)
-    }
-  }
-
-  const performReturnFromLunch = () => {
-    if (!user) return
-    
-    try {
-      setIsPunching(true)
-      const today = format(new Date(), 'yyyy-MM-dd')
-      const now = format(new Date(), 'HH:mm:ss')
-      const attendanceRecords = JSON.parse(localStorage.getItem('attendanceRecords') || '[]')
-      
-      const existingRecordIndex = attendanceRecords.findIndex(
-        (record: any) => record.employee_id === user.id && record.date === today
-      )
-      
-      if (existingRecordIndex > -1) {
-        attendanceRecords[existingRecordIndex] = {
-          ...attendanceRecords[existingRecordIndex],
-          lunch_break_end: now,
-          is_clocked_in: true
-        }
-        localStorage.setItem('attendanceRecords', JSON.stringify(attendanceRecords))
-        loadTodayStatus()
-        saveActivity('lunch_end', `Returned from lunch at ${now}`)
-        toast({
-          title: "Welcome Back",
-          description: "You've returned from lunch break."
-        })
-      }
-    } catch (error) {
-      console.error('Return from lunch error:', error)
-      toast({ title: "Error", description: "Failed to return from lunch.", variant: "destructive" })
-    } finally {
-      setIsPunching(false)
-    }
-  }
-
-  const performClockOut = (reason?: string, isLunch?: boolean) => {
-    if (!user) return
-    
-    try {
-      setIsPunching(true)
-      const today = format(new Date(), 'yyyy-MM-dd')
-      const now = format(new Date(), 'HH:mm:ss')
-      const attendanceRecords = JSON.parse(localStorage.getItem('attendanceRecords') || '[]')
-      
-      const existingRecordIndex = attendanceRecords.findIndex(
-        (record: any) => record.employee_id === user.id && record.date === today && record.is_clocked_in
-      )
-      
-      if (existingRecordIndex === -1) {
-        toast({ title: "Not Clocked In", description: "You need to clock in first.", variant: "destructive" })
-        setIsPunching(false)
-        return
-      }
-
-      if (isLunch) {
-        attendanceRecords[existingRecordIndex] = {
-          ...attendanceRecords[existingRecordIndex],
-          lunch_break_start: now,
-          is_clocked_in: false
-        }
-        saveActivity('lunch_start', `Started lunch break at ${now}`)
-        toast({ title: "Success", description: "Lunch break started. Click Lunch Break button to return!" })
-      } else {
-        attendanceRecords[existingRecordIndex] = {
-          ...attendanceRecords[existingRecordIndex],
-          clock_out_time: now,
-          is_clocked_in: false,
-          early_departure_reason: reason || ""
-        }
-        saveActivity('clock_out', `Clocked out at ${now}${reason ? ` - ${reason}` : ''}`)
-        toast({ title: "Success", description: "Clocked out successfully!" })
-      }
-      
-      localStorage.setItem('attendanceRecords', JSON.stringify(attendanceRecords))
-      loadTodayStatus()
+      const response = await apiService.clockOut({
+        employee_id: currentEmployeeId,
+        date: new Date().toISOString().split('T')[0],
+        status: 'present',
+        notes: reason || (isLunch ? 'Lunch break' : ''),
+        location: 'office'
+      })
+      toast({
+        title: "Success",
+        description: response.message || (isLunch ? "Lunch break started. Remember to clock back in!" : "Clocked out successfully!")
+      })
+      saveActivity(isLunch ? 'lunch_start' : 'clock_out', `${isLunch ? 'Started lunch break' : 'Clocked out'} at ${format(new Date(), 'HH:mm:ss')}`)
+      await loadTodayStatus()
       setShowClockOutDialog(false)
       setClockOutReason("")
-    } catch (error) {
+    } catch (error: any) {
       console.error('Clock out error:', error)
-      toast({ title: "Error", description: "Failed to clock out.", variant: "destructive" })
+      const msg = error?.response?.data?.message || error?.message || "Failed to clock out."
+      toast({ title: "Error", description: msg, variant: "destructive" })
     } finally {
       setIsPunching(false)
     }
   }
 
-  const handleConfirmClockOut = () => {
-    if (!clockOutReason.trim() && new Date().getHours() < 17) {
-      toast({ 
-        title: "Reason Required", 
-        description: "Please provide a reason for early departure.", 
-        variant: "destructive" 
+  const handleConfirmClockOut = async () => {
+    if (isLunchBreak) {
+      performClockOut(clockOutReason, true)
+      return
+    }
+    if (!clockOutReason.trim()) {
+      toast({
+        title: "Reason Required",
+        description: "Please provide a reason for the early clock-out approval request.",
+        variant: "destructive",
       })
       return
     }
-    performClockOut(clockOutReason, isLunchBreak)
+    try {
+      setIsPunching(true)
+      await apiService.submitEarlyClockoutRequest({
+        employee_id: currentEmployeeId as number,
+        reason: clockOutReason.trim(),
+        requested_at: new Date().toISOString(),
+      })
+      toast({
+        title: "Approval Request Submitted",
+        description: "Your early clock-out request has been sent to HR Manager / Corporate HR. You remain clocked in until it is approved.",
+      })
+      setShowClockOutDialog(false)
+      setClockOutReason("")
+    } catch (error: any) {
+      console.error('Early clock-out request error:', error)
+      const msg = error?.response?.data?.message || error?.message || "Failed to submit early clock-out request."
+      toast({ title: "Error", description: msg, variant: "destructive" })
+    } finally {
+      setIsPunching(false)
+    }
   }
 
   return (

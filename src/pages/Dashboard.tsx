@@ -93,6 +93,7 @@ export default function Dashboard() {
   const [recentActivities, setRecentActivities] = useState<UserActivity[]>([])
   const [currentMonthCelebrations, setCurrentMonthCelebrations] = useState<Celebration[]>([])
   const [upcomingCelebrations, setUpcomingCelebrations] = useState<Celebration[]>([])
+  const [currentEmployeeId, setCurrentEmployeeId] = useState<number | null>(null)
   // Message dialog state moved to CelebrationsCard component
 
   // Load user activities from localStorage
@@ -192,21 +193,48 @@ export default function Dashboard() {
     return actions
   }
 
-  const loadTodayStatus = () => {
-    if (!user) return
-    const today = format(new Date(), 'yyyy-MM-dd')
-    const attendanceRecords = JSON.parse(localStorage.getItem('attendanceRecords') || '[]')
-    const todayRecord = attendanceRecords.find(
-      (record: any) => record.employee_id === user.id && record.date === today
-    )
-    setTodayStatus(todayRecord || null)
+  const loadTodayStatus = async () => {
+    if (!user || !currentEmployeeId) return
+    try {
+      const response: any = await apiService.getAttendance()
+      const today = format(new Date(), 'yyyy-MM-dd')
+      let attendanceArray: any[] = []
+      if (response && typeof response === 'object') {
+        if (Array.isArray(response)) attendanceArray = response
+        else if (response.data) {
+          attendanceArray = Array.isArray(response.data)
+            ? response.data
+            : (response.data.data || [])
+        }
+      }
+      const todayRecord = attendanceArray.find(
+        (r: any) => r.employee_id === currentEmployeeId &&
+          format(new Date(r.date), 'yyyy-MM-dd') === today
+      )
+      setTodayStatus(todayRecord || null)
+    } catch (e) {
+      console.error('Failed to load today attendance:', e)
+    }
   }
 
   useEffect(() => {
-    loadTodayStatus()
     loadUserActivities()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user])
+
+  // Resolve current employee ID from loaded employees
+  useEffect(() => {
+    if (!user || allEmployees.length === 0) return
+    const me = allEmployees.find(
+      (e) => e.email?.toLowerCase() === user.email?.toLowerCase()
+    )
+    if (me && me.id) setCurrentEmployeeId(Number(me.id))
+  }, [user, allEmployees])
+
+  useEffect(() => {
+    loadTodayStatus()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentEmployeeId])
 
   useEffect(() => {
     const fetchDashboardData = async () => {

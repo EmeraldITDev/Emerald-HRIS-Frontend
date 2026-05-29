@@ -310,29 +310,22 @@ export default function Dashboard() {
     const check = async () => {
       try {
         const res: any = await apiService.getLateClockinRequests({ employee_id: currentEmployeeId })
-        let arr: any[] = []
-        if (Array.isArray(res)) arr = res
-        else if (res?.data) arr = Array.isArray(res.data) ? res.data : (res.data.data || [])
+        const arr = extractRows(res)
         const todays = arr.filter((r: any) => {
           if (Number(r.employee_id) !== Number(currentEmployeeId)) return false
           const ts = r.requested_at || r.created_at
-          if (!ts) return false
-          try { return format(new Date(ts), 'yyyy-MM-dd') === todayStr } catch { return false }
+          return dateOnly(ts) === todayStr
         })
-        const approvedPostLunch = todays.find((r: any) =>
-          (r.status || '').toLowerCase() === 'approved' &&
-          typeof r.reason === 'string' &&
-          r.reason.includes('[Late return from lunch]')
-        )
+        const approvedPostLunch = todays.find(isApprovedPostLunchRequest)
         if (!approvedPostLunch) return
         const processedId = localStorage.getItem(processedKey)
         if (String(processedId) === String(approvedPostLunch.id)) return
 
         // Refresh status first; only end break if still on break.
-        await loadTodayStatus()
-        const stillOnBreak = !!(todayStatus?.break_start && !todayStatus?.break_end)
-        if (stillOnBreak) {
-          await endLunchBreak()
+        const latestStatus = await loadTodayStatus()
+        if (isOnLunchBreak(latestStatus)) {
+          const ended = await endLunchBreak()
+          if (!ended) return
           toast({
             title: "Late return approved",
             description: "HR approved your late return from lunch. You've been clocked back in.",

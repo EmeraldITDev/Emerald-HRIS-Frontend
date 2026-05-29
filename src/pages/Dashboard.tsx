@@ -319,10 +319,10 @@ export default function Dashboard() {
         const approvedPostLunch = todays.find(isApprovedPostLunchRequest)
         if (!approvedPostLunch) return
         const processedId = localStorage.getItem(processedKey)
-        if (String(processedId) === String(approvedPostLunch.id)) return
 
         // Refresh status first; only end break if still on break.
         const latestStatus = await loadTodayStatus()
+        if (String(processedId) === String(approvedPostLunch.id) && !isOnLunchBreak(latestStatus)) return
         if (isOnLunchBreak(latestStatus)) {
           const ended = await endLunchBreak()
           if (!ended) return

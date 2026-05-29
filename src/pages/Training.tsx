@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { Textarea } from "@/components/ui/textarea"
 import { GraduationCap, Calendar, DollarSign, Users, Plus, BookOpen, Upload, Download, Award, Bell, CheckCircle } from "lucide-react"
+import { Eye, Pencil, Trash2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/contexts/AuthContext"
 import RoleBasedComponent from "@/components/RoleBasedComponent"
@@ -78,6 +79,68 @@ export default function Training() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const certificateInputRef = useRef<HTMLInputElement>(null)
   const { toast } = useToast()
+
+  // View / Edit / Delete state
+  const [viewAssignment, setViewAssignment] = useState<any | null>(null)
+  const [editAssignment, setEditAssignment] = useState<any | null>(null)
+  const [editForm, setEditForm] = useState({
+    scheduled_at: '',
+    completion_deadline: '',
+    duration_hours: 1,
+    notes: '',
+  })
+  const [deleteAssignmentId, setDeleteAssignmentId] = useState<number | null>(null)
+
+  const canManageTraining = isExecutiveOrHR || isLineManager
+
+  const openEditDialog = (assignment: any) => {
+    setEditAssignment(assignment)
+    setEditForm({
+      scheduled_at: assignment.scheduled_at ? String(assignment.scheduled_at).slice(0, 16) : '',
+      completion_deadline: assignment.completion_deadline ? String(assignment.completion_deadline).slice(0, 16) : '',
+      duration_hours: Number(assignment.duration_hours) || 1,
+      notes: assignment.notes || '',
+    })
+  }
+
+  const handleSaveEdit = async () => {
+    if (!editAssignment) return
+    try {
+      await apiService.updateTrainingAssignment(editAssignment.id, {
+        scheduled_at: editForm.scheduled_at,
+        completion_deadline: editForm.completion_deadline,
+        duration_hours: editForm.duration_hours,
+        notes: editForm.notes,
+      })
+      toast({ title: 'Training updated', description: 'The training assignment has been updated.' })
+      setEditAssignment(null)
+      fetchTrainingAssignments()
+    } catch (e) {
+      toast({ title: 'Update failed', description: 'Could not update training assignment.', variant: 'destructive' })
+    }
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!deleteAssignmentId) return
+    try {
+      await apiService.deleteTrainingAssignment(deleteAssignmentId)
+      toast({ title: 'Training deleted', description: 'The training assignment has been removed.' })
+      setDeleteAssignmentId(null)
+      fetchTrainingAssignments()
+    } catch (e) {
+      toast({ title: 'Delete failed', description: 'Could not delete training assignment.', variant: 'destructive' })
+    }
+  }
+
+  const handleConfirmCompletion = async (assignment: any) => {
+    try {
+      await apiService.markTrainingCompleted(assignment.id)
+      toast({ title: 'Marked as completed', description: 'Your training has been marked as completed.' })
+      fetchTrainingAssignments()
+    } catch (e) {
+      toast({ title: 'Action failed', description: 'Could not confirm completion.', variant: 'destructive' })
+    }
+  }
 
   useEffect(() => {
     const fetchEmployees = async () => {
@@ -704,10 +767,17 @@ export default function Training() {
                   <TableHead>Status</TableHead>
                   <TableHead>Materials</TableHead>
                   {canUploadCertificate && <TableHead>Certificate</TableHead>}
+                  <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredTrainings.map((training) => (
+                {filteredTrainings.map((training) => {
+                  const assignment = trainingAssignments.find(a => String(a.id) === training.id)
+                  const isOwnAssignment = assignment && user && (
+                    String(assignment.employee_id) === String((user as any).employee_id ?? (user as any).id) ||
+                    `${assignment.employee?.first_name || ''} ${assignment.employee?.last_name || ''}`.trim() === currentUserFullName
+                  )
+                  return (
                   <TableRow key={training.id}>
                     <TableCell className="font-medium">{training.employeeName}</TableCell>
                     <TableCell>{training.trainingType}</TableCell>
@@ -784,13 +854,177 @@ export default function Training() {
                         )}
                       </TableCell>
                     )}
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          title="View details"
+                          onClick={() => assignment && setViewAssignment(assignment)}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        {canManageTraining && (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              title="Edit"
+                              onClick={() => assignment && openEditDialog(assignment)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              title="Delete"
+                              className="text-destructive hover:text-destructive"
+                              onClick={() => assignment && setDeleteAssignmentId(assignment.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </>
+                        )}
+                        {isOwnAssignment && training.status !== 'Completed' && training.status !== 'Cancelled' && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="ml-1"
+                            onClick={() => assignment && handleConfirmCompletion(assignment)}
+                          >
+                            <CheckCircle className="h-4 w-4 mr-1" />
+                            Confirm
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
                   </TableRow>
-                ))}
+                  )
+                })}
               </TableBody>
             </Table>
           </div>
         </CardContent>
       </Card>
+
+      {/* View Details Dialog */}
+      <Dialog open={!!viewAssignment} onOpenChange={(o) => !o && setViewAssignment(null)}>
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{viewAssignment?.training?.title || 'Training Details'}</DialogTitle>
+            <DialogDescription>
+              Full information about this training assignment.
+            </DialogDescription>
+          </DialogHeader>
+          {viewAssignment && (
+            <div className="space-y-3 text-sm">
+              <div className="grid grid-cols-2 gap-3">
+                <div><span className="text-muted-foreground">Employee:</span><div className="font-medium">{`${viewAssignment.employee?.first_name || ''} ${viewAssignment.employee?.last_name || ''}`.trim()}</div></div>
+                <div><span className="text-muted-foreground">Department:</span><div className="font-medium">{viewAssignment.employee?.department || 'N/A'}</div></div>
+                <div><span className="text-muted-foreground">Category:</span><div className="font-medium">{viewAssignment.training?.category || '—'}</div></div>
+                <div><span className="text-muted-foreground">Delivery Method:</span><div className="font-medium capitalize">{viewAssignment.training?.delivery_method || '—'}</div></div>
+                <div><span className="text-muted-foreground">Instructor:</span><div className="font-medium">{viewAssignment.training?.instructor || '—'}</div></div>
+                <div><span className="text-muted-foreground">Location:</span><div className="font-medium">{viewAssignment.training?.location || '—'}</div></div>
+                <div><span className="text-muted-foreground">Scheduled:</span><div className="font-medium">{viewAssignment.scheduled_at ? new Date(viewAssignment.scheduled_at).toLocaleString() : '—'}</div></div>
+                <div><span className="text-muted-foreground">Deadline:</span><div className="font-medium">{viewAssignment.completion_deadline ? new Date(viewAssignment.completion_deadline).toLocaleString() : '—'}</div></div>
+                <div><span className="text-muted-foreground">Duration:</span><div className="font-medium">{viewAssignment.duration_hours || 0} hour(s)</div></div>
+                <div><span className="text-muted-foreground">Status:</span><div className="font-medium capitalize">{viewAssignment.status}</div></div>
+              </div>
+              {viewAssignment.training?.description && (
+                <div>
+                  <span className="text-muted-foreground">Description:</span>
+                  <div className="font-medium whitespace-pre-wrap">{viewAssignment.training.description}</div>
+                </div>
+              )}
+              {viewAssignment.notes && (
+                <div>
+                  <span className="text-muted-foreground">Notes:</span>
+                  <div className="font-medium whitespace-pre-wrap">{viewAssignment.notes}</div>
+                </div>
+              )}
+              {viewAssignment.training?.attachment_name && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={async () => {
+                    try {
+                      const blob = await apiService.downloadTrainingAttachment(viewAssignment.training_id)
+                      const url = window.URL.createObjectURL(blob)
+                      const a = document.createElement('a')
+                      a.href = url
+                      a.download = viewAssignment.training.attachment_name || 'training-material'
+                      document.body.appendChild(a)
+                      a.click()
+                      window.URL.revokeObjectURL(url)
+                      document.body.removeChild(a)
+                    } catch {
+                      toast({ title: 'Download failed', variant: 'destructive' })
+                    }
+                  }}
+                >
+                  <Download className="h-4 w-4 mr-1" />
+                  Download Materials
+                </Button>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setViewAssignment(null)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Dialog */}
+      <Dialog open={!!editAssignment} onOpenChange={(o) => !o && setEditAssignment(null)}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Edit Training Assignment</DialogTitle>
+            <DialogDescription>Update schedule, deadline, duration, or notes.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-2">
+            <div className="space-y-2">
+              <Label>Scheduled Date & Time</Label>
+              <Input type="datetime-local" value={editForm.scheduled_at}
+                onChange={(e) => setEditForm({ ...editForm, scheduled_at: e.target.value })} />
+            </div>
+            <div className="space-y-2">
+              <Label>Completion Deadline</Label>
+              <Input type="datetime-local" value={editForm.completion_deadline}
+                onChange={(e) => setEditForm({ ...editForm, completion_deadline: e.target.value })} />
+            </div>
+            <div className="space-y-2">
+              <Label>Duration (hours)</Label>
+              <Input type="number" min="1" value={editForm.duration_hours}
+                onChange={(e) => setEditForm({ ...editForm, duration_hours: parseInt(e.target.value) || 1 })} />
+            </div>
+            <div className="space-y-2">
+              <Label>Notes</Label>
+              <Textarea value={editForm.notes}
+                onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditAssignment(null)}>Cancel</Button>
+            <Button onClick={handleSaveEdit} className="bg-emerald-600 hover:bg-emerald-700 text-white">Save Changes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirm Dialog */}
+      <Dialog open={!!deleteAssignmentId} onOpenChange={(o) => !o && setDeleteAssignmentId(null)}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Delete Training Assignment?</DialogTitle>
+            <DialogDescription>
+              This will permanently remove the training assignment. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteAssignmentId(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleConfirmDelete}>Delete</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

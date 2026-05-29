@@ -85,6 +85,11 @@ Conventions:
 - `GET /training-assignments`: include `training.cost` in the joined payload.
 - Reports / dashboard: `Total Training Investment = SUM(trainings.cost * COUNT(assigned_employees))` (or per business rule).
 - Permissions: `line_manager` already allowed to assign within their department; extend to "all staff" by removing the dept filter in the controller's eligible-employees scope when role is line_manager.
+- **Assignment management endpoints (now consumed by FE):**
+  - `PUT /training/assignments/{id}` — update `scheduled_at`, `completion_deadline`, `duration_hours`, `status`, `notes`. RBAC: `hr_manager`, `corporate_hr`, `executive`, `line_manager` (within their department). Already implemented in `backend/training.php` (updateTrainingAssignment).
+  - `DELETE /training/assignments/{id}` — permanent removal of an assignment. RBAC: same as PUT. Already implemented in `backend/training.php` (deleteTrainingAssignment).
+  - `PUT /training/assignments/{id}/complete` — used by participants to confirm completion of their own assignment from the Training page. Server must enforce that the caller is either the assigned employee OR has `training.assign.all`. Already implemented in `backend/training.php` (completeTraining).
+  - `GET /training/assignments` response must include `notes`, `completed_at`, `training.attachment_name`, `training.attachment_path`, `training.cost`, `training.delivery_method`, `training.instructor`, `training.location`, `training.description`, `training.category`, `training.title` so the FE View Details / Edit dialogs render fully.
 
 ## 4. Benefits Module
 

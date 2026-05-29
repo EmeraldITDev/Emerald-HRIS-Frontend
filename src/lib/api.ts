@@ -1332,6 +1332,23 @@ class ApiService {
     return this.request<{ success: boolean; assignment: any }>(`/training/assignments/${id}/cancel`, { method: 'PUT' });
   }
 
+  async deleteTrainingAssignment(id: number): Promise<{ success: boolean }> {
+    return this.request<{ success: boolean }>(`/training/assignments/${id}`, { method: 'DELETE' });
+  }
+
+  async updateTrainingAssignment(id: number, data: {
+    scheduled_at?: string;
+    completion_deadline?: string;
+    duration_hours?: number;
+    status?: string;
+    notes?: string;
+  }): Promise<{ success: boolean }> {
+    return this.request<{ success: boolean }>(`/training/assignments/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
   async downloadTrainingAttachment(trainingId: number): Promise<Blob> {
     const url = `${this.baseUrl}/training/${trainingId}/download`;
     const token = localStorage.getItem('auth_token');

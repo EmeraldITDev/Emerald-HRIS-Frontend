@@ -912,6 +912,43 @@ export default function Dashboard() {
         </DialogContent>
       </Dialog>
 
+      {/* Late Clock-In Approval Dialog */}
+      <Dialog open={showLateClockInDialog} onOpenChange={setShowLateClockInDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Late Clock-In Approval Request</DialogTitle>
+            <DialogDescription>
+              Clock-in is only allowed before 9:00 AM. Please provide a reason for clocking in late.
+              Your request will be sent to HR Manager / Corporate HR for approval and you will only
+              be clocked in once it is approved.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="late-reason">Reason</Label>
+              <Textarea
+                id="late-reason"
+                placeholder="e.g., Traffic delay, Medical appointment, Family emergency"
+                value={lateClockInReason}
+                onChange={(e) => setLateClockInReason(e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setShowLateClockInDialog(false)
+              setLateClockInReason("")
+            }}>
+              Cancel
+            </Button>
+            <Button onClick={handleConfirmLateClockIn} disabled={isPunching}>
+              Submit for Approval
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Hide aggregate stats for general_employee, finance, corporate_hr, line_manager, it_admin, executive */}
       {!['general_employee', 'finance', 'corporate_hr', 'line_manager', 'it_admin', 'executive'].includes(user?.role || '') && (
         <div className="grid gap-3 md:gap-4 lg:gap-6 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">

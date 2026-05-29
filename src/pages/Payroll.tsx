@@ -891,9 +891,11 @@ export default function Payroll() {
         : payrollPackage.monthlyGross
       const overtime = toMoneyNumber(payrollData.earnings)
       const otherDeductions = toMoneyNumber(payrollData.deduction)
+      const includeNhf = payrollData.includeNhf !== false
+      const monthlyNhf = includeNhf ? payrollPackage.monthlyNhf : 0
       const grossPay = roundMoney(monthlyGross + overtime)
       const totalAllowances = roundMoney(payrollPackage.monthlyHousing + payrollPackage.monthlyTransport + payrollPackage.monthlyMeal + payrollPackage.monthlyOther)
-      const totalDeductions = roundMoney(payrollPackage.monthlyPaye + payrollPackage.monthlyPension + payrollPackage.monthlyNhf + otherDeductions)
+      const totalDeductions = roundMoney(payrollPackage.monthlyPaye + payrollPackage.monthlyPension + monthlyNhf + otherDeductions)
       const netPay = roundMoney(grossPay - totalDeductions)
 
       console.log('💰 Employee financials:', {
@@ -936,7 +938,7 @@ export default function Payroll() {
         income_tax: payrollPackage.monthlyPaye,
         pension_employee: payrollPackage.monthlyPension,
         pension_employer: roundMoney((annualGross * 0.1) / 12),
-        nhf: payrollPackage.monthlyNhf,
+        nhf: monthlyNhf,
         total_deductions: totalDeductions,
         net_pay: netPay,
       })

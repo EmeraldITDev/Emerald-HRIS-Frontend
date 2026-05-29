@@ -1,5 +1,15 @@
 import type { Employee, PayrollRecord } from "@/lib/api"
 
+const isNhfOptedOut = (employeeId: unknown, period: unknown): boolean => {
+  if (!employeeId || !period) return false
+  try {
+    return typeof localStorage !== "undefined" &&
+      localStorage.getItem(`payroll_nhf_optout:${employeeId}:${period}`) === "1"
+  } catch {
+    return false
+  }
+}
+
 export const toMoneyNumber = (value: unknown): number => {
   if (value === null || value === undefined || value === "") return 0
   const normalized = typeof value === "string" ? value.replace(/[₦,\s]/g, "") : value

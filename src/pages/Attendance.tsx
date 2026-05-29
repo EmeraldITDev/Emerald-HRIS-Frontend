@@ -1156,6 +1156,9 @@ export default function Attendance() {
         </RoleBasedComponent>
       </div>
 
+      {/* HR / Corporate HR: pending late clock-in & early clock-out approvals */}
+      <AttendanceApprovalsCard />
+
       {/* Weekly Attendance View - For All Users */}
       <Card className="border-border/50 shadow-sm mb-6">
         <CardHeader 

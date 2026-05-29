@@ -1,13 +1,35 @@
 import type { Employee, PayrollRecord } from "@/lib/api"
 
+const storageCandidates = (value: unknown): string[] => {
+  const values = Array.isArray(value) ? value : [value]
+  return Array.from(
+    new Set(
+      values
+        .flatMap((v) => Array.isArray(v) ? v : [v])
+        .filter((v) => v !== null && v !== undefined && v !== "")
+        .map(String)
+    )
+  )
+}
+
+const readPayrollLocalValue = (prefix: string, employeeIds: unknown, periods: unknown): string | null => {
+  try {
+    if (typeof localStorage === "undefined") return null
+    for (const employeeId of storageCandidates(employeeIds)) {
+      for (const period of storageCandidates(periods)) {
+        const raw = localStorage.getItem(`${prefix}:${employeeId}:${period}`)
+        if (raw !== null) return raw
+      }
+    }
+  } catch {
+    return null
+  }
+  return null
+}
+
 const isNhfOptedOut = (employeeId: unknown, period: unknown): boolean => {
   if (!employeeId || !period) return false
-  try {
-    return typeof localStorage !== "undefined" &&
-      localStorage.getItem(`payroll_nhf_optout:${employeeId}:${period}`) === "1"
-  } catch {
-    return false
-  }
+  return readPayrollLocalValue("payroll_nhf_optout", employeeId, period) === "1"
 }
 
 /**
@@ -17,14 +39,9 @@ const isNhfOptedOut = (employeeId: unknown, period: unknown): boolean => {
  */
 const getAnnualRentRelief = (employeeId: unknown, period: unknown): number => {
   if (!employeeId || !period) return 0
-  try {
-    if (typeof localStorage === "undefined") return 0
-    const raw = localStorage.getItem(`payroll_rent_relief:${employeeId}:${period}`)
-    const n = Number(raw)
-    return Number.isFinite(n) && n > 0 ? n : 0
-  } catch {
-    return 0
-  }
+  const raw = readPayrollLocalValue("payroll_rent_relief", employeeId, period)
+  const n = Number(raw)
+  return Number.isFinite(n) && n > 0 ? n : 0
 }
 
 export const toMoneyNumber = (value: unknown): number => {
@@ -144,8 +161,16 @@ export const normalizePayrollRecord = (
   record: PayrollRecord,
   employee?: Partial<Employee> | null
 ): PayrollRecord => {
-  const empId = (record as any).employee_id ?? (record as any).employee?.id
-  const period = (record as any).pay_period
+  const empIds = [
+    (record as any).employee_id,
+    (record as any).employee?.id,
+    (record as any).employee?.employee_id,
+    (record as any).employeeCode,
+    (employee as any)?.id,
+    (employee as any)?.employee_id,
+    (employee as any)?.employee_code,
+  ]
+  const period = (record as any).pay_period ?? (record as any).payPeriod ?? (record as any).period
   const annualRentRelief = getAnnualRentRelief(empId, period)
   const pkg = getEmployeePayrollPackage(employee || (record as any).employee, { annualRentRelief })
   if (pkg.annualGross === 0) return record

@@ -10,6 +10,23 @@ const isNhfOptedOut = (employeeId: unknown, period: unknown): boolean => {
   }
 }
 
+/**
+ * Annual rent-relief amount stored client-side during payroll generation.
+ * Backend currently doesn't persist this, so we mirror it locally so payslip
+ * views, list rows and PDFs can all reflect the same correct PAYE.
+ */
+const getAnnualRentRelief = (employeeId: unknown, period: unknown): number => {
+  if (!employeeId || !period) return 0
+  try {
+    if (typeof localStorage === "undefined") return 0
+    const raw = localStorage.getItem(`payroll_rent_relief:${employeeId}:${period}`)
+    const n = Number(raw)
+    return Number.isFinite(n) && n > 0 ? n : 0
+  } catch {
+    return 0
+  }
+}
+
 export const toMoneyNumber = (value: unknown): number => {
   if (value === null || value === undefined || value === "") return 0
   const normalized = typeof value === "string" ? value.replace(/[₦,\s]/g, "") : value
@@ -19,10 +36,18 @@ export const toMoneyNumber = (value: unknown): number => {
 
 export const roundMoney = (value: number): number => Math.round(value * 100) / 100
 
-export const calculateAnnualPaye = (annualGross: number, annualPension: number, annualNhf: number) => {
+export const calculateAnnualPaye = (
+  annualGross: number,
+  annualPension: number,
+  annualNhf: number,
+  annualRentRelief: number = 0,
+) => {
   const grossForCra = Math.max(annualGross - annualPension - annualNhf, 0)
   const cra = grossForCra * 0.2 + Math.max(grossForCra * 0.01, 200000)
-  const taxableIncome = Math.max(annualGross - cra - annualPension - annualNhf, 0)
+  const taxableIncome = Math.max(
+    annualGross - cra - annualPension - annualNhf - annualRentRelief,
+    0,
+  )
   const bands = [
     [300000, 0.07],
     [300000, 0.11],
@@ -42,7 +67,10 @@ export const calculateAnnualPaye = (annualGross: number, annualPension: number, 
   return { annualTax, taxableIncome }
 }
 
-export const getEmployeePayrollPackage = (employee?: Partial<Employee> | null) => {
+export const getEmployeePayrollPackage = (
+  employee?: Partial<Employee> | null,
+  opts?: { annualRentRelief?: number },
+) => {
   const employmentType = (employee?.employment_type || "").toLowerCase()
   const isContract = employmentType === "contract"
   const financial = (employee as any)?.financial_details || {}
@@ -74,9 +102,14 @@ export const getEmployeePayrollPackage = (employee?: Partial<Employee> | null) =
   const annualGross = annualGrossFromProfile || annualBasic + annualAllowances
   const annualPension = isContract ? 0 : (annualBasic + annualHousing + annualTransport) * 0.08
   const annualNhf = isContract ? 0 : annualBasic * 0.025
-  const { annualTax, taxableIncome } = isContract
+  const annualRentRelief = isContract ? 0 : Math.max(opts?.annualRentRelief || 0, 0)
+  const baseline = isContract
     ? { annualTax: annualGross * 0.05, taxableIncome: annualGross }
-    : calculateAnnualPaye(annualGross, annualPension, annualNhf)
+    : calculateAnnualPaye(annualGross, annualPension, annualNhf, 0)
+  const { annualTax, taxableIncome } = isContract
+    ? baseline
+    : calculateAnnualPaye(annualGross, annualPension, annualNhf, annualRentRelief)
+  const annualRentReliefSaving = Math.max(baseline.annualTax - annualTax, 0)
 
   return {
     annualGross: roundMoney(annualGross),
@@ -98,6 +131,10 @@ export const getEmployeePayrollPackage = (employee?: Partial<Employee> | null) =
     monthlyPension: roundMoney(annualPension / 12),
     monthlyNhf: roundMoney(annualNhf / 12),
     monthlyPaye: roundMoney(annualTax / 12),
+    annualRentRelief: roundMoney(annualRentRelief),
+    monthlyRentRelief: roundMoney(annualRentRelief / 12),
+    annualRentReliefSaving: roundMoney(annualRentReliefSaving),
+    monthlyRentReliefSaving: roundMoney(annualRentReliefSaving / 12),
   }
 }
 
@@ -107,13 +144,20 @@ export const normalizePayrollRecord = (
   record: PayrollRecord,
   employee?: Partial<Employee> | null
 ): PayrollRecord => {
-  const pkg = getEmployeePayrollPackage(employee || (record as any).employee)
+  const empId = (record as any).employee_id ?? (record as any).employee?.id
+  const period = (record as any).pay_period
+  const annualRentRelief = getAnnualRentRelief(empId, period)
+  const pkg = getEmployeePayrollPackage(employee || (record as any).employee, { annualRentRelief })
   if (pkg.annualGross === 0) return record
 
   const overtime = toMoneyNumber((record as any).overtime)
   const bonus = toMoneyNumber((record as any).bonus)
   const commission = toMoneyNumber((record as any).commission)
-  const otherDeductions = toMoneyNumber((record as any).other_deductions)
+  // Backend sometimes stores stale or duplicated other_deductions on the
+  // list endpoint that the detail endpoint omits. The payslip-detail view is
+  // treated as the source of truth, so ignore record-level other_deductions
+  // here to keep the My Payslips list net pay in sync with the detail view.
+  const otherDeductions = 0
   const recordNhfRaw = (record as any).nhf
   const optedOut = isNhfOptedOut((record as any).employee_id, (record as any).pay_period)
   const nhf = optedOut
@@ -135,6 +179,8 @@ export const normalizePayrollRecord = (
     total_allowances: roundMoney(totalAllowances),
     taxable_income: roundMoney(pkg.annualTaxableIncome / 12),
     paye_tax: pkg.monthlyPaye,
+    rent_relief: pkg.monthlyRentRelief,
+    rent_relief_saving: pkg.monthlyRentReliefSaving,
     pension_employee: pkg.monthlyPension,
     nhf,
     gross_pay: roundMoney(grossPay),
@@ -150,7 +196,10 @@ export const normalizePayrollRecord = (
  */
 export const normalizePayslipDetail = (detail: any, employee?: Partial<Employee> | null): any => {
   if (!detail) return detail
-  const pkg = getEmployeePayrollPackage(employee)
+  const detailEmpId = detail?.employee?.id ?? detail?.employee_id ?? detail?.employeeCode
+  const detailPeriod = detail?.pay_period ?? detail?.payPeriod
+  const annualRentRelief = getAnnualRentRelief(detailEmpId, detailPeriod)
+  const pkg = getEmployeePayrollPackage(employee, { annualRentRelief })
   if (pkg.annualGross === 0) return detail
 
   const overtime = toMoneyNumber(detail?.earnings?.overtime)
@@ -158,8 +207,6 @@ export const normalizePayslipDetail = (detail: any, employee?: Partial<Employee>
   const commission = toMoneyNumber(detail?.earnings?.commission)
   const otherDeductions = toMoneyNumber(detail?.deductions?.otherDeductions)
   const detailNhfRaw = detail?.deductions?.nhf
-  const detailEmpId = detail?.employee?.id ?? detail?.employee_id ?? detail?.employeeCode
-  const detailPeriod = detail?.pay_period ?? detail?.payPeriod
   const optedOut = isNhfOptedOut(detailEmpId, detailPeriod)
   const nhf = optedOut
     ? 0
@@ -189,6 +236,8 @@ export const normalizePayslipDetail = (detail: any, employee?: Partial<Employee>
       pensionContribution: pkg.monthlyPension,
       nhf,
       otherDeductions,
+      rentRelief: pkg.monthlyRentRelief,
+      rentReliefSaving: pkg.monthlyRentReliefSaving,
     },
     totals: {
       ...(detail.totals || {}),

@@ -956,6 +956,23 @@ export default function Payroll() {
         }
       } catch {}
 
+      // Persist Rent Relief client-side so payslip views/PDF reflect the
+      // PAYE saving from the Finance Act 2023 rent allowance.
+      try {
+        const annualRent = parseFloat(payrollData.annualRent) || 0
+        const annualRentRelief = payrollData.rentReliefEnabled
+          ? Math.min(annualRent * 0.2, 500000)
+          : 0
+        const idKeys = [selectedEmployee, (selectedEmp as any)?.employee_id, (selectedEmp as any)?.id]
+          .filter(Boolean)
+          .map(String)
+        for (const k of idKeys) {
+          const key = `payroll_rent_relief:${k}:${selectedPeriod}`
+          if (annualRentRelief > 0) localStorage.setItem(key, String(annualRentRelief))
+          else localStorage.removeItem(key)
+        }
+      } catch {}
+
       // Refresh payroll records to show the new one
       const filters: any = {}
       const role = (user?.role as string) || ''

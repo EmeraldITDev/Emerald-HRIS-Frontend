@@ -603,6 +603,7 @@ export default function Dashboard() {
     if (afterNine && !isAdminBypass) {
       // Open the late clock-in approval dialog instead of blocking outright.
       setLateClockInReason("")
+      setLateClockInContext("morning")
       setShowLateClockInDialog(true)
       return
     }
@@ -651,6 +652,15 @@ export default function Dashboard() {
     // If currently on break, clicking again ends the break (resume working).
     const onBreak = !!(todayStatus?.break_start && !todayStatus?.break_end)
     if (onBreak) {
+      const currentHour = new Date().getHours()
+      const isAdminBypass = user.role === 'hr_manager' || user.role === 'corporate_hr' || isTestMode
+      // Lunch window ends at 2:00 PM. Returning after that requires HR approval.
+      if (currentHour >= 14 && !isAdminBypass) {
+        setLateClockInReason("")
+        setLateClockInContext("post_lunch")
+        setShowLateClockInDialog(true)
+        return
+      }
       endLunchBreak()
       return
     }

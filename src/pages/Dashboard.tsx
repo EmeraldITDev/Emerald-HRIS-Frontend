@@ -251,22 +251,13 @@ export default function Dashboard() {
     try {
       const response: any = await apiService.getAttendance()
       const today = format(new Date(), 'yyyy-MM-dd')
-      let attendanceArray: any[] = []
-      if (response && typeof response === 'object') {
-        if (Array.isArray(response)) attendanceArray = response
-        else if (response.data) {
-          attendanceArray = Array.isArray(response.data)
-            ? response.data
-            : (response.data.data || [])
-        }
-      }
-      const todayRecord = attendanceArray.find(
-        (r: any) => r.employee_id === currentEmployeeId &&
-          format(new Date(r.date), 'yyyy-MM-dd') === today
-      )
+      const attendanceArray = extractRows(response)
+      const todayRecord = selectTodayRecord(attendanceArray, currentEmployeeId, today)
       setTodayStatus(todayRecord || null)
+      return todayRecord || null
     } catch (e) {
       console.error('Failed to load today attendance:', e)
+      return null
     }
   }
 

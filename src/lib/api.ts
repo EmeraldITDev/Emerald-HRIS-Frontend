@@ -394,8 +394,9 @@ class ApiService {
 
   // Get all employees
   async getEmployees(): Promise<Employee[]> {
-    const employees = await this.request<Employee[]>('/employees-full');
-    return Array.isArray(employees) ? employees.map((employee) => this.normalizeEmployee(employee)) : employees;
+    const response = await this.request<any>('/employees-full');
+    const employees = Array.isArray(response) ? response : (response?.data || []);
+    return Array.isArray(employees) ? employees.map((employee) => this.normalizeEmployee(employee)) : [];
   }
 
   // Get employees with optional hire-date range filter (Requirement 2)

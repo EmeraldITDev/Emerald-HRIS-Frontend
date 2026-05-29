@@ -946,9 +946,14 @@ export default function Payroll() {
       // Persist NHF opt-out client-side because the backend may recompute NHF
       // regardless of the value we send. The normalizers read this flag.
       try {
-        const key = `payroll_nhf_optout:${selectedEmployee}:${selectedPeriod}`
-        if (!includeNhf) localStorage.setItem(key, "1")
-        else localStorage.removeItem(key)
+        const idKeys = [selectedEmployee, (selectedEmp as any)?.employee_id, (selectedEmp as any)?.id]
+          .filter(Boolean)
+          .map(String)
+        for (const k of idKeys) {
+          const key = `payroll_nhf_optout:${k}:${selectedPeriod}`
+          if (!includeNhf) localStorage.setItem(key, "1")
+          else localStorage.removeItem(key)
+        }
       } catch {}
 
       // Refresh payroll records to show the new one

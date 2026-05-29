@@ -145,8 +145,9 @@ export default function Training() {
   useEffect(() => {
     const fetchEmployees = async () => {
       try {
-        const data = await apiService.getEmployees()
-        let activeEmployees = data.filter(emp => {
+        const data = await apiService.getEmployees() as any
+        const employeesList: Employee[] = Array.isArray(data) ? data : (data?.data || [])
+        let activeEmployees = employeesList.filter((emp: Employee) => {
           const s = (emp.employment_status || '').toString().trim().toLowerCase()
           // Treat missing status as active; exclude only explicit non-active statuses.
           return !s || s === 'active'

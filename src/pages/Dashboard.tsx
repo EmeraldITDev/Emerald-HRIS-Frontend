@@ -732,7 +732,7 @@ export default function Dashboard() {
       return
     }
     // If currently on break, clicking again ends the break (resume working).
-    const onBreak = !!(todayStatus?.break_start && !todayStatus?.break_end)
+    const onBreak = isOnLunchBreak(todayStatus)
     if (onBreak) {
       const currentHour = new Date().getHours()
       const isAdminBypass = user.role === 'hr_manager' || user.role === 'corporate_hr' || isTestMode
@@ -742,8 +742,7 @@ export default function Dashboard() {
         findApprovedPostLunchRequest()
           .then((approvedRequest) => {
             if (approvedRequest) {
-              endLunchBreak()
-              return
+              return endLunchBreak()
             }
             setLateClockInReason("")
             setLateClockInContext("post_lunch")

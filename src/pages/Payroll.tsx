@@ -941,6 +941,11 @@ export default function Payroll() {
         nhf: monthlyNhf,
         total_deductions: totalDeductions,
         net_pay: netPay,
+        include_nhf: includeNhf,
+        rent_relief_enabled: !!payrollData.rentReliefEnabled,
+        annual_rent: payrollData.rentReliefEnabled
+          ? (parseFloat(payrollData.annualRent) || 0)
+          : 0,
       })
 
       // Persist NHF opt-out client-side because the backend may recompute NHF

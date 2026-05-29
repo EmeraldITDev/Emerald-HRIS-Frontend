@@ -738,9 +738,23 @@ export default function Dashboard() {
       const isAdminBypass = user.role === 'hr_manager' || user.role === 'corporate_hr' || isTestMode
       // Lunch window ends at 2:00 PM. Returning after that requires HR approval.
       if (currentHour >= 14 && !isAdminBypass) {
-        setLateClockInReason("")
-        setLateClockInContext("post_lunch")
-        setShowLateClockInDialog(true)
+        setIsPunching(true)
+        findApprovedPostLunchRequest()
+          .then((approvedRequest) => {
+            if (approvedRequest) {
+              endLunchBreak()
+              return
+            }
+            setLateClockInReason("")
+            setLateClockInContext("post_lunch")
+            setShowLateClockInDialog(true)
+          })
+          .catch(() => {
+            setLateClockInReason("")
+            setLateClockInContext("post_lunch")
+            setShowLateClockInDialog(true)
+          })
+          .finally(() => setIsPunching(false))
         return
       }
       endLunchBreak()

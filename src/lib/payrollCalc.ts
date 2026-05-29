@@ -104,9 +104,13 @@ export const normalizePayrollRecord = (
   const bonus = toMoneyNumber((record as any).bonus)
   const commission = toMoneyNumber((record as any).commission)
   const otherDeductions = toMoneyNumber((record as any).other_deductions)
+  const recordNhfRaw = (record as any).nhf
+  const nhf = recordNhfRaw !== undefined && recordNhfRaw !== null
+    ? toMoneyNumber(recordNhfRaw)
+    : pkg.monthlyNhf
   const grossPay = pkg.monthlyGross + overtime + bonus + commission
   const totalAllowances = pkg.monthlyHousing + pkg.monthlyTransport + pkg.monthlyMeal + pkg.monthlyOther
-  const totalDeductions = pkg.monthlyPaye + pkg.monthlyPension + pkg.monthlyNhf + otherDeductions
+  const totalDeductions = pkg.monthlyPaye + pkg.monthlyPension + nhf + otherDeductions
 
   return {
     ...record,
@@ -119,7 +123,7 @@ export const normalizePayrollRecord = (
     taxable_income: roundMoney(pkg.annualTaxableIncome / 12),
     paye_tax: pkg.monthlyPaye,
     pension_employee: pkg.monthlyPension,
-    nhf: pkg.monthlyNhf,
+    nhf,
     gross_pay: roundMoney(grossPay),
     total_deductions: roundMoney(totalDeductions),
     net_pay: roundMoney(grossPay - totalDeductions),
@@ -140,8 +144,12 @@ export const normalizePayslipDetail = (detail: any, employee?: Partial<Employee>
   const bonus = toMoneyNumber(detail?.earnings?.bonus)
   const commission = toMoneyNumber(detail?.earnings?.commission)
   const otherDeductions = toMoneyNumber(detail?.deductions?.otherDeductions)
+  const detailNhfRaw = detail?.deductions?.nhf
+  const nhf = detailNhfRaw !== undefined && detailNhfRaw !== null
+    ? toMoneyNumber(detailNhfRaw)
+    : pkg.monthlyNhf
   const grossSalary = roundMoney(pkg.monthlyGross + overtime + bonus + commission)
-  const totalDeductions = roundMoney(pkg.monthlyPaye + pkg.monthlyPension + pkg.monthlyNhf + otherDeductions)
+  const totalDeductions = roundMoney(pkg.monthlyPaye + pkg.monthlyPension + nhf + otherDeductions)
   const netSalary = roundMoney(grossSalary - totalDeductions)
 
   return {
@@ -161,7 +169,7 @@ export const normalizePayslipDetail = (detail: any, employee?: Partial<Employee>
       ...(detail.deductions || {}),
       incomeTax: pkg.monthlyPaye,
       pensionContribution: pkg.monthlyPension,
-      nhf: pkg.monthlyNhf,
+      nhf,
       otherDeductions,
     },
     totals: {

@@ -22,8 +22,6 @@ export interface PayslipLike {
   tax?: number | string;
   pension?: number | string;
   nhf?: number | string;
-  rentRelief?: number | string;
-  rentReliefSaving?: number | string;
   totalDeductions?: number | string;
   net?: number | string;
 }
@@ -55,8 +53,6 @@ export function toPayslipLike(src: any): PayslipLike {
     tax: d.incomeTax ?? src.income_tax ?? src.tax,
     pension: d.pensionContribution ?? src.pension,
     nhf: d.nhf,
-    rentRelief: d.rentRelief,
-    rentReliefSaving: d.rentReliefSaving,
     totalDeductions: s.totalDeductions ?? src.total_deductions,
     net: s.netSalary ?? src.net_pay,
   };
@@ -106,9 +102,6 @@ export function generatePayslipPdf(p: PayslipLike, filename: string) {
   pdf.line(20, y - 4, pageWidth - 20, y - 4);
   pdf.setFont("helvetica", "normal");
   line("Income Tax (PAYE)", ngn(p.tax));
-  if (Number(p.rentReliefSaving) > 0) {
-    line(`Rent Relief Tax Saving (on ${ngn(p.rentRelief)}/mo)`, `- ${ngn(p.rentReliefSaving)}`);
-  }
   line("Pension", ngn(p.pension));
   line("NHF", ngn(p.nhf));
   pdf.setFont("helvetica", "bold");
@@ -141,8 +134,6 @@ export function generatePayslipCsv(p: PayslipLike, filename: string) {
     ["Income Tax", String(p.tax ?? "")],
     ["Pension", String(p.pension ?? "")],
     ["NHF", String(p.nhf ?? "")],
-    ["Rent Relief (monthly)", String(p.rentRelief ?? "")],
-    ["Rent Relief Tax Saving", String(p.rentReliefSaving ?? "")],
     ["Total Deductions", String(p.totalDeductions ?? "")],
     ["Net Pay", String(p.net ?? "")],
   ];

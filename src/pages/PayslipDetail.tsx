@@ -62,9 +62,15 @@ export default function PayslipDetail() {
           </Button>
           <Button size="sm" variant="outline" onClick={async () => {
             try {
-              generatePayslipPdf(toPayslipLike(data), `Payslip_${period}.pdf`);
+              const blob = await apiService.exportMyPayslipPdf(period!);
+              downloadBlob(blob, `Payslip_${period}.pdf`);
             } catch (err: any) {
-              toast({ title: "PDF failed", description: err?.message, variant: "destructive" });
+              try {
+                generatePayslipPdf(toPayslipLike(data), `Payslip_${period}.pdf`);
+                toast({ title: "PDF generated locally", description: "Server export failed; built from this payslip." });
+              } catch {
+                toast({ title: "PDF failed", description: err?.message, variant: "destructive" });
+              }
             }
           }}>
             <Download className="h-4 w-4 mr-2" />PDF

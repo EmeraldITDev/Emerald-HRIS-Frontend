@@ -106,6 +106,7 @@ export default function Dashboard() {
   const [isLunchBreak, setIsLunchBreak] = useState(false)
   const [showLateClockInDialog, setShowLateClockInDialog] = useState(false)
   const [lateClockInReason, setLateClockInReason] = useState("")
+  const [lateClockInContext, setLateClockInContext] = useState<"morning" | "post_lunch">("morning")
   const [recentActivities, setRecentActivities] = useState<UserActivity[]>([])
   const [currentMonthCelebrations, setCurrentMonthCelebrations] = useState<Celebration[]>([])
   const [upcomingCelebrations, setUpcomingCelebrations] = useState<Celebration[]>([])

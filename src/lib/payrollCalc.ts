@@ -1,5 +1,15 @@
 import type { Employee, PayrollRecord } from "@/lib/api"
 
+const isNhfOptedOut = (employeeId: unknown, period: unknown): boolean => {
+  if (!employeeId || !period) return false
+  try {
+    return typeof localStorage !== "undefined" &&
+      localStorage.getItem(`payroll_nhf_optout:${employeeId}:${period}`) === "1"
+  } catch {
+    return false
+  }
+}
+
 export const toMoneyNumber = (value: unknown): number => {
   if (value === null || value === undefined || value === "") return 0
   const normalized = typeof value === "string" ? value.replace(/[₦,\s]/g, "") : value
@@ -105,9 +115,12 @@ export const normalizePayrollRecord = (
   const commission = toMoneyNumber((record as any).commission)
   const otherDeductions = toMoneyNumber((record as any).other_deductions)
   const recordNhfRaw = (record as any).nhf
-  const nhf = recordNhfRaw !== undefined && recordNhfRaw !== null
-    ? toMoneyNumber(recordNhfRaw)
-    : pkg.monthlyNhf
+  const optedOut = isNhfOptedOut((record as any).employee_id, (record as any).pay_period)
+  const nhf = optedOut
+    ? 0
+    : recordNhfRaw !== undefined && recordNhfRaw !== null
+      ? toMoneyNumber(recordNhfRaw)
+      : pkg.monthlyNhf
   const grossPay = pkg.monthlyGross + overtime + bonus + commission
   const totalAllowances = pkg.monthlyHousing + pkg.monthlyTransport + pkg.monthlyMeal + pkg.monthlyOther
   const totalDeductions = pkg.monthlyPaye + pkg.monthlyPension + nhf + otherDeductions
@@ -145,9 +158,14 @@ export const normalizePayslipDetail = (detail: any, employee?: Partial<Employee>
   const commission = toMoneyNumber(detail?.earnings?.commission)
   const otherDeductions = toMoneyNumber(detail?.deductions?.otherDeductions)
   const detailNhfRaw = detail?.deductions?.nhf
-  const nhf = detailNhfRaw !== undefined && detailNhfRaw !== null
-    ? toMoneyNumber(detailNhfRaw)
-    : pkg.monthlyNhf
+  const detailEmpId = detail?.employee?.id ?? detail?.employee_id ?? detail?.employeeCode
+  const detailPeriod = detail?.pay_period ?? detail?.payPeriod
+  const optedOut = isNhfOptedOut(detailEmpId, detailPeriod)
+  const nhf = optedOut
+    ? 0
+    : detailNhfRaw !== undefined && detailNhfRaw !== null
+      ? toMoneyNumber(detailNhfRaw)
+      : pkg.monthlyNhf
   const grossSalary = roundMoney(pkg.monthlyGross + overtime + bonus + commission)
   const totalDeductions = roundMoney(pkg.monthlyPaye + pkg.monthlyPension + nhf + otherDeductions)
   const netSalary = roundMoney(grossSalary - totalDeductions)

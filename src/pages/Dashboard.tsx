@@ -972,11 +972,15 @@ export default function Dashboard() {
       <Dialog open={showLateClockInDialog} onOpenChange={setShowLateClockInDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Late Clock-In Approval Request</DialogTitle>
+            <DialogTitle>
+              {lateClockInContext === "post_lunch"
+                ? "Late Return From Lunch — Approval Required"
+                : "Late Clock-In Approval Request"}
+            </DialogTitle>
             <DialogDescription>
-              Clock-in is only allowed before 9:00 AM. Please provide a reason for clocking in late.
-              Your request will be sent to HR Manager / Corporate HR for approval and you will only
-              be clocked in once it is approved.
+              {lateClockInContext === "post_lunch"
+                ? "You are clocking in outside the allowed lunch window (12:00 PM – 2:00 PM). Please provide a reason for your late return. Your request will be sent to HR Manager / Corporate HR for approval."
+                : "Clock-in is only allowed before 9:00 AM. Please provide a reason for clocking in late. Your request will be sent to HR Manager / Corporate HR for approval and you will only be clocked in once it is approved."}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">

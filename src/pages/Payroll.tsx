@@ -1229,7 +1229,7 @@ export default function Payroll() {
               <div className="space-y-3 border-t pt-3">
                 <div>
                   <Label htmlFor="basicSalary" className="font-semibold">
-                    {calculations.employmentType === "Contract" ? "Contract Amount (Monthly) *" : "Monthly Basic Salary *"}
+                    {calculations.employmentType === "Contract" ? "Contract Amount (Monthly) *" : "Basic Salary (40% of Monthly Gross) *"}
                   </Label>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₦</span>
@@ -1248,6 +1248,49 @@ export default function Payroll() {
                       : "Auto-filled as 40% of Monthly Gross (Basic component of the 40/20/9/31 split)."}
                   </p>
                 </div>
+
+                {/* Read-only salary breakdown preview */}
+                {calculations.employmentType !== "Contract" && (() => {
+                  const selectedEmp = employees.find(emp => emp.id?.toString() === selectedEmployee)
+                  if (!selectedEmp) return null
+                  const pkg = getEmployeePayrollPackage(selectedEmp)
+                  if (!pkg.annualGross) return null
+                  const housingPctOfBasic = pkg.monthlyBasic > 0
+                    ? Math.round((pkg.monthlyHousing / pkg.monthlyBasic) * 100)
+                    : 0
+                  const rows: Array<{ label: string; value: number }> = [
+                    { label: `Monthly Gross (Annual Gross Salary ÷ 12)`, value: pkg.monthlyGross },
+                    { label: `Housing Allowance (${housingPctOfBasic}% of Basic)`, value: pkg.monthlyHousing },
+                    { label: `Transport Allowance (9% of Monthly Gross)`, value: pkg.monthlyTransport },
+                    { label: `Other Allowances (31% of Monthly Gross)`, value: pkg.monthlyOther },
+                    { label: `PAYE Tax (Auto-calculated)`, value: pkg.monthlyPaye },
+                    { label: `Pension Contribution (Auto-calculated, 8% of BHT)`, value: pkg.monthlyPension },
+                  ]
+                  return (
+                    <div className="rounded-md border p-3 space-y-2 bg-muted/30">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                        Salary Breakdown (Read-only Preview)
+                      </p>
+                      {rows.map((r) => (
+                        <div key={r.label} className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">{r.label}</Label>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₦</span>
+                            <Input
+                              readOnly
+                              tabIndex={-1}
+                              value={Math.round(r.value).toLocaleString()}
+                              className="pl-8 bg-muted/50 cursor-not-allowed"
+                            />
+                          </div>
+                        </div>
+                      ))}
+                      <p className="text-[11px] text-muted-foreground pt-1">
+                        Auto-calculated from the employee's annual gross salary. Updates when employee or pay period changes.
+                      </p>
+                    </div>
+                  )
+                })()}
 
                 {/* NHF Toggle */}
                 <div className="flex items-start gap-2 rounded-md border p-3">

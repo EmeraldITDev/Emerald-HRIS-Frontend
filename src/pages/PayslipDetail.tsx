@@ -110,6 +110,17 @@ export default function PayslipDetail() {
             <h3 className="font-semibold mb-2">Deductions</h3>
             <div className="space-y-1 text-sm">
               <div className="flex justify-between"><span>Income Tax (PAYE)</span><span>{ngn(d.incomeTax)}</span></div>
+              {Number(d.rentReliefSaving) > 0 && (
+                <div className="flex justify-between text-success">
+                  <span>
+                    Rent Relief Tax Saving
+                    <span className="text-xs text-muted-foreground ml-1">
+                      (on {ngn(d.rentRelief)} /mo relief)
+                    </span>
+                  </span>
+                  <span>− {ngn(d.rentReliefSaving)}</span>
+                </div>
+              )}
               <div className="flex justify-between"><span>Pension</span><span>{ngn(d.pensionContribution)}</span></div>
               <div className="flex justify-between"><span>NHF</span><span>{ngn(d.nhf)}</span></div>
               <Separator className="my-2" />

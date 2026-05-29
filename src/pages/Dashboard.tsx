@@ -76,6 +76,20 @@ interface UserActivity {
   userId: string
 }
 
+// Extract HH:mm from a backend datetime string ("YYYY-MM-DD HH:MM:SS" or ISO).
+function formatTimeOnly(value?: string | null): string {
+  if (!value) return ""
+  const s = String(value)
+  // Try parse — fall back to substring extraction for raw "YYYY-MM-DD HH:MM:SS".
+  const d = new Date(s.includes("T") ? s : s.replace(" ", "T"))
+  if (!isNaN(d.getTime())) {
+    const hh = String(d.getHours()).padStart(2, "0")
+    const mm = String(d.getMinutes()).padStart(2, "0")
+    return `${hh}:${mm}`
+  }
+  return s.length >= 16 ? s.slice(11, 16) : s
+}
+
 export default function Dashboard() {
   const navigate = useNavigate()
   const { toast } = useToast()

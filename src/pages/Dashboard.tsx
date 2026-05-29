@@ -90,6 +90,46 @@ function formatTimeOnly(value?: string | null): string {
   return s.length >= 16 ? s.slice(11, 16) : s
 }
 
+function extractRows(response: any): any[] {
+  if (Array.isArray(response)) return response
+  if (response?.data) return Array.isArray(response.data) ? response.data : (response.data.data || [])
+  return []
+}
+
+function dateOnly(value?: string | null): string {
+  if (!value) return ""
+  const raw = String(value)
+  const match = raw.match(/^\d{4}-\d{2}-\d{2}/)
+  if (match) return match[0]
+  try { return format(new Date(raw), "yyyy-MM-dd") } catch { return "" }
+}
+
+function recordSortTime(record: any): number {
+  const value = record?.updated_at || record?.break_end || record?.clock_out || record?.break_start || record?.clock_in || record?.created_at || record?.date
+  const parsed = value ? new Date(String(value).replace(" ", "T")).getTime() : 0
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
+function selectTodayRecord(records: any[], employeeId: number, today: string): any | null {
+  return records
+    .filter((r: any) => Number(r.employee_id) === Number(employeeId) && dateOnly(r.date) === today)
+    .sort((a: any, b: any) => (recordSortTime(b) - recordSortTime(a)) || (Number(b.id || 0) - Number(a.id || 0)))[0] || null
+}
+
+function isOnLunchBreak(record: any): boolean {
+  return !!(record?.break_start && !record?.break_end)
+}
+
+function lunchEndOverrideKey(employeeId: number, today: string): string {
+  return `lunchBreak:ended:${employeeId}:${today}`
+}
+
+function isApprovedPostLunchRequest(request: any): boolean {
+  return (request?.status || "").toLowerCase() === "approved" &&
+    typeof request?.reason === "string" &&
+    request.reason.toLowerCase().includes("late return from lunch")
+}
+
 export default function Dashboard() {
   const navigate = useNavigate()
   const { toast } = useToast()
@@ -215,22 +255,17 @@ export default function Dashboard() {
     try {
       const response: any = await apiService.getAttendance()
       const today = format(new Date(), 'yyyy-MM-dd')
-      let attendanceArray: any[] = []
-      if (response && typeof response === 'object') {
-        if (Array.isArray(response)) attendanceArray = response
-        else if (response.data) {
-          attendanceArray = Array.isArray(response.data)
-            ? response.data
-            : (response.data.data || [])
-        }
+      const attendanceArray = extractRows(response)
+      let todayRecord = selectTodayRecord(attendanceArray, currentEmployeeId, today)
+      const localBreakEnd = localStorage.getItem(lunchEndOverrideKey(currentEmployeeId, today))
+      if (todayRecord && isOnLunchBreak(todayRecord) && localBreakEnd) {
+        todayRecord = { ...todayRecord, break_end: localBreakEnd }
       }
-      const todayRecord = attendanceArray.find(
-        (r: any) => r.employee_id === currentEmployeeId &&
-          format(new Date(r.date), 'yyyy-MM-dd') === today
-      )
       setTodayStatus(todayRecord || null)
+      return todayRecord || null
     } catch (e) {
       console.error('Failed to load today attendance:', e)
+      return null
     }
   }
 
@@ -272,6 +307,17 @@ export default function Dashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentEmployeeId])
 
+  const findApprovedPostLunchRequest = async () => {
+    if (!currentEmployeeId) return null
+    const todayStr = format(new Date(), 'yyyy-MM-dd')
+    const res: any = await apiService.getLateClockinRequests({ employee_id: currentEmployeeId })
+    return extractRows(res).find((r: any) =>
+      Number(r.employee_id) === Number(currentEmployeeId) &&
+      dateOnly(r.requested_at || r.created_at) === todayStr &&
+      isApprovedPostLunchRequest(r)
+    ) || null
+  }
+
   // Poll for approval of a pending post-lunch late-return request.
   // When HR approves, automatically end the lunch break and refresh status
   // so the dashboard reflects "clocked back in" without a manual refresh.
@@ -283,29 +329,22 @@ export default function Dashboard() {
     const check = async () => {
       try {
         const res: any = await apiService.getLateClockinRequests({ employee_id: currentEmployeeId })
-        let arr: any[] = []
-        if (Array.isArray(res)) arr = res
-        else if (res?.data) arr = Array.isArray(res.data) ? res.data : (res.data.data || [])
+        const arr = extractRows(res)
         const todays = arr.filter((r: any) => {
           if (Number(r.employee_id) !== Number(currentEmployeeId)) return false
           const ts = r.requested_at || r.created_at
-          if (!ts) return false
-          try { return format(new Date(ts), 'yyyy-MM-dd') === todayStr } catch { return false }
+          return dateOnly(ts) === todayStr
         })
-        const approvedPostLunch = todays.find((r: any) =>
-          (r.status || '').toLowerCase() === 'approved' &&
-          typeof r.reason === 'string' &&
-          r.reason.includes('[Late return from lunch]')
-        )
+        const approvedPostLunch = todays.find(isApprovedPostLunchRequest)
         if (!approvedPostLunch) return
         const processedId = localStorage.getItem(processedKey)
-        if (String(processedId) === String(approvedPostLunch.id)) return
 
         // Refresh status first; only end break if still on break.
-        await loadTodayStatus()
-        const stillOnBreak = !!(todayStatus?.break_start && !todayStatus?.break_end)
-        if (stillOnBreak) {
-          await endLunchBreak()
+        const latestStatus = await loadTodayStatus()
+        if (String(processedId) === String(approvedPostLunch.id) && !isOnLunchBreak(latestStatus)) return
+        if (isOnLunchBreak(latestStatus)) {
+          const ended = await endLunchBreak()
+          if (!ended) return
           toast({
             title: "Late return approved",
             description: "HR approved your late return from lunch. You've been clocked back in.",
@@ -701,15 +740,28 @@ export default function Dashboard() {
       return
     }
     // If currently on break, clicking again ends the break (resume working).
-    const onBreak = !!(todayStatus?.break_start && !todayStatus?.break_end)
+    const onBreak = isOnLunchBreak(todayStatus)
     if (onBreak) {
       const currentHour = new Date().getHours()
       const isAdminBypass = user.role === 'hr_manager' || user.role === 'corporate_hr' || isTestMode
       // Lunch window ends at 2:00 PM. Returning after that requires HR approval.
       if (currentHour >= 14 && !isAdminBypass) {
-        setLateClockInReason("")
-        setLateClockInContext("post_lunch")
-        setShowLateClockInDialog(true)
+        setIsPunching(true)
+        findApprovedPostLunchRequest()
+          .then((approvedRequest) => {
+            if (approvedRequest) {
+              return endLunchBreak()
+            }
+            setLateClockInReason("")
+            setLateClockInContext("post_lunch")
+            setShowLateClockInDialog(true)
+          })
+          .catch(() => {
+            setLateClockInReason("")
+            setLateClockInContext("post_lunch")
+            setShowLateClockInDialog(true)
+          })
+          .finally(() => setIsPunching(false))
         return
       }
       endLunchBreak()
@@ -728,10 +780,11 @@ export default function Dashboard() {
     }
   }
 
-  const endLunchBreak = async () => {
-    if (!user || !currentEmployeeId) return
+  const endLunchBreak = async (): Promise<boolean> => {
+    if (!user || !currentEmployeeId) return false
     try {
       setIsPunching(true)
+      const fallbackBreakEnd = new Date().toISOString()
       const response = await apiService.createAttendance({
         employee_id: currentEmployeeId,
         date: new Date().toISOString().split('T')[0],
@@ -741,11 +794,17 @@ export default function Dashboard() {
       })
       toast({ title: "Welcome back", description: response.message || "Lunch break ended. You're clocked back in." })
       saveActivity('lunch_end', `Ended lunch break at ${format(new Date(), 'HH:mm:ss')}`)
-      await loadTodayStatus()
+      localStorage.setItem(lunchEndOverrideKey(currentEmployeeId, format(new Date(), 'yyyy-MM-dd')), fallbackBreakEnd)
+      const refreshedStatus = await loadTodayStatus()
+      if (isOnLunchBreak(refreshedStatus)) {
+        setTodayStatus((previous: any) => previous ? { ...previous, break_end: fallbackBreakEnd } : previous)
+      }
+      return true
     } catch (error: any) {
       console.error('End lunch break error:', error)
       const msg = error?.response?.data?.message || error?.message || "Failed to end lunch break."
       toast({ title: "Error", description: msg, variant: "destructive" })
+      return false
     } finally {
       setIsPunching(false)
     }

@@ -511,7 +511,7 @@ class ApiService {
 
   // Attendance methods
   async getAttendance(): Promise<Attendance[]> {
-    return this.request<Attendance[]>('/attendance');
+    return this.request<Attendance[]>(`/attendance?_=${Date.now()}`, { cache: 'no-store' });
   }
 
   async createAttendance(attendanceData: Attendance): Promise<{ message: string }> {
@@ -1027,10 +1027,11 @@ class ApiService {
 
   async getEarlyClockoutRequests(params?: { status?: string; employee_id?: number }): Promise<any> {
     const qp = new URLSearchParams();
+    qp.append('_', String(Date.now()));
     if (params?.status) qp.append('status', params.status);
     if (params?.employee_id != null) qp.append('employee_id', String(params.employee_id));
     const q = qp.toString();
-    return this.request<any>(`/attendance/early-clockout-requests${q ? `?${q}` : ''}`);
+    return this.request<any>(`/attendance/early-clockout-requests?${q}`, { cache: 'no-store' });
   }
 
   async approveEarlyClockoutRequest(id: number | string, approver_notes?: string): Promise<any> {
@@ -1061,10 +1062,11 @@ class ApiService {
 
   async getLateClockinRequests(params?: { status?: string; employee_id?: number }): Promise<any> {
     const qp = new URLSearchParams();
+    qp.append('_', String(Date.now()));
     if (params?.status) qp.append('status', params.status);
     if (params?.employee_id != null) qp.append('employee_id', String(params.employee_id));
     const q = qp.toString();
-    return this.request<any>(`/attendance/late-clockin-requests${q ? `?${q}` : ''}`);
+    return this.request<any>(`/attendance/late-clockin-requests?${q}`, { cache: 'no-store' });
   }
 
   async approveLateClockinRequest(id: number | string, approver_notes?: string): Promise<any> {

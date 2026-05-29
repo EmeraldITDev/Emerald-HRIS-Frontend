@@ -2257,6 +2257,39 @@ export default function Attendance() {
         </DialogContent>
       </Dialog>
 
+      {/* Late Clock-In Approval Dialog */}
+      <Dialog open={showLateClockInDialog} onOpenChange={setShowLateClockInDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Request Late Clock-In Approval</DialogTitle>
+            <DialogDescription>
+              Clock-in is only allowed before 9:00 AM. Submit a reason below — your request will be
+              routed to HR Manager / Corporate HR. You will only be clocked in once it is approved.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Label htmlFor="lateClockInReason" className="mb-2 block">
+              Reason for late clock-in *
+            </Label>
+            <Textarea
+              id="lateClockInReason"
+              placeholder="e.g. traffic delay, medical appointment, family emergency..."
+              value={lateClockInReason}
+              onChange={(e) => setLateClockInReason(e.target.value)}
+              rows={3}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowLateClockInDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleConfirmLateClockIn} disabled={isPunching}>
+              Submit Approval Request
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* This Month's Birthdays & Anniversaries - Collapsible */}
       <CollapsibleCelebrations 
         celebrations={currentMonthCelebrations} 

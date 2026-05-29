@@ -272,6 +272,57 @@ export default function Dashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentEmployeeId])
 
+  // Poll for approval of a pending post-lunch late-return request.
+  // When HR approves, automatically end the lunch break and refresh status
+  // so the dashboard reflects "clocked back in" without a manual refresh.
+  useEffect(() => {
+    if (!currentEmployeeId) return
+    const todayStr = format(new Date(), 'yyyy-MM-dd')
+    const processedKey = `latePostLunch:processed:${currentEmployeeId}:${todayStr}`
+
+    const check = async () => {
+      try {
+        const res: any = await apiService.getLateClockinRequests({ employee_id: currentEmployeeId })
+        let arr: any[] = []
+        if (Array.isArray(res)) arr = res
+        else if (res?.data) arr = Array.isArray(res.data) ? res.data : (res.data.data || [])
+        const todays = arr.filter((r: any) => {
+          if (Number(r.employee_id) !== Number(currentEmployeeId)) return false
+          const ts = r.requested_at || r.created_at
+          if (!ts) return false
+          try { return format(new Date(ts), 'yyyy-MM-dd') === todayStr } catch { return false }
+        })
+        const approvedPostLunch = todays.find((r: any) =>
+          (r.status || '').toLowerCase() === 'approved' &&
+          typeof r.reason === 'string' &&
+          r.reason.includes('[Late return from lunch]')
+        )
+        if (!approvedPostLunch) return
+        const processedId = localStorage.getItem(processedKey)
+        if (String(processedId) === String(approvedPostLunch.id)) return
+
+        // Refresh status first; only end break if still on break.
+        await loadTodayStatus()
+        const stillOnBreak = !!(todayStatus?.break_start && !todayStatus?.break_end)
+        if (stillOnBreak) {
+          await endLunchBreak()
+          toast({
+            title: "Late return approved",
+            description: "HR approved your late return from lunch. You've been clocked back in.",
+          })
+        }
+        localStorage.setItem(processedKey, String(approvedPostLunch.id))
+      } catch (e) {
+        // non-fatal
+      }
+    }
+
+    check()
+    const id = window.setInterval(check, 30000)
+    return () => window.clearInterval(id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentEmployeeId, todayStatus?.break_start, todayStatus?.break_end])
+
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {

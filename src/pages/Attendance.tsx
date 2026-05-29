@@ -38,6 +38,19 @@ import { useAuth } from "@/contexts/AuthContext"
 import { RoleBasedComponent } from "@/components/RoleBasedComponent"
 import apiService, { Employee } from "@/lib/api"
 import { getCurrentMonthCelebrations, type Celebration } from "@/utils/celebrations"
+
+// Extract HH:mm from a backend datetime string ("YYYY-MM-DD HH:MM:SS" or ISO).
+function formatAttTime(value?: string | null): string {
+  if (!value) return ""
+  const s = String(value)
+  const d = new Date(s.includes("T") ? s : s.replace(" ", "T"))
+  if (!isNaN(d.getTime())) {
+    const hh = String(d.getHours()).padStart(2, "0")
+    const mm = String(d.getMinutes()).padStart(2, "0")
+    return `${hh}:${mm}`
+  }
+  return s.length >= 16 ? s.slice(11, 16) : s
+}
 import { CelebrationsCard } from "@/components/CelebrationsCard"
 import { LeaveBalanceCard } from "@/components/LeaveBalanceCard"
 import { AttendanceApprovalsCard } from "@/components/AttendanceApprovalsCard"
@@ -1206,19 +1219,19 @@ export default function Attendance() {
                     >
                       <div className="flex items-center gap-4">
                         <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                          dayRecord?.clock_in_time && dayRecord?.clock_out_time 
+                          dayRecord?.clock_in && dayRecord?.clock_out 
                             ? 'bg-success/20 border-2 border-success' 
-                            : dayRecord?.is_clocked_in 
+                            : dayRecord?.clock_in 
                             ? 'bg-warning/20 border-2 border-warning'
                             : isPast
                             ? 'bg-muted/20 border-2 border-muted'
                             : 'bg-muted/10 border-2 border-muted/30'
                         }`}>
-                          {dayRecord?.clock_in_time && dayRecord?.clock_out_time ? (
+                          {dayRecord?.clock_in && dayRecord?.clock_out ? (
                             <svg className="w-6 h-6 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                             </svg>
-                          ) : dayRecord?.is_clocked_in ? (
+                          ) : dayRecord?.clock_in ? (
                             <Clock className="w-5 h-5 text-warning" />
                           ) : (
                             <span className="text-xs font-medium text-muted-foreground">
@@ -1238,12 +1251,12 @@ export default function Attendance() {
                             <div className="mt-1 space-y-0.5">
                               <div className="text-xs flex items-center gap-1">
                                 <LogIn className="w-3 h-3 text-success" />
-                                <span className="font-medium">In:</span> {dayRecord.clock_in_time}
+                                <span className="font-medium">In:</span> {formatAttTime(dayRecord.clock_in)}
                               </div>
-                              {dayRecord.clock_out_time && (
+                              {dayRecord.clock_out && (
                                 <div className="text-xs flex items-center gap-1">
                                   <LogOut className="w-3 h-3 text-destructive" />
-                                  <span className="font-medium">Out:</span> {dayRecord.clock_out_time}
+                                  <span className="font-medium">Out:</span> {formatAttTime(dayRecord.clock_out)}
                                 </div>
                               )}
                             </div>
@@ -1259,12 +1272,12 @@ export default function Attendance() {
                       </div>
                       
                       <div>
-                        {dayRecord?.clock_in_time && dayRecord?.clock_out_time && (
+                        {dayRecord?.clock_in && dayRecord?.clock_out && (
                           <Badge className="bg-success/10 text-success border-success/20">
                             Completed
                           </Badge>
                         )}
-                        {dayRecord?.is_clocked_in && !dayRecord?.clock_out_time && (
+                        {dayRecord?.clock_in && !dayRecord?.clock_out && (
                           <Badge className="bg-warning/10 text-warning border-warning/20">
                             Active
                           </Badge>
@@ -1312,23 +1325,23 @@ export default function Attendance() {
                         <div className="text-xs text-muted-foreground mt-1">
                           <div className="flex items-center gap-1">
                             <LogIn className="w-3 h-3" />
-                            Clock In: {record.clock_in_time}
+                            Clock In: {formatAttTime(record.clock_in)}
                           </div>
-                          {record.clock_out_time && (
+                          {record.clock_out && (
                             <div className="flex items-center gap-1 mt-0.5">
                               <LogOut className="w-3 h-3" />
-                              Clock Out: {record.clock_out_time}
+                              Clock Out: {formatAttTime(record.clock_out)}
                             </div>
                           )}
                         </div>
                       </div>
                       <div className="flex flex-col items-end gap-1">
-                        {record.is_clocked_in && !record.clock_out_time && (
+                        {record.clock_in && !record.clock_out && (
                           <Badge variant="default" className="text-xs">
                             Active
                           </Badge>
                         )}
-                        {record.clock_out_time && (
+                        {record.clock_out && (
                           <Badge variant="outline" className="text-xs">
                             Completed
                           </Badge>

@@ -943,6 +943,14 @@ export default function Payroll() {
         net_pay: netPay,
       })
 
+      // Persist NHF opt-out client-side because the backend may recompute NHF
+      // regardless of the value we send. The normalizers read this flag.
+      try {
+        const key = `payroll_nhf_optout:${selectedEmployee}:${selectedPeriod}`
+        if (!includeNhf) localStorage.setItem(key, "1")
+        else localStorage.removeItem(key)
+      } catch {}
+
       // Refresh payroll records to show the new one
       const filters: any = {}
       const role = (user?.role as string) || ''

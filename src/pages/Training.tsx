@@ -145,23 +145,18 @@ export default function Training() {
   useEffect(() => {
     const fetchEmployees = async () => {
       try {
-        const data = await apiService.getEmployees() as any
-        const employeesList: Employee[] = Array.isArray(data) ? data : (data?.data || [])
-        let activeEmployees = employeesList.filter((emp: Employee) => {
-          const s = (emp.employment_status || '').toString().trim().toLowerCase()
-          // Treat missing status as active; exclude only explicit non-active statuses.
-          return !s || s === 'active'
-        })
+        const employeesList = await apiService.getEmployees()
+        let assignableEmployees = employeesList.filter((emp: Employee) => emp.id !== undefined && emp.id !== null)
         
         // Executives, HR Managers, and Corporate HR see ALL employees
         // Line Managers only see employees in their own department
         if (isLineManager && !isExecutiveOrHR && userDepartment) {
           const norm = (s?: string) => (s || '').trim().toLowerCase()
           const target = norm(userDepartment)
-          activeEmployees = activeEmployees.filter(emp => norm(emp.department) === target)
+          assignableEmployees = assignableEmployees.filter(emp => norm(emp.department) === target)
         }
         
-        setEmployees(activeEmployees)
+        setEmployees(assignableEmployees)
       } catch (error) {
         console.error('Failed to fetch employees:', error)
         toast({

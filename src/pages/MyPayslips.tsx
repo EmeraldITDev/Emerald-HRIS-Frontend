@@ -31,7 +31,9 @@ const fetchPayslipDetailForIds = async (period: string, ids: any[]) => {
   for (const id of uniqueStrings(ids)) {
     try {
       return await apiService.getPayslipDetail(id, period);
-    } catch {}
+    } catch {
+      continue;
+    }
   }
   return null;
 };

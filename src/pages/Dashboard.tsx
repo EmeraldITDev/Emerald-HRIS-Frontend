@@ -90,6 +90,8 @@ export default function Dashboard() {
   const [showClockOutDialog, setShowClockOutDialog] = useState(false)
   const [clockOutReason, setClockOutReason] = useState("")
   const [isLunchBreak, setIsLunchBreak] = useState(false)
+  const [showLateClockInDialog, setShowLateClockInDialog] = useState(false)
+  const [lateClockInReason, setLateClockInReason] = useState("")
   const [recentActivities, setRecentActivities] = useState<UserActivity[]>([])
   const [currentMonthCelebrations, setCurrentMonthCelebrations] = useState<Celebration[]>([])
   const [upcomingCelebrations, setUpcomingCelebrations] = useState<Celebration[]>([])
@@ -230,6 +232,25 @@ export default function Dashboard() {
     )
     if (me && me.id) setCurrentEmployeeId(Number(me.id))
   }, [user, allEmployees])
+
+  // Fallback: ask backend for the authenticated user's employee_id
+  // so admins / users without a directory email match can still clock in.
+  useEffect(() => {
+    if (!user || currentEmployeeId) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const ctx = await apiService.getLeaveSubmitContext()
+        const eid = (ctx as any)?.employee_id
+        if (!cancelled && eid && !currentEmployeeId) {
+          setCurrentEmployeeId(Number(eid))
+        }
+      } catch (e) {
+        // non-fatal
+      }
+    })()
+    return () => { cancelled = true }
+  }, [user, currentEmployeeId])
 
   useEffect(() => {
     loadTodayStatus()
@@ -565,11 +586,9 @@ export default function Dashboard() {
     const isAdminBypass = user.role === 'hr_manager' || user.role === 'corporate_hr' || isTestMode
     const afterNine = hour > 9 || (hour === 9 && minute > 0)
     if (afterNine && !isAdminBypass) {
-      toast({
-        title: "Clock-in window closed",
-        description: "Clock-in is only allowed before 9:00 AM. Please contact HR Manager or Corporate HR for an admin bypass.",
-        variant: "destructive",
-      })
+      // Open the late clock-in approval dialog instead of blocking outright.
+      setLateClockInReason("")
+      setShowLateClockInDialog(true)
       return
     }
 
@@ -684,6 +703,41 @@ export default function Dashboard() {
     } catch (error: any) {
       console.error('Early clock-out request error:', error)
       const msg = error?.response?.data?.message || error?.message || "Failed to submit early clock-out request."
+      toast({ title: "Error", description: msg, variant: "destructive" })
+    } finally {
+      setIsPunching(false)
+    }
+  }
+
+  const handleConfirmLateClockIn = async () => {
+    if (!user || !currentEmployeeId) {
+      toast({ title: "Error", description: "No user logged in or employee record not found.", variant: "destructive" })
+      return
+    }
+    if (!lateClockInReason.trim()) {
+      toast({
+        title: "Reason Required",
+        description: "Please provide a reason for the late clock-in approval request.",
+        variant: "destructive",
+      })
+      return
+    }
+    try {
+      setIsPunching(true)
+      await apiService.submitLateClockinRequest({
+        employee_id: currentEmployeeId,
+        reason: lateClockInReason.trim(),
+        requested_at: new Date().toISOString(),
+      })
+      toast({
+        title: "Approval Request Submitted",
+        description: "Your late clock-in request has been sent to HR Manager / Corporate HR for approval.",
+      })
+      setShowLateClockInDialog(false)
+      setLateClockInReason("")
+    } catch (error: any) {
+      console.error('Late clock-in request error:', error)
+      const msg = error?.data?.message || error?.message || "Failed to submit late clock-in request."
       toast({ title: "Error", description: msg, variant: "destructive" })
     } finally {
       setIsPunching(false)
@@ -853,6 +907,43 @@ export default function Dashboard() {
             </Button>
             <Button onClick={handleConfirmClockOut} disabled={isPunching}>
               Confirm
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Late Clock-In Approval Dialog */}
+      <Dialog open={showLateClockInDialog} onOpenChange={setShowLateClockInDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Late Clock-In Approval Request</DialogTitle>
+            <DialogDescription>
+              Clock-in is only allowed before 9:00 AM. Please provide a reason for clocking in late.
+              Your request will be sent to HR Manager / Corporate HR for approval and you will only
+              be clocked in once it is approved.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="late-reason">Reason</Label>
+              <Textarea
+                id="late-reason"
+                placeholder="e.g., Traffic delay, Medical appointment, Family emergency"
+                value={lateClockInReason}
+                onChange={(e) => setLateClockInReason(e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setShowLateClockInDialog(false)
+              setLateClockInReason("")
+            }}>
+              Cancel
+            </Button>
+            <Button onClick={handleConfirmLateClockIn} disabled={isPunching}>
+              Submit for Approval
             </Button>
           </DialogFooter>
         </DialogContent>

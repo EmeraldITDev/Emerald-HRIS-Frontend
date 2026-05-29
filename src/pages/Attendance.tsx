@@ -132,6 +132,8 @@ export default function Attendance() {
   const [todayAttendance, setTodayAttendance] = useState<any[]>([]);
   const [showClockOutDialog, setShowClockOutDialog] = useState(false);
   const [clockOutReason, setClockOutReason] = useState("");
+  const [showLateClockInDialog, setShowLateClockInDialog] = useState(false);
+  const [lateClockInReason, setLateClockInReason] = useState("");
   const [isLunchBreak, setIsLunchBreak] = useState(false);
   const [selectedLeaveRequest, setSelectedLeaveRequest] = useState<any>(null);
   const [showLeaveDetailsDialog, setShowLeaveDetailsDialog] = useState(false);
@@ -811,11 +813,9 @@ export default function Attendance() {
     const isAdminBypass = user.role === 'hr_manager' || user.role === 'corporate_hr';
     const afterNine = hour > 9 || (hour === 9 && minute > 0);
     if (afterNine && !isAdminBypass) {
-      toast({
-        title: "Clock-in window closed",
-        description: "Clock-in is only allowed before 9:00 AM. Please contact HR Manager or Corporate HR for an admin bypass.",
-        variant: "destructive",
-      });
+      // Open late clock-in approval dialog instead of blocking outright.
+      setLateClockInReason("");
+      setShowLateClockInDialog(true);
       return;
     }
 
@@ -966,6 +966,44 @@ export default function Attendance() {
       toast({
         title: "Request Failed",
         description: error?.message || "Could not submit your early clock-out request.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsPunching(false);
+    }
+  };
+
+  const handleConfirmLateClockIn = async () => {
+    if (!user || !currentEmployeeId) {
+      toast({ title: "Error", description: "No user logged in or employee ID not found.", variant: "destructive" });
+      return;
+    }
+    if (!lateClockInReason.trim()) {
+      toast({
+        title: "Reason Required",
+        description: "Please provide a reason for the late clock-in approval request.",
+        variant: "destructive",
+      });
+      return;
+    }
+    try {
+      setIsPunching(true);
+      await apiService.submitLateClockinRequest({
+        employee_id: currentEmployeeId,
+        reason: lateClockInReason.trim(),
+        requested_at: new Date().toISOString(),
+      });
+      toast({
+        title: "Approval Request Submitted",
+        description: "Your late clock-in request has been sent to HR Manager / Corporate HR for approval.",
+      });
+      setShowLateClockInDialog(false);
+      setLateClockInReason("");
+    } catch (error: any) {
+      console.error("Late clock-in request error:", error);
+      toast({
+        title: "Request Failed",
+        description: error?.message || "Could not submit your late clock-in request.",
         variant: "destructive",
       });
     } finally {
@@ -2214,6 +2252,39 @@ export default function Attendance() {
             </Button>
             <Button onClick={handleConfirmClockOut} disabled={isPunching}>
               {isLunchBreak ? "Start Break" : "Submit Approval Request"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Late Clock-In Approval Dialog */}
+      <Dialog open={showLateClockInDialog} onOpenChange={setShowLateClockInDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Request Late Clock-In Approval</DialogTitle>
+            <DialogDescription>
+              Clock-in is only allowed before 9:00 AM. Submit a reason below — your request will be
+              routed to HR Manager / Corporate HR. You will only be clocked in once it is approved.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Label htmlFor="lateClockInReason" className="mb-2 block">
+              Reason for late clock-in *
+            </Label>
+            <Textarea
+              id="lateClockInReason"
+              placeholder="e.g. traffic delay, medical appointment, family emergency..."
+              value={lateClockInReason}
+              onChange={(e) => setLateClockInReason(e.target.value)}
+              rows={3}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowLateClockInDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleConfirmLateClockIn} disabled={isPunching}>
+              Submit Approval Request
             </Button>
           </DialogFooter>
         </DialogContent>

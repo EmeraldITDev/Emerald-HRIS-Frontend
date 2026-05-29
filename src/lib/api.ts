@@ -1044,6 +1044,40 @@ class ApiService {
     });
   }
 
+  // Late clock-in approval workflow (clock-in after 09:00 for non-admin roles)
+  async submitLateClockinRequest(payload: {
+    employee_id: number;
+    reason: string;
+    requested_at: string;
+  }): Promise<any> {
+    return this.request<any>('/attendance/late-clockin-request', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async getLateClockinRequests(params?: { status?: string; employee_id?: number }): Promise<any> {
+    const qp = new URLSearchParams();
+    if (params?.status) qp.append('status', params.status);
+    if (params?.employee_id != null) qp.append('employee_id', String(params.employee_id));
+    const q = qp.toString();
+    return this.request<any>(`/attendance/late-clockin-requests${q ? `?${q}` : ''}`);
+  }
+
+  async approveLateClockinRequest(id: number | string, approver_notes?: string): Promise<any> {
+    return this.request<any>(`/attendance/late-clockin-requests/${id}/approve`, {
+      method: 'POST',
+      body: JSON.stringify({ approver_notes: approver_notes ?? '' }),
+    });
+  }
+
+  async rejectLateClockinRequest(id: number | string, approver_notes: string): Promise<any> {
+    return this.request<any>(`/attendance/late-clockin-requests/${id}/reject`, {
+      method: 'POST',
+      body: JSON.stringify({ approver_notes }),
+    });
+  }
+
   // Analytics
   async getHeadcountTrends(): Promise<any> {
     return this.request<any>('/analytics/headcount-trends');

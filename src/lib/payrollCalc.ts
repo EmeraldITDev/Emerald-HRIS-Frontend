@@ -221,9 +221,19 @@ export const normalizePayrollRecord = (
  */
 export const normalizePayslipDetail = (detail: any, employee?: Partial<Employee> | null): any => {
   if (!detail) return detail
-  const detailEmpId = detail?.employee?.id ?? detail?.employee_id ?? detail?.employeeCode
-  const detailPeriod = detail?.pay_period ?? detail?.payPeriod
-  const annualRentRelief = getAnnualRentRelief(detailEmpId, detailPeriod)
+  const detailEmpIds = [
+    detail?.employee?.id,
+    detail?.employee?.employee_id,
+    detail?.employee?.employee_code,
+    detail?.employee_id,
+    detail?.employeeCode,
+    detail?.employee_code,
+    (employee as any)?.id,
+    (employee as any)?.employee_id,
+    (employee as any)?.employee_code,
+  ]
+  const detailPeriods = [detail?.pay_period, detail?.payPeriod, detail?.period]
+  const annualRentRelief = getAnnualRentRelief(detailEmpIds, detailPeriods)
   const pkg = getEmployeePayrollPackage(employee, { annualRentRelief })
   if (pkg.annualGross === 0) return detail
 
@@ -232,7 +242,7 @@ export const normalizePayslipDetail = (detail: any, employee?: Partial<Employee>
   const commission = toMoneyNumber(detail?.earnings?.commission)
   const otherDeductions = toMoneyNumber(detail?.deductions?.otherDeductions)
   const detailNhfRaw = detail?.deductions?.nhf
-  const optedOut = isNhfOptedOut(detailEmpId, detailPeriod)
+  const optedOut = isNhfOptedOut(detailEmpIds, detailPeriods)
   const nhf = optedOut
     ? 0
     : detailNhfRaw !== undefined && detailNhfRaw !== null

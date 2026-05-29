@@ -1245,7 +1245,7 @@ export default function Payroll() {
                   <p className="text-xs text-muted-foreground mt-1">
                     {calculations.employmentType === "Contract" 
                       ? "Monthly contract payment"
-                      : "Auto-filled from Gross Salary (Annual) ÷ 12."}
+                      : "Auto-filled as 40% of Monthly Gross (Basic component of the 40/20/9/31 split)."}
                   </p>
                 </div>
 

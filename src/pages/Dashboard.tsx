@@ -299,6 +299,17 @@ export default function Dashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentEmployeeId])
 
+  const findApprovedPostLunchRequest = async () => {
+    if (!currentEmployeeId) return null
+    const todayStr = format(new Date(), 'yyyy-MM-dd')
+    const res: any = await apiService.getLateClockinRequests({ employee_id: currentEmployeeId })
+    return extractRows(res).find((r: any) =>
+      Number(r.employee_id) === Number(currentEmployeeId) &&
+      dateOnly(r.requested_at || r.created_at) === todayStr &&
+      isApprovedPostLunchRequest(r)
+    ) || null
+  }
+
   // Poll for approval of a pending post-lunch late-return request.
   // When HR approves, automatically end the lunch break and refresh status
   // so the dashboard reflects "clocked back in" without a manual refresh.

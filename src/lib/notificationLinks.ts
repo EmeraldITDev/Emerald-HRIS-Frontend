@@ -21,15 +21,36 @@ export function resolveNotificationLink(
     role === "corporate_hr" ||
     role === "executive";
 
-  // Approved leave notifications → /attendance
-  const isApprovedLeave =
-    type.includes("leave") && /approve/i.test(type);
+  // Final-approved/rejected leave (employee-facing) → /attendance
+  const isFinalLeaveDecision =
+    type === "leave_finally_approved" ||
+    type === "leave_finally_rejected" ||
+    type === "leave_rejected_by_line_manager";
+
+  // Leave needing action by manager/HR
+  const isLeavePendingManager = type === "leave_request_submitted";
+  const isLeavePendingHr = type === "leave_approved_by_line_manager";
 
   // Normalize backend-provided link if it points at obsolete routes.
   const raw = n?.link || "";
-  if (isApprovedLeave) {
+  if (isFinalLeaveDecision) {
     return "/attendance";
   }
+  if (isLeavePendingManager) {
+    return "/approvals/leave?stage=manager";
+  }
+  if (isLeavePendingHr) {
+    return "/approvals/leave?stage=hr";
+  }
+
+  // Attendance approval workflows (late clock-in / early clock-out)
+  if (type.startsWith("early_clockout_request_") || type.startsWith("late_clockin_request_")) {
+    if (/_approved$|_rejected$/.test(type)) return "/attendance";
+    // pending/submitted → approvers
+    if (isManager) return "/attendance?tab=approvals";
+    return "/attendance";
+  }
+
   if (raw) {
     // /leaves/{id} (approved leave detail) → /attendance
     if (/^\/leaves\/\d+/i.test(raw)) {
@@ -80,6 +101,15 @@ export function resolveNotificationLink(
       n?.data?.pay_period || n?.data?.payPeriod || n?.data?.period || null;
     const base = isAdminPayroll ? "/payroll/payslips" : "/payroll/my-payslips";
     return period ? `${base}/${period}` : base;
+  }
+
+  if (type.startsWith("benefit_")) {
+    return "/benefits";
+  }
+
+  if (type.startsWith("announcement_")) {
+    const aid = n?.data?.announcement_id ?? n?.data?.id ?? n?.related_id ?? null;
+    return aid != null ? `/announcements/${aid}` : "/announcements";
   }
 
   return null;

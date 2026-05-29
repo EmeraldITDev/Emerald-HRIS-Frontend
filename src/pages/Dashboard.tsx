@@ -815,16 +815,16 @@ export default function Dashboard() {
           <div className="flex flex-col sm:flex-row items-center gap-4">
             <div className="flex-1 space-y-2">
               <div className="text-sm text-muted-foreground">
-                {todayStatus?.clock_in_time ? (
+                {todayStatus?.clock_in ? (
                   <>
                     <div className="flex items-center gap-2">
                       <LogIn className="h-4 w-4 text-success" />
-                      <span>Clocked in at {todayStatus.clock_in_time}</span>
+                      <span>Clocked in at {formatTimeOnly(todayStatus.clock_in)}</span>
                     </div>
-                    {todayStatus?.clock_out_time && (
+                    {todayStatus?.clock_out && (
                       <div className="flex items-center gap-2 mt-1">
                         <LogOut className="h-4 w-4 text-destructive" />
-                        <span>Clocked out at {todayStatus.clock_out_time}</span>
+                        <span>Clocked out at {formatTimeOnly(todayStatus.clock_out)}</span>
                       </div>
                     )}
                   </>
@@ -837,7 +837,7 @@ export default function Dashboard() {
               </div>
             </div>
             <div className="flex gap-2">
-              {!todayStatus?.is_clocked_in ? (
+              {!(todayStatus?.clock_in && !todayStatus?.clock_out) ? (
                 <Button 
                   onClick={handleClockIn}
                   disabled={isPunching}
@@ -850,16 +850,16 @@ export default function Dashboard() {
                 <>
                   <Button 
                     onClick={handleLunchBreak}
-                    disabled={isPunching || todayStatus?.clock_out_time}
-                    variant={todayStatus?.lunch_break_start && !todayStatus?.lunch_break_end ? "default" : "outline"}
-                    className={cn("gap-2", todayStatus?.lunch_break_start && !todayStatus?.lunch_break_end && "bg-success hover:bg-success/90 text-white")}
+                    disabled={isPunching || !!todayStatus?.clock_out}
+                    variant={todayStatus?.break_start && !todayStatus?.break_end ? "default" : "outline"}
+                    className={cn("gap-2", todayStatus?.break_start && !todayStatus?.break_end && "bg-success hover:bg-success/90 text-white")}
                   >
                     <Timer className="h-4 w-4" />
-                    {todayStatus?.lunch_break_start && !todayStatus?.lunch_break_end ? "On Lunch Break" : "Lunch Break"}
+                    {todayStatus?.break_start && !todayStatus?.break_end ? "On Lunch Break" : "Lunch Break"}
                   </Button>
                   <Button 
                     onClick={handleClockOut}
-                    disabled={isPunching || todayStatus?.clock_out_time}
+                    disabled={isPunching || !!todayStatus?.clock_out}
                     variant="destructive"
                     className="gap-2"
                   >

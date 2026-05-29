@@ -25,34 +25,92 @@ function triggerDownload(blob: Blob, filename: string) {
 const ngn = (v: number | string | undefined) =>
   v == null ? "—" : new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", maximumFractionDigits: 0 }).format(Number(v) || 0);
 
+const uniqueStrings = (values: any[]) => Array.from(new Set(values.filter(Boolean).map(String)));
+
+const fetchPayslipDetailForIds = async (period: string, ids: any[]) => {
+  for (const id of uniqueStrings(ids)) {
+    try {
+      return await apiService.getPayslipDetail(id, period);
+    } catch {
+      continue;
+    }
+  }
+  return null;
+};
+
 export default function MyPayslips() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [items, setItems] = useState<any[]>([]);
+  const [detailsByPeriod, setDetailsByPeriod] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
   const [employee, setEmployee] = useState<any>(null);
 
   useEffect(() => {
-    apiService.getMyProfile().then(setEmployee).catch(() => {});
-  }, []);
+    const load = async () => {
+      setLoading(true);
+      try {
+        const [res, profile] = await Promise.all([
+          apiService.getMyPayslips(1),
+          apiService.getMyProfile().catch(() => null),
+        ]);
+        const rows = Array.isArray((res as any)?.data) ? (res as any).data : [];
+        setEmployee(profile);
+        setItems(rows);
 
-  const load = async () => {
-    setLoading(true);
-    try {
-      const res: any = await apiService.getMyPayslips(1);
-      setItems(res?.data || []);
-    } catch (e: any) {
-      toast({ title: "Failed to load payslips", description: e?.message, variant: "destructive" });
-    } finally { setLoading(false); }
-  };
-  useEffect(() => { load(); }, []);
+        const entries = await Promise.all(
+          rows.map(async (row: any) => {
+            const period = row.pay_period || row.payPeriod;
+            if (!period) return null;
+            const detail = await fetchPayslipDetailForIds(period, [
+              user?.employee_id,
+              row.employee_id,
+              row.employee?.id,
+              row.employee?.employee_id,
+              row.employeeCode,
+              profile?.id,
+              profile?.employee_id,
+              profile?.employee_code,
+            ]);
+            return detail ? [period, detail] as const : null;
+          })
+        );
+        setDetailsByPeriod(Object.fromEntries(entries.filter(Boolean) as Array<readonly [string, any]>));
+      } catch (e: any) {
+        toast({ title: "Failed to load payslips", description: e?.message, variant: "destructive" });
+      } finally { setLoading(false); }
+    };
 
-  const normalizedItems = items.map((r) => normalizePayrollRecord(r as any, employee));
+    load();
+  }, [user?.employee_id]);
+
+  const normalizedItems = items.map((r) => {
+    const period = r.pay_period || r.payPeriod;
+    const detail = period ? detailsByPeriod[period] : null;
+    if (!detail) return normalizePayrollRecord(r as any, employee);
+    const normalizedDetail = normalizePayslipDetail(detail, employee);
+    return {
+      ...normalizePayrollRecord(r as any, employee),
+      pay_period: period,
+      pay_date: normalizedDetail.payDate || normalizedDetail.pay_date || r.pay_date || r.payDate,
+      status: normalizedDetail.status || r.status,
+      gross_pay: normalizedDetail.summary?.grossSalary ?? normalizedDetail.totals?.grossSalary ?? r.gross_pay,
+      total_deductions: normalizedDetail.summary?.totalDeductions ?? r.total_deductions,
+      net_pay: normalizedDetail.summary?.netSalary ?? r.net_pay,
+    };
+  });
 
   const buildLocal = async (period: string) => {
-    if (!user?.employee_id) return null;
+    const detailFromList = detailsByPeriod[period];
+    if (detailFromList) return toPayslipLike(normalizePayslipDetail(detailFromList, employee));
     try {
-      const detail = await apiService.getPayslipDetail(user.employee_id, period);
+      const detail = await fetchPayslipDetailForIds(period, [
+        user?.employee_id,
+        employee?.id,
+        employee?.employee_id,
+        employee?.employee_code,
+      ]);
+      if (!detail) throw new Error("Payslip detail not found");
       return toPayslipLike(normalizePayslipDetail(detail, employee));
     } catch {
       const row = normalizedItems.find((r: any) => (r.pay_period || r.payPeriod) === period);

@@ -241,7 +241,7 @@ export default function Announcements() {
 
   const buildTargetAudience = () => {
     if (targetMode === 'all') return 'all_employees'
-    if (targetMode === 'department') return targetDepartments.join(',') || 'all_employees'
+    if (targetMode === 'department') return 'department'
     return 'individual'
   }
 

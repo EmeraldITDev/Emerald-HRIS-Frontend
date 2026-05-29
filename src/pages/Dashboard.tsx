@@ -647,6 +647,12 @@ export default function Dashboard() {
       toast({ title: "Error", description: "No user logged in.", variant: "destructive" })
       return
     }
+    // If currently on break, clicking again ends the break (resume working).
+    const onBreak = !!(todayStatus?.break_start && !todayStatus?.break_end)
+    if (onBreak) {
+      endLunchBreak()
+      return
+    }
     const currentHour = new Date().getHours()
     const isAdminBypass = user.role === 'hr_manager' || user.role === 'corporate_hr' || isTestMode
     if ((currentHour >= 12 && currentHour < 14) || isAdminBypass) {
@@ -657,6 +663,29 @@ export default function Dashboard() {
         description: "Lunch break is only available between 12:00 PM and 2:00 PM.",
         variant: "destructive"
       })
+    }
+  }
+
+  const endLunchBreak = async () => {
+    if (!user || !currentEmployeeId) return
+    try {
+      setIsPunching(true)
+      const response = await apiService.createAttendance({
+        employee_id: currentEmployeeId,
+        date: new Date().toISOString().split('T')[0],
+        status: 'present',
+        location: 'office',
+        notes: 'Resumed from lunch break',
+      })
+      toast({ title: "Welcome back", description: response.message || "Lunch break ended. You're clocked back in." })
+      saveActivity('lunch_end', `Ended lunch break at ${format(new Date(), 'HH:mm:ss')}`)
+      await loadTodayStatus()
+    } catch (error: any) {
+      console.error('End lunch break error:', error)
+      const msg = error?.response?.data?.message || error?.message || "Failed to end lunch break."
+      toast({ title: "Error", description: msg, variant: "destructive" })
+    } finally {
+      setIsPunching(false)
     }
   }
 

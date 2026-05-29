@@ -40,6 +40,7 @@ import apiService, { Employee } from "@/lib/api"
 import { getCurrentMonthCelebrations, type Celebration } from "@/utils/celebrations"
 import { CelebrationsCard } from "@/components/CelebrationsCard"
 import { LeaveBalanceCard } from "@/components/LeaveBalanceCard"
+import { AttendanceApprovalsCard } from "@/components/AttendanceApprovalsCard"
 
 // Sample attendance records
 const attendanceRecords = [
@@ -1154,6 +1155,9 @@ export default function Attendance() {
           </div>
         </RoleBasedComponent>
       </div>
+
+      {/* HR / Corporate HR: pending late clock-in & early clock-out approvals */}
+      <AttendanceApprovalsCard />
 
       {/* Weekly Attendance View - For All Users */}
       <Card className="border-border/50 shadow-sm mb-6">

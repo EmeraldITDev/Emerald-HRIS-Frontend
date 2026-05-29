@@ -54,6 +54,7 @@ function formatAttTime(value?: string | null): string {
 import { CelebrationsCard } from "@/components/CelebrationsCard"
 import { LeaveBalanceCard } from "@/components/LeaveBalanceCard"
 import { AttendanceApprovalsCard } from "@/components/AttendanceApprovalsCard"
+import { MyAttendanceRequestsCard } from "@/components/MyAttendanceRequestsCard"
 
 // Sample attendance records
 const attendanceRecords = [

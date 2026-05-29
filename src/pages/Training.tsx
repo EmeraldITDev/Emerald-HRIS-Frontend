@@ -549,6 +549,8 @@ export default function Training() {
                 <div className="border rounded-md p-3 max-h-32 overflow-y-auto">
                   {isLoadingEmployees ? (
                     <div className="text-sm text-muted-foreground">Loading employees...</div>
+                  ) : employees.length === 0 ? (
+                    <div className="text-sm text-muted-foreground">No employees available</div>
                   ) : (
                     employees.map((employee) => (
                       <div key={employee.id} className="flex items-center space-x-2 py-1">

@@ -120,6 +120,10 @@ function isOnLunchBreak(record: any): boolean {
   return !!(record?.break_start && !record?.break_end)
 }
 
+function lunchEndOverrideKey(employeeId: number, today: string): string {
+  return `lunchBreak:ended:${employeeId}:${today}`
+}
+
 function isApprovedPostLunchRequest(request: any): boolean {
   return (request?.status || "").toLowerCase() === "approved" &&
     typeof request?.reason === "string" &&
@@ -252,7 +256,11 @@ export default function Dashboard() {
       const response: any = await apiService.getAttendance()
       const today = format(new Date(), 'yyyy-MM-dd')
       const attendanceArray = extractRows(response)
-      const todayRecord = selectTodayRecord(attendanceArray, currentEmployeeId, today)
+      let todayRecord = selectTodayRecord(attendanceArray, currentEmployeeId, today)
+      const localBreakEnd = localStorage.getItem(lunchEndOverrideKey(currentEmployeeId, today))
+      if (todayRecord && isOnLunchBreak(todayRecord) && localBreakEnd) {
+        todayRecord = { ...todayRecord, break_end: localBreakEnd }
+      }
       setTodayStatus(todayRecord || null)
       return todayRecord || null
     } catch (e) {

@@ -51,7 +51,9 @@ export const getEmployeePayrollPackage = (employee?: Partial<Employee> | null) =
       annualHousing = annualTransport = annualMeal = annualOther = 0
     } else {
       // Monthly Basic = Annual Gross / 12 — no percentage-based defaulting
-      annualBasic = annualBasic || annualGrossFromProfile
+      // Always derive from the profile gross so stale `basic_salary` values
+      // persisted under the previous 40%-of-gross rule are ignored.
+      annualBasic = annualGrossFromProfile
       annualHousing = annualHousing || annualGrossFromProfile * 0.2
       annualTransport = annualTransport || annualGrossFromProfile * 0.09
       annualOther = annualOther || annualGrossFromProfile * 0.31

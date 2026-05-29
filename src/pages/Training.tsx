@@ -146,7 +146,11 @@ export default function Training() {
     const fetchEmployees = async () => {
       try {
         const data = await apiService.getEmployees()
-        let activeEmployees = data.filter(emp => emp.employment_status === 'Active')
+        let activeEmployees = data.filter(emp => {
+          const s = (emp.employment_status || '').toString().trim().toLowerCase()
+          // Treat missing status as active; exclude only explicit non-active statuses.
+          return !s || s === 'active'
+        })
         
         // Executives, HR Managers, and Corporate HR see ALL employees
         // Line Managers only see employees in their own department

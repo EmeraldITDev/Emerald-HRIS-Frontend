@@ -151,7 +151,9 @@ export default function Training() {
         // Executives, HR Managers, and Corporate HR see ALL employees
         // Line Managers only see employees in their own department
         if (isLineManager && !isExecutiveOrHR && userDepartment) {
-          activeEmployees = activeEmployees.filter(emp => emp.department === userDepartment)
+          const norm = (s?: string) => (s || '').trim().toLowerCase()
+          const target = norm(userDepartment)
+          activeEmployees = activeEmployees.filter(emp => norm(emp.department) === target)
         }
         
         setEmployees(activeEmployees)

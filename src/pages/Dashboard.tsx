@@ -794,6 +794,7 @@ export default function Dashboard() {
       })
       toast({ title: "Welcome back", description: response.message || "Lunch break ended. You're clocked back in." })
       saveActivity('lunch_end', `Ended lunch break at ${format(new Date(), 'HH:mm:ss')}`)
+      localStorage.setItem(lunchEndOverrideKey(currentEmployeeId, format(new Date(), 'yyyy-MM-dd')), fallbackBreakEnd)
       const refreshedStatus = await loadTodayStatus()
       if (isOnLunchBreak(refreshedStatus)) {
         setTodayStatus((previous: any) => previous ? { ...previous, break_end: fallbackBreakEnd } : previous)

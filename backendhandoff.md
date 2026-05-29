@@ -42,6 +42,14 @@ Conventions:
   - Schema: `early_clockout_requests (id, employee_id, reason, requested_at, status ENUM('pending','approved','rejected'), approver_user_id NULL, approver_notes NULL, decided_at NULL, created_at)`.
   - RBAC: only `hr_manager`, `corporate_hr`, `executive` may approve/reject. Self-approval guard: an `hr_manager` or `corporate_hr` who submitted the request cannot approve their own (they shouldn't hit this flow at all since they bypass, but enforce server-side).
   - Once the approval endpoints ship, remove the `localStorage` bridge and POST the request directly via the API.
+- **Late clock-in approval endpoints** (new — mirrors early clock-out flow):
+  - `POST /attendance/late-clockin-request` — body: `{ employee_id, reason, requested_at }`. Creates a pending row in `late_clockin_requests`. Notifies HR Manager + Corporate HR (notification deep-links to the approval queue).
+  - `GET /attendance/late-clockin-requests?status=pending` — list for approvers.
+  - `POST /attendance/late-clockin-requests/{id}/approve` — body: `{ approver_notes? }`. On approval the server performs the actual `clock_in` write at the originally requested timestamp (or `now()` per policy), marks the request `approved`, writes `attendance_audit_log`, and notifies the employee. The employee is NOT clocked in until approval.
+  - `POST /attendance/late-clockin-requests/{id}/reject` — body: `{ approver_notes }`. Marks `rejected`, notifies the employee, no attendance row is created.
+  - Schema: `late_clockin_requests (id, employee_id, reason, requested_at, status ENUM('pending','approved','rejected'), approver_user_id NULL, approver_notes NULL, decided_at NULL, created_at)`.
+  - RBAC: only `hr_manager`, `corporate_hr`, `executive` may approve/reject. `hr_manager` / `corporate_hr` bypass the late window entirely and should never enter this flow as requesters; enforce self-approval guard server-side regardless.
+  - Notification payload: `{ type: 'late_clockin_request', request_id, employee_id, employee_name, reason, requested_at }` delivered to all users with role in (`hr_manager`, `corporate_hr`).
 - Audit log table (new): `attendance_audit_log`
   - Columns: `id`, `actor_user_id`, `target_employee_id`, `action`, `bypass`, `reason`, `original_timestamp`, `approved_timestamp`, `created_at`.
 - Server-side timezone: store all timestamps in UTC; compare windows in `Africa/Lagos`.

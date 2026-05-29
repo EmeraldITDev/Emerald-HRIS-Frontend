@@ -102,16 +102,18 @@ export const getEmployeePayrollPackage = (
 
   if (annualGrossFromProfile > 0) {
     if (isContract) {
-      annualBasic = annualBasic || annualGrossFromProfile
+      annualBasic = annualGrossFromProfile
       annualHousing = annualTransport = annualMeal = annualOther = 0
     } else {
-      // Monthly Basic = Annual Gross / 12 — no percentage-based defaulting
-      // Always derive from the profile gross so stale `basic_salary` values
-      // persisted under the previous 40%-of-gross rule are ignored.
-      annualBasic = annualGrossFromProfile
-      annualHousing = annualHousing || annualGrossFromProfile * 0.2
-      annualTransport = annualTransport || annualGrossFromProfile * 0.09
-      annualOther = annualOther || annualGrossFromProfile * 0.31
+      // Authoritative split — mirrors the backend payslip generator
+      // (docs/backend-payslip-calculation-brief.md). Always derive all four
+      // lines from gross_salary so the frontend view matches the server PDF
+      // and the printed (40/20/9/31) labels reflect the actual ratios.
+      annualBasic = annualGrossFromProfile * 0.4
+      annualHousing = annualGrossFromProfile * 0.2
+      annualTransport = annualGrossFromProfile * 0.09
+      annualOther = annualGrossFromProfile * 0.31
+      annualMeal = 0
     }
   }
 

@@ -118,31 +118,19 @@ export default function MyPayslips() {
     }
   };
   const handlePdf = async (period: string) => {
-    try {
-      const blob = await apiService.exportMyPayslipPdf(period);
-      triggerDownload(blob, `Payslip_${period}.pdf`);
-    } catch (e: any) {
-      const p = await buildLocal(period);
-      if (p) {
-        generatePayslipPdf(p, `Payslip_${period}.pdf`);
-        toast({ title: "PDF generated locally", description: "Server export failed; built from your payslip data." });
-      } else {
-        toast({ title: "PDF export failed", description: e?.message, variant: "destructive" });
-      }
+    const p = await buildLocal(period);
+    if (p) {
+      generatePayslipPdf(p, `Payslip_${period}.pdf`);
+    } else {
+      toast({ title: "PDF export failed", description: "Payslip data unavailable.", variant: "destructive" });
     }
   };
   const handleCsv = async (period: string) => {
-    try {
-      const blob = await apiService.exportMyPayslipCsv(period);
-      triggerDownload(blob, `Payslip_${period}.csv`);
-    } catch (e: any) {
-      const p = await buildLocal(period);
-      if (p) {
-        generatePayslipCsv(p, `Payslip_${period}.csv`);
-        toast({ title: "CSV generated locally", description: "Server export failed; built from your payslip data." });
-      } else {
-        toast({ title: "CSV export failed", description: e?.message, variant: "destructive" });
-      }
+    const p = await buildLocal(period);
+    if (p) {
+      generatePayslipCsv(p, `Payslip_${period}.csv`);
+    } else {
+      toast({ title: "CSV export failed", description: "Payslip data unavailable.", variant: "destructive" });
     }
   };
 

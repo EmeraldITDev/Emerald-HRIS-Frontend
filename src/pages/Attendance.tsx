@@ -40,6 +40,7 @@ import apiService, { Employee } from "@/lib/api"
 import { getCurrentMonthCelebrations, type Celebration } from "@/utils/celebrations"
 import { CelebrationsCard } from "@/components/CelebrationsCard"
 import { LeaveBalanceCard } from "@/components/LeaveBalanceCard"
+import { AttendanceApprovalsCard } from "@/components/AttendanceApprovalsCard"
 
 // Sample attendance records
 const attendanceRecords = [

@@ -884,7 +884,7 @@ export default function Payroll() {
         ? manualMonthlyBasic
         : payrollPackage.monthlyBasic
       const annualGross = manualMonthlyBasic > 0
-        ? roundMoney(manualAnnualBasic / 0.4)
+        ? roundMoney(manualAnnualBasic)
         : payrollPackage.annualGross
       const monthlyGross = manualMonthlyBasic > 0
         ? roundMoney(annualGross / 12)

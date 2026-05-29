@@ -722,9 +722,9 @@ export default function Payroll() {
       yPos += 5
       pdf.line(20, yPos, pageWidth - 20, yPos)
       yPos += 7
-      pdf.text("Basic Salary (40%)", 20, yPos)
+      pdf.text("Basic Salary", 20, yPos)
       pdf.text(`₦${monthlyBasic.toFixed(2)}`, 120, yPos)
-      pdf.text("40% of Gross", 160, yPos)
+      pdf.text("Gross ÷ 12", 160, yPos)
       
       yPos += 7
       pdf.text("Housing Allowance (20%)", 20, yPos)
@@ -884,7 +884,7 @@ export default function Payroll() {
         ? manualMonthlyBasic
         : payrollPackage.monthlyBasic
       const annualGross = manualMonthlyBasic > 0
-        ? roundMoney(manualAnnualBasic / 0.4)
+        ? roundMoney(manualAnnualBasic)
         : payrollPackage.annualGross
       const monthlyGross = manualMonthlyBasic > 0
         ? roundMoney(annualGross / 12)
@@ -1213,7 +1213,7 @@ export default function Payroll() {
                   <p className="text-xs text-muted-foreground mt-1">
                     {calculations.employmentType === "Contract" 
                       ? "Monthly contract payment"
-                      : "Auto-filled from Gross Salary (Annual) ÷ 12. Basic = 40% of Gross."}
+                      : "Auto-filled from Gross Salary (Annual) ÷ 12."}
                   </p>
                 </div>
 

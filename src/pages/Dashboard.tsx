@@ -106,6 +106,7 @@ export default function Dashboard() {
   const [isLunchBreak, setIsLunchBreak] = useState(false)
   const [showLateClockInDialog, setShowLateClockInDialog] = useState(false)
   const [lateClockInReason, setLateClockInReason] = useState("")
+  const [lateClockInContext, setLateClockInContext] = useState<"morning" | "post_lunch">("morning")
   const [recentActivities, setRecentActivities] = useState<UserActivity[]>([])
   const [currentMonthCelebrations, setCurrentMonthCelebrations] = useState<Celebration[]>([])
   const [upcomingCelebrations, setUpcomingCelebrations] = useState<Celebration[]>([])
@@ -602,6 +603,7 @@ export default function Dashboard() {
     if (afterNine && !isAdminBypass) {
       // Open the late clock-in approval dialog instead of blocking outright.
       setLateClockInReason("")
+      setLateClockInContext("morning")
       setShowLateClockInDialog(true)
       return
     }
@@ -650,6 +652,15 @@ export default function Dashboard() {
     // If currently on break, clicking again ends the break (resume working).
     const onBreak = !!(todayStatus?.break_start && !todayStatus?.break_end)
     if (onBreak) {
+      const currentHour = new Date().getHours()
+      const isAdminBypass = user.role === 'hr_manager' || user.role === 'corporate_hr' || isTestMode
+      // Lunch window ends at 2:00 PM. Returning after that requires HR approval.
+      if (currentHour >= 14 && !isAdminBypass) {
+        setLateClockInReason("")
+        setLateClockInContext("post_lunch")
+        setShowLateClockInDialog(true)
+        return
+      }
       endLunchBreak()
       return
     }
@@ -769,12 +780,14 @@ export default function Dashboard() {
       setIsPunching(true)
       await apiService.submitLateClockinRequest({
         employee_id: currentEmployeeId,
-        reason: lateClockInReason.trim(),
+        reason: `${lateClockInContext === "post_lunch" ? "[Late return from lunch] " : ""}${lateClockInReason.trim()}`,
         requested_at: new Date().toISOString(),
       })
       toast({
         title: "Approval Request Submitted",
-        description: "Your late clock-in request has been sent to HR Manager / Corporate HR for approval.",
+        description: lateClockInContext === "post_lunch"
+          ? "Your late-return-from-lunch request has been sent to HR Manager / Corporate HR. You remain on break until it is approved."
+          : "Your late clock-in request has been sent to HR Manager / Corporate HR for approval.",
       })
       setShowLateClockInDialog(false)
       setLateClockInReason("")
@@ -959,11 +972,15 @@ export default function Dashboard() {
       <Dialog open={showLateClockInDialog} onOpenChange={setShowLateClockInDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Late Clock-In Approval Request</DialogTitle>
+            <DialogTitle>
+              {lateClockInContext === "post_lunch"
+                ? "Late Return From Lunch — Approval Required"
+                : "Late Clock-In Approval Request"}
+            </DialogTitle>
             <DialogDescription>
-              Clock-in is only allowed before 9:00 AM. Please provide a reason for clocking in late.
-              Your request will be sent to HR Manager / Corporate HR for approval and you will only
-              be clocked in once it is approved.
+              {lateClockInContext === "post_lunch"
+                ? "You are clocking in outside the allowed lunch window (12:00 PM – 2:00 PM). Please provide a reason for your late return. Your request will be sent to HR Manager / Corporate HR for approval."
+                : "Clock-in is only allowed before 9:00 AM. Please provide a reason for clocking in late. Your request will be sent to HR Manager / Corporate HR for approval and you will only be clocked in once it is approved."}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">

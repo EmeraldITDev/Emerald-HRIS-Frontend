@@ -54,6 +54,7 @@ function formatAttTime(value?: string | null): string {
 import { CelebrationsCard } from "@/components/CelebrationsCard"
 import { LeaveBalanceCard } from "@/components/LeaveBalanceCard"
 import { AttendanceApprovalsCard } from "@/components/AttendanceApprovalsCard"
+import { MyAttendanceRequestsCard } from "@/components/MyAttendanceRequestsCard"
 
 // Sample attendance records
 const attendanceRecords = [
@@ -1171,6 +1172,9 @@ export default function Attendance() {
 
       {/* HR / Corporate HR: pending late clock-in & early clock-out approvals */}
       <AttendanceApprovalsCard />
+
+      {/* Employee self-service: status of my submitted justifications */}
+      <MyAttendanceRequestsCard employeeId={currentEmployeeId} />
 
       {/* Weekly Attendance View - For All Users */}
       <Card className="border-border/50 shadow-sm mb-6">

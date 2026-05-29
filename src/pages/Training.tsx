@@ -774,7 +774,7 @@ export default function Training() {
                 {filteredTrainings.map((training) => {
                   const assignment = trainingAssignments.find(a => String(a.id) === training.id)
                   const isOwnAssignment = assignment && user && (
-                    String(assignment.employee_id) === String(user.employeeId) ||
+                    String(assignment.employee_id) === String((user as any).employee_id ?? (user as any).id) ||
                     `${assignment.employee?.first_name || ''} ${assignment.employee?.last_name || ''}`.trim() === currentUserFullName
                   )
                   return (

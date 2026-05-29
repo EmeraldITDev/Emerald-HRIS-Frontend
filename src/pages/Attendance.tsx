@@ -973,6 +973,44 @@ export default function Attendance() {
     }
   };
 
+  const handleConfirmLateClockIn = async () => {
+    if (!user || !currentEmployeeId) {
+      toast({ title: "Error", description: "No user logged in or employee ID not found.", variant: "destructive" });
+      return;
+    }
+    if (!lateClockInReason.trim()) {
+      toast({
+        title: "Reason Required",
+        description: "Please provide a reason for the late clock-in approval request.",
+        variant: "destructive",
+      });
+      return;
+    }
+    try {
+      setIsPunching(true);
+      await apiService.submitLateClockinRequest({
+        employee_id: currentEmployeeId,
+        reason: lateClockInReason.trim(),
+        requested_at: new Date().toISOString(),
+      });
+      toast({
+        title: "Approval Request Submitted",
+        description: "Your late clock-in request has been sent to HR Manager / Corporate HR for approval.",
+      });
+      setShowLateClockInDialog(false);
+      setLateClockInReason("");
+    } catch (error: any) {
+      console.error("Late clock-in request error:", error);
+      toast({
+        title: "Request Failed",
+        description: error?.message || "Could not submit your late clock-in request.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsPunching(false);
+    }
+  };
+
   // Example helpers (replace your current variants if desired)
   const getButtonText = () => {
     if (!todayStatus?.clock_in) return "Clock In";

@@ -29,25 +29,65 @@ export default function MyPayslips() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [items, setItems] = useState<any[]>([]);
+  const [detailsByPeriod, setDetailsByPeriod] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
   const [employee, setEmployee] = useState<any>(null);
 
   useEffect(() => {
-    apiService.getMyProfile().then(setEmployee).catch(() => {});
-  }, []);
+    const unique = (values: any[]) => Array.from(new Set(values.filter(Boolean).map(String)));
+    const getDetail = async (period: string, profile: any) => {
+      const ids = unique([user?.employee_id, profile?.id, profile?.employee_id, profile?.employee_code]);
+      for (const id of ids) {
+        try {
+          return await apiService.getPayslipDetail(id, period);
+        } catch {}
+      }
+      return null;
+    };
 
-  const load = async () => {
+    const load = async () => {
     setLoading(true);
     try {
-      const res: any = await apiService.getMyPayslips(1);
-      setItems(res?.data || []);
+      const [res, profile] = await Promise.all([
+        apiService.getMyPayslips(1),
+        apiService.getMyProfile().catch(() => null),
+      ]);
+      const rows = Array.isArray((res as any)?.data) ? (res as any).data : [];
+      setEmployee(profile);
+      setItems(rows);
+
+      const entries = await Promise.all(
+        rows.map(async (row: any) => {
+          const period = row.pay_period || row.payPeriod;
+          if (!period) return null;
+          const detail = await getDetail(period, profile);
+          return detail ? [period, detail] as const : null;
+        })
+      );
+      setDetailsByPeriod(Object.fromEntries(entries.filter(Boolean) as Array<readonly [string, any]>));
     } catch (e: any) {
       toast({ title: "Failed to load payslips", description: e?.message, variant: "destructive" });
     } finally { setLoading(false); }
-  };
-  useEffect(() => { load(); }, []);
+    };
 
-  const normalizedItems = items.map((r) => normalizePayrollRecord(r as any, employee));
+    load();
+  }, [user?.employee_id]);
+
+  const normalizedItems = items.map((r) => {
+    const period = r.pay_period || r.payPeriod;
+    const detail = period ? detailsByPeriod[period] : null;
+    if (!detail) return normalizePayrollRecord(r as any, employee);
+    const normalizedDetail = normalizePayslipDetail(detail, employee);
+    return {
+      ...normalizePayrollRecord(r as any, employee),
+      pay_period: period,
+      pay_date: normalizedDetail.payDate || normalizedDetail.pay_date || r.pay_date || r.payDate,
+      status: normalizedDetail.status || r.status,
+      gross_pay: normalizedDetail.summary?.grossSalary ?? normalizedDetail.totals?.grossSalary ?? r.gross_pay,
+      total_deductions: normalizedDetail.summary?.totalDeductions ?? r.total_deductions,
+      net_pay: normalizedDetail.summary?.netSalary ?? r.net_pay,
+    };
+  });
 
   const buildLocal = async (period: string) => {
     if (!user?.employee_id) return null;

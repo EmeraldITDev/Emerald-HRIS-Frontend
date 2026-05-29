@@ -10,6 +10,23 @@ const isNhfOptedOut = (employeeId: unknown, period: unknown): boolean => {
   }
 }
 
+/**
+ * Annual rent-relief amount stored client-side during payroll generation.
+ * Backend currently doesn't persist this, so we mirror it locally so payslip
+ * views, list rows and PDFs can all reflect the same correct PAYE.
+ */
+const getAnnualRentRelief = (employeeId: unknown, period: unknown): number => {
+  if (!employeeId || !period) return 0
+  try {
+    if (typeof localStorage === "undefined") return 0
+    const raw = localStorage.getItem(`payroll_rent_relief:${employeeId}:${period}`)
+    const n = Number(raw)
+    return Number.isFinite(n) && n > 0 ? n : 0
+  } catch {
+    return 0
+  }
+}
+
 export const toMoneyNumber = (value: unknown): number => {
   if (value === null || value === undefined || value === "") return 0
   const normalized = typeof value === "string" ? value.replace(/[₦,\s]/g, "") : value
@@ -19,10 +36,18 @@ export const toMoneyNumber = (value: unknown): number => {
 
 export const roundMoney = (value: number): number => Math.round(value * 100) / 100
 
-export const calculateAnnualPaye = (annualGross: number, annualPension: number, annualNhf: number) => {
+export const calculateAnnualPaye = (
+  annualGross: number,
+  annualPension: number,
+  annualNhf: number,
+  annualRentRelief: number = 0,
+) => {
   const grossForCra = Math.max(annualGross - annualPension - annualNhf, 0)
   const cra = grossForCra * 0.2 + Math.max(grossForCra * 0.01, 200000)
-  const taxableIncome = Math.max(annualGross - cra - annualPension - annualNhf, 0)
+  const taxableIncome = Math.max(
+    annualGross - cra - annualPension - annualNhf - annualRentRelief,
+    0,
+  )
   const bands = [
     [300000, 0.07],
     [300000, 0.11],

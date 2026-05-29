@@ -748,10 +748,11 @@ export default function Dashboard() {
     }
   }
 
-  const endLunchBreak = async () => {
-    if (!user || !currentEmployeeId) return
+  const endLunchBreak = async (): Promise<boolean> => {
+    if (!user || !currentEmployeeId) return false
     try {
       setIsPunching(true)
+      const fallbackBreakEnd = new Date().toISOString()
       const response = await apiService.createAttendance({
         employee_id: currentEmployeeId,
         date: new Date().toISOString().split('T')[0],
@@ -761,11 +762,16 @@ export default function Dashboard() {
       })
       toast({ title: "Welcome back", description: response.message || "Lunch break ended. You're clocked back in." })
       saveActivity('lunch_end', `Ended lunch break at ${format(new Date(), 'HH:mm:ss')}`)
-      await loadTodayStatus()
+      const refreshedStatus = await loadTodayStatus()
+      if (isOnLunchBreak(refreshedStatus)) {
+        setTodayStatus((previous: any) => previous ? { ...previous, break_end: fallbackBreakEnd } : previous)
+      }
+      return true
     } catch (error: any) {
       console.error('End lunch break error:', error)
       const msg = error?.response?.data?.message || error?.message || "Failed to end lunch break."
       toast({ title: "Error", description: msg, variant: "destructive" })
+      return false
     } finally {
       setIsPunching(false)
     }

@@ -171,7 +171,7 @@ export const normalizePayrollRecord = (
     (employee as any)?.employee_code,
   ]
   const period = (record as any).pay_period ?? (record as any).payPeriod ?? (record as any).period
-  const annualRentRelief = getAnnualRentRelief(empId, period)
+  const annualRentRelief = getAnnualRentRelief(empIds, period)
   const pkg = getEmployeePayrollPackage(employee || (record as any).employee, { annualRentRelief })
   if (pkg.annualGross === 0) return record
 
@@ -184,7 +184,7 @@ export const normalizePayrollRecord = (
   // here to keep the My Payslips list net pay in sync with the detail view.
   const otherDeductions = 0
   const recordNhfRaw = (record as any).nhf
-  const optedOut = isNhfOptedOut((record as any).employee_id, (record as any).pay_period)
+  const optedOut = isNhfOptedOut(empIds, period)
   const nhf = optedOut
     ? 0
     : recordNhfRaw !== undefined && recordNhfRaw !== null

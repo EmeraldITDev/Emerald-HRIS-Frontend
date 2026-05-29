@@ -687,6 +687,9 @@ class ApiService {
     nhf?: number;
     total_deductions?: number;
     net_pay?: number;
+    include_nhf?: boolean;
+    rent_relief_enabled?: boolean;
+    annual_rent?: number;
   }): Promise<{ success: boolean; message: string; payroll?: PayrollRecord }> {
     return this.request<{ success: boolean; message: string; payroll?: PayrollRecord }>('/payroll/generate', {
       method: 'POST',

@@ -132,6 +132,8 @@ export default function Attendance() {
   const [todayAttendance, setTodayAttendance] = useState<any[]>([]);
   const [showClockOutDialog, setShowClockOutDialog] = useState(false);
   const [clockOutReason, setClockOutReason] = useState("");
+  const [showLateClockInDialog, setShowLateClockInDialog] = useState(false);
+  const [lateClockInReason, setLateClockInReason] = useState("");
   const [isLunchBreak, setIsLunchBreak] = useState(false);
   const [selectedLeaveRequest, setSelectedLeaveRequest] = useState<any>(null);
   const [showLeaveDetailsDialog, setShowLeaveDetailsDialog] = useState(false);
@@ -811,11 +813,9 @@ export default function Attendance() {
     const isAdminBypass = user.role === 'hr_manager' || user.role === 'corporate_hr';
     const afterNine = hour > 9 || (hour === 9 && minute > 0);
     if (afterNine && !isAdminBypass) {
-      toast({
-        title: "Clock-in window closed",
-        description: "Clock-in is only allowed before 9:00 AM. Please contact HR Manager or Corporate HR for an admin bypass.",
-        variant: "destructive",
-      });
+      // Open late clock-in approval dialog instead of blocking outright.
+      setLateClockInReason("");
+      setShowLateClockInDialog(true);
       return;
     }
 

@@ -780,12 +780,14 @@ export default function Dashboard() {
       setIsPunching(true)
       await apiService.submitLateClockinRequest({
         employee_id: currentEmployeeId,
-        reason: lateClockInReason.trim(),
+        reason: `${lateClockInContext === "post_lunch" ? "[Late return from lunch] " : ""}${lateClockInReason.trim()}`,
         requested_at: new Date().toISOString(),
       })
       toast({
         title: "Approval Request Submitted",
-        description: "Your late clock-in request has been sent to HR Manager / Corporate HR for approval.",
+        description: lateClockInContext === "post_lunch"
+          ? "Your late-return-from-lunch request has been sent to HR Manager / Corporate HR. You remain on break until it is approved."
+          : "Your late clock-in request has been sent to HR Manager / Corporate HR for approval.",
       })
       setShowLateClockInDialog(false)
       setLateClockInReason("")

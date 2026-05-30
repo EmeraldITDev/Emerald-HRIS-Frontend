@@ -15,6 +15,116 @@ import { useAuth } from '@/contexts/AuthContext'
 import { apiService, Employee } from '@/lib/api'
 import RoleBasedComponent from '@/components/RoleBasedComponent'
 
+const BENEFIT_TYPE_STYLES: Record<string, { label: string; icon: any; color: string; bar: string; text: string }> = {
+  health:     { label: 'Health / HMO',      icon: Heart,         color: 'text-red-500',     bar: 'bg-red-500',     text: 'text-red-600' },
+  wellness:   { label: 'Wellness',          icon: Stethoscope,   color: 'text-pink-500',    bar: 'bg-pink-500',    text: 'text-pink-600' },
+  insurance:  { label: 'Insurance',         icon: Shield,        color: 'text-blue-500',    bar: 'bg-blue-500',    text: 'text-blue-600' },
+  allowance:  { label: 'Allowance',         icon: DollarSign,    color: 'text-green-500',   bar: 'bg-green-500',   text: 'text-green-600' },
+  equipment:  { label: 'Equipment',         icon: Monitor,       color: 'text-purple-500',  bar: 'bg-purple-500',  text: 'text-purple-600' },
+  transport:  { label: 'Transport',         icon: Briefcase,     color: 'text-amber-500',   bar: 'bg-amber-500',   text: 'text-amber-600' },
+  training:   { label: 'Training',          icon: GraduationCap, color: 'text-indigo-500',  bar: 'bg-indigo-500',  text: 'text-indigo-600' },
+  bonus:      { label: 'Bonus',             icon: Gift,          color: 'text-fuchsia-500', bar: 'bg-fuchsia-500', text: 'text-fuchsia-600' },
+}
+
+function styleForType(type: string) {
+  const key = (type || '').toLowerCase()
+  return BENEFIT_TYPE_STYLES[key] || { label: type || 'Other', icon: Package, color: 'text-slate-500', bar: 'bg-slate-500', text: 'text-slate-600' }
+}
+
+function BenefitTypeOverview({ activeDbBenefits, totalEmployees }: { activeDbBenefits: any[]; totalEmployees: number }) {
+  // Group benefits by benefit_type
+  const grouped = new Map<string, any[]>()
+  for (const b of activeDbBenefits) {
+    const key = (b.benefit_type || 'other').toLowerCase()
+    if (!grouped.has(key)) grouped.set(key, [])
+    grouped.get(key)!.push(b)
+  }
+
+  const types = Array.from(grouped.entries()).sort((a, b) => a[0].localeCompare(b[0]))
+
+  if (types.length === 0) {
+    return (
+      <Card>
+        <CardContent className="py-10 text-center text-sm text-muted-foreground">
+          No benefits have been assigned yet. Once you assign benefits, they will appear here grouped by benefit type.
+        </CardContent>
+      </Card>
+    )
+  }
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {types.map(([type, items]) => {
+        const style = styleForType(type)
+        const Icon = style.icon
+        const uniqueEmployees = new Set(items.map(i => i.employee_id)).size
+        const percentage = totalEmployees > 0 ? Math.round((uniqueEmployees / totalEmployees) * 100) : 0
+
+        // Group by benefit_name within this type
+        const byName = new Map<string, { count: number; totalValue: number }>()
+        for (const b of items) {
+          const name = b.benefit_name || 'Unnamed'
+          const entry = byName.get(name) || { count: 0, totalValue: 0 }
+          entry.count += 1
+          entry.totalValue += Number(b.value || 0)
+          byName.set(name, entry)
+        }
+        const benefitsList = Array.from(byName.entries()).sort((a, b) => b[1].count - a[1].count)
+
+        return (
+          <Card key={type}>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Icon className={`h-5 w-5 ${style.color}`} />
+                <span className="capitalize">{style.label}</span>
+                <Badge variant="secondary" className="ml-auto">{items.length} assignment{items.length === 1 ? '' : 's'}</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Staff assigned</span>
+                  <span className={`text-2xl font-bold ${style.text}`}>{percentage}%</span>
+                </div>
+                <div className="w-full bg-secondary rounded-full h-2">
+                  <div className={`${style.bar} h-2 rounded-full transition-all`} style={{ width: `${percentage}%` }} />
+                </div>
+                <p className="text-xs text-muted-foreground text-right">
+                  {uniqueEmployees} of {totalEmployees} employees
+                </p>
+              </div>
+
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
+                  Benefits in this category
+                </p>
+                <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                  {benefitsList.map(([name, info]) => (
+                    <div key={name} className="flex items-center justify-between gap-2 p-2 rounded-md border bg-muted/30">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">{name}</p>
+                        {info.totalValue > 0 && (
+                          <p className="text-xs text-muted-foreground">
+                            Total value: ₦{info.totalValue.toLocaleString()}
+                          </p>
+                        )}
+                      </div>
+                      <Badge variant="outline" className="shrink-0">
+                        <Users className="h-3 w-3 mr-1" />
+                        {info.count}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )
+      })}
+    </div>
+  )
+}
+
 interface BenefitDetail {
   status: 'active' | 'inactive'
   cost: number

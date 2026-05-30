@@ -434,6 +434,54 @@ export default function Benefits() {
     }))
   }
 
+  // Open Assign dialog pre-filled for editing an existing DB benefit
+  const handleEditDbBenefit = (benefit: any) => {
+    setEditingBenefitId(Number(benefit.id))
+    setAssignBenefitForm({
+      employee_ids: [Number(benefit.employee_id)],
+      benefit_name: benefit.benefit_name || '',
+      benefit_type: benefit.benefit_type || '',
+      description: benefit.description || '',
+      value: benefit.value != null ? String(benefit.value) : '',
+      start_date: benefit.start_date ? benefit.start_date.split('T')[0] : '',
+      end_date: benefit.end_date ? benefit.end_date.split('T')[0] : '',
+      notes: benefit.notes || '',
+      is_recurring: false,
+      recurrence: 'none',
+    })
+    setIsAssignDialogOpen(true)
+  }
+
+  const handleDeleteDbBenefit = async (benefitId: number) => {
+    try {
+      await apiService.deleteBenefit(benefitId)
+      await fetchBenefits()
+      toast({ title: 'Benefit Deleted', description: 'The benefit has been removed.' })
+      setDeletingBenefitId(null)
+      // Refresh view dialog content if open
+      if (selectedEmployeeForView) {
+        setSelectedEmployeeForView({
+          ...selectedEmployeeForView,
+          benefits: selectedEmployeeForView.benefits.filter((b: any) => Number(b.id) !== benefitId),
+        })
+      }
+    } catch (e: any) {
+      console.error('Delete benefit error:', e)
+      toast({ title: 'Delete failed', description: e?.message || 'Could not delete benefit', variant: 'destructive' })
+    }
+  }
+
+  // Whether the current user can edit/delete a benefit assignment.
+  // HR managers and executives can always manage. If backend supplies
+  // `assigned_by` (user id), the original assigner can also manage.
+  const canEditBenefit = (benefit: any): boolean => {
+    if (canManageBenefits) return true
+    if (!user) return false
+    const assignerId = benefit?.assigned_by ?? benefit?.created_by
+    if (assignerId != null && String(assignerId) === String(user.id)) return true
+    return false
+  }
+
   const handleCSVUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file) {

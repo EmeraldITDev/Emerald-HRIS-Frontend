@@ -175,7 +175,14 @@ export default function Training() {
   const fetchTrainingAssignments = async () => {
     try {
       const data = await apiService.getTrainingAssignments()
-      setTrainingAssignments(Array.isArray(data) ? data : ((data as any)?.data || []))
+      const list = Array.isArray(data) ? data : ((data as any)?.data || [])
+      if (list.length > 0) {
+        // Diagnostic: show the exact shape so we can see how the backend
+        // returns attachment metadata for training programs.
+        console.log('[Training] first assignment payload:', list[0])
+        console.log('[Training] first assignment.training:', (list[0] as any)?.training)
+      }
+      setTrainingAssignments(list)
     } catch (error) {
       console.error('Failed to fetch training assignments:', error)
     }
@@ -356,7 +363,23 @@ export default function Training() {
     }
 
     try {
-      await apiService.uploadTrainingAttachment(trainingId, file)
+      const result = await apiService.uploadTrainingAttachment(trainingId, file)
+      console.log('[Training] upload result:', result)
+      // Optimistically update local state so the row reflects the new
+      // material even if the backend list endpoint hasn't been refreshed
+      // or returns the field under a different name.
+      setTrainingAssignments(prev => prev.map(a => (
+        a.training_id === trainingId || a.training?.id === trainingId
+          ? {
+              ...a,
+              training: {
+                ...(a.training || {}),
+                attachment_name: file.name,
+                attachment_path: (result as any)?.key || a.training?.attachment_path,
+              },
+            }
+          : a
+      )))
       await fetchTrainingAssignments()
       toast({ title: "Materials uploaded", description: `${file.name} attached to training.` })
     } catch (err) {
@@ -385,8 +408,23 @@ export default function Training() {
     status: a.status === 'completed' ? 'Completed' : a.status === 'cancelled' ? 'Cancelled' : a.status === 'in_progress' ? 'In Progress' : 'Scheduled',
     certificateName: undefined,
     trainingId: a.training_id,
-    attachmentName: a.training?.attachment_name,
-    attachmentPath: a.training?.attachment_path,
+    // Backend field naming has drifted in the past — read every variant we've
+    // seen so a successful upload always renders as "Download" instead of
+    // "No materials".
+    attachmentName:
+      a.training?.attachment_name ||
+      a.training?.attachment_filename ||
+      a.training?.attachment ||
+      a.attachment_name ||
+      a.attachment_filename ||
+      undefined,
+    attachmentPath:
+      a.training?.attachment_path ||
+      a.training?.attachment_key ||
+      a.training?.attachment_url ||
+      a.attachment_path ||
+      a.attachment_key ||
+      undefined,
   }))
 
   const filteredTrainings = mappedTrainings

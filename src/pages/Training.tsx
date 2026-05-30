@@ -196,15 +196,31 @@ export default function Training() {
       const payload: any = {
         ...assignmentData,
         ...newTraining,
-        attachment: trainingAttachment || undefined,
       }
 
       if (!payload.training_id) {
         delete payload.training_id
       }
 
-      await apiService.assignTraining(payload)
-      
+      // Don't send the file through assignTraining — it goes via S3 separately.
+      delete payload.attachment
+
+      const result = await apiService.assignTraining(payload)
+
+      // Step 2: upload training materials to S3 if provided
+      if (trainingAttachment && result?.training_id) {
+        try {
+          await apiService.uploadTrainingAttachment(result.training_id, trainingAttachment)
+        } catch (uploadErr) {
+          console.error('Training material upload failed:', uploadErr)
+          toast({
+            title: "Training created, but material upload failed",
+            description: uploadErr instanceof Error ? uploadErr.message : "Could not upload materials. Try again from the table.",
+            variant: "destructive",
+          })
+        }
+      }
+
       await fetchTrainingAssignments()
       
       setAssignmentData({

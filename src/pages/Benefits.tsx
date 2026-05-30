@@ -1595,9 +1595,34 @@ export default function Benefits() {
                           <p className="text-sm text-muted-foreground mt-2 italic">Notes: {benefit.notes}</p>
                         )}
                       </div>
-                      <Badge variant={benefit.status === 'active' ? 'default' : 'secondary'}>
-                        {benefit.status}
-                      </Badge>
+                      <div className="flex flex-col items-end gap-2">
+                        <Badge variant={benefit.status === 'active' ? 'default' : 'secondary'}>
+                          {benefit.status}
+                        </Badge>
+                        {canEditBenefit(benefit) && (
+                          <div className="flex gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => { setIsViewDialogOpen(false); handleEditDbBenefit(benefit); }}
+                            >
+                              <Pencil className="h-4 w-4 mr-1" /> Edit
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-destructive hover:text-destructive"
+                              onClick={() => {
+                                if (window.confirm(`Delete benefit "${benefit.benefit_name}"?`)) {
+                                  handleDeleteDbBenefit(Number(benefit.id))
+                                }
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4 mr-1" /> Delete
+                            </Button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </CardContent>
                 </Card>

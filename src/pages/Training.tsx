@@ -834,36 +834,57 @@ export default function Training() {
                     </TableCell>
                     <TableCell>{getStatusBadge(training.status)}</TableCell>
                     <TableCell>
-                      {training.attachmentName ? (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={async () => {
-                            try {
-                              const blob = await apiService.downloadTrainingAttachment(training.trainingId!)
-                              const url = window.URL.createObjectURL(blob)
-                              const a = document.createElement('a')
-                              a.href = url
-                              a.download = training.attachmentName || 'training-material'
-                              document.body.appendChild(a)
-                              a.click()
-                              window.URL.revokeObjectURL(url)
-                              document.body.removeChild(a)
-                            } catch (error) {
-                              toast({
-                                title: "Download failed",
-                                description: "Could not download training materials",
-                                variant: "destructive"
-                              })
-                            }
-                          }}
-                        >
-                          <Download className="h-4 w-4 mr-1" />
-                          Download
-                        </Button>
-                      ) : (
-                        <span className="text-sm text-muted-foreground">No materials</span>
-                      )}
+                      <div className="flex items-center gap-1">
+                        {training.attachmentName ? (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={async () => {
+                              try {
+                                const blob = await apiService.downloadTrainingAttachment(training.trainingId!)
+                                const url = window.URL.createObjectURL(blob)
+                                const a = document.createElement('a')
+                                a.href = url
+                                a.download = training.attachmentName || 'training-material'
+                                document.body.appendChild(a)
+                                a.click()
+                                window.URL.revokeObjectURL(url)
+                                document.body.removeChild(a)
+                              } catch (error) {
+                                toast({
+                                  title: "Download failed",
+                                  description: "Could not download training materials",
+                                  variant: "destructive"
+                                })
+                              }
+                            }}
+                          >
+                            <Download className="h-4 w-4 mr-1" />
+                            Download
+                          </Button>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">No materials</span>
+                        )}
+                        {canUploadCertificate && training.trainingId && (
+                          <>
+                            <input
+                              type="file"
+                              accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.jpg,.jpeg,.png"
+                              onChange={(e) => handleUploadMaterialForTraining(training.trainingId!, e)}
+                              className="hidden"
+                              id={`mat-upload-${training.id}`}
+                            />
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              title={training.attachmentName ? 'Replace materials' : 'Upload materials'}
+                              onClick={() => document.getElementById(`mat-upload-${training.id}`)?.click()}
+                            >
+                              <Upload className="h-4 w-4" />
+                            </Button>
+                          </>
+                        )}
+                      </div>
                     </TableCell>
                     {canUploadCertificate && (
                       <TableCell>

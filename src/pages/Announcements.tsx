@@ -23,7 +23,9 @@ import {
   LinkIcon,
   Type,
   Palette,
-  MessageSquare
+  MessageSquare,
+  Pencil,
+  Trash2
 } from "lucide-react"
 import ReactQuill from 'react-quill'
 import 'react-quill/dist/quill.snow.css'
@@ -36,6 +38,7 @@ interface Announcement {
   createdAt: string
   status: 'draft' | 'published'
   recipients?: string[]
+  createdById?: string
 }
 
 interface AnnouncementComment {
@@ -56,6 +59,7 @@ export default function Announcements() {
   const [newCommentText, setNewCommentText] = useState<Record<string, string>>({})
   
   const [isCreating, setIsCreating] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [currentAnnouncement, setCurrentAnnouncement] = useState<Partial<Announcement>>({
     title: '',
     content: '',
@@ -85,10 +89,11 @@ export default function Announcements() {
         id: ann.id?.toString() || '',
         title: ann.title,
         content: ann.content,
-        author: user?.firstName ? `${user.firstName} ${user.lastName}` : 'HR Department',
+        author: (ann as any).createdBy?.name || (user?.firstName ? `${user.firstName} ${user.lastName}` : 'HR Department'),
         createdAt: ann.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
         status: 'published',
-        recipients: ann.target_audience ? [ann.target_audience] : ['all_employees']
+        recipients: ann.target_audience ? [ann.target_audience] : ['all_employees'],
+        createdById: ((ann as any).createdBy?.id ?? ann.created_by)?.toString(),
       }))
       setAnnouncements(mappedAnnouncements)
       // Fetch comment threads for each announcement in parallel
@@ -175,17 +180,22 @@ export default function Announcements() {
         target_department_ids: targetMode === 'department' ? targetDepartments : undefined,
         target_employee_ids: targetMode === 'individual' ? targetEmployeeIds : undefined,
       } as any
-      
-      await apiService.createAnnouncement(announcementData)
+
+      if (editingId) {
+        await apiService.updateAnnouncement(Number(editingId), announcementData)
+      } else {
+        await apiService.createAnnouncement(announcementData)
+      }
       await fetchAnnouncements()
       
       setCurrentAnnouncement({ title: '', content: '', author: 'HR Department', status: 'draft' })
       resetTargeting()
       setIsCreating(false)
+      setEditingId(null)
       
       toast({
         title: "Success",
-        description: "Announcement saved as draft"
+        description: editingId ? "Announcement updated" : "Announcement saved as draft"
       })
     } catch (error) {
       console.error('Failed to save announcement:', error)
@@ -216,18 +226,23 @@ export default function Announcements() {
         target_department_ids: targetMode === 'department' ? targetDepartments : undefined,
         target_employee_ids: targetMode === 'individual' ? targetEmployeeIds : undefined,
       } as any
-      
-      await apiService.createAnnouncement(announcementData)
+
+      if (editingId) {
+        await apiService.updateAnnouncement(Number(editingId), announcementData)
+      } else {
+        await apiService.createAnnouncement(announcementData)
+      }
       await fetchAnnouncements()
       
       setCurrentAnnouncement({ title: '', content: '', author: 'HR Department', status: 'draft' })
       resetTargeting()
       setIsCreating(false)
+      setEditingId(null)
 
       // Simulate sending newsletter to all employees
       toast({
-        title: "Newsletter Sent!",
-        description: "Announcement has been shared with all employees via email"
+        title: editingId ? "Announcement updated" : "Newsletter Sent!",
+        description: editingId ? "Your changes are live" : "Announcement has been shared with all employees via email"
       })
     } catch (error) {
       console.error('Failed to publish announcement:', error)
@@ -249,6 +264,34 @@ export default function Announcements() {
     setTargetMode('all')
     setTargetDepartments([])
     setTargetEmployeeIds([])
+  }
+
+  const startEdit = (ann: Announcement) => {
+    setCurrentAnnouncement({
+      title: ann.title,
+      content: ann.content,
+      author: ann.author,
+      status: ann.status,
+    })
+    setEditingId(ann.id)
+    setIsCreating(true)
+  }
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Delete this announcement? This cannot be undone.')) return
+    try {
+      await apiService.deleteAnnouncement(Number(id))
+      setAnnouncements((prev) => prev.filter((a) => a.id !== id))
+      toast({ title: 'Deleted', description: 'Announcement removed' })
+    } catch (e: any) {
+      toast({ title: 'Failed to delete', description: e?.message, variant: 'destructive' })
+    }
+  }
+
+  const canManage = (ann: Announcement) => {
+    if (!user) return false
+    if (user.role === 'hr_manager' || user.role === 'executive') return true
+    return !!ann.createdById && ann.createdById === user.id
   }
 
   const addComment = async (announcementId: string) => {

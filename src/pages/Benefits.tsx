@@ -1427,11 +1427,11 @@ export default function Benefits() {
           </div>
           
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAssignDialogOpen(false)}>
+            <Button variant="outline" onClick={() => { setIsAssignDialogOpen(false); setEditingBenefitId(null); }}>
               Cancel
             </Button>
             <Button onClick={handleAssignBenefit} className="bg-emerald-600 hover:bg-emerald-700 text-white">
-              Assign Benefit
+              {editingBenefitId ? 'Save Changes' : 'Assign Benefit'}
             </Button>
           </DialogFooter>
         </DialogContent>

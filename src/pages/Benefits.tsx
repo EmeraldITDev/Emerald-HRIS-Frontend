@@ -1197,6 +1197,9 @@ export default function Benefits() {
         open={isAssignDialogOpen} 
         onOpenChange={(open) => {
           setIsAssignDialogOpen(open)
+          if (!open) {
+            setEditingBenefitId(null)
+          }
           if (open) {
             const token = getAuthToken()
             if (token && employees.length === 0) {
@@ -1213,9 +1216,11 @@ export default function Benefits() {
       >
         <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Assign Benefit to Employees</DialogTitle>
+            <DialogTitle>{editingBenefitId ? 'Edit Benefit' : 'Assign Benefit to Employees'}</DialogTitle>
             <DialogDescription>
-              Assign a benefit to one or more employees
+              {editingBenefitId
+                ? 'Update this benefit assignment for the selected employee.'
+                : 'Assign a benefit to one or more employees'}
             </DialogDescription>
           </DialogHeader>
           

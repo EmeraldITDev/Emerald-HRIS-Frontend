@@ -60,6 +60,10 @@ export default function Benefits() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false)
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false)
+  const [isManageAllDialogOpen, setIsManageAllDialogOpen] = useState(false)
+  const [editingBenefitId, setEditingBenefitId] = useState<number | null>(null)
+  const [deletingBenefitId, setDeletingBenefitId] = useState<number | null>(null)
+  const [manageSearch, setManageSearch] = useState('')
   const [selectedEmployeeForView, setSelectedEmployeeForView] = useState<{employeeId: number, employeeName: string, benefits: any[]} | null>(null)
   const [assignBenefitForm, setAssignBenefitForm] = useState({
     employee_ids: [] as number[],

@@ -42,12 +42,6 @@ interface Review {
 
 export default function Performance() {
   const [employees, setEmployees] = useState<Employee[]>([])
-  const [reviews, setReviews] = useState<Review[]>([
-    // HR Manager - Austin Nwachwukwu
-    {
-      id: '1',
-      employeeId: 'austin.nwachwukwu@emeraldcfze.com',
-      employeeName: 'Austin Nwachwukwu',
       department: 'Human Resources',
       reviewPeriod: 'Q4 2024',
       reviewDate: '2024-12-15',
@@ -454,10 +448,7 @@ export default function Performance() {
       achievements: 'Processed 300+ purchase orders accurately, maintained vendor database',
       areasForImprovement: 'Negotiation skills and strategic sourcing',
       comments: 'Emeka performs routine tasks well but needs to develop more advanced procurement skills.',
-      selfAssessment: 'I accurately processed over 300 purchase orders and maintained our comprehensive vendor database throughout the quarter.',
-      selfAssessmentDate: '2024-12-04'
-    }
-  ])
+  const [reviews, setReviews] = useState<Review[]>([])
   
   const [newReview, setNewReview] = useState({
     employeeId: '',

@@ -52,6 +52,10 @@ export function resolveNotificationLink(
   }
 
   if (raw) {
+    // Announcements: app only has a list page
+    if (/^\/announcements(\/|$|\?)/i.test(raw)) {
+      return "/announcements";
+    }
     // /leaves/{id} (approved leave detail) → /attendance
     if (/^\/leaves\/\d+/i.test(raw)) {
       return "/attendance";
@@ -108,8 +112,11 @@ export function resolveNotificationLink(
   }
 
   if (type.startsWith("announcement_")) {
-    const aid = n?.data?.announcement_id ?? n?.data?.id ?? n?.related_id ?? null;
-    return aid != null ? `/announcements/${aid}` : "/announcements";
+    return "/announcements";
+  }
+
+  if (type.includes("announcement")) {
+    return "/announcements";
   }
 
   return null;

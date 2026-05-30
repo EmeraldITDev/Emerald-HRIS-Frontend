@@ -1280,47 +1280,42 @@ class ApiService {
     const url = `${this.baseUrl}/training/assign`;
     const token = localStorage.getItem('auth_token');
     
-    // Use FormData if file is present, otherwise use JSON
-    if (data.attachment) {
-      const formData = new FormData();
-      
-      // Add all fields to FormData
-      Object.keys(data).forEach(key => {
-        if (key === 'attachment') {
-          formData.append('attachment', data.attachment!);
-        } else if (key === 'employee_ids') {
-          // Handle array separately
-          data.employee_ids.forEach((id, index) => {
-            formData.append(`employee_ids[${index}]`, id.toString());
-          });
-        } else if (data[key as keyof typeof data] !== undefined && data[key as keyof typeof data] !== null) {
-          formData.append(key, String(data[key as keyof typeof data]));
+    // Always use FormData; only append `attachment` when a valid File is provided.
+    // Sending an empty/null attachment field causes Laravel's file validator to
+    // fail with "The attachment field must be a file of type: ...".
+    const formData = new FormData();
+    Object.keys(data).forEach((key) => {
+      const value = (data as any)[key];
+      if (key === 'attachment') {
+        if (value instanceof File && value.size > 0) {
+          formData.append('attachment', value);
         }
-      });
-
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-          ...(token && { 'Authorization': `Bearer ${token}` }),
-        },
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`HTTP error! status: ${response.status}`);
+        // Otherwise: omit entirely — do NOT append empty string/null.
+      } else if (key === 'employee_ids') {
+        data.employee_ids.forEach((id, index) => {
+          formData.append(`employee_ids[${index}]`, id.toString());
+        });
+      } else if (value !== undefined && value !== null && value !== '') {
+        formData.append(key, String(value));
       }
+    });
 
-      return await response.json();
-    } else {
-      // No file, use regular JSON request
-      const { attachment, ...jsonData } = data;
-      return this.request<{ success: boolean; assignments: any[] }>('/training/assign', {
-        method: 'POST',
-        body: JSON.stringify(jsonData),
-      });
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('assignTraining failed:', response.status, errorText);
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
+
+    return await response.json();
   }
 
   async markTrainingCompleted(id: number, notes?: string): Promise<{ success: boolean; assignment: any }> {

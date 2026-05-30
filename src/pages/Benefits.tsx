@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Shield, Wifi, Monitor, Heart, Upload, Plus, Users, Award } from "lucide-react"
+import { Pencil, Trash2, Settings } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from '@/contexts/AuthContext'
 import { apiService, Employee } from '@/lib/api'
@@ -59,6 +60,10 @@ export default function Benefits() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false)
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false)
+  const [isManageAllDialogOpen, setIsManageAllDialogOpen] = useState(false)
+  const [editingBenefitId, setEditingBenefitId] = useState<number | null>(null)
+  const [deletingBenefitId, setDeletingBenefitId] = useState<number | null>(null)
+  const [manageSearch, setManageSearch] = useState('')
   const [selectedEmployeeForView, setSelectedEmployeeForView] = useState<{employeeId: number, employeeName: string, benefits: any[]} | null>(null)
   const [assignBenefitForm, setAssignBenefitForm] = useState({
     employee_ids: [] as number[],
@@ -291,15 +296,24 @@ export default function Benefits() {
     }
 
     try {
-      console.log('Assigning benefit with data:', {
-        ...assignBenefitForm,
-        value: assignBenefitForm.value ? parseFloat(assignBenefitForm.value) : undefined,
-      })
-      
-      const response = await apiService.assignBenefit({
-        ...assignBenefitForm,
-        value: assignBenefitForm.value ? parseFloat(assignBenefitForm.value) : undefined,
-      })
+      let response: any
+      if (editingBenefitId) {
+        // Update existing benefit (single benefit)
+        response = await apiService.updateBenefit(editingBenefitId, {
+          benefit_name: assignBenefitForm.benefit_name,
+          benefit_type: assignBenefitForm.benefit_type,
+          description: assignBenefitForm.description,
+          value: assignBenefitForm.value ? parseFloat(assignBenefitForm.value) : undefined,
+          start_date: assignBenefitForm.start_date,
+          end_date: assignBenefitForm.end_date || null,
+          notes: assignBenefitForm.notes,
+        })
+      } else {
+        response = await apiService.assignBenefit({
+          ...assignBenefitForm,
+          value: assignBenefitForm.value ? parseFloat(assignBenefitForm.value) : undefined,
+        })
+      }
       
       console.log('Benefit assignment response:', response)
       
@@ -320,6 +334,16 @@ export default function Benefits() {
         recurrence: 'none',
       })
       setIsAssignDialogOpen(false)
+      const wasEditing = !!editingBenefitId
+      setEditingBenefitId(null)
+
+      if (wasEditing) {
+        toast({
+          title: "Benefit Updated",
+          description: `Benefit "${assignBenefitForm.benefit_name}" updated successfully.`,
+        })
+        return
+      }
 
       // Check if there were any skipped employees
       const responseAny = response as any
@@ -408,6 +432,54 @@ export default function Benefits() {
         [field]: value
       }
     }))
+  }
+
+  // Open Assign dialog pre-filled for editing an existing DB benefit
+  const handleEditDbBenefit = (benefit: any) => {
+    setEditingBenefitId(Number(benefit.id))
+    setAssignBenefitForm({
+      employee_ids: [Number(benefit.employee_id)],
+      benefit_name: benefit.benefit_name || '',
+      benefit_type: benefit.benefit_type || '',
+      description: benefit.description || '',
+      value: benefit.value != null ? String(benefit.value) : '',
+      start_date: benefit.start_date ? benefit.start_date.split('T')[0] : '',
+      end_date: benefit.end_date ? benefit.end_date.split('T')[0] : '',
+      notes: benefit.notes || '',
+      is_recurring: false,
+      recurrence: 'none',
+    })
+    setIsAssignDialogOpen(true)
+  }
+
+  const handleDeleteDbBenefit = async (benefitId: number) => {
+    try {
+      await apiService.deleteBenefit(benefitId)
+      await fetchBenefits()
+      toast({ title: 'Benefit Deleted', description: 'The benefit has been removed.' })
+      setDeletingBenefitId(null)
+      // Refresh view dialog content if open
+      if (selectedEmployeeForView) {
+        setSelectedEmployeeForView({
+          ...selectedEmployeeForView,
+          benefits: selectedEmployeeForView.benefits.filter((b: any) => Number(b.id) !== benefitId),
+        })
+      }
+    } catch (e: any) {
+      console.error('Delete benefit error:', e)
+      toast({ title: 'Delete failed', description: e?.message || 'Could not delete benefit', variant: 'destructive' })
+    }
+  }
+
+  // Whether the current user can edit/delete a benefit assignment.
+  // HR managers and executives can always manage. If backend supplies
+  // `assigned_by` (user id), the original assigner can also manage.
+  const canEditBenefit = (benefit: any): boolean => {
+    if (canManageBenefits) return true
+    if (!user) return false
+    const assignerId = benefit?.assigned_by ?? benefit?.created_by
+    if (assignerId != null && String(assignerId) === String(user.id)) return true
+    return false
   }
 
   const handleCSVUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -609,9 +681,9 @@ export default function Benefits() {
           </Button>
           <Button 
             variant="outline"
-            onClick={() => handleOpenManageBenefit()}
+            onClick={() => setIsManageAllDialogOpen(true)}
           >
-            <Plus className="mr-2 h-4 w-4" />
+            <Settings className="mr-2 h-4 w-4" />
             Manage Benefits
           </Button>
         </div>
@@ -889,7 +961,132 @@ export default function Benefits() {
         </CardContent>
       </Card>
 
-      {/* Manage Benefits Dialog */}
+      {/* Manage All Benefits Dialog */}
+      <Dialog open={isManageAllDialogOpen} onOpenChange={setIsManageAllDialogOpen}>
+        <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Manage Employee Benefits</DialogTitle>
+            <DialogDescription>
+              View, edit, or remove benefit assignments across the organisation.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <Input
+              placeholder="Search by employee, benefit name, or type..."
+              value={manageSearch}
+              onChange={(e) => setManageSearch(e.target.value)}
+            />
+
+            <div className="overflow-x-auto border rounded-md">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Employee</TableHead>
+                    <TableHead>Benefit</TableHead>
+                    <TableHead className="hidden md:table-cell">Type</TableHead>
+                    <TableHead className="hidden md:table-cell">Value</TableHead>
+                    <TableHead className="hidden lg:table-cell">Period</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {(() => {
+                    const q = manageSearch.trim().toLowerCase()
+                    const rows = dbBenefits
+                      .map((b: any) => {
+                        const emp = employees.find(e => Number(e.id) === Number(b.employee_id))
+                        const empName = emp
+                          ? `${emp.first_name} ${emp.last_name}`
+                          : (b.employee_name || `Employee #${b.employee_id}`)
+                        return { ...b, _empName: empName }
+                      })
+                      .filter((b: any) => {
+                        if (!q) return true
+                        return (
+                          b._empName.toLowerCase().includes(q) ||
+                          (b.benefit_name || '').toLowerCase().includes(q) ||
+                          (b.benefit_type || '').toLowerCase().includes(q)
+                        )
+                      })
+                    if (rows.length === 0) {
+                      return (
+                        <TableRow>
+                          <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                            No benefit assignments found.
+                          </TableCell>
+                        </TableRow>
+                      )
+                    }
+                    return rows.map((b: any) => (
+                      <TableRow key={b.id}>
+                        <TableCell className="font-medium">{b._empName}</TableCell>
+                        <TableCell>{b.benefit_name}</TableCell>
+                        <TableCell className="hidden md:table-cell capitalize">{b.benefit_type}</TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          {b.value ? `₦${Number(b.value).toLocaleString()}` : '—'}
+                        </TableCell>
+                        <TableCell className="hidden lg:table-cell text-xs">
+                          {b.start_date ? new Date(b.start_date).toLocaleDateString() : '—'}
+                          {b.end_date ? ` → ${new Date(b.end_date).toLocaleDateString()}` : ''}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={b.status === 'active' ? 'default' : 'secondary'} className="capitalize">
+                            {b.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-1">
+                            {canEditBenefit(b) && (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    setIsManageAllDialogOpen(false)
+                                    handleEditDbBenefit(b)
+                                  }}
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-destructive hover:text-destructive"
+                                  onClick={() => {
+                                    if (window.confirm(`Delete benefit "${b.benefit_name}" for ${b._empName}?`)) {
+                                      handleDeleteDbBenefit(Number(b.id))
+                                    }
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  })()}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsManageAllDialogOpen(false)}>Close</Button>
+            <Button
+              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+              onClick={() => { setIsManageAllDialogOpen(false); setEditingBenefitId(null); setIsAssignDialogOpen(true); }}
+            >
+              <Plus className="mr-2 h-4 w-4" /> New Assignment
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Legacy local-state Manage Benefits Dialog (kept for backwards compat, hidden) */}
       <Dialog open={showManageBenefitDialog} onOpenChange={setShowManageBenefitDialog}>
         <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -1125,6 +1322,9 @@ export default function Benefits() {
         open={isAssignDialogOpen} 
         onOpenChange={(open) => {
           setIsAssignDialogOpen(open)
+          if (!open) {
+            setEditingBenefitId(null)
+          }
           if (open) {
             const token = getAuthToken()
             if (token && employees.length === 0) {
@@ -1141,9 +1341,11 @@ export default function Benefits() {
       >
         <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Assign Benefit to Employees</DialogTitle>
+            <DialogTitle>{editingBenefitId ? 'Edit Benefit' : 'Assign Benefit to Employees'}</DialogTitle>
             <DialogDescription>
-              Assign a benefit to one or more employees
+              {editingBenefitId
+                ? 'Update this benefit assignment for the selected employee.'
+                : 'Assign a benefit to one or more employees'}
             </DialogDescription>
           </DialogHeader>
           
@@ -1350,11 +1552,11 @@ export default function Benefits() {
           </div>
           
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAssignDialogOpen(false)}>
+            <Button variant="outline" onClick={() => { setIsAssignDialogOpen(false); setEditingBenefitId(null); }}>
               Cancel
             </Button>
             <Button onClick={handleAssignBenefit} className="bg-emerald-600 hover:bg-emerald-700 text-white">
-              Assign Benefit
+              {editingBenefitId ? 'Save Changes' : 'Assign Benefit'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1393,9 +1595,34 @@ export default function Benefits() {
                           <p className="text-sm text-muted-foreground mt-2 italic">Notes: {benefit.notes}</p>
                         )}
                       </div>
-                      <Badge variant={benefit.status === 'active' ? 'default' : 'secondary'}>
-                        {benefit.status}
-                      </Badge>
+                      <div className="flex flex-col items-end gap-2">
+                        <Badge variant={benefit.status === 'active' ? 'default' : 'secondary'}>
+                          {benefit.status}
+                        </Badge>
+                        {canEditBenefit(benefit) && (
+                          <div className="flex gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => { setIsViewDialogOpen(false); handleEditDbBenefit(benefit); }}
+                            >
+                              <Pencil className="h-4 w-4 mr-1" /> Edit
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-destructive hover:text-destructive"
+                              onClick={() => {
+                                if (window.confirm(`Delete benefit "${benefit.benefit_name}"?`)) {
+                                  handleDeleteDbBenefit(Number(benefit.id))
+                                }
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4 mr-1" /> Delete
+                            </Button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </CardContent>
                 </Card>

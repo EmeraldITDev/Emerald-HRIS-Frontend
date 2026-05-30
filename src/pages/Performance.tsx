@@ -43,8 +43,17 @@ interface Review {
 export default function Performance() {
   const [employees, setEmployees] = useState<Employee[]>([])
   const [reviews, setReviews] = useState<Review[]>([])
+
+  const [newReview, setNewReview] = useState({
+    employeeId: '',
+    reviewPeriod: '',
+    rating: 0,
+    goals: '',
+    achievements: '',
+    areasForImprovement: '',
+    comments: ''
   })
-  
+
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [viewDialogOpen, setViewDialogOpen] = useState(false)
   const [commentDialogOpen, setCommentDialogOpen] = useState(false)

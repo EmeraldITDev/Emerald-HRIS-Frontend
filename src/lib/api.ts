@@ -1275,38 +1275,20 @@ class ApiService {
     scheduled_at: string;
     duration_hours: number;
     completion_deadline: string;
-    attachment?: File;
-  }): Promise<{ success: boolean; assignments: any[] }> {
+  }): Promise<{ success: boolean; training_id?: number; assignments: any[] }> {
     const url = `${this.baseUrl}/training/assign`;
     const token = localStorage.getItem('auth_token');
     
-    // Always use FormData; only append `attachment` when a valid File is provided.
-    // Sending an empty/null attachment field causes Laravel's file validator to
-    // fail with "The attachment field must be a file of type: ...".
-    const formData = new FormData();
-    Object.keys(data).forEach((key) => {
-      const value = (data as any)[key];
-      if (key === 'attachment') {
-        if (value instanceof File && value.size > 0) {
-          formData.append('attachment', value);
-        }
-        // Otherwise: omit entirely — do NOT append empty string/null.
-      } else if (key === 'employee_ids') {
-        data.employee_ids.forEach((id, index) => {
-          formData.append(`employee_ids[${index}]`, id.toString());
-        });
-      } else if (value !== undefined && value !== null && value !== '') {
-        formData.append(key, String(value));
-      }
-    });
-
+    // Attachments are uploaded separately via the S3 presigned-URL flow
+    // (uploadTrainingAttachment). This endpoint only accepts JSON data.
     const response = await fetch(url, {
       method: 'POST',
       headers: {
+        'Content-Type': 'application/json',
         Accept: 'application/json',
         ...(token && { Authorization: `Bearer ${token}` }),
       },
-      body: formData,
+      body: JSON.stringify(data),
     });
 
     if (!response.ok) {
@@ -1350,22 +1332,40 @@ class ApiService {
     });
   }
 
-  async downloadTrainingAttachment(trainingId: number): Promise<Blob> {
-    const url = `${this.baseUrl}/training/${trainingId}/download`;
-    const token = localStorage.getItem('auth_token');
-    
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'Accept': '*/*',
-        ...(token && { 'Authorization': `Bearer ${token}` }),
-      },
+  // S3 presigned URL flow for training attachments (mirrors employee documents)
+  async getTrainingUploadUrl(filename: string, contentType?: string): Promise<{ url: string; headers: Record<string, string>; key: string; expires_at?: string }> {
+    return this.request(`/training/upload-url`, {
+      method: 'POST',
+      body: JSON.stringify({ filename, content_type: contentType }),
     });
+  }
 
+  async attachTrainingAttachment(trainingId: number, key: string, filename: string): Promise<{ message: string; key: string; training?: any }> {
+    return this.request(`/training/${trainingId}/attach`, {
+      method: 'POST',
+      body: JSON.stringify({ key, filename }),
+    });
+  }
+
+  async getTrainingDownloadUrl(trainingId: number, download: boolean = true): Promise<{ url: string; expires_at?: string; key: string; filename: string }> {
+    return this.request(`/training/${trainingId}/download?download=${download ? 'true' : 'false'}`);
+  }
+
+  // Full upload flow: get presigned URL → PUT to S3 → attach to training record
+  async uploadTrainingAttachment(trainingId: number, file: File): Promise<{ message: string; key: string }> {
+    const { url, headers, key } = await this.getTrainingUploadUrl(file.name, file.type);
+    await this.uploadFileToS3(url, file, headers);
+    const result = await this.attachTrainingAttachment(trainingId, key, file.name);
+    return { message: result.message, key };
+  }
+
+  // Convenience: fetch a presigned download URL and return the file as a Blob
+  async downloadTrainingAttachment(trainingId: number): Promise<Blob> {
+    const { url } = await this.getTrainingDownloadUrl(trainingId, true);
+    const response = await fetch(url, { method: 'GET' });
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      throw new Error(`S3 download failed: ${response.status}`);
     }
-
     return await response.blob();
   }
 

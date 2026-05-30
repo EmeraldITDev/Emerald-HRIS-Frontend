@@ -365,7 +365,7 @@ export default function Announcements() {
           </div>
           <Button 
             variant="outline" 
-            onClick={() => setIsCreating(false)}
+            onClick={() => { setIsCreating(false); setEditingId(null); }}
           >
             Back to Announcements
           </Button>
@@ -567,6 +567,18 @@ export default function Announcements() {
                       <Send className="mr-2 h-4 w-4" />
                       Publish
                     </Button>
+                  )}
+                  {canManage(announcement) && (
+                    <>
+                      <Button size="sm" variant="outline" onClick={() => startEdit(announcement)}>
+                        <Pencil className="mr-2 h-4 w-4" />
+                        Edit
+                      </Button>
+                      <Button size="sm" variant="destructive" onClick={() => handleDelete(announcement.id)}>
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete
+                      </Button>
+                    </>
                   )}
                 </div>
               </div>

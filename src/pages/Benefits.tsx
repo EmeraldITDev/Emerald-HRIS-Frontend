@@ -296,15 +296,24 @@ export default function Benefits() {
     }
 
     try {
-      console.log('Assigning benefit with data:', {
-        ...assignBenefitForm,
-        value: assignBenefitForm.value ? parseFloat(assignBenefitForm.value) : undefined,
-      })
-      
-      const response = await apiService.assignBenefit({
-        ...assignBenefitForm,
-        value: assignBenefitForm.value ? parseFloat(assignBenefitForm.value) : undefined,
-      })
+      let response: any
+      if (editingBenefitId) {
+        // Update existing benefit (single benefit)
+        response = await apiService.updateBenefit(editingBenefitId, {
+          benefit_name: assignBenefitForm.benefit_name,
+          benefit_type: assignBenefitForm.benefit_type,
+          description: assignBenefitForm.description,
+          value: assignBenefitForm.value ? parseFloat(assignBenefitForm.value) : undefined,
+          start_date: assignBenefitForm.start_date,
+          end_date: assignBenefitForm.end_date || null,
+          notes: assignBenefitForm.notes,
+        })
+      } else {
+        response = await apiService.assignBenefit({
+          ...assignBenefitForm,
+          value: assignBenefitForm.value ? parseFloat(assignBenefitForm.value) : undefined,
+        })
+      }
       
       console.log('Benefit assignment response:', response)
       
@@ -325,6 +334,16 @@ export default function Benefits() {
         recurrence: 'none',
       })
       setIsAssignDialogOpen(false)
+      const wasEditing = !!editingBenefitId
+      setEditingBenefitId(null)
+
+      if (wasEditing) {
+        toast({
+          title: "Benefit Updated",
+          description: `Benefit "${assignBenefitForm.benefit_name}" updated successfully.`,
+        })
+        return
+      }
 
       // Check if there were any skipped employees
       const responseAny = response as any

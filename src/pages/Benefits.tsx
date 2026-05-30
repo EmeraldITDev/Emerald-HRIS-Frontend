@@ -961,7 +961,132 @@ export default function Benefits() {
         </CardContent>
       </Card>
 
-      {/* Manage Benefits Dialog */}
+      {/* Manage All Benefits Dialog */}
+      <Dialog open={isManageAllDialogOpen} onOpenChange={setIsManageAllDialogOpen}>
+        <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Manage Employee Benefits</DialogTitle>
+            <DialogDescription>
+              View, edit, or remove benefit assignments across the organisation.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <Input
+              placeholder="Search by employee, benefit name, or type..."
+              value={manageSearch}
+              onChange={(e) => setManageSearch(e.target.value)}
+            />
+
+            <div className="overflow-x-auto border rounded-md">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Employee</TableHead>
+                    <TableHead>Benefit</TableHead>
+                    <TableHead className="hidden md:table-cell">Type</TableHead>
+                    <TableHead className="hidden md:table-cell">Value</TableHead>
+                    <TableHead className="hidden lg:table-cell">Period</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {(() => {
+                    const q = manageSearch.trim().toLowerCase()
+                    const rows = dbBenefits
+                      .map((b: any) => {
+                        const emp = employees.find(e => Number(e.id) === Number(b.employee_id))
+                        const empName = emp
+                          ? `${emp.first_name} ${emp.last_name}`
+                          : (b.employee_name || `Employee #${b.employee_id}`)
+                        return { ...b, _empName: empName }
+                      })
+                      .filter((b: any) => {
+                        if (!q) return true
+                        return (
+                          b._empName.toLowerCase().includes(q) ||
+                          (b.benefit_name || '').toLowerCase().includes(q) ||
+                          (b.benefit_type || '').toLowerCase().includes(q)
+                        )
+                      })
+                    if (rows.length === 0) {
+                      return (
+                        <TableRow>
+                          <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                            No benefit assignments found.
+                          </TableCell>
+                        </TableRow>
+                      )
+                    }
+                    return rows.map((b: any) => (
+                      <TableRow key={b.id}>
+                        <TableCell className="font-medium">{b._empName}</TableCell>
+                        <TableCell>{b.benefit_name}</TableCell>
+                        <TableCell className="hidden md:table-cell capitalize">{b.benefit_type}</TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          {b.value ? `₦${Number(b.value).toLocaleString()}` : '—'}
+                        </TableCell>
+                        <TableCell className="hidden lg:table-cell text-xs">
+                          {b.start_date ? new Date(b.start_date).toLocaleDateString() : '—'}
+                          {b.end_date ? ` → ${new Date(b.end_date).toLocaleDateString()}` : ''}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={b.status === 'active' ? 'default' : 'secondary'} className="capitalize">
+                            {b.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-1">
+                            {canEditBenefit(b) && (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    setIsManageAllDialogOpen(false)
+                                    handleEditDbBenefit(b)
+                                  }}
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-destructive hover:text-destructive"
+                                  onClick={() => {
+                                    if (window.confirm(`Delete benefit "${b.benefit_name}" for ${b._empName}?`)) {
+                                      handleDeleteDbBenefit(Number(b.id))
+                                    }
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  })()}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsManageAllDialogOpen(false)}>Close</Button>
+            <Button
+              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+              onClick={() => { setIsManageAllDialogOpen(false); setEditingBenefitId(null); setIsAssignDialogOpen(true); }}
+            >
+              <Plus className="mr-2 h-4 w-4" /> New Assignment
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Legacy local-state Manage Benefits Dialog (kept for backwards compat, hidden) */}
       <Dialog open={showManageBenefitDialog} onOpenChange={setShowManageBenefitDialog}>
         <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>

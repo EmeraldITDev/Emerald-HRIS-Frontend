@@ -360,8 +360,8 @@ export default function Announcements() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Create Announcement</h1>
-            <p className="text-muted-foreground">Write and share updates with your team</p>
+            <h1 className="text-3xl font-bold text-foreground">{editingId ? 'Edit Announcement' : 'Create Announcement'}</h1>
+            <p className="text-muted-foreground">{editingId ? 'Update an existing announcement' : 'Write and share updates with your team'}</p>
           </div>
           <Button 
             variant="outline" 

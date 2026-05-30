@@ -345,6 +345,30 @@ export default function Training() {
     }
   }
 
+  const handleUploadMaterialForTraining = async (trainingId: number, event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    event.target.value = ''
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast({ title: "File too large", description: "Materials must be smaller than 10MB", variant: "destructive" })
+      return
+    }
+
+    try {
+      await apiService.uploadTrainingAttachment(trainingId, file)
+      await fetchTrainingAssignments()
+      toast({ title: "Materials uploaded", description: `${file.name} attached to training.` })
+    } catch (err) {
+      console.error('Material upload failed:', err)
+      toast({
+        title: "Upload failed",
+        description: err instanceof Error ? err.message : "Could not upload training material",
+        variant: "destructive",
+      })
+    }
+  }
+
   // Filter trainings based on role and department
   const currentUserFullName = user ? `${user.firstName} ${user.lastName}` : ''
   

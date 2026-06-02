@@ -1026,7 +1026,7 @@ export default function Employees() {
       gender: employee.gender || "",
       maritalStatus: employee.marital_status || "",
       nationality: employee.nationality || "",
-      phoneNumber: employee.phone_number || "",
+      phoneNumber: employee.phone || employee.phone_number || "",
       email: employee.email || "",
       homeAddress: employee.address || "",
 
@@ -1068,7 +1068,7 @@ export default function Employees() {
 
       // Government IDs
       national_id: employee.national_id || "",
-      passport_number: "",
+      passport_number: employee.passport_number || "",
       tin: employee.tin || "",
       pension_pin: employee.pension_pin || "",
       nhf_number: employee.nhf_number || "",
@@ -1161,6 +1161,7 @@ export default function Employees() {
         // Government ID Information
         employee_code: editEmployee.employeeId,
         national_id: editEmployee.national_id,
+        passport_number: editEmployee.passport_number,
         bvn: editEmployee.bvn,
         tin: editEmployee.tin,
         pension_pin: editEmployee.pension_pin,

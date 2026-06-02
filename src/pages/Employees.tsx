@@ -3818,11 +3818,11 @@ export default function Employees() {
                       <Label htmlFor="editNationalId">National ID (NIN)</Label>
                       <Input
                         id="editNationalId"
-                        value={editEmployee.nationalId || ""}
+                        value={editEmployee.national_id || ""}
                         onChange={(e) =>
                           setEditEmployee({
                             ...editEmployee,
-                            nationalId: e.target.value,
+                            national_id: e.target.value,
                           })
                         }
                         placeholder="National ID"
@@ -3835,11 +3835,11 @@ export default function Employees() {
                       <Label htmlFor="editPassportNumber">Passport Number</Label>
                       <Input
                         id="editPassportNumber"
-                        value={editEmployee.passportNumber || ""}
+                        value={editEmployee.passport_number || ""}
                         onChange={(e) =>
                           setEditEmployee({
                             ...editEmployee,
-                            passportNumber: e.target.value,
+                            passport_number: e.target.value,
                           })
                         }
                         placeholder="Passport number"
@@ -3866,11 +3866,11 @@ export default function Employees() {
                       <Label htmlFor="editPensionPin">Pension PIN</Label>
                       <Input
                         id="editPensionPin"
-                        value={editEmployee.pensionPin || ""}
+                        value={editEmployee.pension_pin || ""}
                         onChange={(e) =>
                           setEditEmployee({
                             ...editEmployee,
-                            pensionPin: e.target.value,
+                            pension_pin: e.target.value,
                           })
                         }
                         placeholder="Pension PIN"
@@ -3880,11 +3880,11 @@ export default function Employees() {
                       <Label htmlFor="editNhfNumber">NHF Number</Label>
                       <Input
                         id="editNhfNumber"
-                        value={editEmployee.nhfNumber || ""}
+                        value={editEmployee.nhf_number || ""}
                         onChange={(e) =>
                           setEditEmployee({
                             ...editEmployee,
-                            nhfNumber: e.target.value,
+                            nhf_number: e.target.value,
                           })
                         }
                         placeholder="NHF Number"
@@ -3896,11 +3896,11 @@ export default function Employees() {
                     <Label htmlFor="editTaxId">Tax ID</Label>
                     <Input
                       id="editTaxId"
-                      value={editEmployee.taxId || ""}
+                      value={editEmployee.tax_id || ""}
                       onChange={(e) =>
                         setEditEmployee({
                           ...editEmployee,
-                          taxId: e.target.value,
+                          tax_id: e.target.value,
                         })
                       }
                       placeholder="Tax ID"

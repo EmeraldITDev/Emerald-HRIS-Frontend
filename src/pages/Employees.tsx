@@ -1026,7 +1026,7 @@ export default function Employees() {
       gender: employee.gender || "",
       maritalStatus: employee.marital_status || "",
       nationality: employee.nationality || "",
-      phoneNumber: employee.phone_number || "",
+      phoneNumber: employee.phone || employee.phone_number || "",
       email: employee.email || "",
       homeAddress: employee.address || "",
 
@@ -1068,7 +1068,7 @@ export default function Employees() {
 
       // Government IDs
       national_id: employee.national_id || "",
-      passport_number: "",
+      passport_number: employee.passport_number || "",
       tin: employee.tin || "",
       pension_pin: employee.pension_pin || "",
       nhf_number: employee.nhf_number || "",
@@ -1161,6 +1161,7 @@ export default function Employees() {
         // Government ID Information
         employee_code: editEmployee.employeeId,
         national_id: editEmployee.national_id,
+        passport_number: editEmployee.passport_number,
         bvn: editEmployee.bvn,
         tin: editEmployee.tin,
         pension_pin: editEmployee.pension_pin,
@@ -2468,6 +2469,20 @@ export default function Employees() {
                             })
                           }
                           placeholder="Passport Number"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="bvn">BVN</Label>
+                        <Input
+                          id="bvn"
+                          value={newEmployee.bvn}
+                          onChange={(e) =>
+                            setNewEmployee({
+                              ...newEmployee,
+                              bvn: e.target.value,
+                            })
+                          }
+                          placeholder="Bank Verification Number"
                         />
                       </div>
                     </div>
@@ -3817,11 +3832,11 @@ export default function Employees() {
                       <Label htmlFor="editNationalId">National ID (NIN)</Label>
                       <Input
                         id="editNationalId"
-                        value={editEmployee.nationalId || ""}
+                        value={editEmployee.national_id || ""}
                         onChange={(e) =>
                           setEditEmployee({
                             ...editEmployee,
-                            nationalId: e.target.value,
+                            national_id: e.target.value,
                           })
                         }
                         placeholder="National ID"
@@ -3834,16 +3849,33 @@ export default function Employees() {
                       <Label htmlFor="editPassportNumber">Passport Number</Label>
                       <Input
                         id="editPassportNumber"
-                        value={editEmployee.passportNumber || ""}
+                        value={editEmployee.passport_number || ""}
                         onChange={(e) =>
                           setEditEmployee({
                             ...editEmployee,
-                            passportNumber: e.target.value,
+                            passport_number: e.target.value,
                           })
                         }
                         placeholder="Passport number"
                       />
                     </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="editBvn">BVN</Label>
+                        <Input
+                          id="editBvn"
+                          value={editEmployee.bvn || ""}
+                          onChange={(e) =>
+                            setEditEmployee({
+                              ...editEmployee,
+                              bvn: e.target.value,
+                            })
+                          }
+                          placeholder="BVN"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="editTin">TIN</Label>
                       <Input
@@ -3865,11 +3897,11 @@ export default function Employees() {
                       <Label htmlFor="editPensionPin">Pension PIN</Label>
                       <Input
                         id="editPensionPin"
-                        value={editEmployee.pensionPin || ""}
+                        value={editEmployee.pension_pin || ""}
                         onChange={(e) =>
                           setEditEmployee({
                             ...editEmployee,
-                            pensionPin: e.target.value,
+                            pension_pin: e.target.value,
                           })
                         }
                         placeholder="Pension PIN"
@@ -3879,11 +3911,11 @@ export default function Employees() {
                       <Label htmlFor="editNhfNumber">NHF Number</Label>
                       <Input
                         id="editNhfNumber"
-                        value={editEmployee.nhfNumber || ""}
+                        value={editEmployee.nhf_number || ""}
                         onChange={(e) =>
                           setEditEmployee({
                             ...editEmployee,
-                            nhfNumber: e.target.value,
+                            nhf_number: e.target.value,
                           })
                         }
                         placeholder="NHF Number"
@@ -3895,11 +3927,11 @@ export default function Employees() {
                     <Label htmlFor="editTaxId">Tax ID</Label>
                     <Input
                       id="editTaxId"
-                      value={editEmployee.taxId || ""}
+                      value={editEmployee.tax_id || ""}
                       onChange={(e) =>
                         setEditEmployee({
                           ...editEmployee,
-                          taxId: e.target.value,
+                          tax_id: e.target.value,
                         })
                       }
                       placeholder="Tax ID"

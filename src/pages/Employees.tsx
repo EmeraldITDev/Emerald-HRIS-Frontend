@@ -2471,6 +2471,20 @@ export default function Employees() {
                           placeholder="Passport Number"
                         />
                       </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="bvn">BVN</Label>
+                        <Input
+                          id="bvn"
+                          value={newEmployee.bvn}
+                          onChange={(e) =>
+                            setNewEmployee({
+                              ...newEmployee,
+                              bvn: e.target.value,
+                            })
+                          }
+                          placeholder="Bank Verification Number"
+                        />
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -3845,6 +3859,23 @@ export default function Employees() {
                         placeholder="Passport number"
                       />
                     </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="editBvn">BVN</Label>
+                        <Input
+                          id="editBvn"
+                          value={editEmployee.bvn || ""}
+                          onChange={(e) =>
+                            setEditEmployee({
+                              ...editEmployee,
+                              bvn: e.target.value,
+                            })
+                          }
+                          placeholder="BVN"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="editTin">TIN</Label>
                       <Input

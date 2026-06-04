@@ -1281,13 +1281,21 @@ export default function Employees() {
         tax_id: editEmployee.tax_id,
 
         // System Role for user account update
-        system_role: editSystemRole || null,
+        // Only executives and Corporate HR may assign system roles (FE guard; BE
+        // currently has no role middleware on PUT /employees-full/{id}, so this
+        // prevents accidental role changes from HR Manager edits).
+        ...((user?.role === "executive" || user?.role === "corporate_hr")
+          ? { system_role: editSystemRole || null }
+          : {}),
       };
 
       // Call the API to update the employee
       await apiService.updateEmployee(editEmployee.id, employeeData);
 
-      // Refresh the employee list from the database
+      // Refresh the employee list from the database.
+      // NOTE: The PUT response does NOT flatten financialDetails to top level
+      // (only GET /employees-full does). Always re-fetch instead of trusting the
+      // PUT body, otherwise salary/bank fields appear empty in subsequent edits.
       await fetchEmployees();
 
       toast({
@@ -3342,32 +3350,35 @@ export default function Employees() {
             </DialogHeader>
 
             {/* Add System Role Dropdown at the top */}
-            <div className="space-y-2">
-              <Label>System Role</Label>
-              <Select
-                value={editSystemRole}
-                onValueChange={(val) => {
-                  setEditSystemRole(val);
-                  // Update employee code when system role changes
-                  const newEmployeeCode = getNextEmployeeCode(val);
-                  setEditEmployee((prev) => ({
-                    ...prev,
-                    employeeId: newEmployeeCode,
-                  }));
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select system role" />
-                </SelectTrigger>
-                <SelectContent>
-                  {ROLE_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {/* System Role assignment restricted to Executives and Corporate HR */}
+            {(user?.role === "executive" || user?.role === "corporate_hr") && (
+              <div className="space-y-2">
+                <Label>System Role</Label>
+                <Select
+                  value={editSystemRole}
+                  onValueChange={(val) => {
+                    setEditSystemRole(val);
+                    // Update employee code when system role changes
+                    const newEmployeeCode = getNextEmployeeCode(val);
+                    setEditEmployee((prev) => ({
+                      ...prev,
+                      employeeId: newEmployeeCode,
+                    }));
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select system role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ROLE_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             {editEmployee && (
               <Tabs defaultValue="personal" className="w-full">

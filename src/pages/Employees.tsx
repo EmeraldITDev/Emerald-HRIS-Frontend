@@ -1054,7 +1054,10 @@ export default function Employees() {
       // Personal Information - Map database fields to form fields
       firstName: employee.first_name || "",
       lastName: employee.last_name || "",
-      middleName: "", // This field doesn't exist in database
+      middleName:
+        (employee as any).middle_name ||
+        (employee as any).middleName ||
+        "",
       dateOfBirth: employee.dob ? new Date(employee.dob) : undefined,
       gender: employee.gender || "",
       maritalStatus: employee.marital_status || "",
@@ -1064,13 +1067,34 @@ export default function Employees() {
       homeAddress: employee.address || "",
 
       // Emergency Contact Information
-      emergencyContact: "",
-      emergencyContactNumber: "",
-      nextOfKinName: "",
-      nextOfKinRelationship: "",
-      nextOfKinPhone: "",
-      nextOfKinAddress: "",
-      nextOfKinEmail: "",
+      emergencyContact:
+        (employee as any).emergency_contact_name ||
+        (employee as any).emergency_contact ||
+        "",
+      emergencyContactNumber:
+        (employee as any).emergency_contact_phone ||
+        (employee as any).emergency_contact_number ||
+        "",
+      nextOfKinName:
+        (employee as any).next_of_kin_name ||
+        (employee as any).nextOfKinName ||
+        "",
+      nextOfKinRelationship:
+        (employee as any).next_of_kin_relationship ||
+        (employee as any).nextOfKinRelationship ||
+        "",
+      nextOfKinPhone:
+        (employee as any).next_of_kin_phone ||
+        (employee as any).nextOfKinPhone ||
+        "",
+      nextOfKinAddress:
+        (employee as any).next_of_kin_address ||
+        (employee as any).nextOfKinAddress ||
+        "",
+      nextOfKinEmail:
+        (employee as any).next_of_kin_email ||
+        (employee as any).nextOfKinEmail ||
+        "",
 
       // Job Information
       jobTitle: employee.job_title || "",
@@ -1139,10 +1163,16 @@ export default function Employees() {
       vacation_days: employee.vacation_days?.toString() || "",
 
       // Contract Information (if available in database)
-      contract_amount: "",
-      payment_frequency: "",
-      contract_duration: "",
-      contract_terms: "",
+      contract_amount:
+        (employee as any).contract_amount?.toString?.() ||
+        (employee as any).contract_amount ||
+        "",
+      payment_frequency:
+        (employee as any).payment_frequency || "",
+      contract_duration:
+        (employee as any).contract_duration || "",
+      contract_terms:
+        (employee as any).contract_terms || "",
 
       // Document fields
       ninDocument: null,
@@ -1184,7 +1214,7 @@ export default function Employees() {
       const employeeData = {
         first_name: editEmployee.firstName,
         last_name: editEmployee.lastName,
-        // Remove middle_name - doesn't exist in database
+        middle_name: editEmployee.middleName || null,
         email: editEmployee.email,
         phone: editEmployee.phoneNumber, // Backend uses 'phone' not 'phone_number'
         dob: editEmployee.dateOfBirth
@@ -1205,6 +1235,25 @@ export default function Employees() {
         probation_period: editEmployee.probation_period,
         confirmation_date: editEmployee.confirmation_date ? format(editEmployee.confirmation_date, "yyyy-MM-dd") : null,
         vacation_days: editEmployee.vacation_days ? parseInt(editEmployee.vacation_days) : 20,
+
+        // Emergency Contact
+        emergency_contact_name: editEmployee.emergencyContact || null,
+        emergency_contact_phone: editEmployee.emergencyContactNumber || null,
+
+        // Next of Kin
+        next_of_kin_name: editEmployee.nextOfKinName || null,
+        next_of_kin_relationship: editEmployee.nextOfKinRelationship || null,
+        next_of_kin_phone: editEmployee.nextOfKinPhone || null,
+        next_of_kin_address: editEmployee.nextOfKinAddress || null,
+        next_of_kin_email: editEmployee.nextOfKinEmail || null,
+
+        // Contract Information
+        contract_amount: editEmployee.contract_amount
+          ? parseFloat(editEmployee.contract_amount)
+          : null,
+        payment_frequency: editEmployee.payment_frequency || null,
+        contract_duration: editEmployee.contract_duration || null,
+        contract_terms: editEmployee.contract_terms || null,
 
         // Financial Information
         gross_salary: editEmployee.gross_salary ? parseInt(editEmployee.gross_salary) : 0,

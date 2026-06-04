@@ -1053,18 +1053,45 @@ export default function Employees() {
 
       // Financial Information
       gross_salary: employee.gross_salary?.toString() || "",
-      basic_salary: "",
-      housing_allowance: employee.housing_allowance?.toString() || "",
-      transport_allowance: employee.transport_allowance?.toString() || "",
-      other_allowance: "",
+      basic_salary:
+        employee.basic_salary?.toString() ||
+        employee.financial_details?.basic_salary?.toString() ||
+        "",
+      housing_allowance:
+        employee.housing_allowance?.toString() ||
+        employee.financial_details?.housing_allowance?.toString() ||
+        "",
+      transport_allowance:
+        employee.transport_allowance?.toString() ||
+        employee.financial_details?.transport_allowance?.toString() ||
+        "",
+      other_allowance:
+        employee.other_allowance?.toString() ||
+        employee.financial_details?.other_allowance?.toString() ||
+        "",
       meal_allowance: employee.meal_allowance?.toString() || "",
 
-      // Banking Information
-      bank_account: employee.bank_account || "",
-      bank_name: "",
-      account_number: "",
-      nuban: "",
-      sort_code: "",
+      // Banking Information — populate from top-level OR nested financial_details
+      bank_account:
+        employee.bank_account ||
+        employee.financial_details?.bank_account ||
+        "",
+      bank_name:
+        employee.bank_name ||
+        employee.financial_details?.bank_name ||
+        "",
+      account_number:
+        employee.account_number ||
+        employee.financial_details?.account_number ||
+        "",
+      nuban:
+        employee.nuban ||
+        employee.financial_details?.nuban ||
+        "",
+      sort_code:
+        employee.sort_code ||
+        employee.financial_details?.sort_code ||
+        "",
 
       // Government IDs
       national_id: employee.national_id || "",

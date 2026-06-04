@@ -503,6 +503,39 @@ export default function Employees() {
     }
   }, [newEmployee.grossSalary, newEmployee.employmentType]);
 
+  // Mirror the Add-form auto-calc for the Edit dialog so behavior is
+  // identical: Full-time → basic 40 / housing 20 / transport 9 / other 31 of gross.
+  useEffect(() => {
+    if (!editEmployee) return;
+    if (editEmployee.employment_type !== "Full-time") return;
+    const gross = parseFloat(String(editEmployee.gross_salary ?? "")) || 0;
+    if (gross <= 0) return;
+    const basic_salary = (gross * 0.4).toString();
+    const housing_allowance = (gross * 0.2).toString();
+    const transport_allowance = (gross * 0.09).toString();
+    const other_allowance = (gross * 0.31).toString();
+    // Only update if values actually changed to avoid infinite render loop.
+    if (
+      String(editEmployee.basic_salary ?? "") === basic_salary &&
+      String(editEmployee.housing_allowance ?? "") === housing_allowance &&
+      String(editEmployee.transport_allowance ?? "") === transport_allowance &&
+      String(editEmployee.other_allowance ?? "") === other_allowance
+    ) {
+      return;
+    }
+    setEditEmployee((prev: any) =>
+      prev
+        ? {
+            ...prev,
+            basic_salary,
+            housing_allowance,
+            transport_allowance,
+            other_allowance,
+          }
+        : prev,
+    );
+  }, [editEmployee?.gross_salary, editEmployee?.employment_type]);
+
   // Validate required fields
   const validateRequiredFields = (tab: string) => {
     const errors: {
@@ -1053,18 +1086,45 @@ export default function Employees() {
 
       // Financial Information
       gross_salary: employee.gross_salary?.toString() || "",
-      basic_salary: "",
-      housing_allowance: employee.housing_allowance?.toString() || "",
-      transport_allowance: employee.transport_allowance?.toString() || "",
-      other_allowance: "",
+      basic_salary:
+        employee.basic_salary?.toString() ||
+        employee.financial_details?.basic_salary?.toString() ||
+        "",
+      housing_allowance:
+        employee.housing_allowance?.toString() ||
+        employee.financial_details?.housing_allowance?.toString() ||
+        "",
+      transport_allowance:
+        employee.transport_allowance?.toString() ||
+        employee.financial_details?.transport_allowance?.toString() ||
+        "",
+      other_allowance:
+        employee.other_allowance?.toString() ||
+        employee.financial_details?.other_allowance?.toString() ||
+        "",
       meal_allowance: employee.meal_allowance?.toString() || "",
 
-      // Banking Information
-      bank_account: employee.bank_account || "",
-      bank_name: "",
-      account_number: "",
-      nuban: "",
-      sort_code: "",
+      // Banking Information — populate from top-level OR nested financial_details
+      bank_account:
+        employee.bank_account ||
+        employee.financial_details?.bank_account ||
+        "",
+      bank_name:
+        employee.bank_name ||
+        employee.financial_details?.bank_name ||
+        "",
+      account_number:
+        employee.account_number ||
+        employee.financial_details?.account_number ||
+        "",
+      nuban:
+        employee.nuban ||
+        employee.financial_details?.nuban ||
+        "",
+      sort_code:
+        employee.sort_code ||
+        employee.financial_details?.sort_code ||
+        "",
 
       // Government IDs
       national_id: employee.national_id || "",
@@ -1127,6 +1187,9 @@ export default function Employees() {
         // Remove middle_name - doesn't exist in database
         email: editEmployee.email,
         phone: editEmployee.phoneNumber, // Backend uses 'phone' not 'phone_number'
+        dob: editEmployee.dateOfBirth
+          ? format(editEmployee.dateOfBirth, "yyyy-MM-dd")
+          : null,
         job_title: editEmployee.jobTitle,
         department: editEmployee.department,
         employment_type: editEmployee.employment_type,
@@ -3658,9 +3721,76 @@ export default function Employees() {
                 </TabsContent>
 
                 <TabsContent value="financial" className="space-y-4">
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {editEmployee.employment_type === "Full-time" ? (
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="editGrossSalary">Gross Salary (Annual) *</Label>
+                        <Input
+                          id="editGrossSalary"
+                          type="number"
+                          value={editEmployee.gross_salary || ""}
+                          onChange={(e) =>
+                            setEditEmployee({
+                              ...editEmployee,
+                              gross_salary: e.target.value,
+                            })
+                          }
+                          placeholder="2500000"
+                        />
+                        <p className="text-xs text-muted-foreground">Enter annual amount in Naira (₦). Monthly = Annual ÷ 12.</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="editBasicSalary">Basic Salary (40% of Gross)</Label>
+                        <Input
+                          id="editBasicSalary"
+                          type="number"
+                          value={editEmployee.basic_salary || ""}
+                          readOnly
+                          className="bg-muted cursor-not-allowed"
+                          placeholder="Auto-calculated"
+                        />
+                        <p className="text-xs text-muted-foreground">Automatically calculated as 40% of gross salary.</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="editHousingAllowance">Housing Allowance (20% of Gross)</Label>
+                        <Input
+                          id="editHousingAllowance"
+                          type="number"
+                          value={editEmployee.housing_allowance || ""}
+                          readOnly
+                          className="bg-muted cursor-not-allowed"
+                          placeholder="Auto-calculated"
+                        />
+                        <p className="text-xs text-muted-foreground">Automatically calculated as 20% of gross salary.</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="editTransportAllowance">Transport Allowance (9% of Gross)</Label>
+                        <Input
+                          id="editTransportAllowance"
+                          type="number"
+                          value={editEmployee.transport_allowance || ""}
+                          readOnly
+                          className="bg-muted cursor-not-allowed"
+                          placeholder="Auto-calculated"
+                        />
+                        <p className="text-xs text-muted-foreground">Automatically calculated as 9% of gross salary.</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="editOtherAllowance">Other Allowance (31% of Gross)</Label>
+                        <Input
+                          id="editOtherAllowance"
+                          type="number"
+                          value={editEmployee.other_allowance || ""}
+                          readOnly
+                          className="bg-muted cursor-not-allowed"
+                          placeholder="Auto-calculated"
+                        />
+                        <p className="text-xs text-muted-foreground">Automatically calculated as 31% of gross salary.</p>
+                      </div>
+                    </>
+                  ) : editEmployee.employment_type === "Contract" ? (
                     <div className="space-y-2">
-                      <Label htmlFor="editGrossSalary">Gross Salary (Annual)</Label>
+                      <Label htmlFor="editGrossSalary">Gross Salary (Annual) *</Label>
                       <Input
                         id="editGrossSalary"
                         type="number"
@@ -3668,79 +3798,18 @@ export default function Employees() {
                         onChange={(e) =>
                           setEditEmployee({
                             ...editEmployee,
-                            gross_salary: parseFloat(e.target.value) || 0,
+                            gross_salary: e.target.value,
                           })
                         }
-                        placeholder="₦0.00"
+                        placeholder="1500000"
                       />
+                      <p className="text-xs text-muted-foreground">Enter annual gross salary in Naira (₦).</p>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="editNetSalary">Net Salary (Monthly)</Label>
-                      <Input
-                        id="editNetSalary"
-                        type="number"
-                        value={editEmployee.net_salary || ""}
-                        onChange={(e) =>
-                          setEditEmployee({
-                            ...editEmployee,
-                            net_salary: parseFloat(e.target.value) || 0,
-                          })
-                        }
-                        placeholder="₦0.00"
-                      />
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <p>Please select an employment type to configure financial information.</p>
                     </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="editHousingAllowance">Housing Allowance</Label>
-                      <Input
-                        id="editHousingAllowance"
-                        type="number"
-                        value={editEmployee.housing_allowance || ""}
-                        onChange={(e) =>
-                          setEditEmployee({
-                            ...editEmployee,
-                            housing_allowance: parseFloat(e.target.value) || 0,
-                          })
-                        }
-                        placeholder="₦0.00"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="editTransportAllowance">Transport Allowance</Label>
-                      <Input
-                        id="editTransportAllowance"
-                        type="number"
-                        value={editEmployee.transport_allowance || ""}
-                        onChange={(e) =>
-                          setEditEmployee({
-                            ...editEmployee,
-                            transport_allowance: parseFloat(e.target.value) || 0,
-                          })
-                        }
-                        placeholder="₦0.00"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="editOtherAllowance">Other Allowance</Label>
-                      <Input
-                        id="editOtherAllowance"
-                        type="number"
-                        value={editEmployee.other_allowance || ""}
-                        onChange={(e) =>
-                          setEditEmployee({
-                            ...editEmployee,
-                            other_allowance: parseFloat(e.target.value) || 0,
-                          })
-                        }
-                        placeholder="₦0.00"
-                      />
-                    </div>
-                  </div>
+                  )}
 
                   <Separator className="my-4" />
 

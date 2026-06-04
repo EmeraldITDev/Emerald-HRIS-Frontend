@@ -1154,6 +1154,9 @@ export default function Employees() {
         // Remove middle_name - doesn't exist in database
         email: editEmployee.email,
         phone: editEmployee.phoneNumber, // Backend uses 'phone' not 'phone_number'
+        dob: editEmployee.dateOfBirth
+          ? format(editEmployee.dateOfBirth, "yyyy-MM-dd")
+          : null,
         job_title: editEmployee.jobTitle,
         department: editEmployee.department,
         employment_type: editEmployee.employment_type,

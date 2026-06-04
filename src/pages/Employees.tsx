@@ -1054,7 +1054,10 @@ export default function Employees() {
       // Personal Information - Map database fields to form fields
       firstName: employee.first_name || "",
       lastName: employee.last_name || "",
-      middleName: "", // This field doesn't exist in database
+      middleName:
+        (employee as any).middle_name ||
+        (employee as any).middleName ||
+        "",
       dateOfBirth: employee.dob ? new Date(employee.dob) : undefined,
       gender: employee.gender || "",
       maritalStatus: employee.marital_status || "",
@@ -1064,13 +1067,34 @@ export default function Employees() {
       homeAddress: employee.address || "",
 
       // Emergency Contact Information
-      emergencyContact: "",
-      emergencyContactNumber: "",
-      nextOfKinName: "",
-      nextOfKinRelationship: "",
-      nextOfKinPhone: "",
-      nextOfKinAddress: "",
-      nextOfKinEmail: "",
+      emergencyContact:
+        (employee as any).emergency_contact_name ||
+        (employee as any).emergency_contact ||
+        "",
+      emergencyContactNumber:
+        (employee as any).emergency_contact_phone ||
+        (employee as any).emergency_contact_number ||
+        "",
+      nextOfKinName:
+        (employee as any).next_of_kin_name ||
+        (employee as any).nextOfKinName ||
+        "",
+      nextOfKinRelationship:
+        (employee as any).next_of_kin_relationship ||
+        (employee as any).nextOfKinRelationship ||
+        "",
+      nextOfKinPhone:
+        (employee as any).next_of_kin_phone ||
+        (employee as any).nextOfKinPhone ||
+        "",
+      nextOfKinAddress:
+        (employee as any).next_of_kin_address ||
+        (employee as any).nextOfKinAddress ||
+        "",
+      nextOfKinEmail:
+        (employee as any).next_of_kin_email ||
+        (employee as any).nextOfKinEmail ||
+        "",
 
       // Job Information
       jobTitle: employee.job_title || "",
@@ -1139,10 +1163,16 @@ export default function Employees() {
       vacation_days: employee.vacation_days?.toString() || "",
 
       // Contract Information (if available in database)
-      contract_amount: "",
-      payment_frequency: "",
-      contract_duration: "",
-      contract_terms: "",
+      contract_amount:
+        (employee as any).contract_amount?.toString?.() ||
+        (employee as any).contract_amount ||
+        "",
+      payment_frequency:
+        (employee as any).payment_frequency || "",
+      contract_duration:
+        (employee as any).contract_duration || "",
+      contract_terms:
+        (employee as any).contract_terms || "",
 
       // Document fields
       ninDocument: null,

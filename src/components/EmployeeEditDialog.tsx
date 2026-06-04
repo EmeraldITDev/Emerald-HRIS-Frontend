@@ -108,8 +108,9 @@ export function EmployeeEditDialog({ employee, open, onOpenChange, onSuccess }: 
         housing_allowance: formData.housing_allowance,
         transport_allowance: formData.transport_allowance,
         // meal_allowance removed (Requirement 6 – no longer used in new payroll runs)
-        baseSalary: formData.baseSalary,
-        salaryType: formData.salaryType,
+        // baseSalary / salaryType intentionally NOT sent: BE has no migration for
+        // employees.base_salary / salary_type. Payroll uses financial_details.gross_salary
+        // (annual NGN, divided by 12). Re-enable only after BE adds the columns.
         bank_account: formData.bank_account,
         bank_name: formData.bank_name,
         account_number: formData.account_number,

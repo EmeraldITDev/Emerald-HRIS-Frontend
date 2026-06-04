@@ -3350,32 +3350,35 @@ export default function Employees() {
             </DialogHeader>
 
             {/* Add System Role Dropdown at the top */}
-            <div className="space-y-2">
-              <Label>System Role</Label>
-              <Select
-                value={editSystemRole}
-                onValueChange={(val) => {
-                  setEditSystemRole(val);
-                  // Update employee code when system role changes
-                  const newEmployeeCode = getNextEmployeeCode(val);
-                  setEditEmployee((prev) => ({
-                    ...prev,
-                    employeeId: newEmployeeCode,
-                  }));
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select system role" />
-                </SelectTrigger>
-                <SelectContent>
-                  {ROLE_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {/* System Role assignment restricted to Executives and Corporate HR */}
+            {(user?.role === "executive" || user?.role === "corporate_hr") && (
+              <div className="space-y-2">
+                <Label>System Role</Label>
+                <Select
+                  value={editSystemRole}
+                  onValueChange={(val) => {
+                    setEditSystemRole(val);
+                    // Update employee code when system role changes
+                    const newEmployeeCode = getNextEmployeeCode(val);
+                    setEditEmployee((prev) => ({
+                      ...prev,
+                      employeeId: newEmployeeCode,
+                    }));
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select system role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ROLE_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             {editEmployee && (
               <Tabs defaultValue="personal" className="w-full">

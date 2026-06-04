@@ -1281,13 +1281,21 @@ export default function Employees() {
         tax_id: editEmployee.tax_id,
 
         // System Role for user account update
-        system_role: editSystemRole || null,
+        // Only executives and Corporate HR may assign system roles (FE guard; BE
+        // currently has no role middleware on PUT /employees-full/{id}, so this
+        // prevents accidental role changes from HR Manager edits).
+        ...((user?.role === "executive" || user?.role === "corporate_hr")
+          ? { system_role: editSystemRole || null }
+          : {}),
       };
 
       // Call the API to update the employee
       await apiService.updateEmployee(editEmployee.id, employeeData);
 
-      // Refresh the employee list from the database
+      // Refresh the employee list from the database.
+      // NOTE: The PUT response does NOT flatten financialDetails to top level
+      // (only GET /employees-full does). Always re-fetch instead of trusting the
+      // PUT body, otherwise salary/bank fields appear empty in subsequent edits.
       await fetchEmployees();
 
       toast({

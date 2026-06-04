@@ -503,6 +503,39 @@ export default function Employees() {
     }
   }, [newEmployee.grossSalary, newEmployee.employmentType]);
 
+  // Mirror the Add-form auto-calc for the Edit dialog so behavior is
+  // identical: Full-time → basic 40 / housing 20 / transport 9 / other 31 of gross.
+  useEffect(() => {
+    if (!editEmployee) return;
+    if (editEmployee.employment_type !== "Full-time") return;
+    const gross = parseFloat(String(editEmployee.gross_salary ?? "")) || 0;
+    if (gross <= 0) return;
+    const basic_salary = (gross * 0.4).toString();
+    const housing_allowance = (gross * 0.2).toString();
+    const transport_allowance = (gross * 0.09).toString();
+    const other_allowance = (gross * 0.31).toString();
+    // Only update if values actually changed to avoid infinite render loop.
+    if (
+      String(editEmployee.basic_salary ?? "") === basic_salary &&
+      String(editEmployee.housing_allowance ?? "") === housing_allowance &&
+      String(editEmployee.transport_allowance ?? "") === transport_allowance &&
+      String(editEmployee.other_allowance ?? "") === other_allowance
+    ) {
+      return;
+    }
+    setEditEmployee((prev: any) =>
+      prev
+        ? {
+            ...prev,
+            basic_salary,
+            housing_allowance,
+            transport_allowance,
+            other_allowance,
+          }
+        : prev,
+    );
+  }, [editEmployee?.gross_salary, editEmployee?.employment_type]);
+
   // Validate required fields
   const validateRequiredFields = (tab: string) => {
     const errors: {

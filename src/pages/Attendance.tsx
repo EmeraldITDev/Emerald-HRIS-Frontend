@@ -1148,7 +1148,7 @@ export default function Attendance() {
             Manage employee leave requests and track attendance records
           </p>
         </div>
-        <RoleBasedComponent allowedRoles={['executive', 'hr_manager']}>
+        <RoleBasedComponent allowedRoles={['executive', 'hr_manager', 'corporate_hr']}>
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={() => handleGenerateReport('Daily')}>
               <Download className="mr-2 h-4 w-4" />
@@ -2017,7 +2017,7 @@ export default function Attendance() {
       </div>
 
       {/* Employee Leave Balances */}
-      <RoleBasedComponent allowedRoles={['hr_manager']}>
+      <RoleBasedComponent allowedRoles={['hr_manager', 'corporate_hr', 'executive']}>
         <Card className="border-border/50 shadow-sm">
           <CardHeader>
             <CardTitle className="text-primary">Employee Leave Balances</CardTitle>

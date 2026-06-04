@@ -1214,7 +1214,7 @@ export default function Employees() {
       const employeeData = {
         first_name: editEmployee.firstName,
         last_name: editEmployee.lastName,
-        // Remove middle_name - doesn't exist in database
+        middle_name: editEmployee.middleName || null,
         email: editEmployee.email,
         phone: editEmployee.phoneNumber, // Backend uses 'phone' not 'phone_number'
         dob: editEmployee.dateOfBirth
@@ -1235,6 +1235,25 @@ export default function Employees() {
         probation_period: editEmployee.probation_period,
         confirmation_date: editEmployee.confirmation_date ? format(editEmployee.confirmation_date, "yyyy-MM-dd") : null,
         vacation_days: editEmployee.vacation_days ? parseInt(editEmployee.vacation_days) : 20,
+
+        // Emergency Contact
+        emergency_contact_name: editEmployee.emergencyContact || null,
+        emergency_contact_phone: editEmployee.emergencyContactNumber || null,
+
+        // Next of Kin
+        next_of_kin_name: editEmployee.nextOfKinName || null,
+        next_of_kin_relationship: editEmployee.nextOfKinRelationship || null,
+        next_of_kin_phone: editEmployee.nextOfKinPhone || null,
+        next_of_kin_address: editEmployee.nextOfKinAddress || null,
+        next_of_kin_email: editEmployee.nextOfKinEmail || null,
+
+        // Contract Information
+        contract_amount: editEmployee.contract_amount
+          ? parseFloat(editEmployee.contract_amount)
+          : null,
+        payment_frequency: editEmployee.payment_frequency || null,
+        contract_duration: editEmployee.contract_duration || null,
+        contract_terms: editEmployee.contract_terms || null,
 
         // Financial Information
         gross_salary: editEmployee.gross_salary ? parseInt(editEmployee.gross_salary) : 0,

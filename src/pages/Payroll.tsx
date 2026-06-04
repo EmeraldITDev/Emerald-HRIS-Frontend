@@ -33,7 +33,8 @@ import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/contexts/AuthContext"
 import { RoleBasedComponent } from "@/components/RoleBasedComponent"
 import { canHrPayroll } from "@/lib/permissions"
-import { calculateAnnualPaye, getEmployeePayrollPackage, normalizePayrollRecord, roundMoney, toMoneyNumber } from "@/lib/payrollCalc"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { calculateAnnualPaye, employeesMissingAnnualGross, getAnnualGrossSalary, getEmployeePayrollPackage, normalizePayrollRecord, roundMoney, toMoneyNumber } from "@/lib/payrollCalc"
 import {
   Dialog,
   DialogContent,
@@ -868,11 +869,12 @@ export default function Payroll() {
       console.log('💰 Generating payroll for employee:', selectedEmployee);
       console.log('💰 Pay period:', selectedPeriod);
 
+      const annualGrossOnFile = getAnnualGrossSalary(selectedEmp)
       const payrollPackage = getEmployeePayrollPackage(selectedEmp)
-      if (payrollPackage.annualGross <= 0) {
+      if (annualGrossOnFile < 12) {
         toast({
           title: "Generation Failed",
-          description: `No gross salary found for ${selectedEmp.first_name} ${selectedEmp.last_name}. Please confirm the employee financial details before generating payroll.`,
+          description: `${selectedEmp.first_name} ${selectedEmp.last_name} has no annual gross salary (financial_details.gross_salary). Set it under Employees → Edit → Financial (whole naira, annual NGN), then try again.`,
           variant: "destructive"
         })
         return
@@ -1174,6 +1176,26 @@ export default function Payroll() {
         </div>
       </div>
 
+      {canHrPayroll(user) && missingGrossEmployees.length > 0 && (
+        <Alert variant="destructive">
+          <AlertTitle>Annual gross salary missing ({missingGrossEmployees.length})</AlertTitle>
+          <AlertDescription className="space-y-2">
+            <p>
+              Payroll divides <strong>financial_details.gross_salary</strong> (annual NGN) by 12 for monthly figures.
+              These active employees cannot generate payroll until HR sets annual gross under{" "}
+              <strong>Employees → Edit → Financial</strong> (whole naira, minimum ₦12).
+            </p>
+            <ul className="list-disc pl-5 text-sm space-y-0.5">
+              {missingGrossEmployees.map((emp) => (
+                <li key={emp.id ?? emp.code}>
+                  <span className="font-mono">{emp.code}</span> {emp.name}
+                </li>
+              ))}
+            </ul>
+          </AlertDescription>
+        </Alert>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
         {/* Payroll Calculator - For HR admins only */}
         {canHrPayroll(user) && (
@@ -1200,11 +1222,16 @@ export default function Payroll() {
                     ) : onboardEmployees.length === 0 ? (
                       <SelectItem value="none" disabled>No employees found</SelectItem>
                     ) : (
-                      onboardEmployees.map((emp) => (
-                        <SelectItem key={emp.id} value={emp.id}>
-                          {emp.name} - {emp.employmentType}
-                        </SelectItem>
-                      ))
+                      onboardEmployees.map((emp) => {
+                        const full = employees.find((e) => e.id?.toString() === emp.id)
+                        const noGross = full ? getAnnualGrossSalary(full) < 12 : false
+                        return (
+                          <SelectItem key={emp.id} value={emp.id}>
+                            {emp.name} - {emp.employmentType}
+                            {noGross ? " (no annual gross)" : ""}
+                          </SelectItem>
+                        )
+                      })
                     )}
                   </SelectContent>
                 </Select>

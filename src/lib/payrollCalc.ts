@@ -51,6 +51,32 @@ export const toMoneyNumber = (value: unknown): number => {
   return Number.isFinite(parsed) ? parsed : 0
 }
 
+/** Annual gross in NGN from API top-level or financial_details (BE storage). */
+export const getAnnualGrossSalary = (employee?: Partial<Employee> | null): number => {
+  const financial = (employee as any)?.financial_details || {}
+  return toMoneyNumber((employee as any)?.gross_salary ?? financial.gross_salary)
+}
+
+const ACTIVE_PAYROLL_STATUSES = new Set(["active", "on probation", "probation"])
+
+/** Employees who need annual gross set before payroll generation (BE rule: whole naira, ≥ 12). */
+export const employeesMissingAnnualGross = (
+  employees: Partial<Employee>[],
+): Array<{ id?: number; code: string; name: string }> => {
+  return employees
+    .filter((emp) => {
+      const status = (emp.employment_status || "").trim().toLowerCase()
+      if (status && !ACTIVE_PAYROLL_STATUSES.has(status)) return false
+      return getAnnualGrossSalary(emp) < 12
+    })
+    .map((emp) => ({
+      id: emp.id,
+      code: emp.employee_code || emp.employee_display || (emp.id ? `ID${emp.id}` : "—"),
+      name: `${emp.first_name || ""} ${emp.last_name || ""}`.trim() || "Unknown",
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name))
+}
+
 export const roundMoney = (value: number): number => Math.round(value * 100) / 100
 
 export const calculateAnnualPaye = (

@@ -1255,8 +1255,14 @@ export default function Employees() {
         contract_duration: editEmployee.contract_duration || null,
         contract_terms: editEmployee.contract_terms || null,
 
-        // Financial Information
-        gross_salary: editEmployee.gross_salary ? parseInt(editEmployee.gross_salary) : 0,
+        // Financial Information — omit gross_salary when empty so incidental saves
+        // do not POST 0 and wipe financial_details.gross_salary on the backend.
+        ...((): Record<string, number> => {
+          const gross = editEmployee.gross_salary
+            ? parseInt(String(editEmployee.gross_salary).replace(/[₦,\s]/g, ""), 10)
+            : NaN
+          return Number.isFinite(gross) && gross >= 12 ? { gross_salary: gross } : {}
+        })(),
         basic_salary: editEmployee.basic_salary ? parseInt(editEmployee.basic_salary) : 0,
         meal_allowance: editEmployee.meal_allowance ? parseInt(editEmployee.meal_allowance) : 0,
         housing_allowance: editEmployee.housing_allowance ? parseInt(editEmployee.housing_allowance) : 0,

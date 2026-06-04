@@ -3721,9 +3721,76 @@ export default function Employees() {
                 </TabsContent>
 
                 <TabsContent value="financial" className="space-y-4">
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {editEmployee.employment_type === "Full-time" ? (
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="editGrossSalary">Gross Salary (Annual) *</Label>
+                        <Input
+                          id="editGrossSalary"
+                          type="number"
+                          value={editEmployee.gross_salary || ""}
+                          onChange={(e) =>
+                            setEditEmployee({
+                              ...editEmployee,
+                              gross_salary: e.target.value,
+                            })
+                          }
+                          placeholder="2500000"
+                        />
+                        <p className="text-xs text-muted-foreground">Enter annual amount in Naira (₦). Monthly = Annual ÷ 12.</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="editBasicSalary">Basic Salary (40% of Gross)</Label>
+                        <Input
+                          id="editBasicSalary"
+                          type="number"
+                          value={editEmployee.basic_salary || ""}
+                          readOnly
+                          className="bg-muted cursor-not-allowed"
+                          placeholder="Auto-calculated"
+                        />
+                        <p className="text-xs text-muted-foreground">Automatically calculated as 40% of gross salary.</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="editHousingAllowance">Housing Allowance (20% of Gross)</Label>
+                        <Input
+                          id="editHousingAllowance"
+                          type="number"
+                          value={editEmployee.housing_allowance || ""}
+                          readOnly
+                          className="bg-muted cursor-not-allowed"
+                          placeholder="Auto-calculated"
+                        />
+                        <p className="text-xs text-muted-foreground">Automatically calculated as 20% of gross salary.</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="editTransportAllowance">Transport Allowance (9% of Gross)</Label>
+                        <Input
+                          id="editTransportAllowance"
+                          type="number"
+                          value={editEmployee.transport_allowance || ""}
+                          readOnly
+                          className="bg-muted cursor-not-allowed"
+                          placeholder="Auto-calculated"
+                        />
+                        <p className="text-xs text-muted-foreground">Automatically calculated as 9% of gross salary.</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="editOtherAllowance">Other Allowance (31% of Gross)</Label>
+                        <Input
+                          id="editOtherAllowance"
+                          type="number"
+                          value={editEmployee.other_allowance || ""}
+                          readOnly
+                          className="bg-muted cursor-not-allowed"
+                          placeholder="Auto-calculated"
+                        />
+                        <p className="text-xs text-muted-foreground">Automatically calculated as 31% of gross salary.</p>
+                      </div>
+                    </>
+                  ) : editEmployee.employment_type === "Contract" ? (
                     <div className="space-y-2">
-                      <Label htmlFor="editGrossSalary">Gross Salary (Annual)</Label>
+                      <Label htmlFor="editGrossSalary">Gross Salary (Annual) *</Label>
                       <Input
                         id="editGrossSalary"
                         type="number"
@@ -3731,79 +3798,18 @@ export default function Employees() {
                         onChange={(e) =>
                           setEditEmployee({
                             ...editEmployee,
-                            gross_salary: parseFloat(e.target.value) || 0,
+                            gross_salary: e.target.value,
                           })
                         }
-                        placeholder="₦0.00"
+                        placeholder="1500000"
                       />
+                      <p className="text-xs text-muted-foreground">Enter annual gross salary in Naira (₦).</p>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="editNetSalary">Net Salary (Monthly)</Label>
-                      <Input
-                        id="editNetSalary"
-                        type="number"
-                        value={editEmployee.net_salary || ""}
-                        onChange={(e) =>
-                          setEditEmployee({
-                            ...editEmployee,
-                            net_salary: parseFloat(e.target.value) || 0,
-                          })
-                        }
-                        placeholder="₦0.00"
-                      />
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <p>Please select an employment type to configure financial information.</p>
                     </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="editHousingAllowance">Housing Allowance</Label>
-                      <Input
-                        id="editHousingAllowance"
-                        type="number"
-                        value={editEmployee.housing_allowance || ""}
-                        onChange={(e) =>
-                          setEditEmployee({
-                            ...editEmployee,
-                            housing_allowance: parseFloat(e.target.value) || 0,
-                          })
-                        }
-                        placeholder="₦0.00"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="editTransportAllowance">Transport Allowance</Label>
-                      <Input
-                        id="editTransportAllowance"
-                        type="number"
-                        value={editEmployee.transport_allowance || ""}
-                        onChange={(e) =>
-                          setEditEmployee({
-                            ...editEmployee,
-                            transport_allowance: parseFloat(e.target.value) || 0,
-                          })
-                        }
-                        placeholder="₦0.00"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="editOtherAllowance">Other Allowance</Label>
-                      <Input
-                        id="editOtherAllowance"
-                        type="number"
-                        value={editEmployee.other_allowance || ""}
-                        onChange={(e) =>
-                          setEditEmployee({
-                            ...editEmployee,
-                            other_allowance: parseFloat(e.target.value) || 0,
-                          })
-                        }
-                        placeholder="₦0.00"
-                      />
-                    </div>
-                  </div>
+                  )}
 
                   <Separator className="my-4" />
 

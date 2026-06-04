@@ -123,6 +123,23 @@ export function EmployeeEditDialog({ employee, open, onOpenChange, onSuccess }: 
         national_id: formData.national_id,
         nhf_number: formData.nhf_number,
         supporting_documents: formData.supporting_documents,
+
+        // Emergency Contact
+        emergency_contact_name: (formData as any).emergency_contact_name,
+        emergency_contact_phone: (formData as any).emergency_contact_phone,
+
+        // Next of Kin
+        next_of_kin_name: (formData as any).next_of_kin_name,
+        next_of_kin_relationship: (formData as any).next_of_kin_relationship,
+        next_of_kin_phone: (formData as any).next_of_kin_phone,
+        next_of_kin_address: (formData as any).next_of_kin_address,
+        next_of_kin_email: (formData as any).next_of_kin_email,
+
+        // Additional financial fields
+        basic_salary: (formData as any).basic_salary,
+        other_allowance: (formData as any).other_allowance,
+        nuban: (formData as any).nuban,
+        sort_code: (formData as any).sort_code,
       }
 
       // Remove undefined/null values to avoid sending unnecessary fields

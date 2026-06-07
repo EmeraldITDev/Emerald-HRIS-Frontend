@@ -1652,6 +1652,11 @@ export default function Payroll() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={async () => {
+                    const periodRows = visiblePayrollRecords.filter((r: any) => r.pay_period === selectedPeriod)
+                    if (!periodRows.length) {
+                      toast({ title: 'No records to export', description: `No payroll records exist for ${selectedPeriod}. Generate payroll first.`, variant: 'destructive' })
+                      return
+                    }
                     try {
                       const blob = await apiService.exportPayrollBulkCsv(selectedPeriod)
                       const url = URL.createObjectURL(blob); const a = document.createElement('a')
@@ -1684,6 +1689,11 @@ export default function Payroll() {
                     }
                   }}>CSV</DropdownMenuItem>
                   <DropdownMenuItem onClick={async () => {
+                    const periodRows = visiblePayrollRecords.filter((r: any) => r.pay_period === selectedPeriod)
+                    if (!periodRows.length) {
+                      toast({ title: 'No records to export', description: `No payroll records exist for ${selectedPeriod}. Generate payroll first.`, variant: 'destructive' })
+                      return
+                    }
                     try {
                       const blob = await apiService.exportPayrollBulkPdf(selectedPeriod)
                       const url = URL.createObjectURL(blob); const a = document.createElement('a')

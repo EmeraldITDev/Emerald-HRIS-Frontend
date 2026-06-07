@@ -1827,6 +1827,7 @@ export default function Payroll() {
 
       {/* Edit Payroll Dialog */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        {/* Bulk Generate Drafts Dialog */}
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Payroll Record</DialogTitle>

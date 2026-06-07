@@ -72,7 +72,7 @@ export default function Announcements() {
   const { toast } = useToast()
   const { user } = useAuth()
   
-  const canCreateAnnouncements = user?.role === 'hr_manager' || user?.role === 'executive'
+  const canCreateAnnouncements = user?.role === 'hr_manager' || user?.role === 'executive' || user?.role === 'corporate_hr'
   
   // Fetch announcements from API
   useEffect(() => {
@@ -290,7 +290,7 @@ export default function Announcements() {
 
   const canManage = (ann: Announcement) => {
     if (!user) return false
-    if (user.role === 'hr_manager' || user.role === 'executive') return true
+    if (user.role === 'hr_manager' || user.role === 'executive' || user.role === 'corporate_hr') return true
     return !!ann.createdById && ann.createdById === user.id
   }
 

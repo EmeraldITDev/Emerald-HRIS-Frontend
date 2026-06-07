@@ -3448,16 +3448,8 @@ export default function Employees() {
 
                 <TabsContent value="additional" className="space-y-4">
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium text-muted-foreground">Performance History</Label>
-                    <p className="text-base">{selectedEmployee.performance_history || "N/A"}</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-muted-foreground">Asset Allocation History</Label>
-                    <p className="text-base">{selectedEmployee.asset_allocation_history || "N/A"}</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-muted-foreground">Supporting Documents</Label>
-                    <p className="text-base">{selectedEmployee.supporting_documents || "N/A"}</p>
+                    <Label className="text-sm font-medium text-muted-foreground">Uploaded Documents</Label>
+                    <EmployeeDocumentsReadOnly employeeId={selectedEmployee.id} />
                   </div>
                 </TabsContent>
               </Tabs>

@@ -1376,7 +1376,16 @@ export default function Employees() {
       };
 
       // Call the API to update the employee
-      await apiService.updateEmployee(editEmployee.id, employeeData);
+      console.log("[UpdateEmployee] PUT payload:", {
+        id: editEmployee.id,
+        emergency_contact_name: employeeData.emergency_contact_name,
+        emergency_contact_phone: employeeData.emergency_contact_phone,
+        bank_name: employeeData.bank_name,
+        middle_name: employeeData.middle_name,
+        hire_date: employeeData.hire_date,
+      });
+      const updateResp = await apiService.updateEmployee(editEmployee.id, employeeData);
+      console.log("[UpdateEmployee] PUT response:", updateResp);
 
       // Refresh the employee list from the database.
       // NOTE: The PUT response does NOT flatten financialDetails to top level
@@ -3281,7 +3290,13 @@ export default function Employees() {
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <Label className="text-sm font-medium text-muted-foreground">Emergency Contact Number</Label>
-                      <p className="text-base">{(selectedEmployee as any).emergency_contact_phone || (selectedEmployee as any).emergency_contact_number || "N/A"}</p>
+                      <p className="text-base">{
+                        (selectedEmployee as any).emergency_contact_phone
+                        || (selectedEmployee as any).emergency_contact_number
+                        || (selectedEmployee as any).emergencyContactNumber
+                        || (selectedEmployee as any).emergency_phone
+                        || "N/A"
+                      }</p>
                     </div>
                     <div className="space-y-2">
                       <Label className="text-sm font-medium text-muted-foreground">Next of Kin Name</Label>
@@ -3348,7 +3363,12 @@ export default function Employees() {
                     </div>
                     <div className="space-y-2">
                       <Label className="text-sm font-medium text-muted-foreground">Bank Name</Label>
-                      <p className="text-base">{selectedEmployee.financial_details?.bank_name || "N/A"}</p>
+                      <p className="text-base">{
+                        selectedEmployee.financial_details?.bank_name
+                        || (selectedEmployee as any).bank_name
+                        || (selectedEmployee as any).bankName
+                        || "N/A"
+                      }</p>
                     </div>
                   </div>
 

@@ -1992,6 +1992,13 @@ export default function Payroll() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Bulk Generate Drafts */}
+      <BulkGenerateDialog
+        open={bulkGenerateOpen}
+        onOpenChange={setBulkGenerateOpen}
+        initialPayPeriod={selectedPeriod}
+      />
     </div>
   )
 }

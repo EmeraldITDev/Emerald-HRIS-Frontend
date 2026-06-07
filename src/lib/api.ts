@@ -919,6 +919,12 @@ class ApiService {
   async exportPayrollBulkPdf(pay_period: string): Promise<Blob> {
     return this.downloadBlob(`/payroll/export/bulk-pdf?pay_period=${pay_period}`);
   }
+  async exportPayrollBulkPdfWithStatus(pay_period: string, status: string = 'approved'): Promise<Blob> {
+    return this.downloadBlob(`/payroll/export/bulk-pdf?pay_period=${pay_period}&status=${status}`);
+  }
+  async exportPayrollBulkCsvWithStatus(pay_period: string, status: string = 'approved'): Promise<Blob> {
+    return this.downloadBlob(`/payroll/export/bulk-csv?pay_period=${pay_period}&status=${status}`);
+  }
   async exportPayrollRecordPdf(id: number): Promise<Blob> {
     return this.downloadBlob(`/payroll/${id}/export/pdf`);
   }

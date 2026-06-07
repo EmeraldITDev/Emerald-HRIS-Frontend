@@ -320,12 +320,10 @@ export default function PayrollReview() {
   const handleExport = async (format: "pdf" | "csv") => {
     try {
       const status = statusFilter === "all" ? "all" : statusFilter;
-      const url = `/payroll/export/bulk-${format}?pay_period=${payPeriod}&status=${status}`;
-      const blob = await (apiService as any).downloadBlob?.(url);
-      if (!blob) {
-        toast({ title: "Export unavailable", description: "Backend export endpoint not reachable.", variant: "destructive" });
-        return;
-      }
+      const blob =
+        format === "pdf"
+          ? await apiService.exportPayrollBulkPdfWithStatus(payPeriod, status)
+          : await apiService.exportPayrollBulkCsvWithStatus(payPeriod, status);
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
       a.download = `payroll-${payPeriod}-${status}.${format}`;

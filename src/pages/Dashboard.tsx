@@ -1119,8 +1119,8 @@ export default function Dashboard() {
         </DialogContent>
       </Dialog>
 
-      {/* Hide aggregate stats for general_employee, finance, corporate_hr, line_manager, it_admin, executive */}
-      {!['general_employee', 'finance', 'corporate_hr', 'line_manager', 'it_admin', 'executive'].includes(user?.role || '') && (
+      {/* Hide aggregate stats for general_employee, finance, line_manager, it_admin, executive (corporate_hr sees HR admin view) */}
+      {!['general_employee', 'finance', 'line_manager', 'it_admin', 'executive'].includes(user?.role || '') && (
         <div className="grid gap-3 md:gap-4 lg:gap-6 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
           <Card className="border-border/50 shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-3 md:p-6">
@@ -1386,7 +1386,7 @@ export default function Dashboard() {
                   </div>
                 ))}
               </div>
-            ) : ['general_employee', 'finance', 'corporate_hr', 'line_manager', 'it_admin', 'executive'].includes(user?.role || '') ? (
+            ) : ['general_employee', 'finance', 'line_manager', 'it_admin', 'executive'].includes(user?.role || '') ? (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-sm">Performance Review Form</span>
@@ -1449,8 +1449,8 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        {!['general_employee', 'finance', 'corporate_hr', 'line_manager', 'it_admin'].includes(user?.role || '') && (
-          <RoleBasedComponent allowedRoles={['executive', 'hr_manager']}>
+        {!['general_employee', 'finance', 'line_manager', 'it_admin'].includes(user?.role || '') && (
+          <RoleBasedComponent allowedRoles={['executive', 'hr_manager', 'corporate_hr']}>
             <Card className="border-border/50 shadow-sm">
               <CardHeader>
                 <CardTitle className="text-primary">Nigerian Compliance</CardTitle>
@@ -1499,7 +1499,7 @@ export default function Dashboard() {
         )}
 
         {/* Personal Benefits & Payroll for specific roles */}
-        {['general_employee', 'finance', 'corporate_hr', 'line_manager', 'it_admin', 'executive'].includes(user?.role || '') && (
+        {['general_employee', 'finance', 'line_manager', 'it_admin', 'executive'].includes(user?.role || '') && (
           <Card className="border-border/50 shadow-sm">
             <CardHeader>
               <CardTitle className="text-primary">My Benefits & Payroll</CardTitle>

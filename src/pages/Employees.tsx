@@ -3965,10 +3965,12 @@ export default function Employees() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="Active">Active</SelectItem>
-                          <SelectItem value="Inactive">Inactive</SelectItem>
-                          <SelectItem value="On Leave">On Leave</SelectItem>
-                          <SelectItem value="Terminated">Terminated</SelectItem>
+                          <SelectItem value="On-Leave">On-Leave</SelectItem>
+                          <SelectItem value="Time-Off">Time-Off</SelectItem>
+                          <SelectItem value="On-board">On-board</SelectItem>
                           <SelectItem value="Resigned">Resigned</SelectItem>
+                          <SelectItem value="Terminated">Terminated</SelectItem>
+                          <SelectItem value="Retired">Retired</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -3976,18 +3978,23 @@ export default function Employees() {
 
                   <div className="space-y-2">
                     <Label htmlFor="editVacationDays">Vacation Days</Label>
-                    <Input
-                      id="editVacationDays"
-                      type="number"
-                      value={editEmployee.vacationDays || ""}
-                      onChange={(e) =>
-                        setEditEmployee({
-                          ...editEmployee,
-                          vacationDays: parseInt(e.target.value) || 0,
-                        })
+                    <Select
+                      value={editEmployee.vacation_days?.toString() || ""}
+                      onValueChange={(value) =>
+                        setEditEmployee({ ...editEmployee, vacation_days: value })
                       }
-                      placeholder="25"
-                    />
+                    >
+                      <SelectTrigger id="editVacationDays">
+                        <SelectValue placeholder="Select vacation days" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover border shadow-lg">
+                        {Array.from({ length: 14 }, (_, i) => i + 7).map((days) => (
+                          <SelectItem key={days} value={days.toString()}>
+                            {days} days
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </TabsContent>
 

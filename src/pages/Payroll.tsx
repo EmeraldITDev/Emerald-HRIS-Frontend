@@ -1630,6 +1630,7 @@ export default function Payroll() {
                 <CardTitle className="text-primary">Payroll History - Edit & Update</CardTitle>
                 <p className="text-sm text-muted-foreground mt-1">Click edit to modify payroll records. Changes sync to employee records.</p>
               </div>
+              <div className="flex items-center gap-2">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm">
@@ -1678,6 +1679,42 @@ export default function Payroll() {
                   }}>PDF Summary</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+              {canHrPayroll(user) && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-destructive hover:bg-destructive/10 border-destructive/40"
+                  onClick={async () => {
+                    const rows = visiblePayrollRecords.filter((r: any) => r.pay_period === selectedPeriod)
+                    if (!rows.length) {
+                      toast({ title: 'Nothing to delete', description: `No payroll records found for ${selectedPeriod}.` })
+                      return
+                    }
+                    if (!window.confirm(`Delete ALL ${rows.length} payroll record(s) for ${selectedPeriod}? This cannot be undone.`)) return
+                    const reason = window.prompt('Reason for deletion (optional):') || undefined
+                    let ok = 0, fail = 0
+                    for (const r of rows) {
+                      try {
+                        await apiService.deletePayrollWithReason((r as any).id!, reason)
+                        ok++
+                      } catch (e) {
+                        console.error('Bulk delete row failed', r, e)
+                        fail++
+                      }
+                    }
+                    const okIds = new Set(rows.map((r: any) => r.id))
+                    setPayrollRecords(prev => prev.filter(r => !okIds.has(r.id)))
+                    toast({
+                      title: fail ? 'Some deletions failed' : 'Payroll records deleted',
+                      description: `Deleted ${ok} of ${rows.length}${fail ? ` — ${fail} failed` : ''}.`,
+                      variant: fail ? 'destructive' : undefined,
+                    })
+                  }}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />Delete all ({selectedPeriod})
+                </Button>
+              )}
+              </div>
             </div>
           </CardHeader>
           <CardContent>

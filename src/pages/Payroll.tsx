@@ -1693,12 +1693,14 @@ export default function Payroll() {
                     if (!window.confirm(`Delete ALL ${rows.length} payroll record(s) for ${selectedPeriod}? This cannot be undone.`)) return
                     const reason = window.prompt('Reason for deletion (optional):') || undefined
                     let ok = 0, fail = 0
+                    let firstError: string | null = null
                     for (const r of rows) {
                       try {
                         await apiService.deletePayrollWithReason((r as any).id!, reason)
                         ok++
                       } catch (e) {
                         console.error('Bulk delete row failed', r, e)
+                        if (!firstError) firstError = (e as any)?.message || String(e)
                         fail++
                       }
                     }
@@ -1706,7 +1708,7 @@ export default function Payroll() {
                     setPayrollRecords(prev => prev.filter(r => !okIds.has(r.id)))
                     toast({
                       title: fail ? 'Some deletions failed' : 'Payroll records deleted',
-                      description: `Deleted ${ok} of ${rows.length}${fail ? ` — ${fail} failed` : ''}.`,
+                      description: `Deleted ${ok} of ${rows.length}${fail ? ` — ${fail} failed${firstError ? `: ${firstError}` : ''}` : ''}.`,
                       variant: fail ? 'destructive' : undefined,
                     })
                   }}

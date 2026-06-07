@@ -3281,7 +3281,13 @@ export default function Employees() {
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <Label className="text-sm font-medium text-muted-foreground">Emergency Contact Number</Label>
-                      <p className="text-base">{(selectedEmployee as any).emergency_contact_phone || (selectedEmployee as any).emergency_contact_number || "N/A"}</p>
+                      <p className="text-base">{
+                        (selectedEmployee as any).emergency_contact_phone
+                        || (selectedEmployee as any).emergency_contact_number
+                        || (selectedEmployee as any).emergencyContactNumber
+                        || (selectedEmployee as any).emergency_phone
+                        || "N/A"
+                      }</p>
                     </div>
                     <div className="space-y-2">
                       <Label className="text-sm font-medium text-muted-foreground">Next of Kin Name</Label>
@@ -3348,7 +3354,12 @@ export default function Employees() {
                     </div>
                     <div className="space-y-2">
                       <Label className="text-sm font-medium text-muted-foreground">Bank Name</Label>
-                      <p className="text-base">{selectedEmployee.financial_details?.bank_name || "N/A"}</p>
+                      <p className="text-base">{
+                        selectedEmployee.financial_details?.bank_name
+                        || (selectedEmployee as any).bank_name
+                        || (selectedEmployee as any).bankName
+                        || "N/A"
+                      }</p>
                     </div>
                   </div>
 

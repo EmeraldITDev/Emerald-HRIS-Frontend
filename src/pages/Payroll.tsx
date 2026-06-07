@@ -72,6 +72,20 @@ export default function Payroll() {
   const { toast } = useToast()
   const { user } = useAuth()
 
+  // Active employees missing annual gross_salary — payroll cannot be generated for these.
+  const missingGrossEmployees = employees
+    .filter((emp: any) => {
+      const status = String(emp?.employment_status ?? '').toLowerCase()
+      const isActive = status === '' || status === 'active'
+      const gross = Number(emp?.gross_salary ?? 0)
+      return isActive && (!gross || gross < 12)
+    })
+    .map((emp: any) => ({
+      id: emp.id,
+      code: emp.employee_id ?? emp.employee_code ?? `EMR${String(emp.id ?? '').padStart(3, '0')}`,
+      name: `${emp.first_name ?? ''} ${emp.last_name ?? ''}`.trim(),
+    }))
+
   useEffect(() => {
     const fetchEmployees = async () => {
       try {

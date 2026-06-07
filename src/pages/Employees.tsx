@@ -47,6 +47,7 @@ import { parseCSVFile, formatDataForPHP, type EmployeeData } from "@/utils/csvIm
 import { downloadCSVTemplate, downloadTemplateGuide } from "@/utils/csvTemplate";
 import { validateCSVData, CSVValidationResult, ValidatedRow, getRoleValue } from "@/utils/csvValidation";
 import { CSVValidationPreview } from "@/components/CSVValidationPreview";
+import { EmployeeDocumentsReadOnly } from "@/components/EmployeeDocumentsReadOnly";
 import Papa from "papaparse";
 import { DEPARTMENTS } from "@/constants/departments";
 import jsPDF from "jspdf";
@@ -2633,6 +2634,23 @@ export default function Employees() {
                           />
                         </div>
                       </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="bankAccount">Bank Account</Label>
+                          <Input
+                            id="bankAccount"
+                            value={newEmployee.bankAccount || ""}
+                            onChange={(e) =>
+                              setNewEmployee({
+                                ...newEmployee,
+                                bankAccount: e.target.value,
+                              })
+                            }
+                            placeholder="Bank account holder / reference"
+                          />
+                        </div>
+                      </div>
                     </div>
                   </TabsContent>
 
@@ -3430,16 +3448,8 @@ export default function Employees() {
 
                 <TabsContent value="additional" className="space-y-4">
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium text-muted-foreground">Performance History</Label>
-                    <p className="text-base">{selectedEmployee.performance_history || "N/A"}</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-muted-foreground">Asset Allocation History</Label>
-                    <p className="text-base">{selectedEmployee.asset_allocation_history || "N/A"}</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-muted-foreground">Supporting Documents</Label>
-                    <p className="text-base">{selectedEmployee.supporting_documents || "N/A"}</p>
+                    <Label className="text-sm font-medium text-muted-foreground">Uploaded Documents</Label>
+                    <EmployeeDocumentsReadOnly employeeId={selectedEmployee.id} />
                   </div>
                 </TabsContent>
               </Tabs>
@@ -4226,6 +4236,23 @@ export default function Employees() {
                           })
                         }
                         placeholder="Sort code"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="editFinancialBankAccount">Bank Account</Label>
+                      <Input
+                        id="editFinancialBankAccount"
+                        value={editEmployee.bank_account || ""}
+                        onChange={(e) =>
+                          setEditEmployee({
+                            ...editEmployee,
+                            bank_account: e.target.value,
+                          })
+                        }
+                        placeholder="Bank account holder / reference"
                       />
                     </div>
                   </div>

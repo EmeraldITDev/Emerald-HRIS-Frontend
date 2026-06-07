@@ -86,6 +86,8 @@ export default function Employees() {
   const { user } = useAuth();
   const [formErrors, setFormErrors] = useState<{ [key: string]: boolean }>({});
   const [currentTab, setCurrentTab] = useState("personal");
+  const [editFormErrors, setEditFormErrors] = useState<{ [key: string]: boolean }>({});
+  const [editActiveTab, setEditActiveTab] = useState<string>("personal");
   const [showAddEmployee, setShowAddEmployee] = useState(false);
   const [showViewDetails, setShowViewDetails] = useState(false);
   const [showEditEmployee, setShowEditEmployee] = useState(false);

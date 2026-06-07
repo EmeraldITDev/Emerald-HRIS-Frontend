@@ -67,6 +67,7 @@ import RoleBasedComponent from "@/components/RoleBasedComponent"
 import { getCurrentMonthCelebrations, getUpcomingCelebrations, type Celebration } from "@/utils/celebrations"
 import { CelebrationsCard } from "@/components/CelebrationsCard"
 import { UpcomingAnniversariesCard } from "@/components/UpcomingAnniversariesCard"
+import { getAnnualGrossSalary } from "@/lib/payrollCalc"
 
 interface UserActivity {
   id: string
@@ -152,6 +153,10 @@ export default function Dashboard() {
   const [upcomingCelebrations, setUpcomingCelebrations] = useState<Celebration[]>([])
   const [currentEmployeeId, setCurrentEmployeeId] = useState<number | null>(null)
   // Message dialog state moved to CelebrationsCard component
+
+  const annualSalaryBudget = allEmployees.reduce((sum, emp) => sum + getAnnualGrossSalary(emp), 0)
+  const monthlySalaryBudget = annualSalaryBudget / 12
+  const formattedMonthlySalaryBudget = `₦${(monthlySalaryBudget / 1000000).toFixed(1)}M`
 
   // Load user activities from localStorage
   const loadUserActivities = () => {
@@ -1199,11 +1204,7 @@ export default function Dashboard() {
               ) : (
                 <>
                   <div className="text-xl md:text-2xl font-bold">
-                    ₦{(allEmployees.reduce((sum, emp) => {
-                      const raw = (emp as any).gross_salary ?? (emp as any).financial_details?.gross_salary
-                      const n = typeof raw === 'string' ? Number(raw.replace(/[₦,\s]/g, '')) : Number(raw)
-                      return sum + (Number.isFinite(n) ? n : 0)
-                    }, 0) / 1000000).toFixed(1)}M
+                    {formattedMonthlySalaryBudget}
                   </div>
                   <p className="text-xs text-muted-foreground">
                     Total monthly payroll
@@ -1445,7 +1446,7 @@ export default function Dashboard() {
                 <div className="flex items-center justify-between">
                   <span className="text-sm">Total salary budget</span>
                   <span className="bg-info/10 text-info px-2 py-1 rounded text-xs font-medium">
-                    ₦{(allEmployees.reduce((sum, emp) => sum + (emp.gross_salary || 0), 0) / 1000000).toFixed(1)}M
+                    {formattedMonthlySalaryBudget}
                   </span>
                 </div>
               </div>

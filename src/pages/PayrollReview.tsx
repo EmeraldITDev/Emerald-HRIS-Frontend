@@ -133,8 +133,34 @@ export default function PayrollReview() {
   const loadDrafts = async () => {
     setLoading(true);
     try {
-      const rows = await apiService.listPayrollDrafts(payPeriod);
-      setDrafts(rows);
+      const [rows, employees] = await Promise.all([
+        apiService.listPayrollDrafts(payPeriod),
+        apiService.getEmployees().catch(() => [] as any[]),
+      ]);
+      const empMap = new Map<any, any>();
+      (employees || []).forEach((e: any) => {
+        if (e?.id != null) empMap.set(String(e.id), e);
+        if (e?.employee_id != null) empMap.set(String(e.employee_id), e);
+      });
+      const enriched = (rows || []).map((d: any) => {
+        const key = String(d.employee_id ?? d.employee?.id ?? "");
+        const emp = empMap.get(key) || d.employee || {};
+        return {
+          ...d,
+          employee: {
+            ...emp,
+            first_name: d.employee?.first_name ?? emp.first_name ?? d.first_name,
+            last_name: d.employee?.last_name ?? emp.last_name ?? d.last_name,
+            employee_code: d.employee?.employee_code ?? emp.employee_code ?? d.employee_code,
+            department: d.employee?.department ?? emp.department ?? d.department,
+          },
+          first_name: d.first_name ?? emp.first_name,
+          last_name: d.last_name ?? emp.last_name,
+          employee_code: d.employee_code ?? emp.employee_code,
+          department: d.department ?? emp.department,
+        };
+      });
+      setDrafts(enriched);
       setSelected(new Set());
     } catch (e: any) {
       toast({

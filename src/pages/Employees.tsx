@@ -1060,6 +1060,8 @@ export default function Employees() {
     return `${prefix}${String(next).padStart(3, "0")}`;
   };
   const handleEditEmployee = (employee: Employee) => {
+    setEditFormErrors({});
+    setEditActiveTab("personal");
     setEditEmployee({
       // Employee ID - Format it properly
       id: employee.id,

@@ -1696,7 +1696,7 @@ export default function Payroll() {
                     let firstError: string | null = null
                     for (const r of rows) {
                       try {
-                        await apiService.deletePayrollWithReason((r as any).id!, reason)
+                        await apiService.forceDeletePayroll((r as any).id!, reason)
                         ok++
                       } catch (e) {
                         console.error('Bulk delete row failed', r, e)

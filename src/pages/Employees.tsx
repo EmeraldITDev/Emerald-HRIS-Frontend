@@ -3728,32 +3728,47 @@ export default function Employees() {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="editProbationPeriod">Probation Period</Label>
-                      <Input
-                        id="editProbationPeriod"
+                      <Select
                         value={editEmployee.probationPeriod || ""}
-                        onChange={(e) =>
+                        onValueChange={(value) =>
                           setEditEmployee({
                             ...editEmployee,
-                            probationPeriod: e.target.value,
+                            probationPeriod: value,
                           })
                         }
-                        placeholder="e.g., 3 months"
-                      />
+                      >
+                        <SelectTrigger id="editProbationPeriod">
+                          <SelectValue placeholder="Select probation period" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-popover border shadow-lg">
+                          <SelectItem value="1">1 month</SelectItem>
+                          <SelectItem value="2">2 months</SelectItem>
+                          <SelectItem value="3">3 months</SelectItem>
+                          <SelectItem value="4">4 months</SelectItem>
+                          <SelectItem value="5">5 months</SelectItem>
+                          <SelectItem value="6">6 months</SelectItem>
+                          <SelectItem value="7">7 months</SelectItem>
+                          <SelectItem value="8">8 months</SelectItem>
+                          <SelectItem value="9">9 months</SelectItem>
+                          <SelectItem value="10">10 months</SelectItem>
+                          <SelectItem value="11">11 months</SelectItem>
+                          <SelectItem value="12">12 months (1 year)</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <Label>Confirmation Date</Label>
-                      <DateInput
-                        value={editEmployee.confirmationDate ? new Date(editEmployee.confirmationDate) : undefined}
-                        onChange={(date) =>
-                          setEditEmployee({
-                            ...editEmployee,
-                            confirmationDate: date,
-                          })
+                      <Label>Confirmation Date (Auto-calculated)</Label>
+                      <Input
+                        value={
+                          editEmployee.confirmationDate
+                            ? format(new Date(editEmployee.confirmationDate), "PPP")
+                            : "Will be calculated based on hire date + probation period"
                         }
-                        placeholder="MM/DD/YY"
+                        readOnly
+                        className="bg-muted text-muted-foreground cursor-not-allowed"
                       />
                     </div>
                     <div className="space-y-2">

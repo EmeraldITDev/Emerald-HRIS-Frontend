@@ -4477,26 +4477,6 @@ export default function Employees() {
                       <p className="text-xs text-muted-foreground mt-2">Select document type, then choose files. Max 10MB each</p>
                     </div>
                   </div>
-
-                  {/* Vacation Days */}
-                  <div className="border rounded-lg p-4 bg-card">
-                    <h3 className="text-base font-semibold mb-4">Leave Information</h3>
-                    <div className="space-y-2">
-                      <Label htmlFor="editVacationDays">Vacation Days</Label>
-                      <Input
-                        id="editVacationDays"
-                        type="number"
-                        value={editEmployee.vacation_days || ""}
-                        onChange={(e) =>
-                          setEditEmployee({
-                            ...editEmployee,
-                            vacation_days: e.target.value,
-                          })
-                        }
-                        placeholder="Number of vacation days"
-                      />
-                    </div>
-                  </div>
                 </TabsContent>
 
                 <div className="flex justify-end space-x-2 pt-4 border-t">

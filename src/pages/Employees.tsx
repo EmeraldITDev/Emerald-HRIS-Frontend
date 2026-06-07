@@ -3177,7 +3177,7 @@ export default function Employees() {
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <Label className="text-sm font-medium text-muted-foreground">Phone Number</Label>
-                      <p className="text-base">{selectedEmployee.phone_number || "N/A"}</p>
+                      <p className="text-base">{(selectedEmployee as any).phone || selectedEmployee.phone_number || "N/A"}</p>
                     </div>
                     <div className="space-y-2">
                       <Label className="text-sm font-medium text-muted-foreground">Email Address</Label>
@@ -3275,13 +3275,13 @@ export default function Employees() {
                     </div>
                     <div className="space-y-2">
                       <Label className="text-sm font-medium text-muted-foreground">Emergency Contact Name</Label>
-                      <p className="text-base">{selectedEmployee.emergency_contact || "N/A"}</p>
+                      <p className="text-base">{(selectedEmployee as any).emergency_contact_name || (selectedEmployee as any).emergency_contact || "N/A"}</p>
                     </div>
                   </div>
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <Label className="text-sm font-medium text-muted-foreground">Emergency Contact Number</Label>
-                      <p className="text-base">{selectedEmployee.emergency_contact_number || "N/A"}</p>
+                      <p className="text-base">{(selectedEmployee as any).emergency_contact_phone || (selectedEmployee as any).emergency_contact_number || "N/A"}</p>
                     </div>
                     <div className="space-y-2">
                       <Label className="text-sm font-medium text-muted-foreground">Next of Kin Name</Label>
@@ -3887,7 +3887,11 @@ export default function Employees() {
                       <Label htmlFor="editHireDate">Hire Date *</Label>
                       <DateInput
                         value={
-                          editEmployee.hire_date
+                          editEmployee.hireDate instanceof Date
+                            ? editEmployee.hireDate
+                            : editEmployee.hireDate
+                              ? new Date(editEmployee.hireDate)
+                              : editEmployee.hire_date
                             ? new Date(editEmployee.hire_date)
                             : editEmployee.joinDate
                               ? new Date(editEmployee.joinDate)

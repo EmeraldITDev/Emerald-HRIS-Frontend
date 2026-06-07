@@ -4246,6 +4246,23 @@ export default function Employees() {
                       />
                     </div>
                   </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="editFinancialBankAccount">Bank Account</Label>
+                      <Input
+                        id="editFinancialBankAccount"
+                        value={editEmployee.bank_account || ""}
+                        onChange={(e) =>
+                          setEditEmployee({
+                            ...editEmployee,
+                            bank_account: e.target.value,
+                          })
+                        }
+                        placeholder="Bank account holder / reference"
+                      />
+                    </div>
+                  </div>
                 </TabsContent>
 
                 <TabsContent value="government" className="space-y-4">

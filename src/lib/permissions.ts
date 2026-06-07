@@ -28,3 +28,18 @@ export function canHrApproveLeave(user: (User & Record<string, any>) | null | un
   if (canHrPayroll(user)) return true;
   return user.role === "corporate_hr";
 }
+
+/**
+ * Who may view the payroll draft review screen.
+ *
+ * HR roles (executive, hr_manager, corporate_hr) get full read/write
+ * access via `canHrPayroll`. Line managers get read-only access scoped
+ * to their own department (backend enforces scope).
+ */
+export function canViewPayrollDrafts(
+  user: (User & Record<string, any>) | null | undefined,
+): boolean {
+  if (!user) return false;
+  if (canHrPayroll(user)) return true;
+  return user.role === "line_manager";
+}

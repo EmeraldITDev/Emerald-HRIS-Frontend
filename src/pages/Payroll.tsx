@@ -22,6 +22,8 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Calculator, Download, FileText, Lock, Settings, ChevronDown } from "lucide-react"
+import { ListChecks } from "lucide-react"
+import { BulkGenerateDialog } from "@/components/payroll/BulkGenerateDialog"
 import jsPDF from "jspdf"
 import {
   DropdownMenu,
@@ -49,6 +51,7 @@ import {
 export default function Payroll() {
   const [employees, setEmployees] = useState<Employee[]>([])
   const [isLoadingEmployees, setIsLoadingEmployees] = useState(true)
+  const [bulkGenerateOpen, setBulkGenerateOpen] = useState(false)
   const [payrollRecords, setPayrollRecords] = useState<PayrollRecord[]>([])
   const [isLoadingPayroll, setIsLoadingPayroll] = useState(true)
   const [selectedEmployee, setSelectedEmployee] = useState("")
@@ -1162,6 +1165,12 @@ export default function Payroll() {
             <Button variant="outline" size="sm" onClick={handleTaxSettings}>
               <Settings className="mr-2 h-4 w-4" />
               Tax Settings
+            </Button>
+          )}
+          {canHrPayroll(user) && (
+            <Button size="sm" onClick={() => setBulkGenerateOpen(true)}>
+              <ListChecks className="mr-2 h-4 w-4" />
+              Bulk Generate Payroll
             </Button>
           )}
           <DropdownMenu>

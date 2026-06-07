@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react"
+import { useNavigate } from "react-router-dom"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import apiService, { Employee, PayrollRecord } from "@/lib/api"
 import { Button } from "@/components/ui/button"
@@ -23,6 +24,7 @@ import {
 } from "@/components/ui/select"
 import { Calculator, Download, FileText, Lock, Settings, ChevronDown } from "lucide-react"
 import { ListChecks } from "lucide-react"
+import { ClipboardEdit } from "lucide-react"
 import { BulkGenerateDialog } from "@/components/payroll/BulkGenerateDialog"
 import jsPDF from "jspdf"
 import {
@@ -50,6 +52,7 @@ import {
 
 export default function Payroll() {
   const [employees, setEmployees] = useState<Employee[]>([])
+  const navigate = useNavigate()
   const [isLoadingEmployees, setIsLoadingEmployees] = useState(true)
   const [bulkGenerateOpen, setBulkGenerateOpen] = useState(false)
   const [payrollRecords, setPayrollRecords] = useState<PayrollRecord[]>([])
@@ -1171,6 +1174,16 @@ export default function Payroll() {
             <Button size="sm" onClick={() => setBulkGenerateOpen(true)}>
               <ListChecks className="mr-2 h-4 w-4" />
               Bulk Generate Payroll
+            </Button>
+          )}
+          {canHrPayroll(user) && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => navigate(`/payroll/review/${selectedPeriod}`)}
+            >
+              <ClipboardEdit className="mr-2 h-4 w-4" />
+              Review Drafts
             </Button>
           )}
           <DropdownMenu>

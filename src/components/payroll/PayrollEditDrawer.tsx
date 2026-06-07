@@ -50,27 +50,55 @@ export function PayrollEditDrawer({ open, onOpenChange, draft, onChanged }: Prop
   const [transitioning, setTransitioning] = useState(false);
   const [audit, setAudit] = useState<any[]>([]);
   const [loadingAudit, setLoadingAudit] = useState(false);
+  const [fullRecord, setFullRecord] = useState<any>(null);
+
+  const pick = (d: any, ...keys: string[]) => {
+    for (const k of keys) {
+      if (d?.[k] !== undefined && d?.[k] !== null && d?.[k] !== "") return d[k];
+    }
+    return undefined;
+  };
 
   useEffect(() => {
+    const src = { ...(draft || {}), ...(fullRecord || {}) };
     if (draft) {
       setForm({
-        basic_salary: draft.basic_salary ?? 0,
-        housing_allowance: draft.housing_allowance ?? 0,
-        transport_allowance: draft.transport_allowance ?? 0,
-        meal_allowance: draft.meal_allowance ?? 0,
-        other_allowance: draft.other_allowance ?? 0,
-        bonus: draft.bonus ?? 0,
-        commission: draft.commission ?? 0,
-        overtime: draft.overtime ?? 0,
-        other_deductions: draft.other_deductions ?? 0,
-        deduction_notes: draft.deduction_notes ?? "",
-        rent_relief_enabled: !!draft.rent_relief_enabled,
-        annual_rent: draft.annual_rent ?? 0,
-        include_nhf: draft.include_nhf !== false,
-        notes: draft.notes ?? "",
+        basic_salary: pick(src, "basic_salary", "basicSalary", "base_salary", "baseSalary") ?? 0,
+        housing_allowance: pick(src, "housing_allowance", "housingAllowance") ?? 0,
+        transport_allowance: pick(src, "transport_allowance", "transportAllowance") ?? 0,
+        meal_allowance: pick(src, "meal_allowance", "mealAllowance") ?? 0,
+        other_allowance: pick(src, "other_allowance", "otherAllowance") ?? 0,
+        bonus: pick(src, "bonus") ?? 0,
+        commission: pick(src, "commission") ?? 0,
+        overtime: pick(src, "overtime") ?? 0,
+        other_deductions: pick(src, "other_deductions", "otherDeductions") ?? 0,
+        deduction_notes: pick(src, "deduction_notes", "deductionNotes") ?? "",
+        rent_relief_enabled: !!pick(src, "rent_relief_enabled", "rentReliefEnabled"),
+        annual_rent: pick(src, "annual_rent", "annualRent") ?? 0,
+        include_nhf: pick(src, "include_nhf", "includeNhf") !== false,
+        notes: pick(src, "notes") ?? "",
       });
     }
-  }, [draft]);
+  }, [draft, fullRecord]);
+
+  useEffect(() => {
+    if (!open || !draft?.id || !draft?.pay_period) {
+      setFullRecord(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const rows: any = await apiService.getPayrollRecords({ pay_period: draft.pay_period });
+        const list = Array.isArray(rows) ? rows : (rows?.data || []);
+        const match = list.find((r: any) => Number(r.id) === Number(draft.id));
+        if (match && !cancelled) setFullRecord(match);
+      } catch {
+        /* ignore – fall back to draft */
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [open, draft?.id, draft?.pay_period]);
 
   useEffect(() => {
     if (!open || !draft?.id) return;

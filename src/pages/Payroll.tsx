@@ -1176,6 +1176,16 @@ export default function Payroll() {
               Bulk Generate Payroll
             </Button>
           )}
+          {canHrPayroll(user) && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => navigate(`/payroll/review/${selectedPeriod}`)}
+            >
+              <ClipboardEdit className="mr-2 h-4 w-4" />
+              Review Drafts
+            </Button>
+          )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm">

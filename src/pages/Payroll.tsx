@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react"
+import { useNavigate } from "react-router-dom"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import apiService, { Employee, PayrollRecord } from "@/lib/api"
 import { Button } from "@/components/ui/button"
@@ -23,6 +24,7 @@ import {
 } from "@/components/ui/select"
 import { Calculator, Download, FileText, Lock, Settings, ChevronDown } from "lucide-react"
 import { ListChecks } from "lucide-react"
+import { ClipboardEdit } from "lucide-react"
 import { BulkGenerateDialog } from "@/components/payroll/BulkGenerateDialog"
 import jsPDF from "jspdf"
 import {

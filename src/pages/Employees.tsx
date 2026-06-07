@@ -86,6 +86,8 @@ export default function Employees() {
   const { user } = useAuth();
   const [formErrors, setFormErrors] = useState<{ [key: string]: boolean }>({});
   const [currentTab, setCurrentTab] = useState("personal");
+  const [editFormErrors, setEditFormErrors] = useState<{ [key: string]: boolean }>({});
+  const [editActiveTab, setEditActiveTab] = useState<string>("personal");
   const [showAddEmployee, setShowAddEmployee] = useState(false);
   const [showViewDetails, setShowViewDetails] = useState(false);
   const [showEditEmployee, setShowEditEmployee] = useState(false);
@@ -1058,6 +1060,8 @@ export default function Employees() {
     return `${prefix}${String(next).padStart(3, "0")}`;
   };
   const handleEditEmployee = (employee: Employee) => {
+    setEditFormErrors({});
+    setEditActiveTab("personal");
     setEditEmployee({
       // Employee ID - Format it properly
       id: employee.id,
@@ -1221,6 +1225,70 @@ export default function Employees() {
         });
         return;
       }
+
+      // Required-field validation — mirrors handleAddEmployee
+      const errors: { [key: string]: boolean } = {};
+      const tabOf: { [key: string]: string } = {};
+      const req = (key: string, val: any, tab: string) => {
+        const ok =
+          val !== undefined &&
+          val !== null &&
+          String(val).trim() !== "";
+        if (!ok) {
+          errors[key] = true;
+          tabOf[key] = tab;
+        }
+      };
+      // Personal
+      req("firstName", editEmployee.firstName, "personal");
+      req("lastName", editEmployee.lastName, "personal");
+      req("dateOfBirth", editEmployee.dateOfBirth, "personal");
+      req("gender", editEmployee.gender, "personal");
+      req("maritalStatus", editEmployee.maritalStatus, "personal");
+      req("nationality", editEmployee.nationality, "personal");
+      req("phoneNumber", editEmployee.phoneNumber, "personal");
+      req("email", editEmployee.email, "personal");
+      req("homeAddress", editEmployee.homeAddress, "personal");
+      req("emergencyContact", editEmployee.emergencyContact, "personal");
+      req("emergencyContactNumber", editEmployee.emergencyContactNumber, "personal");
+      req("nextOfKinName", editEmployee.nextOfKinName, "personal");
+      req("nextOfKinRelationship", editEmployee.nextOfKinRelationship, "personal");
+      req("nextOfKinPhone", editEmployee.nextOfKinPhone, "personal");
+      req("nextOfKinEmail", editEmployee.nextOfKinEmail, "personal");
+      req("nextOfKinAddress", editEmployee.nextOfKinAddress, "personal");
+      // Job
+      req("jobTitle", editEmployee.jobTitle, "job");
+      req("department", editEmployee.department, "job");
+      req("employment_type", editEmployee.employment_type, "job");
+      req("grade_level", editEmployee.grade_level, "job");
+      req("supervisor_name", editEmployee.supervisor_name, "job");
+      req("work_location", editEmployee.work_location, "job");
+      req(
+        "hireDate",
+        editEmployee.hireDate || editEmployee.hire_date || editEmployee.joinDate,
+        "job",
+      );
+      req("probationPeriod", editEmployee.probationPeriod, "job");
+      req("employment_status", editEmployee.employment_status, "job");
+      // Financial
+      req("gross_salary", editEmployee.gross_salary, "financial");
+      // Gov IDs
+      req("national_id", editEmployee.national_id, "government");
+
+      if (Object.keys(errors).length > 0) {
+        setEditFormErrors(errors);
+        const tabOrder = ["personal", "job", "financial", "government", "additional"];
+        const firstTab =
+          tabOrder.find((t) => Object.values(tabOf).includes(t)) || "personal";
+        setEditActiveTab(firstTab);
+        toast({
+          title: "Required Fields Missing",
+          description: `Please fill all required fields in the ${firstTab} section.`,
+          variant: "destructive",
+        });
+        return;
+      }
+      setEditFormErrors({});
 
       // Format the employee data for the API
       const employeeData = {
@@ -3399,7 +3467,7 @@ export default function Employees() {
             )}
 
             {editEmployee && (
-              <Tabs defaultValue="personal" className="w-full">
+              <Tabs value={editActiveTab} onValueChange={setEditActiveTab} className="w-full">
                 <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-1">
                   <TabsTrigger value="personal" className="text-xs sm:text-sm">
                     Personal
@@ -3578,7 +3646,7 @@ export default function Employees() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="editAddress">Home Address</Label>
+                    <Label htmlFor="editAddress">Home Address *</Label>
                     <Textarea
                       id="editAddress"
                       value={editEmployee.homeAddress || ""}
@@ -3589,6 +3657,105 @@ export default function Employees() {
                         })
                       }
                       placeholder="Home Address"
+                      className={editFormErrors.homeAddress ? "border-destructive" : ""}
+                    />
+                  </div>
+
+                  <Separator className="my-4" />
+                  <h3 className="text-base font-medium">Emergency Contact & Next of Kin</h3>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="editEmergencyContact">Emergency Contact Name *</Label>
+                      <Input
+                        id="editEmergencyContact"
+                        value={editEmployee.emergencyContact || ""}
+                        onChange={(e) =>
+                          setEditEmployee({ ...editEmployee, emergencyContact: e.target.value })
+                        }
+                        placeholder="Full name"
+                        className={editFormErrors.emergencyContact ? "border-destructive" : ""}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="editEmergencyContactNumber">Emergency Contact Number *</Label>
+                      <Input
+                        id="editEmergencyContactNumber"
+                        value={editEmployee.emergencyContactNumber || ""}
+                        onChange={(e) =>
+                          setEditEmployee({ ...editEmployee, emergencyContactNumber: e.target.value })
+                        }
+                        placeholder="+234 XXX XXX XXXX"
+                        className={editFormErrors.emergencyContactNumber ? "border-destructive" : ""}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="editNextOfKinName">Next of Kin Name *</Label>
+                      <Input
+                        id="editNextOfKinName"
+                        value={editEmployee.nextOfKinName || ""}
+                        onChange={(e) =>
+                          setEditEmployee({ ...editEmployee, nextOfKinName: e.target.value })
+                        }
+                        placeholder="Full name"
+                        className={editFormErrors.nextOfKinName ? "border-destructive" : ""}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="editNextOfKinRelationship">Next of Kin Relationship *</Label>
+                      <Input
+                        id="editNextOfKinRelationship"
+                        value={editEmployee.nextOfKinRelationship || ""}
+                        onChange={(e) =>
+                          setEditEmployee({ ...editEmployee, nextOfKinRelationship: e.target.value })
+                        }
+                        placeholder="e.g., Spouse, Parent"
+                        className={editFormErrors.nextOfKinRelationship ? "border-destructive" : ""}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="editNextOfKinPhone">Next of Kin Phone Number *</Label>
+                      <Input
+                        id="editNextOfKinPhone"
+                        value={editEmployee.nextOfKinPhone || ""}
+                        onChange={(e) =>
+                          setEditEmployee({ ...editEmployee, nextOfKinPhone: e.target.value })
+                        }
+                        placeholder="+234 XXX XXX XXXX"
+                        className={editFormErrors.nextOfKinPhone ? "border-destructive" : ""}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="editNextOfKinEmail">Next of Kin Email *</Label>
+                      <Input
+                        id="editNextOfKinEmail"
+                        type="email"
+                        value={editEmployee.nextOfKinEmail || ""}
+                        onChange={(e) =>
+                          setEditEmployee({ ...editEmployee, nextOfKinEmail: e.target.value })
+                        }
+                        placeholder="email@example.com"
+                        className={editFormErrors.nextOfKinEmail ? "border-destructive" : ""}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="editNextOfKinAddress">Next of Kin Address *</Label>
+                    <Textarea
+                      id="editNextOfKinAddress"
+                      value={editEmployee.nextOfKinAddress || ""}
+                      onChange={(e) =>
+                        setEditEmployee({ ...editEmployee, nextOfKinAddress: e.target.value })
+                      }
+                      placeholder="Full address"
+                      className={editFormErrors.nextOfKinAddress ? "border-destructive" : ""}
                     />
                   </div>
                 </TabsContent>
@@ -3653,30 +3820,38 @@ export default function Employees() {
                           <SelectItem value="Full-time">Full-time</SelectItem>
                           <SelectItem value="Part-time">Part-time</SelectItem>
                           <SelectItem value="Contract">Contract</SelectItem>
-                          <SelectItem value="Intern">Intern</SelectItem>
                           <SelectItem value="Consultant">Consultant</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="editGradeLevel">Grade Level</Label>
-                      <Input
-                        id="editGradeLevel"
+                      <Label htmlFor="editGradeLevel">Grade Level *</Label>
+                      <Select
                         value={editEmployee.grade_level || ""}
-                        onChange={(e) =>
-                          setEditEmployee({
-                            ...editEmployee,
-                            grade_level: e.target.value,
-                          })
+                        onValueChange={(value) =>
+                          setEditEmployee({ ...editEmployee, grade_level: value })
                         }
-                        placeholder="e.g., Level 5"
-                      />
+                      >
+                        <SelectTrigger
+                          id="editGradeLevel"
+                          className={editFormErrors.grade_level ? "border-destructive" : ""}
+                        >
+                          <SelectValue placeholder="Select grade level" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-popover border shadow-lg">
+                          {gradeLevels.map((level) => (
+                            <SelectItem key={level} value={level}>
+                              {level}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <Label htmlFor="editSupervisorName">Supervisor Name</Label>
+                      <Label htmlFor="editSupervisorName">Supervisor Name *</Label>
                       <Input
                         id="editSupervisorName"
                         value={editEmployee.supervisor_name || ""}
@@ -3687,10 +3862,11 @@ export default function Employees() {
                           })
                         }
                         placeholder="Supervisor's full name"
+                        className={editFormErrors.supervisor_name ? "border-destructive" : ""}
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="editWorkLocation">Work Location</Label>
+                      <Label htmlFor="editWorkLocation">Work Location *</Label>
                       <Input
                         id="editWorkLocation"
                         value={editEmployee.work_location || ""}
@@ -3701,6 +3877,7 @@ export default function Employees() {
                           })
                         }
                         placeholder="e.g., Lagos Office"
+                        className={editFormErrors.work_location ? "border-destructive" : ""}
                       />
                     </div>
                   </div>
@@ -3727,7 +3904,7 @@ export default function Employees() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="editProbationPeriod">Probation Period</Label>
+                      <Label htmlFor="editProbationPeriod">Probation Period *</Label>
                       <Select
                         value={editEmployee.probationPeriod || ""}
                         onValueChange={(value) =>
@@ -3737,7 +3914,10 @@ export default function Employees() {
                           })
                         }
                       >
-                        <SelectTrigger id="editProbationPeriod">
+                        <SelectTrigger
+                          id="editProbationPeriod"
+                          className={editFormErrors.probationPeriod ? "border-destructive" : ""}
+                        >
                           <SelectValue placeholder="Select probation period" />
                         </SelectTrigger>
                         <SelectContent className="bg-popover border shadow-lg">
@@ -3787,10 +3967,12 @@ export default function Employees() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="Active">Active</SelectItem>
-                          <SelectItem value="Inactive">Inactive</SelectItem>
-                          <SelectItem value="On Leave">On Leave</SelectItem>
-                          <SelectItem value="Terminated">Terminated</SelectItem>
+                          <SelectItem value="On-Leave">On-Leave</SelectItem>
+                          <SelectItem value="Time-Off">Time-Off</SelectItem>
+                          <SelectItem value="On-board">On-board</SelectItem>
                           <SelectItem value="Resigned">Resigned</SelectItem>
+                          <SelectItem value="Terminated">Terminated</SelectItem>
+                          <SelectItem value="Retired">Retired</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -3798,18 +3980,23 @@ export default function Employees() {
 
                   <div className="space-y-2">
                     <Label htmlFor="editVacationDays">Vacation Days</Label>
-                    <Input
-                      id="editVacationDays"
-                      type="number"
-                      value={editEmployee.vacationDays || ""}
-                      onChange={(e) =>
-                        setEditEmployee({
-                          ...editEmployee,
-                          vacationDays: parseInt(e.target.value) || 0,
-                        })
+                    <Select
+                      value={editEmployee.vacation_days?.toString() || ""}
+                      onValueChange={(value) =>
+                        setEditEmployee({ ...editEmployee, vacation_days: value })
                       }
-                      placeholder="25"
-                    />
+                    >
+                      <SelectTrigger id="editVacationDays">
+                        <SelectValue placeholder="Select vacation days" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover border shadow-lg">
+                        {Array.from({ length: 14 }, (_, i) => i + 7).map((days) => (
+                          <SelectItem key={days} value={days.toString()}>
+                            {days} days
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </TabsContent>
 
@@ -3910,18 +4097,65 @@ export default function Employees() {
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <Label htmlFor="editFinancialBankName">Bank Name</Label>
-                      <Input
-                        id="editFinancialBankName"
+                      <Select
                         value={editEmployee.bank_name || editEmployee.bankName || ""}
-                        onChange={(e) =>
+                        onValueChange={(value) =>
                           setEditEmployee({
                             ...editEmployee,
-                            bank_name: e.target.value,
-                            bankName: e.target.value,
+                            bank_name: value,
+                            bankName: value,
                           })
                         }
-                        placeholder="Bank name"
-                      />
+                      >
+                        <SelectTrigger id="editFinancialBankName">
+                          <SelectValue
+                            placeholder={
+                              editEmployee.nationality
+                                ? `Select ${editEmployee.nationality} bank`
+                                : "Select nationality first"
+                            }
+                          />
+                        </SelectTrigger>
+                        <SelectContent className="bg-popover border shadow-lg">
+                          {editEmployee.nationality === "Nigerian" && [
+                            <SelectItem key="access" value="Access Bank">Access Bank</SelectItem>,
+                            <SelectItem key="gtb" value="Guaranty Trust Bank">Guaranty Trust Bank</SelectItem>,
+                            <SelectItem key="zenith" value="Zenith Bank">Zenith Bank</SelectItem>,
+                            <SelectItem key="uba" value="United Bank for Africa">United Bank for Africa</SelectItem>,
+                            <SelectItem key="firstbank" value="First Bank of Nigeria">First Bank of Nigeria</SelectItem>,
+                            <SelectItem key="fidelity" value="Fidelity Bank">Fidelity Bank</SelectItem>,
+                            <SelectItem key="union" value="Union Bank">Union Bank</SelectItem>,
+                            <SelectItem key="sterling" value="Sterling Bank">Sterling Bank</SelectItem>,
+                            <SelectItem key="fcmb" value="First City Monument Bank">First City Monument Bank</SelectItem>,
+                            <SelectItem key="ecobank" value="Ecobank">Ecobank</SelectItem>,
+                          ]}
+                          {editEmployee.nationality === "American" && [
+                            <SelectItem key="chase" value="JPMorgan Chase">JPMorgan Chase</SelectItem>,
+                            <SelectItem key="boa" value="Bank of America">Bank of America</SelectItem>,
+                            <SelectItem key="wells" value="Wells Fargo">Wells Fargo</SelectItem>,
+                            <SelectItem key="citi" value="Citibank">Citibank</SelectItem>,
+                            <SelectItem key="pnc" value="PNC Bank">PNC Bank</SelectItem>,
+                            <SelectItem key="capital" value="Capital One">Capital One</SelectItem>,
+                            <SelectItem key="td" value="TD Bank">TD Bank</SelectItem>,
+                            <SelectItem key="usbank" value="U.S. Bank">U.S. Bank</SelectItem>,
+                          ]}
+                          {editEmployee.nationality === "British" && [
+                            <SelectItem key="barclays" value="Barclays">Barclays</SelectItem>,
+                            <SelectItem key="lloyds" value="Lloyds Bank">Lloyds Bank</SelectItem>,
+                            <SelectItem key="hsbc" value="HSBC UK">HSBC UK</SelectItem>,
+                            <SelectItem key="natwest" value="NatWest">NatWest</SelectItem>,
+                            <SelectItem key="santander" value="Santander UK">Santander UK</SelectItem>,
+                            <SelectItem key="halifax" value="Halifax">Halifax</SelectItem>,
+                            <SelectItem key="nationwide" value="Nationwide">Nationwide</SelectItem>,
+                          ]}
+                          {!["Nigerian", "American", "British"].includes(editEmployee.nationality) &&
+                            editEmployee.nationality && [
+                              <SelectItem key="other" value="Other International Bank">
+                                Other International Bank
+                              </SelectItem>,
+                            ]}
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="editFinancialAccountNumber">Account Number</Label>
@@ -3991,7 +4225,7 @@ export default function Employees() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="editNationalId">National ID (NIN)</Label>
+                      <Label htmlFor="editNationalId">National ID (NIN) *</Label>
                       <Input
                         id="editNationalId"
                         value={editEmployee.national_id || ""}
@@ -4002,6 +4236,7 @@ export default function Employees() {
                           })
                         }
                         placeholder="National ID"
+                        className={editFormErrors.national_id ? "border-destructive" : ""}
                       />
                     </div>
                   </div>
@@ -4242,26 +4477,6 @@ export default function Employees() {
                         />
                       </div>
                       <p className="text-xs text-muted-foreground mt-2">Select document type, then choose files. Max 10MB each</p>
-                    </div>
-                  </div>
-
-                  {/* Vacation Days */}
-                  <div className="border rounded-lg p-4 bg-card">
-                    <h3 className="text-base font-semibold mb-4">Leave Information</h3>
-                    <div className="space-y-2">
-                      <Label htmlFor="editVacationDays">Vacation Days</Label>
-                      <Input
-                        id="editVacationDays"
-                        type="number"
-                        value={editEmployee.vacation_days || ""}
-                        onChange={(e) =>
-                          setEditEmployee({
-                            ...editEmployee,
-                            vacation_days: e.target.value,
-                          })
-                        }
-                        placeholder="Number of vacation days"
-                      />
                     </div>
                   </div>
                 </TabsContent>

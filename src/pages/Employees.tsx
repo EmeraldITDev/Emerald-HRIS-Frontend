@@ -4095,18 +4095,65 @@ export default function Employees() {
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <Label htmlFor="editFinancialBankName">Bank Name</Label>
-                      <Input
-                        id="editFinancialBankName"
+                      <Select
                         value={editEmployee.bank_name || editEmployee.bankName || ""}
-                        onChange={(e) =>
+                        onValueChange={(value) =>
                           setEditEmployee({
                             ...editEmployee,
-                            bank_name: e.target.value,
-                            bankName: e.target.value,
+                            bank_name: value,
+                            bankName: value,
                           })
                         }
-                        placeholder="Bank name"
-                      />
+                      >
+                        <SelectTrigger id="editFinancialBankName">
+                          <SelectValue
+                            placeholder={
+                              editEmployee.nationality
+                                ? `Select ${editEmployee.nationality} bank`
+                                : "Select nationality first"
+                            }
+                          />
+                        </SelectTrigger>
+                        <SelectContent className="bg-popover border shadow-lg">
+                          {editEmployee.nationality === "Nigerian" && [
+                            <SelectItem key="access" value="Access Bank">Access Bank</SelectItem>,
+                            <SelectItem key="gtb" value="Guaranty Trust Bank">Guaranty Trust Bank</SelectItem>,
+                            <SelectItem key="zenith" value="Zenith Bank">Zenith Bank</SelectItem>,
+                            <SelectItem key="uba" value="United Bank for Africa">United Bank for Africa</SelectItem>,
+                            <SelectItem key="firstbank" value="First Bank of Nigeria">First Bank of Nigeria</SelectItem>,
+                            <SelectItem key="fidelity" value="Fidelity Bank">Fidelity Bank</SelectItem>,
+                            <SelectItem key="union" value="Union Bank">Union Bank</SelectItem>,
+                            <SelectItem key="sterling" value="Sterling Bank">Sterling Bank</SelectItem>,
+                            <SelectItem key="fcmb" value="First City Monument Bank">First City Monument Bank</SelectItem>,
+                            <SelectItem key="ecobank" value="Ecobank">Ecobank</SelectItem>,
+                          ]}
+                          {editEmployee.nationality === "American" && [
+                            <SelectItem key="chase" value="JPMorgan Chase">JPMorgan Chase</SelectItem>,
+                            <SelectItem key="boa" value="Bank of America">Bank of America</SelectItem>,
+                            <SelectItem key="wells" value="Wells Fargo">Wells Fargo</SelectItem>,
+                            <SelectItem key="citi" value="Citibank">Citibank</SelectItem>,
+                            <SelectItem key="pnc" value="PNC Bank">PNC Bank</SelectItem>,
+                            <SelectItem key="capital" value="Capital One">Capital One</SelectItem>,
+                            <SelectItem key="td" value="TD Bank">TD Bank</SelectItem>,
+                            <SelectItem key="usbank" value="U.S. Bank">U.S. Bank</SelectItem>,
+                          ]}
+                          {editEmployee.nationality === "British" && [
+                            <SelectItem key="barclays" value="Barclays">Barclays</SelectItem>,
+                            <SelectItem key="lloyds" value="Lloyds Bank">Lloyds Bank</SelectItem>,
+                            <SelectItem key="hsbc" value="HSBC UK">HSBC UK</SelectItem>,
+                            <SelectItem key="natwest" value="NatWest">NatWest</SelectItem>,
+                            <SelectItem key="santander" value="Santander UK">Santander UK</SelectItem>,
+                            <SelectItem key="halifax" value="Halifax">Halifax</SelectItem>,
+                            <SelectItem key="nationwide" value="Nationwide">Nationwide</SelectItem>,
+                          ]}
+                          {!["Nigerian", "American", "British"].includes(editEmployee.nationality) &&
+                            editEmployee.nationality && [
+                              <SelectItem key="other" value="Other International Bank">
+                                Other International Bank
+                              </SelectItem>,
+                            ]}
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="editFinancialAccountNumber">Account Number</Label>

@@ -1199,7 +1199,11 @@ export default function Dashboard() {
               ) : (
                 <>
                   <div className="text-xl md:text-2xl font-bold">
-                    ₦{(allEmployees.reduce((sum, emp) => sum + (emp.gross_salary || 0), 0) / 1000000).toFixed(1)}M
+                    ₦{(allEmployees.reduce((sum, emp) => {
+                      const raw = (emp as any).gross_salary ?? (emp as any).financial_details?.gross_salary
+                      const n = typeof raw === 'string' ? Number(raw.replace(/[₦,\s]/g, '')) : Number(raw)
+                      return sum + (Number.isFinite(n) ? n : 0)
+                    }, 0) / 1000000).toFixed(1)}M
                   </div>
                   <p className="text-xs text-muted-foreground">
                     Total monthly payroll

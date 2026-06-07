@@ -1224,6 +1224,70 @@ export default function Employees() {
         return;
       }
 
+      // Required-field validation — mirrors handleAddEmployee
+      const errors: { [key: string]: boolean } = {};
+      const tabOf: { [key: string]: string } = {};
+      const req = (key: string, val: any, tab: string) => {
+        const ok =
+          val !== undefined &&
+          val !== null &&
+          String(val).trim() !== "";
+        if (!ok) {
+          errors[key] = true;
+          tabOf[key] = tab;
+        }
+      };
+      // Personal
+      req("firstName", editEmployee.firstName, "personal");
+      req("lastName", editEmployee.lastName, "personal");
+      req("dateOfBirth", editEmployee.dateOfBirth, "personal");
+      req("gender", editEmployee.gender, "personal");
+      req("maritalStatus", editEmployee.maritalStatus, "personal");
+      req("nationality", editEmployee.nationality, "personal");
+      req("phoneNumber", editEmployee.phoneNumber, "personal");
+      req("email", editEmployee.email, "personal");
+      req("homeAddress", editEmployee.homeAddress, "personal");
+      req("emergencyContact", editEmployee.emergencyContact, "personal");
+      req("emergencyContactNumber", editEmployee.emergencyContactNumber, "personal");
+      req("nextOfKinName", editEmployee.nextOfKinName, "personal");
+      req("nextOfKinRelationship", editEmployee.nextOfKinRelationship, "personal");
+      req("nextOfKinPhone", editEmployee.nextOfKinPhone, "personal");
+      req("nextOfKinEmail", editEmployee.nextOfKinEmail, "personal");
+      req("nextOfKinAddress", editEmployee.nextOfKinAddress, "personal");
+      // Job
+      req("jobTitle", editEmployee.jobTitle, "job");
+      req("department", editEmployee.department, "job");
+      req("employment_type", editEmployee.employment_type, "job");
+      req("grade_level", editEmployee.grade_level, "job");
+      req("supervisor_name", editEmployee.supervisor_name, "job");
+      req("work_location", editEmployee.work_location, "job");
+      req(
+        "hireDate",
+        editEmployee.hireDate || editEmployee.hire_date || editEmployee.joinDate,
+        "job",
+      );
+      req("probationPeriod", editEmployee.probationPeriod, "job");
+      req("employment_status", editEmployee.employment_status, "job");
+      // Financial
+      req("gross_salary", editEmployee.gross_salary, "financial");
+      // Gov IDs
+      req("national_id", editEmployee.national_id, "government");
+
+      if (Object.keys(errors).length > 0) {
+        setEditFormErrors(errors);
+        const tabOrder = ["personal", "job", "financial", "government", "additional"];
+        const firstTab =
+          tabOrder.find((t) => Object.values(tabOf).includes(t)) || "personal";
+        setEditActiveTab(firstTab);
+        toast({
+          title: "Required Fields Missing",
+          description: `Please fill all required fields in the ${firstTab} section.`,
+          variant: "destructive",
+        });
+        return;
+      }
+      setEditFormErrors({});
+
       // Format the employee data for the API
       const employeeData = {
         first_name: editEmployee.firstName,

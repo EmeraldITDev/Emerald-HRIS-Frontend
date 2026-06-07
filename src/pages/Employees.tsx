@@ -4223,7 +4223,7 @@ export default function Employees() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="editNationalId">National ID (NIN)</Label>
+                      <Label htmlFor="editNationalId">National ID (NIN) *</Label>
                       <Input
                         id="editNationalId"
                         value={editEmployee.national_id || ""}
@@ -4234,6 +4234,7 @@ export default function Employees() {
                           })
                         }
                         placeholder="National ID"
+                        className={editFormErrors.national_id ? "border-destructive" : ""}
                       />
                     </div>
                   </div>

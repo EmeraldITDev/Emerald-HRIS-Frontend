@@ -40,6 +40,7 @@ draft → pending_review → approved → paid
 | `POST` | `/payroll/batch-approve` | Approve selected `pending_review` records. May be async. |
 | `GET` | `/payroll/batch-approve/status/:batch_id` | Poll async approval. Returns `status`, `processed`, `total`, `error`. |
 | `DELETE` | `/payroll/{id}` | Delete a draft. Only allowed when status is `draft` or `pending_review`. Writes audit. |
+| `DELETE` | `/payroll/{id}?force=true` | **HR-only force delete.** Deletes regardless of status (including `approved`/`paid`). Requires `deletion_reason` in body. Writes audit entry with `forced: true`. Restricted to `executive`, `hr_manager`, `corporate_hr`. |
 | `GET` | `/payroll/{id}/audit` | Ordered audit entries including system auto-populate entries. |
 
 No separate `/payroll/{id}/variance` endpoint — variance is derived from

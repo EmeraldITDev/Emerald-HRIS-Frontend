@@ -2,6 +2,7 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Users, UserCheck } from "lucide-react"
 import apiService, { Employee } from "@/lib/api"
+import { getAnnualGrossSalary } from "@/lib/payrollCalc"
 
 export function DashboardStats() {
   const [employees, setEmployees] = useState<Employee[]>([])
@@ -25,7 +26,7 @@ export function DashboardStats() {
   const contractEmployees = employees.filter(emp => emp.employment_type === 'Contract').length
   const fteEmployees = employees.filter(emp => emp.employment_type === 'Full-time').length
   // Total Salary Budget - Sum of all employees' gross salaries
-  const totalSalaryBudget = employees.reduce((sum, emp) => sum + (emp.gross_salary || 0), 0)
+  const totalSalaryBudget = employees.reduce((sum, emp) => sum + getAnnualGrossSalary(emp), 0)
   
   const onboardToday = employees.filter(emp => {
     if (!emp.hire_date) return false

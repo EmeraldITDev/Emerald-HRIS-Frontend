@@ -3465,7 +3465,7 @@ export default function Employees() {
             )}
 
             {editEmployee && (
-              <Tabs defaultValue="personal" className="w-full">
+              <Tabs value={editActiveTab} onValueChange={setEditActiveTab} className="w-full">
                 <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-1">
                   <TabsTrigger value="personal" className="text-xs sm:text-sm">
                     Personal

@@ -2633,6 +2633,23 @@ export default function Employees() {
                           />
                         </div>
                       </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="bankAccount">Bank Account</Label>
+                          <Input
+                            id="bankAccount"
+                            value={newEmployee.bankAccount || ""}
+                            onChange={(e) =>
+                              setNewEmployee({
+                                ...newEmployee,
+                                bankAccount: e.target.value,
+                              })
+                            }
+                            placeholder="Bank account holder / reference"
+                          />
+                        </div>
+                      </div>
                     </div>
                   </TabsContent>
 

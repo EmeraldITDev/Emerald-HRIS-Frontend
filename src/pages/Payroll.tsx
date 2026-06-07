@@ -52,6 +52,7 @@ import {
 
 export default function Payroll() {
   const [employees, setEmployees] = useState<Employee[]>([])
+  const navigate = useNavigate()
   const [isLoadingEmployees, setIsLoadingEmployees] = useState(true)
   const [bulkGenerateOpen, setBulkGenerateOpen] = useState(false)
   const [payrollRecords, setPayrollRecords] = useState<PayrollRecord[]>([])

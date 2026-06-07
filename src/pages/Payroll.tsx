@@ -1136,7 +1136,6 @@ export default function Payroll() {
 
   return (
     <div className="space-y-4 md:space-y-6">
-      {(() => null)()}
       <div className="flex flex-col space-y-3 md:space-y-0 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-foreground">Nigerian Payroll</h1>

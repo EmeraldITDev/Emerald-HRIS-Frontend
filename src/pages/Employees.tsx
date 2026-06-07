@@ -47,6 +47,7 @@ import { parseCSVFile, formatDataForPHP, type EmployeeData } from "@/utils/csvIm
 import { downloadCSVTemplate, downloadTemplateGuide } from "@/utils/csvTemplate";
 import { validateCSVData, CSVValidationResult, ValidatedRow, getRoleValue } from "@/utils/csvValidation";
 import { CSVValidationPreview } from "@/components/CSVValidationPreview";
+import { EmployeeDocumentsReadOnly } from "@/components/EmployeeDocumentsReadOnly";
 import Papa from "papaparse";
 import { DEPARTMENTS } from "@/constants/departments";
 import jsPDF from "jspdf";

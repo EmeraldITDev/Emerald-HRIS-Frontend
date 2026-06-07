@@ -484,6 +484,18 @@ export default function Employees() {
     }
   }, [newEmployee.hireDate, newEmployee.probationPeriod]);
 
+  // Auto-calculate confirmation date for edit form
+  useEffect(() => {
+    if (!editEmployee) return;
+    const confirmationDate = calculateConfirmationDate(editEmployee.hireDate, editEmployee.probationPeriod);
+    if (confirmationDate && confirmationDate.getTime() !== (editEmployee.confirmationDate?.getTime?.() ?? 0)) {
+      setEditEmployee((prev: any) => ({
+        ...prev,
+        confirmationDate,
+      }));
+    }
+  }, [editEmployee?.hireDate, editEmployee?.probationPeriod]);
+
   // Auto-calculate salary components for Full-time employees
   useEffect(() => {
     if (newEmployee.employmentType === "Full-time" && newEmployee.grossSalary) {
@@ -1104,8 +1116,8 @@ export default function Employees() {
       supervisor_name: employee.supervisor_name || "",
       work_location: employee.work_location || "",
       hireDate: employee.hire_date ? new Date(employee.hire_date) : undefined,
-      probation_period: employee.probation_period || "",
-      confirmation_date: employee.confirmation_date ? new Date(employee.confirmation_date) : undefined,
+      probationPeriod: employee.probation_period || "",
+      confirmationDate: employee.confirmation_date ? new Date(employee.confirmation_date) : undefined,
       employment_status: employee.employment_status || "Active",
 
       // Financial Information
@@ -1232,8 +1244,8 @@ export default function Employees() {
         grade_level: editEmployee.grade_level,
         supervisor_name: editEmployee.supervisor_name,
         work_location: editEmployee.work_location,
-        probation_period: editEmployee.probation_period,
-        confirmation_date: editEmployee.confirmation_date ? format(editEmployee.confirmation_date, "yyyy-MM-dd") : null,
+        probation_period: editEmployee.probationPeriod,
+        confirmation_date: editEmployee.confirmationDate ? format(editEmployee.confirmationDate, "yyyy-MM-dd") : null,
         vacation_days: editEmployee.vacation_days ? parseInt(editEmployee.vacation_days) : 20,
 
         // Emergency Contact
@@ -3716,32 +3728,47 @@ export default function Employees() {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="editProbationPeriod">Probation Period</Label>
-                      <Input
-                        id="editProbationPeriod"
+                      <Select
                         value={editEmployee.probationPeriod || ""}
-                        onChange={(e) =>
+                        onValueChange={(value) =>
                           setEditEmployee({
                             ...editEmployee,
-                            probationPeriod: e.target.value,
+                            probationPeriod: value,
                           })
                         }
-                        placeholder="e.g., 3 months"
-                      />
+                      >
+                        <SelectTrigger id="editProbationPeriod">
+                          <SelectValue placeholder="Select probation period" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-popover border shadow-lg">
+                          <SelectItem value="1">1 month</SelectItem>
+                          <SelectItem value="2">2 months</SelectItem>
+                          <SelectItem value="3">3 months</SelectItem>
+                          <SelectItem value="4">4 months</SelectItem>
+                          <SelectItem value="5">5 months</SelectItem>
+                          <SelectItem value="6">6 months</SelectItem>
+                          <SelectItem value="7">7 months</SelectItem>
+                          <SelectItem value="8">8 months</SelectItem>
+                          <SelectItem value="9">9 months</SelectItem>
+                          <SelectItem value="10">10 months</SelectItem>
+                          <SelectItem value="11">11 months</SelectItem>
+                          <SelectItem value="12">12 months (1 year)</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <Label>Confirmation Date</Label>
-                      <DateInput
-                        value={editEmployee.confirmationDate ? new Date(editEmployee.confirmationDate) : undefined}
-                        onChange={(date) =>
-                          setEditEmployee({
-                            ...editEmployee,
-                            confirmationDate: date,
-                          })
+                      <Label>Confirmation Date (Auto-calculated)</Label>
+                      <Input
+                        value={
+                          editEmployee.confirmationDate
+                            ? format(new Date(editEmployee.confirmationDate), "PPP")
+                            : "Will be calculated based on hire date + probation period"
                         }
-                        placeholder="MM/DD/YY"
+                        readOnly
+                        className="bg-muted text-muted-foreground cursor-not-allowed"
                       />
                     </div>
                     <div className="space-y-2">

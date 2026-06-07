@@ -190,7 +190,7 @@ export default function Benefits() {
   const { toast } = useToast()
   const { user, refreshUser } = useAuth()
   
-  const canManageBenefits = user?.role === 'executive' || user?.role === 'hr_manager'
+  const canManageBenefits = user?.role === 'executive' || user?.role === 'hr_manager' || user?.role === 'corporate_hr'
   const isLineManager = user?.role === 'line_manager'
   const isGeneralEmployee = !canManageBenefits && !isLineManager
   const userDepartment = user?.department

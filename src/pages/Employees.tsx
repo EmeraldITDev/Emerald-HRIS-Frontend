@@ -3818,30 +3818,38 @@ export default function Employees() {
                           <SelectItem value="Full-time">Full-time</SelectItem>
                           <SelectItem value="Part-time">Part-time</SelectItem>
                           <SelectItem value="Contract">Contract</SelectItem>
-                          <SelectItem value="Intern">Intern</SelectItem>
                           <SelectItem value="Consultant">Consultant</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="editGradeLevel">Grade Level</Label>
-                      <Input
-                        id="editGradeLevel"
+                      <Label htmlFor="editGradeLevel">Grade Level *</Label>
+                      <Select
                         value={editEmployee.grade_level || ""}
-                        onChange={(e) =>
-                          setEditEmployee({
-                            ...editEmployee,
-                            grade_level: e.target.value,
-                          })
+                        onValueChange={(value) =>
+                          setEditEmployee({ ...editEmployee, grade_level: value })
                         }
-                        placeholder="e.g., Level 5"
-                      />
+                      >
+                        <SelectTrigger
+                          id="editGradeLevel"
+                          className={editFormErrors.grade_level ? "border-destructive" : ""}
+                        >
+                          <SelectValue placeholder="Select grade level" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-popover border shadow-lg">
+                          {gradeLevels.map((level) => (
+                            <SelectItem key={level} value={level}>
+                              {level}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <Label htmlFor="editSupervisorName">Supervisor Name</Label>
+                      <Label htmlFor="editSupervisorName">Supervisor Name *</Label>
                       <Input
                         id="editSupervisorName"
                         value={editEmployee.supervisor_name || ""}
@@ -3852,10 +3860,11 @@ export default function Employees() {
                           })
                         }
                         placeholder="Supervisor's full name"
+                        className={editFormErrors.supervisor_name ? "border-destructive" : ""}
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="editWorkLocation">Work Location</Label>
+                      <Label htmlFor="editWorkLocation">Work Location *</Label>
                       <Input
                         id="editWorkLocation"
                         value={editEmployee.work_location || ""}
@@ -3866,6 +3875,7 @@ export default function Employees() {
                           })
                         }
                         placeholder="e.g., Lagos Office"
+                        className={editFormErrors.work_location ? "border-destructive" : ""}
                       />
                     </div>
                   </div>
@@ -3892,7 +3902,7 @@ export default function Employees() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="editProbationPeriod">Probation Period</Label>
+                      <Label htmlFor="editProbationPeriod">Probation Period *</Label>
                       <Select
                         value={editEmployee.probationPeriod || ""}
                         onValueChange={(value) =>
@@ -3902,7 +3912,10 @@ export default function Employees() {
                           })
                         }
                       >
-                        <SelectTrigger id="editProbationPeriod">
+                        <SelectTrigger
+                          id="editProbationPeriod"
+                          className={editFormErrors.probationPeriod ? "border-destructive" : ""}
+                        >
                           <SelectValue placeholder="Select probation period" />
                         </SelectTrigger>
                         <SelectContent className="bg-popover border shadow-lg">

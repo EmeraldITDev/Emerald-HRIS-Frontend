@@ -709,6 +709,100 @@ class ApiService {
     });
   }
 
+  // ---------------------------------------------------------------
+  // Bulk payroll: drafts / review / approval workflow
+  // See docs/bulk-payroll.md for the full spec.
+  // ---------------------------------------------------------------
+
+  async getBulkGenerateStatus(batchId: string): Promise<{
+    status: 'queued' | 'running' | 'done' | 'failed';
+    processed?: number;
+    total?: number;
+    drafts?: any[];
+    error?: string;
+  }> {
+    return this.request(`/payroll/bulk-generate/status/${batchId}`);
+  }
+
+  async listPayrollDrafts(payPeriod: string): Promise<any[]> {
+    const resp = await this.request<any>(`/payroll/drafts?pay_period=${payPeriod}`);
+    if (Array.isArray(resp)) return resp;
+    if (Array.isArray(resp?.data)) return resp.data;
+    if (Array.isArray(resp?.drafts)) return resp.drafts;
+    return [];
+  }
+
+  async listDraftPeriods(): Promise<string[]> {
+    try {
+      const resp = await this.request<any>('/payroll/draft-periods');
+      if (Array.isArray(resp)) return resp;
+      if (Array.isArray(resp?.periods)) return resp.periods;
+      if (Array.isArray(resp?.data)) return resp.data;
+      return [];
+    } catch (_e) {
+      return [];
+    }
+  }
+
+  async saveDraftPayroll(id: number, payload: Record<string, any>): Promise<any> {
+    return this.request(`/payroll/${id}/save-draft`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async markPayrollReady(id: number): Promise<any> {
+    return this.request(`/payroll/${id}/mark-ready`, { method: 'POST' });
+  }
+
+  async revertPayrollToDraft(id: number): Promise<any> {
+    return this.request(`/payroll/${id}/revert-to-draft`, { method: 'POST' });
+  }
+
+  async batchApprovePayroll(payload: {
+    ids: number[];
+    acknowledge_warnings?: boolean;
+  }): Promise<{
+    success?: boolean;
+    batch_id?: string;
+    status?: 'queued' | 'running' | 'done' | 'failed';
+    approved_count?: number;
+    error?: string;
+    message?: string;
+  }> {
+    return this.request('/payroll/batch-approve', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async getBatchApproveStatus(batchId: string): Promise<{
+    status: 'queued' | 'running' | 'done' | 'failed';
+    processed?: number;
+    total?: number;
+    error?: string;
+  }> {
+    return this.request(`/payroll/batch-approve/status/${batchId}`);
+  }
+
+  async getPayrollAudit(id: number): Promise<Array<{
+    field: string;
+    old_value: any;
+    new_value: any;
+    changed_by: string | number;
+    changed_at: string;
+    note?: string;
+  }>> {
+    try {
+      const resp = await this.request<any>(`/payroll/${id}/audit`);
+      if (Array.isArray(resp)) return resp;
+      if (Array.isArray(resp?.data)) return resp.data;
+      return [];
+    } catch (_e) {
+      return [];
+    }
+  }
+
   async updatePayroll(id: number, data: {
     basic_salary?: number;
     base_salary?: number;
@@ -824,6 +918,12 @@ class ApiService {
   }
   async exportPayrollBulkPdf(pay_period: string): Promise<Blob> {
     return this.downloadBlob(`/payroll/export/bulk-pdf?pay_period=${pay_period}`);
+  }
+  async exportPayrollBulkPdfWithStatus(pay_period: string, status: string = 'approved'): Promise<Blob> {
+    return this.downloadBlob(`/payroll/export/bulk-pdf?pay_period=${pay_period}&status=${status}`);
+  }
+  async exportPayrollBulkCsvWithStatus(pay_period: string, status: string = 'approved'): Promise<Blob> {
+    return this.downloadBlob(`/payroll/export/bulk-csv?pay_period=${pay_period}&status=${status}`);
   }
   async exportPayrollRecordPdf(id: number): Promise<Blob> {
     return this.downloadBlob(`/payroll/${id}/export/pdf`);

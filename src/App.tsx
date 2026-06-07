@@ -27,6 +27,7 @@ import Notifications from "./pages/Notifications";
 import LeaveApprovals from "./pages/LeaveApprovals";
 import MyPayslips from "./pages/MyPayslips";
 import PayslipDetail from "./pages/PayslipDetail";
+import PayrollReview from "./pages/PayrollReview";
 import React, { useEffect, useState } from "react";
 import { getUsers } from "./api";
 import { PasswordChangeModal } from "./components/PasswordChangeModal";
@@ -91,6 +92,7 @@ const AppContent = () => {
                   <Route path="/approvals/leave" element={<LeaveApprovals />} />
                   <Route path="/payroll/my-payslips" element={<MyPayslips />} />
                   <Route path="/payroll/my-payslips/:period" element={<PayslipDetail />} />
+                  <Route path="/payroll/review/:payPeriod" element={<PayrollReview />} />
                   <Route
                     path="/settings"
                     element={

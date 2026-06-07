@@ -484,6 +484,18 @@ export default function Employees() {
     }
   }, [newEmployee.hireDate, newEmployee.probationPeriod]);
 
+  // Auto-calculate confirmation date for edit form
+  useEffect(() => {
+    if (!editEmployee) return;
+    const confirmationDate = calculateConfirmationDate(editEmployee.hireDate, editEmployee.probationPeriod);
+    if (confirmationDate && confirmationDate.getTime() !== (editEmployee.confirmationDate?.getTime?.() ?? 0)) {
+      setEditEmployee((prev: any) => ({
+        ...prev,
+        confirmationDate,
+      }));
+    }
+  }, [editEmployee?.hireDate, editEmployee?.probationPeriod]);
+
   // Auto-calculate salary components for Full-time employees
   useEffect(() => {
     if (newEmployee.employmentType === "Full-time" && newEmployee.grossSalary) {

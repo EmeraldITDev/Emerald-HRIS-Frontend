@@ -1376,7 +1376,16 @@ export default function Employees() {
       };
 
       // Call the API to update the employee
-      await apiService.updateEmployee(editEmployee.id, employeeData);
+      console.log("[UpdateEmployee] PUT payload:", {
+        id: editEmployee.id,
+        emergency_contact_name: employeeData.emergency_contact_name,
+        emergency_contact_phone: employeeData.emergency_contact_phone,
+        bank_name: employeeData.bank_name,
+        middle_name: employeeData.middle_name,
+        hire_date: employeeData.hire_date,
+      });
+      const updateResp = await apiService.updateEmployee(editEmployee.id, employeeData);
+      console.log("[UpdateEmployee] PUT response:", updateResp);
 
       // Refresh the employee list from the database.
       // NOTE: The PUT response does NOT flatten financialDetails to top level

@@ -1104,8 +1104,8 @@ export default function Employees() {
       supervisor_name: employee.supervisor_name || "",
       work_location: employee.work_location || "",
       hireDate: employee.hire_date ? new Date(employee.hire_date) : undefined,
-      probation_period: employee.probation_period || "",
-      confirmation_date: employee.confirmation_date ? new Date(employee.confirmation_date) : undefined,
+      probationPeriod: employee.probation_period || "",
+      confirmationDate: employee.confirmation_date ? new Date(employee.confirmation_date) : undefined,
       employment_status: employee.employment_status || "Active",
 
       // Financial Information
@@ -1232,8 +1232,8 @@ export default function Employees() {
         grade_level: editEmployee.grade_level,
         supervisor_name: editEmployee.supervisor_name,
         work_location: editEmployee.work_location,
-        probation_period: editEmployee.probation_period,
-        confirmation_date: editEmployee.confirmation_date ? format(editEmployee.confirmation_date, "yyyy-MM-dd") : null,
+        probation_period: editEmployee.probationPeriod,
+        confirmation_date: editEmployee.confirmationDate ? format(editEmployee.confirmationDate, "yyyy-MM-dd") : null,
         vacation_days: editEmployee.vacation_days ? parseInt(editEmployee.vacation_days) : 20,
 
         // Emergency Contact

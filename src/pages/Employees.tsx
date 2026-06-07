@@ -3644,7 +3644,7 @@ export default function Employees() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="editAddress">Home Address</Label>
+                    <Label htmlFor="editAddress">Home Address *</Label>
                     <Textarea
                       id="editAddress"
                       value={editEmployee.homeAddress || ""}
@@ -3655,6 +3655,105 @@ export default function Employees() {
                         })
                       }
                       placeholder="Home Address"
+                      className={editFormErrors.homeAddress ? "border-destructive" : ""}
+                    />
+                  </div>
+
+                  <Separator className="my-4" />
+                  <h3 className="text-base font-medium">Emergency Contact & Next of Kin</h3>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="editEmergencyContact">Emergency Contact Name *</Label>
+                      <Input
+                        id="editEmergencyContact"
+                        value={editEmployee.emergencyContact || ""}
+                        onChange={(e) =>
+                          setEditEmployee({ ...editEmployee, emergencyContact: e.target.value })
+                        }
+                        placeholder="Full name"
+                        className={editFormErrors.emergencyContact ? "border-destructive" : ""}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="editEmergencyContactNumber">Emergency Contact Number *</Label>
+                      <Input
+                        id="editEmergencyContactNumber"
+                        value={editEmployee.emergencyContactNumber || ""}
+                        onChange={(e) =>
+                          setEditEmployee({ ...editEmployee, emergencyContactNumber: e.target.value })
+                        }
+                        placeholder="+234 XXX XXX XXXX"
+                        className={editFormErrors.emergencyContactNumber ? "border-destructive" : ""}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="editNextOfKinName">Next of Kin Name *</Label>
+                      <Input
+                        id="editNextOfKinName"
+                        value={editEmployee.nextOfKinName || ""}
+                        onChange={(e) =>
+                          setEditEmployee({ ...editEmployee, nextOfKinName: e.target.value })
+                        }
+                        placeholder="Full name"
+                        className={editFormErrors.nextOfKinName ? "border-destructive" : ""}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="editNextOfKinRelationship">Next of Kin Relationship *</Label>
+                      <Input
+                        id="editNextOfKinRelationship"
+                        value={editEmployee.nextOfKinRelationship || ""}
+                        onChange={(e) =>
+                          setEditEmployee({ ...editEmployee, nextOfKinRelationship: e.target.value })
+                        }
+                        placeholder="e.g., Spouse, Parent"
+                        className={editFormErrors.nextOfKinRelationship ? "border-destructive" : ""}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="editNextOfKinPhone">Next of Kin Phone Number *</Label>
+                      <Input
+                        id="editNextOfKinPhone"
+                        value={editEmployee.nextOfKinPhone || ""}
+                        onChange={(e) =>
+                          setEditEmployee({ ...editEmployee, nextOfKinPhone: e.target.value })
+                        }
+                        placeholder="+234 XXX XXX XXXX"
+                        className={editFormErrors.nextOfKinPhone ? "border-destructive" : ""}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="editNextOfKinEmail">Next of Kin Email *</Label>
+                      <Input
+                        id="editNextOfKinEmail"
+                        type="email"
+                        value={editEmployee.nextOfKinEmail || ""}
+                        onChange={(e) =>
+                          setEditEmployee({ ...editEmployee, nextOfKinEmail: e.target.value })
+                        }
+                        placeholder="email@example.com"
+                        className={editFormErrors.nextOfKinEmail ? "border-destructive" : ""}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="editNextOfKinAddress">Next of Kin Address *</Label>
+                    <Textarea
+                      id="editNextOfKinAddress"
+                      value={editEmployee.nextOfKinAddress || ""}
+                      onChange={(e) =>
+                        setEditEmployee({ ...editEmployee, nextOfKinAddress: e.target.value })
+                      }
+                      placeholder="Full address"
+                      className={editFormErrors.nextOfKinAddress ? "border-destructive" : ""}
                     />
                   </div>
                 </TabsContent>

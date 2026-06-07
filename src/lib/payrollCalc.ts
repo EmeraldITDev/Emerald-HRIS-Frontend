@@ -54,7 +54,11 @@ export const toMoneyNumber = (value: unknown): number => {
 /** Annual gross in NGN from API top-level or financial_details (BE storage). */
 export const getAnnualGrossSalary = (employee?: Partial<Employee> | null): number => {
   const financial = (employee as any)?.financial_details || {}
-  return toMoneyNumber((employee as any)?.gross_salary ?? financial.gross_salary)
+  const topLevelGross = toMoneyNumber((employee as any)?.gross_salary)
+  if (topLevelGross > 0) return topLevelGross
+  const financialGross = toMoneyNumber(financial.gross_salary)
+  if (financialGross > 0) return financialGross
+  return toMoneyNumber((employee as any)?.baseSalary)
 }
 
 const ACTIVE_PAYROLL_STATUSES = new Set(["active", "on probation", "probation"])

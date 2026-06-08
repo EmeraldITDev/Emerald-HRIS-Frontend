@@ -1598,25 +1598,35 @@ export default function Dashboard() {
                 <div className="flex items-center justify-between">
                   <span className="text-sm">Personal Payroll</span>
                   <span className="bg-success/10 text-success px-2 py-1 rounded text-xs font-medium">
-                    ₦450,000
+                    {formattedSelfMonthlyGross}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm">Health Insurance</span>
-                  <span className="bg-info/10 text-info px-2 py-1 rounded text-xs font-medium">
-                    Active
+                  <span
+                    className={`${
+                      healthBenefit ? 'bg-info/10 text-info' : 'bg-muted text-muted-foreground'
+                    } px-2 py-1 rounded text-xs font-medium`}
+                  >
+                    {healthBenefit ? (healthBenefit.benefit_name || 'Active') : 'Not enrolled'}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm">Pension Plan</span>
-                  <span className="bg-info/10 text-info px-2 py-1 rounded text-xs font-medium">
-                    7.5% contribution
+                  <span
+                    className={`${
+                      pensionRegistered ? 'bg-info/10 text-info' : 'bg-muted text-muted-foreground'
+                    } px-2 py-1 rounded text-xs font-medium`}
+                  >
+                    {pensionRegistered ? '8% contribution' : 'No PIN on file'}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm">Annual Leave</span>
                   <span className="bg-warning/10 text-warning px-2 py-1 rounded text-xs font-medium">
-                    18 days remaining
+                    {selfLeaveRemaining == null
+                      ? '—'
+                      : `${selfLeaveRemaining} days remaining`}
                   </span>
                 </div>
               </div>

@@ -226,6 +226,30 @@ export function PayrollEditDrawer({ open, onOpenChange, draft, onChanged }: Prop
   const warnings: Array<{ code: string; severity: string; message: string; field?: string }> =
     draft.warnings || [];
 
+  // Build a map of fields auto-populated from a previous approved period.
+  // Backend writes system audit entries with note "auto-populated from YYYY-MM"
+  // (see docs/bulk-payroll.md). We surface them as small badges next to inputs.
+  const prefilledMap: Record<string, string> = {};
+  for (const row of audit) {
+    if (String(row?.changed_by) !== "system") continue;
+    const note: string = row?.note || "";
+    const m = note.match(/(\d{4}-\d{2})/);
+    if (!m) continue;
+    const field = String(row?.field || "").toLowerCase();
+    if (field && !prefilledMap[field]) prefilledMap[field] = m[1];
+  }
+
+  const formatPeriodLabel = (p: string) => {
+    const [y, mo] = p.split("-");
+    const d = new Date(Number(y), Number(mo) - 1, 1);
+    return isNaN(d.getTime())
+      ? p
+      : d.toLocaleString(undefined, { month: "short", year: "numeric" });
+  };
+
+  const prefilledFrom = (field: string) =>
+    prefilledMap[field] ? formatPeriodLabel(prefilledMap[field]) : undefined;
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="sm:max-w-2xl w-full overflow-y-auto">
@@ -273,21 +297,21 @@ export function PayrollEditDrawer({ open, onOpenChange, draft, onChanged }: Prop
 
           <TabsContent value="form" className="space-y-4 mt-4">
             <Section title="Salary & Allowances">
-              <Money label="Basic Salary" v={form.basic_salary} on={(v) => set("basic_salary", v)} disabled={readOnly} />
-              <Money label="Housing Allowance" v={form.housing_allowance} on={(v) => set("housing_allowance", v)} disabled={readOnly} />
-              <Money label="Transport Allowance" v={form.transport_allowance} on={(v) => set("transport_allowance", v)} disabled={readOnly} />
-              <Money label="Meal Allowance" v={form.meal_allowance} on={(v) => set("meal_allowance", v)} disabled={readOnly} />
-              <Money label="Other Allowance" v={form.other_allowance} on={(v) => set("other_allowance", v)} disabled={readOnly} />
+              <Money label="Basic Salary" v={form.basic_salary} on={(v) => set("basic_salary", v)} disabled={readOnly} prefilledFrom={prefilledFrom("basic_salary")} />
+              <Money label="Housing Allowance" v={form.housing_allowance} on={(v) => set("housing_allowance", v)} disabled={readOnly} prefilledFrom={prefilledFrom("housing_allowance")} />
+              <Money label="Transport Allowance" v={form.transport_allowance} on={(v) => set("transport_allowance", v)} disabled={readOnly} prefilledFrom={prefilledFrom("transport_allowance")} />
+              <Money label="Meal Allowance" v={form.meal_allowance} on={(v) => set("meal_allowance", v)} disabled={readOnly} prefilledFrom={prefilledFrom("meal_allowance")} />
+              <Money label="Other Allowance" v={form.other_allowance} on={(v) => set("other_allowance", v)} disabled={readOnly} prefilledFrom={prefilledFrom("other_allowance")} />
             </Section>
 
             <Section title="Bonuses & Commission">
-              <Money label="Bonus" v={form.bonus} on={(v) => set("bonus", v)} disabled={readOnly} />
-              <Money label="Commission" v={form.commission} on={(v) => set("commission", v)} disabled={readOnly} />
-              <Money label="Overtime" v={form.overtime} on={(v) => set("overtime", v)} disabled={readOnly} />
+              <Money label="Bonus" v={form.bonus} on={(v) => set("bonus", v)} disabled={readOnly} prefilledFrom={prefilledFrom("bonus")} />
+              <Money label="Commission" v={form.commission} on={(v) => set("commission", v)} disabled={readOnly} prefilledFrom={prefilledFrom("commission")} />
+              <Money label="Overtime" v={form.overtime} on={(v) => set("overtime", v)} disabled={readOnly} prefilledFrom={prefilledFrom("overtime")} />
             </Section>
 
             <Section title="Deductions">
-              <Money label="Other Deductions" v={form.other_deductions} on={(v) => set("other_deductions", v)} disabled={readOnly} />
+              <Money label="Other Deductions" v={form.other_deductions} on={(v) => set("other_deductions", v)} disabled={readOnly} prefilledFrom={prefilledFrom("other_deductions")} />
               <div className="col-span-2">
                 <Label>Deduction Notes</Label>
                 <Textarea
@@ -301,16 +325,30 @@ export function PayrollEditDrawer({ open, onOpenChange, draft, onChanged }: Prop
 
             <Section title="Reliefs">
               <div className="flex items-center justify-between col-span-2">
-                <Label>Rent Relief</Label>
+                <div className="flex items-center gap-2">
+                  <Label>Rent Relief</Label>
+                  {prefilledFrom("rent_relief_enabled") && (
+                    <Badge variant="secondary" className="text-[10px] font-normal">
+                      Prefilled from {prefilledFrom("rent_relief_enabled")}
+                    </Badge>
+                  )}
+                </div>
                 <Switch
                   checked={!!form.rent_relief_enabled}
                   onCheckedChange={(v) => set("rent_relief_enabled", v)}
                   disabled={readOnly}
                 />
               </div>
-              <Money label="Annual Rent" v={form.annual_rent} on={(v) => set("annual_rent", v)} disabled={readOnly || !form.rent_relief_enabled} />
+              <Money label="Annual Rent" v={form.annual_rent} on={(v) => set("annual_rent", v)} disabled={readOnly || !form.rent_relief_enabled} prefilledFrom={prefilledFrom("annual_rent")} />
               <div className="flex items-center justify-between col-span-2">
-                <Label>Include NHF</Label>
+                <div className="flex items-center gap-2">
+                  <Label>Include NHF</Label>
+                  {prefilledFrom("include_nhf") && (
+                    <Badge variant="secondary" className="text-[10px] font-normal">
+                      Prefilled from {prefilledFrom("include_nhf")}
+                    </Badge>
+                  )}
+                </div>
                 <Switch
                   checked={!!form.include_nhf}
                   onCheckedChange={(v) => set("include_nhf", v)}
@@ -318,6 +356,13 @@ export function PayrollEditDrawer({ open, onOpenChange, draft, onChanged }: Prop
                 />
               </div>
             </Section>
+
+            {Object.keys(prefilledMap).length > 0 && (
+              <div className="text-[11px] text-muted-foreground flex items-center gap-2">
+                <Badge variant="secondary" className="text-[10px] font-normal">Prefilled</Badge>
+                Values carried over from the most recent approved payroll. Review and edit before approving.
+              </div>
+            )}
 
             <Section title="Notes">
               <div className="col-span-2">
@@ -436,15 +481,24 @@ function Money({
   v,
   on,
   disabled,
+  prefilledFrom,
 }: {
   label: string;
   v: any;
   on: (n: number) => void;
   disabled?: boolean;
+  prefilledFrom?: string;
 }) {
   return (
     <div>
-      <Label>{label}</Label>
+      <div className="flex items-center justify-between gap-2 mb-1">
+        <Label>{label}</Label>
+        {prefilledFrom && (
+          <Badge variant="secondary" className="text-[10px] font-normal">
+            Prefilled from {prefilledFrom}
+          </Badge>
+        )}
+      </div>
       <Input
         type="number"
         value={v ?? 0}

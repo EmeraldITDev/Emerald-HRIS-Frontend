@@ -154,6 +154,75 @@ export default function Dashboard() {
   const [currentEmployeeId, setCurrentEmployeeId] = useState<number | null>(null)
   // Message dialog state moved to CelebrationsCard component
 
+  // Self-service real data
+  const [selfLeaveRemaining, setSelfLeaveRemaining] = useState<number | null>(null)
+  const [selfBenefits, setSelfBenefits] = useState<any[]>([])
+  const [selfTrainingPending, setSelfTrainingPending] = useState<number>(0)
+  const [selfReviewPending, setSelfReviewPending] = useState<boolean>(false)
+
+  const currentEmployee = allEmployees.find(
+    (e) => Number(e.id) === Number(currentEmployeeId)
+  ) || null
+
+  const hasEmergencyContact = !!(
+    (currentEmployee as any)?.emergency_contact_name &&
+    (currentEmployee as any)?.emergency_contact_phone
+  )
+
+  const selfMonthlyGross = currentEmployee
+    ? getAnnualGrossSalary(currentEmployee) / 12
+    : 0
+  const formattedSelfMonthlyGross = selfMonthlyGross
+    ? new Intl.NumberFormat("en-NG", {
+        style: "currency",
+        currency: "NGN",
+        maximumFractionDigits: 0,
+      }).format(selfMonthlyGross)
+    : "—"
+
+  const healthBenefit = selfBenefits.find((b: any) => {
+    const t = `${b?.benefit_type || ""} ${b?.benefit_name || ""}`.toLowerCase()
+    return t.includes("health") || t.includes("hmo") || t.includes("insur") || t.includes("medical")
+  })
+  const pensionRegistered = !!(currentEmployee as any)?.pension_pin
+
+  useEffect(() => {
+    if (!currentEmployeeId) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const [balance, benefits, trainings, reviews] = await Promise.all([
+          apiService.getLeaveBalance(currentEmployeeId).catch(() => null),
+          apiService.getEmployeeBenefitsByEmployee(currentEmployeeId).catch(() => []),
+          apiService.getTrainingAssignments().catch(() => []),
+          apiService.getPerformanceReviews().catch(() => []),
+        ])
+        if (cancelled) return
+        if (balance && typeof (balance as any).remaining === "number") {
+          setSelfLeaveRemaining((balance as any).remaining)
+        }
+        setSelfBenefits(Array.isArray(benefits) ? benefits : [])
+        const myTrainings = (Array.isArray(trainings) ? trainings : []).filter(
+          (t: any) =>
+            Number(t?.employee_id) === Number(currentEmployeeId) &&
+            !["completed", "complete", "done"].includes(String(t?.status || "").toLowerCase())
+        )
+        setSelfTrainingPending(myTrainings.length)
+        const myPending = (Array.isArray(reviews) ? reviews : []).some(
+          (r: any) =>
+            Number(r?.employee_id) === Number(currentEmployeeId) &&
+            !["completed", "approved", "submitted"].includes(String(r?.status || "").toLowerCase())
+        )
+        setSelfReviewPending(myPending)
+      } catch {
+        /* non-fatal */
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [currentEmployeeId])
+
   const annualSalaryBudget = allEmployees.reduce((sum, emp) => sum + getAnnualGrossSalary(emp), 0)
   const monthlySalaryBudget = annualSalaryBudget / 12
   const formattedMonthlySalaryBudget = `₦${(monthlySalaryBudget / 1000000).toFixed(1)}M`

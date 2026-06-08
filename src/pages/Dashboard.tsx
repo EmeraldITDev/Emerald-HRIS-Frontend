@@ -1461,32 +1461,47 @@ export default function Dashboard() {
                 ))}
               </div>
             ) : ['general_employee', 'finance', 'line_manager', 'it_admin', 'executive'].includes(user?.role || '') ? (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Performance Review Form</span>
-                  <span className="bg-warning/10 text-warning px-2 py-1 rounded text-xs font-medium">
-                    Due Soon
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Complete Training Module</span>
-                  <span className="bg-info/10 text-info px-2 py-1 rounded text-xs font-medium">
-                    Assigned
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Update Emergency Contact</span>
-                  <span className="bg-success/10 text-success px-2 py-1 rounded text-xs font-medium">
-                    Optional
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Submit Timesheet</span>
-                  <span className="bg-warning/10 text-warning px-2 py-1 rounded text-xs font-medium">
-                    Weekly
-                  </span>
-                </div>
-              </div>
+              (() => {
+                const items: Array<{ label: string; status: string; tone: 'warning' | 'info' | 'success' }> = []
+                if (selfReviewPending) {
+                  items.push({ label: 'Performance Review Form', status: 'Pending', tone: 'warning' })
+                }
+                if (selfTrainingPending > 0) {
+                  items.push({
+                    label: 'Complete Training Module',
+                    status: `${selfTrainingPending} assigned`,
+                    tone: 'info',
+                  })
+                }
+                if (currentEmployee && !hasEmergencyContact) {
+                  items.push({ label: 'Update Emergency Contact', status: 'Required', tone: 'warning' })
+                }
+                if (items.length === 0) {
+                  return (
+                    <div className="text-sm text-muted-foreground text-center py-4">
+                      No pending actions
+                    </div>
+                  )
+                }
+                const toneClass = (tone: 'warning' | 'info' | 'success') =>
+                  tone === 'warning'
+                    ? 'bg-warning/10 text-warning'
+                    : tone === 'info'
+                      ? 'bg-info/10 text-info'
+                      : 'bg-success/10 text-success'
+                return (
+                  <div className="space-y-3">
+                    {items.map((it) => (
+                      <div key={it.label} className="flex items-center justify-between">
+                        <span className="text-sm">{it.label}</span>
+                        <span className={`${toneClass(it.tone)} px-2 py-1 rounded text-xs font-medium`}>
+                          {it.status}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )
+              })()
             ) : (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">

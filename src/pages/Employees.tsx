@@ -47,6 +47,7 @@ import { parseCSVFile, formatDataForPHP, type EmployeeData } from "@/utils/csvIm
 import { downloadCSVTemplate, downloadTemplateGuide } from "@/utils/csvTemplate";
 import { validateCSVData, CSVValidationResult, ValidatedRow, getRoleValue } from "@/utils/csvValidation";
 import { CSVValidationPreview } from "@/components/CSVValidationPreview";
+import { GrossSalaryImportDialog } from "@/components/GrossSalaryImportDialog";
 import { EmployeeDocumentsReadOnly } from "@/components/EmployeeDocumentsReadOnly";
 import Papa from "papaparse";
 import { DEPARTMENTS } from "@/constants/departments";
@@ -103,6 +104,7 @@ export default function Employees() {
   const [showValidationPreview, setShowValidationPreview] = useState(false);
   const [validationResult, setValidationResult] = useState<CSVValidationResult | null>(null);
   const [importFileName, setImportFileName] = useState("");
+  const [showGrossSalaryImport, setShowGrossSalaryImport] = useState(false);
   const [newEmployee, setNewEmployee] = useState({
     // Personal Information
     firstName: "",

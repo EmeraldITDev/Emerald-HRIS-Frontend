@@ -4585,6 +4585,11 @@ export default function Employees() {
           validationResult={validationResult}
           fileName={importFileName}
         />
+
+        <GrossSalaryImportDialog
+          open={showGrossSalaryImport}
+          onOpenChange={setShowGrossSalaryImport}
+        />
       </div>
     </ProtectedRoute>
   );

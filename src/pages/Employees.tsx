@@ -47,6 +47,7 @@ import { parseCSVFile, formatDataForPHP, type EmployeeData } from "@/utils/csvIm
 import { downloadCSVTemplate, downloadTemplateGuide } from "@/utils/csvTemplate";
 import { validateCSVData, CSVValidationResult, ValidatedRow, getRoleValue } from "@/utils/csvValidation";
 import { CSVValidationPreview } from "@/components/CSVValidationPreview";
+import { GrossSalaryImportDialog } from "@/components/GrossSalaryImportDialog";
 import { EmployeeDocumentsReadOnly } from "@/components/EmployeeDocumentsReadOnly";
 import Papa from "papaparse";
 import { DEPARTMENTS } from "@/constants/departments";
@@ -103,6 +104,7 @@ export default function Employees() {
   const [showValidationPreview, setShowValidationPreview] = useState(false);
   const [validationResult, setValidationResult] = useState<CSVValidationResult | null>(null);
   const [importFileName, setImportFileName] = useState("");
+  const [showGrossSalaryImport, setShowGrossSalaryImport] = useState(false);
   const [newEmployee, setNewEmployee] = useState({
     // Personal Information
     firstName: "",
@@ -1774,6 +1776,17 @@ export default function Employees() {
               <Download className="mr-2 h-3 w-3 md:h-4 md:w-4" />
               Export Data
             </Button>
+            {user?.grossSalaryImportEnabled && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs md:text-sm border-amber-500/50 text-amber-700 hover:bg-amber-500/10"
+                onClick={() => setShowGrossSalaryImport(true)}
+              >
+                <Upload className="mr-2 h-3 w-3 md:h-4 md:w-4" />
+                Import Gross Salary
+              </Button>
+            )}
             <Dialog open={showAddEmployee} onOpenChange={setShowAddEmployee}>
               <DialogTrigger asChild>
                 <Button size="sm" className="text-xs md:text-sm">
@@ -4571,6 +4584,11 @@ export default function Employees() {
           onConfirmImport={handleConfirmImport}
           validationResult={validationResult}
           fileName={importFileName}
+        />
+
+        <GrossSalaryImportDialog
+          open={showGrossSalaryImport}
+          onOpenChange={setShowGrossSalaryImport}
         />
       </div>
     </ProtectedRoute>

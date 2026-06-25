@@ -28,6 +28,7 @@ export interface User {
   department: string;
   employee_id?: number;
   mustChangePassword?: boolean;
+  grossSalaryImportEnabled?: boolean;
 }
 
 interface AuthContextType {
@@ -211,6 +212,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           department: (response as any).user.department || 'General',
           employee_id: (response as any).user.employee_id,
           mustChangePassword: (response as any).user.must_change_password,
+          grossSalaryImportEnabled: !!(response as any).user.gross_salary_import_enabled,
         };
         
         setUser(user);
@@ -238,6 +240,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           department: (resp as any).user.department || 'General',
           employee_id: (resp as any).user.employee_id,
           mustChangePassword: (resp as any).user.must_change_password,
+          grossSalaryImportEnabled: !!(resp as any).user.gross_salary_import_enabled,
         };
         setUser(user);
         localStorage.setItem('hris_user', JSON.stringify(user));
@@ -277,6 +280,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           department: response.user.department || 'General',
           employee_id: response.user.employee_id,
           mustChangePassword: response.user.must_change_password,
+          grossSalaryImportEnabled: !!(response.user as any).gross_salary_import_enabled,
         };
         
         setUser(updatedUser);

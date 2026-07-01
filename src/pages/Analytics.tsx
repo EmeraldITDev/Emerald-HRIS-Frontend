@@ -8,6 +8,7 @@ import apiService, { Employee } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/contexts/AuthContext"
 import { RoleBasedComponent } from "@/components/RoleBasedComponent"
+import { getAnnualGrossSalary } from "@/lib/payrollCalc"
 
 const COLORS = ['#10b981', '#f59e0b', '#3b82f6', '#ef4444', '#8b5cf6', '#ec4899']
 
@@ -131,40 +132,14 @@ export default function Analytics() {
     }
     
     // Calculate vacation details from employees
-    const vacationData = employeesData
-      .filter(emp => emp.vacation_days !== undefined)
-      .slice(0, 10)
-      .map(emp => ({
-        employee: `${emp.first_name} ${emp.last_name}`,
-        assigned: emp.vacation_days || 25,
-        taken: Math.floor(Math.random() * (emp.vacation_days || 15)), // This would come from leave data
-        remaining: 0
-      }))
+    // Vacation details require real leave-usage data; fetched separately
+    // from apiService.getVacationDetails(). Do not fabricate values here.
     
-    vacationData.forEach(v => {
-      v.remaining = v.assigned - v.taken
-    })
-    
-    if (vacationData.length > 0) {
-      setVacationDetailsData(vacationData)
-    }
-    
-    // Calculate total salary for trends (use actual employee salaries)
-    const totalMonthlySalary = employeesData.reduce((sum, emp) => sum + (emp.gross_salary || 0), 0)
-    
-    // Generate salary trend data for last 6 months using actual total
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
-    const currentMonth = new Date().getMonth()
-    const salaryData = months.slice(0, currentMonth + 1).map((month, i) => ({
-      month,
-      totalSalary: totalMonthlySalary * (0.95 + (i * 0.01)) // Slight growth trend
-    }))
-    
-    if (salaryData.length > 0) {
-      setSalaryTrendsData(salaryData)
-    }
+    // Salary trends require historical payroll data from the backend
+    // (apiService.getSalaryTrends). Skip synthetic trend generation.
     
     // Generate hiring trends from hire dates
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
     const hiringByMonth: { [key: string]: number } = {}
     employeesData.forEach(emp => {
       if (emp.hire_date) {
@@ -176,13 +151,14 @@ export default function Analytics() {
         }
       }
     })
-    
-    if (Object.keys(hiringByMonth).length > 0) {
-      setHiringTrendsData(months.map(month => ({
+
+    const currentMonthIdx = new Date().getMonth()
+    setHiringTrendsData(
+      monthNames.slice(0, currentMonthIdx + 1).map(month => ({
         month,
-        hires: hiringByMonth[month] || 0
-      })))
-    }
+        hires: hiringByMonth[month] || 0,
+      }))
+    )
   }
 
   const totalEmployees = dashboardStats?.total_employees || employees.length
@@ -191,8 +167,13 @@ export default function Analytics() {
   const vacationUtilization = totalVacationAssigned > 0 ? (totalVacationTaken / totalVacationAssigned) * 100 : 0
 
   const totalHires = hiringTrendsData.reduce((sum, item) => sum + (item.hires || 0), 0)
-  const avgAttendance = dashboardStats?.attendance_rate_today || 95
-  const totalSalaryExpense = dashboardStats?.total_payroll_expense || employees.reduce((sum, emp) => sum + (emp.gross_salary || 0), 0)
+  const avgAttendance = typeof dashboardStats?.attendance_rate_today === 'number'
+    ? dashboardStats.attendance_rate_today
+    : null
+  // Monthly salary expense = annual gross / 12, using the safe parser used across dashboard.
+  const monthlySalaryExpense = typeof dashboardStats?.total_payroll_expense === 'number' && dashboardStats.total_payroll_expense > 0
+    ? dashboardStats.total_payroll_expense
+    : employees.reduce((sum, emp) => sum + getAnnualGrossSalary(emp), 0) / 12
 
   if (isLoading) {
     return (
@@ -229,7 +210,7 @@ export default function Analytics() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">{totalHires}</div>
-            <p className="text-xs text-muted-foreground">+50% from last period</p>
+            <p className="text-xs text-muted-foreground">Year to date</p>
           </CardContent>
         </Card>
 
@@ -239,8 +220,12 @@ export default function Analytics() {
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{avgAttendance.toFixed(1)}%</div>
-            <p className="text-xs text-muted-foreground">Monthly average</p>
+            <div className="text-2xl font-bold text-green-600">
+              {avgAttendance !== null ? `${avgAttendance.toFixed(1)}%` : '—'}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {avgAttendance !== null ? 'Today' : 'No data available'}
+            </p>
           </CardContent>
         </Card>
 
@@ -250,8 +235,12 @@ export default function Analytics() {
             <CalendarDays className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-purple-600">{vacationUtilization.toFixed(1)}%</div>
-            <p className="text-xs text-muted-foreground">Of allocated days</p>
+            <div className="text-2xl font-bold text-purple-600">
+              {totalVacationAssigned > 0 ? `${vacationUtilization.toFixed(1)}%` : '—'}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {totalVacationAssigned > 0 ? 'Of allocated days' : 'No leave data available'}
+            </p>
           </CardContent>
         </Card>
 
@@ -261,7 +250,9 @@ export default function Analytics() {
             <Briefcase className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-indigo-600">₦{(totalSalaryExpense / 1000000).toFixed(1)}M</div>
+            <div className="text-2xl font-bold text-indigo-600">
+              ₦{(monthlySalaryExpense / 1000000).toFixed(1)}M
+            </div>
             <p className="text-xs text-muted-foreground">Monthly payroll</p>
           </CardContent>
         </Card>

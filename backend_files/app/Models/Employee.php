@@ -63,13 +63,18 @@ class Employee extends Model
      */
     public function getTodaySchedule(): array
     {
-        $location  = $this->assigned_location ?? $this->work_location ?? 'Lagos';
+        $location  = self::normalizeLocation($this->assigned_location ?? $this->work_location ?? 'Lagos');
         $dayOfWeek = now('Africa/Lagos')->format('l'); // Monday, Tuesday, etc.
 
-        $schedule = \DB::table('attendance_schedules')
-            ->where('location', $location)
-            ->where('day_of_week', $dayOfWeek)
-            ->first();
+        $schedule = null;
+        // Defensive: if the attendance_schedules table has not been migrated yet,
+        // fall back to defaults instead of throwing a 500 on clock-in.
+        if (\Schema::hasTable('attendance_schedules')) {
+            $schedule = \DB::table('attendance_schedules')
+                ->where('location', $location)
+                ->where('day_of_week', $dayOfWeek)
+                ->first();
+        }
 
         if ($schedule) {
             return [
@@ -89,6 +94,21 @@ class Employee extends Model
             'location'       => $location,
             'day_of_week'    => $dayOfWeek,
         ];
+    }
+
+    /**
+     * Map free-text locations ("Lagos Office", "lagos hq") to canonical
+     * schedule locations: Lagos | Calabar | Abuja.
+     */
+    public static function normalizeLocation(?string $location): string
+    {
+        $value = strtolower(trim((string) $location));
+        foreach (['lagos' => 'Lagos', 'calabar' => 'Calabar', 'abuja' => 'Abuja'] as $needle => $canonical) {
+            if (str_contains($value, $needle)) {
+                return $canonical;
+            }
+        }
+        return 'Lagos';
     }
 
     public function resolveGrossSalary(): float

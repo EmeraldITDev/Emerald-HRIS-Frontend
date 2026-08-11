@@ -82,15 +82,6 @@ export function isWithinLunchWindow(date: Date = new Date()): boolean {
   return minutes >= 13 * 60 && minutes < 14 * 60;
 }
 
-function _unusedDateOnly(value?: string | null): string {
-  if (!value) return "";
-  const raw = String(value);
-  const match = raw.match(/^\d{4}-\d{2}-\d{2}/);
-  if (match) return match[0];
-  const d = new Date(raw);
-  return isNaN(d.getTime()) ? "" : d.toISOString().slice(0, 10);
-}
-
 const STATUS_LABELS: Record<string, { label: string; className: string }> = {
   "present-physical": {
     label: "✅ Clocked in — Physical",

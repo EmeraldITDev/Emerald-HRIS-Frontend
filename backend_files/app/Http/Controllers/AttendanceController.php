@@ -1557,4 +1557,259 @@ class AttendanceController extends Controller
             'summary'  => $summary,
         ]);
     }
+
+    /**
+     * POST /api/attendance/late-clockin-requests/{id}/manager-approve
+     * Line-manager tier approval — moves the request to HR stage.
+     */
+    public function managerApproveLateClockin(Request $request, $id): JsonResponse
+    {
+        return $this->decideLateClockinAsManager($request, $id, 'approved');
+    }
+
+    /**
+     * POST /api/attendance/late-clockin-requests/{id}/manager-reject
+     */
+    public function managerRejectLateClockin(Request $request, $id): JsonResponse
+    {
+        return $this->decideLateClockinAsManager($request, $id, 'rejected');
+    }
+
+    private function decideLateClockinAsManager(Request $request, $id, string $decision): JsonResponse
+    {
+        $user     = $request->user();
+        $userRole = $user->getRoleNames()->first() ?? 'general_employee';
+
+        if (!in_array($userRole, ['line_manager', 'hr_manager', 'corporate_hr', 'executive'])) {
+            return response()->json([
+                'error'   => 'INSUFFICIENT_PERMISSIONS',
+                'message' => 'Only line managers and HR can act on late clock-in requests',
+            ], 403);
+        }
+
+        $clockinRequest = LateClockInRequest::find($id);
+        if (!$clockinRequest) {
+            return response()->json(['error' => 'NOT_FOUND', 'message' => 'Late clock-in request not found'], 404);
+        }
+
+        if ($clockinRequest->employee_id == $user->employee_id) {
+            return response()->json([
+                'error'   => 'SELF_APPROVAL_NOT_ALLOWED',
+                'message' => 'You cannot act on your own late clock-in request',
+            ], 403);
+        }
+
+        if ($clockinRequest->status !== 'pending') {
+            return response()->json(['error' => 'INVALID_STATUS', 'message' => 'Only pending requests can be actioned'], 400);
+        }
+
+        if ($decision === 'rejected' && !$request->filled('approver_notes')) {
+            return response()->json(['error' => 'NOTES_REQUIRED', 'message' => 'A rejection note is required'], 422);
+        }
+
+        $clockinRequest->update([
+            'status'                 => $decision === 'approved' ? 'manager_approved' : 'rejected',
+            'line_manager_user_id'   => $user->id,
+            'line_manager_notes'     => $request->input('approver_notes'),
+            'line_manager_acted_at'  => now(),
+        ]);
+
+        $employee     = Employee::find($clockinRequest->employee_id);
+        $employeeName = $employee ? "{$employee->first_name} {$employee->last_name}" : 'Employee';
+
+        if ($decision === 'approved') {
+            // Escalate to HR for the final decision
+            $hrUsers = User::role(['hr_manager', 'corporate_hr'])->get();
+            foreach ($hrUsers as $hrUser) {
+                NotificationService::notify(
+                    $hrUser,
+                    'late_clockin_manager_approved',
+                    "{$employeeName}'s late clock-in request was approved by their line manager and needs HR review",
+                    '/approvals/attendance',
+                    ['late_clockin_request_id' => $clockinRequest->id]
+                );
+            }
+        } else {
+            $employeeUser = $employee ? User::where('employee_id', $employee->id)->first() : null;
+            if ($employeeUser) {
+                NotificationService::notify(
+                    $employeeUser,
+                    'late_clockin_rejected',
+                    'Your late clock-in request was rejected by your line manager',
+                    '/attendance',
+                    ['late_clockin_request_id' => $clockinRequest->id]
+                );
+            }
+        }
+
+        return response()->json(['success' => true, 'data' => $clockinRequest->fresh()]);
+    }
+
+    /**
+     * POST /api/attendance/missing-clockout-request
+     * Employee regularisation request for a day with no clock-out.
+     */
+    public function submitMissingClockoutRequest(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'employee_id'      => 'required|exists:employees,id',
+            'date'             => 'required|date',
+            'actual_clock_out' => 'required|string',
+            'reason'           => 'required|string|max:2000',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
+        }
+
+        $existing = \App\Models\MissingClockoutRequest::where('employee_id', $request->employee_id)
+            ->where('attendance_date', $request->date)
+            ->where('status', 'Pending')
+            ->first();
+
+        if ($existing) {
+            return response()->json([
+                'success' => false,
+                'message' => 'A pending clock-out request already exists for this date',
+            ], 409);
+        }
+
+        $missingRequest = \App\Models\MissingClockoutRequest::create([
+            'employee_id'            => $request->employee_id,
+            'attendance_date'        => $request->date,
+            'claimed_clock_out_time' => $request->actual_clock_out,
+            'reason'                 => $request->reason,
+            'status'                 => 'Pending',
+        ]);
+
+        $employee     = Employee::find($request->employee_id);
+        $employeeName = $employee ? "{$employee->first_name} {$employee->last_name}" : 'Employee';
+
+        foreach (User::role(['hr_manager', 'corporate_hr'])->get() as $hrUser) {
+            NotificationService::notify(
+                $hrUser,
+                'missing_clockout_submitted',
+                "{$employeeName} submitted a missing clock-out request for {$request->date}",
+                '/approvals/attendance',
+                ['missing_clockout_request_id' => $missingRequest->id]
+            );
+        }
+
+        return response()->json(['success' => true, 'data' => $missingRequest], 201);
+    }
+
+    /**
+     * GET /api/attendance/missing-clockout-requests
+     */
+    public function getMissingClockoutRequests(Request $request): JsonResponse
+    {
+        $user     = $request->user();
+        $userRole = $user->getRoleNames()->first() ?? 'general_employee';
+
+        $query = \App\Models\MissingClockoutRequest::with('employee:id,first_name,last_name,employee_code,department');
+
+        if ($userRole === 'general_employee') {
+            $query->where('employee_id', $user->employee_id);
+        } elseif ($userRole === 'line_manager') {
+            $managerEmployee = Employee::find($user->employee_id);
+            $reportIds = $managerEmployee
+                ? Employee::where('supervisor_id', $managerEmployee->id)->pluck('id')
+                : collect();
+            $query->whereIn('employee_id', $reportIds->push($user->employee_id));
+        }
+
+        if ($request->has('status'))      $query->where('status', $request->status);
+        if ($request->has('employee_id')) $query->where('employee_id', $request->employee_id);
+
+        return response()->json([
+            'success' => true,
+            'data'    => $query->orderByDesc('created_at')->paginate($request->get('per_page', 15)),
+        ]);
+    }
+
+    /**
+     * POST /api/attendance/missing-clockout-requests/{id}/approve
+     * Writes the claimed clock-out onto the attendance record.
+     */
+    public function approveMissingClockout(Request $request, $id): JsonResponse
+    {
+        return $this->decideMissingClockout($request, $id, 'Approved');
+    }
+
+    /**
+     * POST /api/attendance/missing-clockout-requests/{id}/reject
+     */
+    public function rejectMissingClockout(Request $request, $id): JsonResponse
+    {
+        return $this->decideMissingClockout($request, $id, 'Rejected');
+    }
+
+    private function decideMissingClockout(Request $request, $id, string $decision): JsonResponse
+    {
+        $user     = $request->user();
+        $userRole = $user->getRoleNames()->first() ?? 'general_employee';
+
+        if (!in_array($userRole, ['hr_manager', 'corporate_hr', 'executive'])) {
+            return response()->json([
+                'error'   => 'INSUFFICIENT_PERMISSIONS',
+                'message' => 'Only HR can decide missing clock-out requests',
+            ], 403);
+        }
+
+        $missingRequest = \App\Models\MissingClockoutRequest::find($id);
+        if (!$missingRequest) {
+            return response()->json(['error' => 'NOT_FOUND', 'message' => 'Request not found'], 404);
+        }
+
+        if ($missingRequest->status !== 'Pending') {
+            return response()->json(['error' => 'INVALID_STATUS', 'message' => 'Only pending requests can be actioned'], 400);
+        }
+
+        if ($decision === 'Rejected' && !$request->filled('approver_notes')) {
+            return response()->json(['error' => 'NOTES_REQUIRED', 'message' => 'A rejection note is required'], 422);
+        }
+
+        $missingRequest->update([
+            'status'           => $decision,
+            'approver_user_id' => $user->id,
+            'approver_notes'   => $request->input('approver_notes'),
+            'decided_at'       => now(),
+        ]);
+
+        if ($decision === 'Approved') {
+            $attendance = Attendance::where('employee_id', $missingRequest->employee_id)
+                ->whereDate('date', $missingRequest->attendance_date)
+                ->first();
+
+            if ($attendance) {
+                $date      = Carbon::parse($missingRequest->attendance_date, 'Africa/Lagos')->format('Y-m-d');
+                $clockOut  = Carbon::parse($date . ' ' . $missingRequest->claimed_clock_out_time, 'Africa/Lagos');
+                $clockIn   = $attendance->clock_in ? Carbon::parse($attendance->clock_in) : null;
+
+                $totalMinutes = null;
+                if ($clockIn) {
+                    $totalMinutes = max(0, $clockIn->diffInMinutes($clockOut) - (int) ($attendance->break_duration ?? 0));
+                }
+
+                $attendance->update(array_filter([
+                    'clock_out'   => $clockOut,
+                    'total_hours' => $totalMinutes,
+                ], fn ($v) => $v !== null));
+            }
+        }
+
+        $employee     = Employee::find($missingRequest->employee_id);
+        $employeeUser = $employee ? User::where('employee_id', $employee->id)->first() : null;
+        if ($employeeUser) {
+            NotificationService::notify(
+                $employeeUser,
+                'missing_clockout_' . strtolower($decision),
+                "Your missing clock-out request for {$missingRequest->attendance_date} was " . strtolower($decision),
+                '/attendance',
+                ['missing_clockout_request_id' => $missingRequest->id]
+            );
+        }
+
+        return response()->json(['success' => true, 'data' => $missingRequest->fresh()]);
+    }
 }

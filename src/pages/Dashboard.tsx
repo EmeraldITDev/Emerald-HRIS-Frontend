@@ -68,6 +68,9 @@ import { getCurrentMonthCelebrations, getUpcomingCelebrations, type Celebration 
 import { CelebrationsCard } from "@/components/CelebrationsCard"
 import { UpcomingAnniversariesCard } from "@/components/UpcomingAnniversariesCard"
 import { getAnnualGrossSalary } from "@/lib/payrollCalc"
+import TimeClockCard from "@/components/attendance/TimeClockCard"
+import MissingClockoutBanner from "@/components/attendance/MissingClockoutBanner"
+import { useAttendanceToday } from "@/hooks/useAttendanceToday"
 
 interface UserActivity {
   id: string
@@ -103,32 +106,6 @@ function dateOnly(value?: string | null): string {
   const match = raw.match(/^\d{4}-\d{2}-\d{2}/)
   if (match) return match[0]
   try { return format(new Date(raw), "yyyy-MM-dd") } catch { return "" }
-}
-
-function recordSortTime(record: any): number {
-  const value = record?.updated_at || record?.break_end || record?.clock_out || record?.break_start || record?.clock_in || record?.created_at || record?.date
-  const parsed = value ? new Date(String(value).replace(" ", "T")).getTime() : 0
-  return Number.isFinite(parsed) ? parsed : 0
-}
-
-function selectTodayRecord(records: any[], employeeId: number, today: string): any | null {
-  return records
-    .filter((r: any) => Number(r.employee_id) === Number(employeeId) && dateOnly(r.date) === today)
-    .sort((a: any, b: any) => (recordSortTime(b) - recordSortTime(a)) || (Number(b.id || 0) - Number(a.id || 0)))[0] || null
-}
-
-function isOnLunchBreak(record: any): boolean {
-  return !!(record?.break_start && !record?.break_end)
-}
-
-function lunchEndOverrideKey(employeeId: number, today: string): string {
-  return `lunchBreak:ended:${employeeId}:${today}`
-}
-
-function isApprovedPostLunchRequest(request: any): boolean {
-  return (request?.status || "").toLowerCase() === "approved" &&
-    typeof request?.reason === "string" &&
-    request.reason.toLowerCase().includes("late return from lunch")
 }
 
 export default function Dashboard() {

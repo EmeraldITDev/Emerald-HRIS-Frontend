@@ -37,6 +37,12 @@ import { Textarea } from "@/components/ui/textarea"
 import { useAuth } from "@/contexts/AuthContext"
 import { RoleBasedComponent } from "@/components/RoleBasedComponent"
 import apiService, { Employee } from "@/lib/api"
+import {
+  AttendanceStatusBadge,
+  extractRows,
+  formatTimeWithZone,
+  locationStatusLabel,
+} from "@/lib/attendanceUi"
 import { getCurrentMonthCelebrations, type Celebration } from "@/utils/celebrations"
 
 // Extract HH:mm from a backend datetime string ("YYYY-MM-DD HH:MM:SS" or ISO).
@@ -163,6 +169,26 @@ export default function Attendance() {
     if (!user) return;
 
     try {
+      const todayStr = format(new Date(), 'yyyy-MM-dd');
+
+      // Prefer the org-dashboard payload — it is the same source the
+      // Organisation-Wide Attendance page uses and already carries employee
+      // name/code, department, work mode and location status.
+      try {
+        const orgRes: any = await apiService.getOrgAttendanceDashboard({ date: todayStr });
+        const payload: any = orgRes?.data ?? orgRes;
+        let orgRows = extractRows(payload?.rows ? payload.rows : orgRes);
+        if (orgRows.length > 0) {
+          if (user?.role === 'line_manager' && user?.department) {
+            orgRows = orgRows.filter((r: any) => r.department === user.department);
+          }
+          setTodayAttendance(orgRows);
+          return;
+        }
+      } catch (orgError) {
+        console.warn('Org dashboard unavailable, falling back to attendance list:', orgError);
+      }
+
       const response = await apiService.getAttendance();
       const today = format(new Date(), 'yyyy-MM-dd');
       
@@ -193,8 +219,20 @@ export default function Attendance() {
           (record: any) => record.employee?.department === user.department
         );
       }
-      
-      setTodayAttendance(allTodayRecords);
+
+      // Normalise the legacy shape onto the org-dashboard field names.
+      setTodayAttendance(
+        allTodayRecords.map((r: any) => ({
+          ...r,
+          employee_name:
+            r.employee_name ||
+            [r.employee?.first_name, r.employee?.last_name].filter(Boolean).join(' '),
+          employee_code: r.employee_code || r.employee?.employee_code || r.employee_id,
+          department: r.department || r.employee?.department,
+          actual_mode: r.actual_mode || r.work_mode,
+          attendance_status: r.attendance_status || r.status,
+        }))
+      );
     } catch (error) {
       console.error('Failed to load attendance status:', error);
     }
@@ -978,58 +1016,52 @@ export default function Attendance() {
           </CardHeader>
           {showTodayAttendance && (
           <CardContent>
-            <div className="space-y-3">
-              {todayAttendance.length > 0 ? (
-                todayAttendance.map((record) => (
-                  <div key={record.id} className="p-3 bg-accent/50 rounded-lg border">
-                    <div className="flex justify-between items-start mb-2">
-                      <div>
-                        <div className="font-medium text-sm">{record.employee_name}</div>
-                        <div className="text-xs text-muted-foreground mt-1">
-                          <div className="flex items-center gap-1">
-                            <LogIn className="w-3 h-3" />
-                            Clock In: {formatAttTime(record.clock_in)}
-                          </div>
-                          {record.clock_out && (
-                            <div className="flex items-center gap-1 mt-0.5">
-                              <LogOut className="w-3 h-3" />
-                              Clock Out: {formatAttTime(record.clock_out)}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex flex-col items-end gap-1">
-                        {record.clock_in && !record.clock_out && (
-                          <Badge variant="default" className="text-xs">
-                            Active
-                          </Badge>
-                        )}
-                        {record.clock_out && (
-                          <Badge variant="outline" className="text-xs">
-                            Completed
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                    
-                    {/* Show early departure reason if exists */}
-                    {record.early_departure_reason && (
-                      <div className="mt-2 pt-2 border-t border-border/50">
-                        <div className="text-xs font-medium text-destructive flex items-center gap-1">
-                          <Bell className="w-3 h-3" />
-                          Early Departure:
-                        </div>
-                        <div className="text-xs text-muted-foreground mt-1 pl-4">
-                          {record.early_departure_reason}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))
-              ) : (
-                <p className="text-sm text-muted-foreground">No attendance records for today</p>
-              )}
-            </div>
+            {todayAttendance.length > 0 ? (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Employee</TableHead>
+                      <TableHead>Employee ID</TableHead>
+                      <TableHead>Department</TableHead>
+                      <TableHead>Clock-In</TableHead>
+                      <TableHead>Clock-Out</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Work Mode</TableHead>
+                      <TableHead>Location Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {todayAttendance.map((record: any, i: number) => (
+                      <TableRow key={record.id ?? record.employee_id ?? i}>
+                        <TableCell className="font-medium text-sm">
+                          {record.employee_name ||
+                            [record.first_name, record.last_name].filter(Boolean).join(' ') ||
+                            `Employee #${record.employee_id}`}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {record.employee_code || record.employee_display || record.employee_id || '—'}
+                        </TableCell>
+                        <TableCell className="text-sm">{record.department || '—'}</TableCell>
+                        <TableCell className="text-sm">{formatTimeWithZone(record.clock_in) || '—'}</TableCell>
+                        <TableCell className="text-sm">{formatTimeWithZone(record.clock_out) || '—'}</TableCell>
+                        <TableCell>
+                          <AttendanceStatusBadge status={record.attendance_status || 'Absent'} compact />
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {record.actual_mode || record.work_mode || '—'}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {locationStatusLabel(record.location_status)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">No attendance records for today</p>
+            )}
           </CardContent>
           )}
         </Card>

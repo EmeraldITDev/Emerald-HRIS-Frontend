@@ -6,6 +6,12 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -20,7 +26,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Eye, Flag, RefreshCw } from "lucide-react";
+import { Download, Eye, Flag, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
 import { canViewOrgDashboard } from "@/lib/permissions";
@@ -75,19 +81,18 @@ export default function OrgAttendanceDashboard() {
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [date, setDate] = useState(todayWAT());
-  const [location, setLocation] = useState("All");
-  const [department, setDepartment] = useState("All");
+  const [locations, setLocations] = useState<string[]>([]);
+  const [departments, setDepartments] = useState<string[]>([]);
   const [mode, setMode] = useState("All");
   const [status, setStatus] = useState("All");
   const [chip, setChip] = useState<ChipKey>("total");
+  const [flagged, setFlagged] = useState<Record<string, boolean>>({});
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const res = await apiService.getOrgAttendanceDashboard({
         date,
-        location,
-        department,
         mode,
         status,
       });
@@ -99,7 +104,7 @@ export default function OrgAttendanceDashboard() {
     } finally {
       setLoading(false);
     }
-  }, [date, location, department, mode, status]);
+  }, [date, mode, status]);
 
   useEffect(() => {
     load();
@@ -111,23 +116,100 @@ export default function OrgAttendanceDashboard() {
     return () => window.clearInterval(id);
   }, [load]);
 
+  const filteredRows = useMemo(
+    () =>
+      rows.filter((r) => {
+        if (locations.length > 0 && !locations.includes(String(r.assigned_location || ""))) {
+          return false;
+        }
+        if (departments.length > 0 && !departments.includes(String(r.department || ""))) {
+          return false;
+        }
+        return true;
+      }),
+    [rows, locations, departments],
+  );
+
   const counts = useMemo(
     () => ({
-      total: rows.length,
-      present_physical: rows.filter((r) => matchesChip(r, "present_physical")).length,
-      present_wfh: rows.filter((r) => matchesChip(r, "present_wfh")).length,
-      absent: rows.filter((r) => matchesChip(r, "absent")).length,
-      exception: rows.filter((r) => matchesChip(r, "exception")).length,
-      unapproved_wfh: rows.filter((r) => matchesChip(r, "unapproved_wfh")).length,
-      location_mismatch: rows.filter((r) => matchesChip(r, "location_mismatch")).length,
+      total: filteredRows.length,
+      present_physical: filteredRows.filter((r) => matchesChip(r, "present_physical")).length,
+      present_wfh: filteredRows.filter((r) => matchesChip(r, "present_wfh")).length,
+      absent: filteredRows.filter((r) => matchesChip(r, "absent")).length,
+      exception: filteredRows.filter((r) => matchesChip(r, "exception")).length,
+      unapproved_wfh: filteredRows.filter((r) => matchesChip(r, "unapproved_wfh")).length,
+      location_mismatch: filteredRows.filter((r) => matchesChip(r, "location_mismatch")).length,
     }),
-    [rows],
+    [filteredRows],
   );
 
   const visibleRows = useMemo(
-    () => (chip === "total" ? rows : rows.filter((r) => matchesChip(r, chip))),
-    [rows, chip],
+    () => (chip === "total" ? filteredRows : filteredRows.filter((r) => matchesChip(r, chip))),
+    [filteredRows, chip],
   );
+
+  const rowKey = (r: any, i: number) => String(r.employee_id ?? r.id ?? i);
+
+  const isLate = (r: any) =>
+    String(r.attendance_status || r.status || "").toLowerCase().includes("late");
+
+  const toggleValue = (
+    setter: (fn: (prev: string[]) => string[]) => void,
+    value: string,
+  ) =>
+    setter((prev) =>
+      prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value],
+    );
+
+  const downloadCsv = () => {
+    const headers = [
+      "Employee",
+      "Employee ID",
+      "Department",
+      "Assigned Location",
+      "Work Arrangement",
+      "Expected Mode",
+      "Actual Mode",
+      "Clock-In",
+      "Clock-Out",
+      "Late",
+      "Location Status",
+      "Status",
+      "Exception",
+    ];
+    const esc = (v: any) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const lines = visibleRows.map((r: any) =>
+      [
+        r.employee_name ||
+          [r.first_name, r.last_name].filter(Boolean).join(" ") ||
+          `Employee #${r.employee_id}`,
+        r.employee_code || r.employee_display || r.employee_id,
+        r.department,
+        r.assigned_location,
+        r.work_arrangement,
+        r.expected_mode,
+        r.actual_mode || r.work_mode,
+        formatTimeWithZone(r.clock_in),
+        formatTimeWithZone(r.clock_out),
+        isLate(r) ? "Late" : "On time",
+        locationStatusLabel(r.location_status),
+        r.attendance_status || "Absent",
+        r.exception?.exception_type || r.exception_type,
+      ]
+        .map(esc)
+        .join(","),
+    );
+    const csv = [headers.map(esc).join(","), ...lines].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `org-attendance-${date}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
 
   if (!canViewOrgDashboard(user)) return <Navigate to="/" replace />;
 
@@ -152,10 +234,16 @@ export default function OrgAttendanceDashboard() {
             Every employee for {date} — including those who never clocked in.
           </p>
         </div>
-        <Button variant="outline" onClick={load} disabled={loading}>
-          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
-          Refresh
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={downloadCsv} disabled={visibleRows.length === 0}>
+            <Download className="h-4 w-4 mr-2" />
+            Download CSV
+          </Button>
+          <Button variant="outline" onClick={load} disabled={loading}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -187,35 +275,47 @@ export default function OrgAttendanceDashboard() {
           </div>
           <div className="space-y-1">
             <Label>Location</Label>
-            <Select value={location} onValueChange={setLocation}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="All">All</SelectItem>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="w-full justify-start font-normal">
+                  {locations.length === 0 ? "All" : locations.join(", ")}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="bg-popover z-50">
                 {LOCATIONS.map((l) => (
-                  <SelectItem key={l} value={l}>
+                  <DropdownMenuCheckboxItem
+                    key={l}
+                    checked={locations.includes(l)}
+                    onSelect={(e) => e.preventDefault()}
+                    onCheckedChange={() => toggleValue(setLocations, l)}
+                  >
                     {l}
-                  </SelectItem>
+                  </DropdownMenuCheckboxItem>
                 ))}
-              </SelectContent>
-            </Select>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
           <div className="space-y-1">
             <Label>Department</Label>
-            <Select value={department} onValueChange={setDepartment}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="All">All</SelectItem>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="w-full justify-start font-normal truncate">
+                  {departments.length === 0 ? "All" : departments.join(", ")}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="bg-popover z-50 max-h-72 overflow-y-auto">
                 {DEPARTMENTS.map((d) => (
-                  <SelectItem key={d} value={d}>
+                  <DropdownMenuCheckboxItem
+                    key={d}
+                    checked={departments.includes(d)}
+                    onSelect={(e) => e.preventDefault()}
+                    onCheckedChange={() => toggleValue(setDepartments, d)}
+                  >
                     {d}
-                  </SelectItem>
+                  </DropdownMenuCheckboxItem>
                 ))}
-              </SelectContent>
-            </Select>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
           <div className="space-y-1">
             <Label>Work Mode</Label>
@@ -271,10 +371,12 @@ export default function OrgAttendanceDashboard() {
                     <TableHead>Employee</TableHead>
                     <TableHead>Department</TableHead>
                     <TableHead>Assigned Location</TableHead>
+                    <TableHead>Work Arrangement</TableHead>
                     <TableHead>Expected Mode</TableHead>
                     <TableHead>Actual Mode</TableHead>
                     <TableHead>Clock-In</TableHead>
                     <TableHead>Clock-Out</TableHead>
+                    <TableHead>Late</TableHead>
                     <TableHead>Location Status</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Exception</TableHead>
@@ -283,7 +385,7 @@ export default function OrgAttendanceDashboard() {
                 </TableHeader>
                 <TableBody>
                   {visibleRows.map((r: any, i: number) => (
-                    <TableRow key={r.employee_id ?? r.id ?? i}>
+                    <TableRow key={rowKey(r, i)}>
                       <TableCell className="font-medium">
                         {r.employee_name ||
                           [r.first_name, r.last_name].filter(Boolean).join(" ") ||
@@ -294,10 +396,20 @@ export default function OrgAttendanceDashboard() {
                       </TableCell>
                       <TableCell className="text-sm">{r.department || "—"}</TableCell>
                       <TableCell className="text-sm">{r.assigned_location || "—"}</TableCell>
+                      <TableCell className="text-sm">
+                        {r.work_arrangement || r.employee?.work_arrangement || "—"}
+                      </TableCell>
                       <TableCell className="text-sm">{r.expected_mode || "—"}</TableCell>
                       <TableCell className="text-sm">{r.actual_mode || r.work_mode || "—"}</TableCell>
                       <TableCell className="text-sm">{formatTimeWithZone(r.clock_in) || "—"}</TableCell>
                       <TableCell className="text-sm">{formatTimeWithZone(r.clock_out) || "—"}</TableCell>
+                      <TableCell className="text-sm">
+                        {isLate(r) ? (
+                          <Badge variant="destructive" className="text-xs">Late</Badge>
+                        ) : (
+                          <span className="text-muted-foreground">On time</span>
+                        )}
+                      </TableCell>
                       <TableCell className="text-sm">
                         {locationStatusLabel(r.location_status)}
                       </TableCell>
@@ -329,17 +441,25 @@ export default function OrgAttendanceDashboard() {
                           </Button>
                           <Button
                             size="sm"
-                            variant="ghost"
-                            onClick={() =>
+                            variant={flagged[rowKey(r, i)] ? "secondary" : "ghost"}
+                            disabled={flagged[rowKey(r, i)]}
+                            onClick={async () => {
+                              setFlagged((prev) => ({ ...prev, [rowKey(r, i)]: true }));
                               toast({
                                 title: "Flagged for review",
                                 description: `${
                                   r.employee_name || `Employee #${r.employee_id}`
                                 } was flagged for HR follow-up.`,
-                              })
-                            }
+                              });
+                              await load();
+                            }}
                           >
-                            <Flag className="h-4 w-4" />
+                            <Flag
+                              className={`h-4 w-4 ${
+                                flagged[rowKey(r, i)] ? "fill-current text-destructive" : ""
+                              }`}
+                            />
+                            {flagged[rowKey(r, i)] && <span className="ml-1 text-xs">Flagged</span>}
                           </Button>
                         </div>
                       </TableCell>

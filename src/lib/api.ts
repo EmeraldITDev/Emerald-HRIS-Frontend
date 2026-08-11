@@ -97,6 +97,47 @@ export interface Attendance {
   updated_at?: string;
 }
 
+export type AttendanceStatus =
+  | 'Present-Physical'
+  | 'Present-WFH'
+  | 'Late'
+  | 'Unapproved-WFH'
+  | 'Location-Mismatch'
+  | 'Missing-Clockout'
+  | 'Absent'
+  | string;
+
+export type WorkMode = 'Physical' | 'WFH' | 'Exception';
+
+export interface AttendanceTodayRecord {
+  id?: number;
+  employee_id?: number;
+  date?: string;
+  clock_in?: string | null;
+  clock_out?: string | null;
+  break_start?: string | null;
+  break_end?: string | null;
+  work_mode?: WorkMode;
+  attendance_status?: AttendanceStatus;
+  location_status?: 'Verified' | 'Mismatch' | 'Exempt' | 'Not Required' | 'N/A' | string;
+  expected_mode?: WorkMode;
+  assigned_location?: string;
+  missing_clockout_date?: string | null;
+  [key: string]: any;
+}
+
+export interface EmployeeAttendanceProfile {
+  employee_id?: number;
+  assigned_location?: 'Lagos' | 'Calabar' | 'Abuja' | string;
+  work_arrangement?: 'Hybrid' | 'Fully Onsite' | 'Fully Remote' | string;
+  expected_workdays?: string[];
+  expected_modes?: Record<string, WorkMode>;
+  clock_in_time?: string;
+  clock_out_time?: string;
+  effective_date?: string;
+  [key: string]: any;
+}
+
 export interface LeaveType {
   id?: number;
   name: string;

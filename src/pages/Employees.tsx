@@ -3159,7 +3159,7 @@ export default function Employees() {
             </DialogHeader>
             {selectedEmployee && (
               <Tabs defaultValue="personal" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-1">
+                <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-1">
                   <TabsTrigger value="personal" className="text-xs sm:text-sm">
                     Personal
                   </TabsTrigger>
@@ -3174,6 +3174,9 @@ export default function Employees() {
                   </TabsTrigger>
                   <TabsTrigger value="additional" className="text-xs sm:text-sm">
                     Additional
+                  </TabsTrigger>
+                  <TabsTrigger value="attendance-profile" className="text-xs sm:text-sm">
+                    Attendance
                   </TabsTrigger>
                 </TabsList>
 
@@ -3464,6 +3467,10 @@ export default function Employees() {
                     <Label className="text-sm font-medium text-muted-foreground">Uploaded Documents</Label>
                     <EmployeeDocumentsReadOnly employeeId={selectedEmployee.id} />
                   </div>
+                </TabsContent>
+
+                <TabsContent value="attendance-profile" className="space-y-4">
+                  <AttendanceProfilePanel employeeId={selectedEmployee.id} />
                 </TabsContent>
               </Tabs>
             )}

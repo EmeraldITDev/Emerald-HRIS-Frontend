@@ -371,10 +371,12 @@ export default function OrgAttendanceDashboard() {
                     <TableHead>Employee</TableHead>
                     <TableHead>Department</TableHead>
                     <TableHead>Assigned Location</TableHead>
+                    <TableHead>Work Arrangement</TableHead>
                     <TableHead>Expected Mode</TableHead>
                     <TableHead>Actual Mode</TableHead>
                     <TableHead>Clock-In</TableHead>
                     <TableHead>Clock-Out</TableHead>
+                    <TableHead>Late</TableHead>
                     <TableHead>Location Status</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Exception</TableHead>
@@ -383,7 +385,7 @@ export default function OrgAttendanceDashboard() {
                 </TableHeader>
                 <TableBody>
                   {visibleRows.map((r: any, i: number) => (
-                    <TableRow key={r.employee_id ?? r.id ?? i}>
+                    <TableRow key={rowKey(r, i)}>
                       <TableCell className="font-medium">
                         {r.employee_name ||
                           [r.first_name, r.last_name].filter(Boolean).join(" ") ||
@@ -394,10 +396,20 @@ export default function OrgAttendanceDashboard() {
                       </TableCell>
                       <TableCell className="text-sm">{r.department || "—"}</TableCell>
                       <TableCell className="text-sm">{r.assigned_location || "—"}</TableCell>
+                      <TableCell className="text-sm">
+                        {r.work_arrangement || r.employee?.work_arrangement || "—"}
+                      </TableCell>
                       <TableCell className="text-sm">{r.expected_mode || "—"}</TableCell>
                       <TableCell className="text-sm">{r.actual_mode || r.work_mode || "—"}</TableCell>
                       <TableCell className="text-sm">{formatTimeWithZone(r.clock_in) || "—"}</TableCell>
                       <TableCell className="text-sm">{formatTimeWithZone(r.clock_out) || "—"}</TableCell>
+                      <TableCell className="text-sm">
+                        {isLate(r) ? (
+                          <Badge variant="destructive" className="text-xs">Late</Badge>
+                        ) : (
+                          <span className="text-muted-foreground">On time</span>
+                        )}
+                      </TableCell>
                       <TableCell className="text-sm">
                         {locationStatusLabel(r.location_status)}
                       </TableCell>

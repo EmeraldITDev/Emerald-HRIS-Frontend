@@ -578,8 +578,11 @@ class ApiService {
 
   // ===== Attendance system v2 =====
 
-  async getAttendanceToday(): Promise<any> {
-    return this.request<any>(`/attendance/today?_=${Date.now()}`, { cache: 'no-store' });
+  async getAttendanceToday(employeeId?: number | string | null): Promise<any> {
+    const qp = new URLSearchParams();
+    if (employeeId != null) qp.append('employee_id', String(employeeId));
+    qp.append('_', String(Date.now()));
+    return this.request<any>(`/attendance/today?${qp.toString()}`, { cache: 'no-store' });
   }
 
   async getAttendanceRange(params: {

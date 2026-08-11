@@ -177,7 +177,24 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
     if (!employeeId) return;
     setIsPunching(true);
     try {
-      const res: any = await apiService.clockOut({ employee_id: employeeId, date: todayWAT() });
+      const payload = { employee_id: employeeId, date: todayWAT() };
+      let res: any;
+      try {
+        res = await apiService.clockOut(payload);
+      } catch (err: any) {
+        const msg = String(err?.data?.message || err?.message || "");
+        // An open break left over from earlier blocks clock-out — close it and retry.
+        if (/break/i.test(msg)) {
+          try {
+            await apiService.endBreak(payload);
+          } catch {
+            /* break may already be closed */
+          }
+          res = await apiService.clockOut(payload);
+        } else {
+          throw err;
+        }
+      }
       setJustClockedOut(true);
       await refresh();
       toast({ title: "Clocked out", description: res?.message || "Clock-out recorded." });

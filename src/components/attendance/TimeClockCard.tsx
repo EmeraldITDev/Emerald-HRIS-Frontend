@@ -220,10 +220,6 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
                 <Badge variant="outline">{expectedMode}</Badge>
               </div>
             )}
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Timer className="h-4 w-4" />
-              <span>Lunch break: {LUNCH_BREAK.label}</span>
-            </div>
             <div className="text-sm text-muted-foreground space-y-1">
               {todayStatus?.clock_in ? (
                 <>
@@ -262,26 +258,15 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
                 Clock In
               </Button>
             ) : (
-              <>
-                <Button
-                  onClick={handleBreak}
-                  disabled={isPunching}
-                  variant={onBreak ? "default" : "outline"}
-                  className={cn("gap-2", onBreak && "bg-success hover:bg-success/90 text-white")}
-                >
-                  <Timer className="h-4 w-4" />
-                  {onBreak ? "On Lunch Break" : "Lunch Break"}
-                </Button>
-                <Button
-                  onClick={handleClockOut}
-                  disabled={isPunching}
-                  variant="destructive"
-                  className="gap-2"
-                >
-                  <LogOut className="h-4 w-4" />
-                  Clock Out
-                </Button>
-              </>
+              <Button
+                onClick={handleClockOut}
+                disabled={isPunching}
+                variant="destructive"
+                className="gap-2"
+              >
+                <LogOut className="h-4 w-4" />
+                Clock Out
+              </Button>
             )}
           </div>
         </div>

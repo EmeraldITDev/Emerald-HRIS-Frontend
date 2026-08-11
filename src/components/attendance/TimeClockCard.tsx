@@ -195,9 +195,40 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
           throw err;
         }
       }
-      setJustClockedOut(true);
-      await refresh();
-      toast({ title: "Clocked out", description: res?.message || "Clock-out recorded." });
+      let record: any = await refresh();
+
+      // Some backends toggle a break instead of closing the day — detect the
+      // half-open break, close it, and clock out for real.
+      const brokeInstead =
+        /break/i.test(String(res?.message || "")) ||
+        (record?.break_start && !record?.break_end && !record?.clock_out);
+      if (brokeInstead) {
+        try {
+          await apiService.endBreak(payload);
+        } catch {
+          /* break may already be closed */
+        }
+        try {
+          await apiService.clockOut(payload);
+        } catch {
+          /* surfaced below via the refreshed record */
+        }
+        record = await refresh();
+      }
+
+      if (record?.clock_out) {
+        setJustClockedOut(true);
+        toast({
+          title: "Clocked out",
+          description: `Clock-out recorded at ${formatTimeWithZone(record.clock_out)}.`,
+        });
+      } else {
+        toast({
+          title: "Clock-out failed",
+          description: "Your clock-out was not recorded. Please try again.",
+          variant: "destructive",
+        });
+      }
     } catch (e: any) {
       toast({
         title: "Clock-out failed",

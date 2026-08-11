@@ -121,7 +121,7 @@ export default function Dashboard() {
   const [currentMonthCelebrations, setCurrentMonthCelebrations] = useState<Celebration[]>([])
   const [upcomingCelebrations, setUpcomingCelebrations] = useState<Celebration[]>([])
   const [currentEmployeeId, setCurrentEmployeeId] = useState<number | null>(null)
-  const { todayStatus, refresh: refreshTodayStatus } = useAttendanceToday(!!user)
+  const { todayStatus, refresh: refreshTodayStatus } = useAttendanceToday(!!user, currentEmployeeId)
   // Message dialog state moved to CelebrationsCard component
 
   // Self-service real data

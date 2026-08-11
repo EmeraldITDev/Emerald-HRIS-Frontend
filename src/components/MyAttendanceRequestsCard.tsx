@@ -77,7 +77,7 @@ export function MyAttendanceRequestsCard({ employeeId }: Props) {
         <CardTitle className="text-primary flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <ClipboardCheck className="h-5 w-5" />
-            My Attendance Justifications
+            My Early Clock-Out Requests
             {items.some((i) => (i.status || "pending").toLowerCase() === "pending") && (
               <Badge variant="secondary" className="ml-2">
                 {items.filter((i) => (i.status || "pending").toLowerCase() === "pending").length} pending

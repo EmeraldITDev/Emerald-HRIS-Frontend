@@ -33,6 +33,7 @@ import OrgAttendanceDashboard from "./pages/attendance/OrgAttendanceDashboard";
 import React, { useEffect, useState } from "react";
 import { getUsers } from "./api";
 import { PasswordChangeModal } from "./components/PasswordChangeModal";
+import { UpdateAvailableBanner } from "./components/UpdateAvailableBanner";
 
 const queryClient = new QueryClient();
 
@@ -138,6 +139,7 @@ const App = () => {
             <Toaster />
             <Sonner />
             <AppContent />
+            <UpdateAvailableBanner />
           </TooltipProvider>
         </ThemeProvider>
       </AuthProvider>

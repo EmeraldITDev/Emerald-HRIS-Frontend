@@ -246,6 +246,10 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
                 <Badge variant="outline">{expectedMode}</Badge>
               </div>
             )}
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Timer className="h-4 w-4" />
+              <span>Lunch break: {LUNCH_BREAK.label}</span>
+            </div>
             <div className="text-sm text-muted-foreground space-y-1">
               {todayStatus?.clock_in ? (
                 <>

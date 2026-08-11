@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { CalendarDays, ChevronDown, Clock, LogIn, LogOut } from "lucide-react";
 import { format } from "date-fns";
 import apiService from "@/lib/api";
-import { AttendanceStatusBadge, dateOnly, extractRows, formatTimeOnly } from "@/lib/attendanceUi";
+import { AttendanceStatusBadge, dateOnly, extractRows, formatTimeWithZone } from "@/lib/attendanceUi";
 
 interface Props {
   employeeId: number | null;
@@ -132,14 +132,14 @@ export function WeeklyAttendanceCard({ employeeId, refreshKey }: Props) {
                             {rec.clock_in && (
                               <div className="text-xs flex items-center gap-1">
                                 <LogIn className="w-3 h-3 text-success" />
-                                <span className="font-medium">In:</span> {formatTimeOnly(rec.clock_in)}
+                                <span className="font-medium">In:</span> {formatTimeWithZone(rec.clock_in)}
                               </div>
                             )}
                             {rec.clock_out && (
                               <div className="text-xs flex items-center gap-1">
                                 <LogOut className="w-3 h-3 text-destructive" />
                                 <span className="font-medium">Out:</span>{" "}
-                                {formatTimeOnly(rec.clock_out)}
+                                {formatTimeWithZone(rec.clock_out)}
                               </div>
                             )}
                           </div>

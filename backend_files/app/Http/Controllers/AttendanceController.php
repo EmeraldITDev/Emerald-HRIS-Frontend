@@ -1609,6 +1609,7 @@ class AttendanceController extends Controller
 
         $clockinRequest->update([
             'status'                 => $decision === 'approved' ? 'manager_approved' : 'rejected',
+            'line_manager_status'    => $decision === 'approved' ? 'Approved' : 'Rejected',
             'line_manager_user_id'   => $user->id,
             'line_manager_notes'     => $request->input('approver_notes'),
             'line_manager_acted_at'  => now(),

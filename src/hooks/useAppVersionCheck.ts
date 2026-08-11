@@ -25,6 +25,9 @@ async function fetchDeployedVersion(): Promise<string | null> {
  */
 export function useAppVersionCheck() {
   const [updateAvailable, setUpdateAvailable] = useState(false);
+  // Increments on every poll that still sees a newer build, so a dismissed
+  // banner can reappear on the next poll.
+  const [signal, setSignal] = useState(0);
 
   useEffect(() => {
     if (import.meta.env.DEV) return;
@@ -38,7 +41,10 @@ export function useAppVersionCheck() {
     const check = async () => {
       const deployed = await fetchDeployedVersion();
       if (cancelled || !deployed) return;
-      if (deployed !== currentBuildId) setUpdateAvailable(true);
+      if (deployed !== currentBuildId) {
+        setUpdateAvailable(true);
+        setSignal((n) => n + 1);
+      }
     };
 
     check();
@@ -55,5 +61,5 @@ export function useAppVersionCheck() {
     };
   }, []);
 
-  return updateAvailable;
+  return { updateAvailable, signal };
 }

@@ -128,7 +128,7 @@ export function AttendanceApprovalsCard() {
         <CardTitle className="text-primary flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <Bell className="h-5 w-5" />
-            Attendance Approvals
+            Early Clock-Out Approvals
             {requests.length > 0 && (
               <Badge variant="destructive" className="ml-2">{requests.length} pending</Badge>
             )}

@@ -49,6 +49,7 @@ import { validateCSVData, CSVValidationResult, ValidatedRow, getRoleValue } from
 import { CSVValidationPreview } from "@/components/CSVValidationPreview";
 import { GrossSalaryImportDialog } from "@/components/GrossSalaryImportDialog";
 import { EmployeeDocumentsReadOnly } from "@/components/EmployeeDocumentsReadOnly";
+import AttendanceProfilePanel from "@/components/attendance/AttendanceProfilePanel";
 import Papa from "papaparse";
 import { DEPARTMENTS } from "@/constants/departments";
 import jsPDF from "jspdf";

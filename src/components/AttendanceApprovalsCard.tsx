@@ -19,7 +19,7 @@ import { canHrPayroll } from "@/lib/permissions";
 import apiService from "@/lib/api";
 import { format } from "date-fns";
 
-type RequestKind = "late_clockin" | "early_clockout";
+type RequestKind = "early_clockout";
 
 interface PendingRequest {
   id: number | string;
@@ -72,14 +72,10 @@ export function AttendanceApprovalsCard() {
     if (!visible) return;
     setLoading(true);
     try {
-      const [late, early] = await Promise.all([
-        apiService.getLateClockinRequests({ status: "pending" }).catch(() => []),
-        apiService.getEarlyClockoutRequests({ status: "pending" }).catch(() => []),
-      ]);
-      const merged = [
-        ...normalize(late, "late_clockin"),
-        ...normalize(early, "early_clockout"),
-      ].sort((a, b) => (a.requested_at < b.requested_at ? 1 : -1));
+      const early = await apiService.getEarlyClockoutRequests({ status: "pending" }).catch(() => []);
+      const merged = normalize(early, "early_clockout").sort((a, b) =>
+        a.requested_at < b.requested_at ? 1 : -1,
+      );
       setRequests(merged);
     } catch (e: any) {
       console.error("Failed to load attendance approvals", e);
@@ -109,13 +105,8 @@ export function AttendanceApprovalsCard() {
     }
     setSubmitting(true);
     try {
-      if (active.kind === "late_clockin") {
-        if (action === "approve") await apiService.approveLateClockinRequest(active.id, notes || undefined);
-        else await apiService.rejectLateClockinRequest(active.id, notes);
-      } else {
-        if (action === "approve") await apiService.approveEarlyClockoutRequest(active.id, notes || undefined);
-        else await apiService.rejectEarlyClockoutRequest(active.id, notes);
-      }
+      if (action === "approve") await apiService.approveEarlyClockoutRequest(active.id, notes || undefined);
+      else await apiService.rejectEarlyClockoutRequest(active.id, notes);
       toast({
         title: action === "approve" ? "Request approved" : "Request rejected",
         description: `${employeeLabel(active)} has been notified.`,
@@ -151,7 +142,7 @@ export function AttendanceApprovalsCard() {
         {loading && requests.length === 0 ? (
           <p className="text-sm text-muted-foreground">Loading pending requests…</p>
         ) : requests.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No pending late clock-in or early clock-out requests.</p>
+          <p className="text-sm text-muted-foreground">No pending early clock-out requests.</p>
         ) : (
           <div className="overflow-x-auto">
             <Table>
@@ -169,9 +160,7 @@ export function AttendanceApprovalsCard() {
                   <TableRow key={`${r.kind}-${r.id}`}>
                     <TableCell className="font-medium">{employeeLabel(r)}</TableCell>
                     <TableCell>
-                      <Badge variant={r.kind === "late_clockin" ? "secondary" : "outline"}>
-                        {r.kind === "late_clockin" ? "Late Clock-In" : "Early Clock-Out"}
-                      </Badge>
+                      <Badge variant="outline">Early Clock-Out</Badge>
                     </TableCell>
                     <TableCell className="text-sm">
                       {(() => {
@@ -202,8 +191,7 @@ export function AttendanceApprovalsCard() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {action === "approve" ? "Approve" : "Reject"}{" "}
-              {active?.kind === "late_clockin" ? "Late Clock-In" : "Early Clock-Out"} Request
+              {action === "approve" ? "Approve" : "Reject"} Early Clock-Out Request
             </DialogTitle>
             <DialogDescription>
               {active ? `${employeeLabel(active)} — ${active.reason}` : ""}

@@ -234,10 +234,16 @@ export default function OrgAttendanceDashboard() {
             Every employee for {date} — including those who never clocked in.
           </p>
         </div>
-        <Button variant="outline" onClick={load} disabled={loading}>
-          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
-          Refresh
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={downloadCsv} disabled={visibleRows.length === 0}>
+            <Download className="h-4 w-4 mr-2" />
+            Download CSV
+          </Button>
+          <Button variant="outline" onClick={load} disabled={loading}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -269,35 +275,47 @@ export default function OrgAttendanceDashboard() {
           </div>
           <div className="space-y-1">
             <Label>Location</Label>
-            <Select value={location} onValueChange={setLocation}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="All">All</SelectItem>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="w-full justify-start font-normal">
+                  {locations.length === 0 ? "All" : locations.join(", ")}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="bg-popover z-50">
                 {LOCATIONS.map((l) => (
-                  <SelectItem key={l} value={l}>
+                  <DropdownMenuCheckboxItem
+                    key={l}
+                    checked={locations.includes(l)}
+                    onSelect={(e) => e.preventDefault()}
+                    onCheckedChange={() => toggleValue(setLocations, l)}
+                  >
                     {l}
-                  </SelectItem>
+                  </DropdownMenuCheckboxItem>
                 ))}
-              </SelectContent>
-            </Select>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
           <div className="space-y-1">
             <Label>Department</Label>
-            <Select value={department} onValueChange={setDepartment}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="All">All</SelectItem>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="w-full justify-start font-normal truncate">
+                  {departments.length === 0 ? "All" : departments.join(", ")}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="bg-popover z-50 max-h-72 overflow-y-auto">
                 {DEPARTMENTS.map((d) => (
-                  <SelectItem key={d} value={d}>
+                  <DropdownMenuCheckboxItem
+                    key={d}
+                    checked={departments.includes(d)}
+                    onSelect={(e) => e.preventDefault()}
+                    onCheckedChange={() => toggleValue(setDepartments, d)}
+                  >
                     {d}
-                  </SelectItem>
+                  </DropdownMenuCheckboxItem>
                 ))}
-              </SelectContent>
-            </Select>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
           <div className="space-y-1">
             <Label>Work Mode</Label>

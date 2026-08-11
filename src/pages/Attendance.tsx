@@ -163,6 +163,26 @@ export default function Attendance() {
     if (!user) return;
 
     try {
+      const todayStr = format(new Date(), 'yyyy-MM-dd');
+
+      // Prefer the org-dashboard payload — it is the same source the
+      // Organisation-Wide Attendance page uses and already carries employee
+      // name/code, department, work mode and location status.
+      try {
+        const orgRes: any = await apiService.getOrgAttendanceDashboard({ date: todayStr });
+        const payload: any = orgRes?.data ?? orgRes;
+        let orgRows = extractRows(payload?.rows ? payload.rows : orgRes);
+        if (orgRows.length > 0) {
+          if (user?.role === 'line_manager' && user?.department) {
+            orgRows = orgRows.filter((r: any) => r.department === user.department);
+          }
+          setTodayAttendance(orgRows);
+          return;
+        }
+      } catch (orgError) {
+        console.warn('Org dashboard unavailable, falling back to attendance list:', orgError);
+      }
+
       const response = await apiService.getAttendance();
       const today = format(new Date(), 'yyyy-MM-dd');
       
@@ -193,8 +213,20 @@ export default function Attendance() {
           (record: any) => record.employee?.department === user.department
         );
       }
-      
-      setTodayAttendance(allTodayRecords);
+
+      // Normalise the legacy shape onto the org-dashboard field names.
+      setTodayAttendance(
+        allTodayRecords.map((r: any) => ({
+          ...r,
+          employee_name:
+            r.employee_name ||
+            [r.employee?.first_name, r.employee?.last_name].filter(Boolean).join(' '),
+          employee_code: r.employee_code || r.employee?.employee_code || r.employee_id,
+          department: r.department || r.employee?.department,
+          actual_mode: r.actual_mode || r.work_mode,
+          attendance_status: r.attendance_status || r.status,
+        }))
+      );
     } catch (error) {
       console.error('Failed to load attendance status:', error);
     }

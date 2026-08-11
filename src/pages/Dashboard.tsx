@@ -701,155 +701,17 @@ export default function Dashboard() {
         className="hidden"
       />
 
-      {/* Clock In/Out Card - Visible to Everyone */}
-      <Card className="border-border/50 shadow-sm bg-gradient-to-r from-primary/5 to-primary/10">
-        <CardHeader>
-          <CardTitle className="flex items-center text-primary">
-            <Clock className="mr-2 h-5 w-5" />
-            Time Clock
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col sm:flex-row items-center gap-4">
-            <div className="flex-1 space-y-2">
-              <div className="text-sm text-muted-foreground">
-                {todayStatus?.clock_in ? (
-                  <>
-                    <div className="flex items-center gap-2">
-                      <LogIn className="h-4 w-4 text-success" />
-                      <span>Clocked in at {formatTimeOnly(todayStatus.clock_in)}</span>
-                    </div>
-                    {todayStatus?.clock_out && (
-                      <div className="flex items-center gap-2 mt-1">
-                        <LogOut className="h-4 w-4 text-destructive" />
-                        <span>Clocked out at {formatTimeOnly(todayStatus.clock_out)}</span>
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <span>Not clocked in today</span>
-                )}
-              </div>
-              <div className="text-lg font-semibold">
-                {format(new Date(), 'EEEE, MMMM d, yyyy')}
-              </div>
-            </div>
-            <div className="flex gap-2">
-              {!(todayStatus?.clock_in && !todayStatus?.clock_out) ? (
-                <Button 
-                  onClick={handleClockIn}
-                  disabled={isPunching}
-                  className="gap-2"
-                >
-                  <LogIn className="h-4 w-4" />
-                  Clock In
-                </Button>
-              ) : (
-                <>
-                  <Button 
-                    onClick={handleLunchBreak}
-                    disabled={isPunching || !!todayStatus?.clock_out}
-                    variant={todayStatus?.break_start && !todayStatus?.break_end ? "default" : "outline"}
-                    className={cn("gap-2", todayStatus?.break_start && !todayStatus?.break_end && "bg-success hover:bg-success/90 text-white")}
-                  >
-                    <Timer className="h-4 w-4" />
-                    {todayStatus?.break_start && !todayStatus?.break_end ? "On Lunch Break" : "Lunch Break"}
-                  </Button>
-                  <Button 
-                    onClick={handleClockOut}
-                    disabled={isPunching || !!todayStatus?.clock_out}
-                    variant="destructive"
-                    className="gap-2"
-                  >
-                    <LogOut className="h-4 w-4" />
-                    Clock Out
-                  </Button>
-                </>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Clock Out Dialog */}
-      <Dialog open={showClockOutDialog} onOpenChange={setShowClockOutDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {isLunchBreak ? "Lunch Break" : "Early Clock Out"}
-            </DialogTitle>
-            <DialogDescription>
-              {isLunchBreak 
-                ? "Please provide a reason for your lunch break."
-                : "You are clocking out before 5:00 PM. Please provide a reason."}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="reason">Reason</Label>
-              <Textarea
-                id="reason"
-                placeholder={isLunchBreak ? "e.g., Lunch break" : "e.g., Doctor's appointment, Personal emergency"}
-                value={clockOutReason}
-                onChange={(e) => setClockOutReason(e.target.value)}
-                rows={3}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => {
-              setShowClockOutDialog(false)
-              setClockOutReason("")
-            }}>
-              Cancel
-            </Button>
-            <Button onClick={handleConfirmClockOut} disabled={isPunching}>
-              Confirm
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Late Clock-In Approval Dialog */}
-      <Dialog open={showLateClockInDialog} onOpenChange={setShowLateClockInDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {lateClockInContext === "post_lunch"
-                ? "Late Return From Lunch — Approval Required"
-                : "Late Clock-In Approval Request"}
-            </DialogTitle>
-            <DialogDescription>
-              {lateClockInContext === "post_lunch"
-                ? "You are clocking in outside the allowed lunch window (12:00 PM – 2:00 PM). Please provide a reason for your late return. Your request will be sent to HR Manager / Corporate HR for approval."
-                : "Clock-in is only allowed before 9:00 AM. Please provide a reason for clocking in late. Your request will be sent to HR Manager / Corporate HR for approval and you will only be clocked in once it is approved."}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="late-reason">Reason</Label>
-              <Textarea
-                id="late-reason"
-                placeholder="e.g., Traffic delay, Medical appointment, Family emergency"
-                value={lateClockInReason}
-                onChange={(e) => setLateClockInReason(e.target.value)}
-                rows={3}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => {
-              setShowLateClockInDialog(false)
-              setLateClockInReason("")
-            }}>
-              Cancel
-            </Button>
-            <Button onClick={handleConfirmLateClockIn} disabled={isPunching}>
-              Submit for Approval
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Time Clock — shared component (schedule-aware, GPS, backend gates) */}
+      <MissingClockoutBanner
+        employeeId={currentEmployeeId}
+        todayStatus={todayStatus}
+        onSubmitted={refreshTodayStatus}
+      />
+      <TimeClockCard
+        employeeId={currentEmployeeId}
+        todayStatus={todayStatus}
+        refresh={refreshTodayStatus}
+      />
 
       {/* Hide aggregate stats for general_employee, finance, line_manager, it_admin, executive (corporate_hr sees HR admin view) */}
       {!['general_employee', 'finance', 'line_manager', 'it_admin', 'executive'].includes(user?.role || '') && (

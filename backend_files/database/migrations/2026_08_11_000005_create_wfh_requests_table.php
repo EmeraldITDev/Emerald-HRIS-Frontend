@@ -1,0 +1,29 @@
+<?php
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration {
+    public function up(): void
+    {
+        Schema::create('wfh_requests', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('employee_id');
+            $table->foreign('employee_id')->references('id')->on('employees')->cascadeOnDelete();
+            $table->date('request_date');
+            $table->text('reason');
+            $table->string('status')->default('Pending')
+                  ->comment('Pending | Approved | Rejected');
+            $table->unsignedBigInteger('approved_by')->nullable();
+            $table->foreign('approved_by')->references('id')->on('users')->nullOnDelete();
+            $table->timestamp('approved_at')->nullable();
+            $table->text('approver_notes')->nullable();
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('wfh_requests');
+    }
+};

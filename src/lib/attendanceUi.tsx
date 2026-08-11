@@ -48,6 +48,49 @@ export function dateOnly(value?: string | null): string {
   return isNaN(d.getTime()) ? "" : d.toISOString().slice(0, 10);
 }
 
+/** Short label for the viewer's timezone, e.g. "WAT", "GMT+1", "EST". */
+export function timezoneLabel(): string {
+  try {
+    const parts = new Intl.DateTimeFormat(undefined, {
+      timeZoneName: "short",
+    }).formatToParts(new Date());
+    const tz = parts.find((p) => p.type === "timeZoneName")?.value;
+    if (tz) return tz;
+  } catch {
+    /* fall through */
+  }
+  return "Local";
+}
+
+/** "15:49 (WAT)" — time plus the viewer's timezone abbreviation. */
+export function formatTimeWithZone(value?: string | null): string {
+  const t = formatTimeOnly(value);
+  return t ? `${t} (${timezoneLabel()})` : "";
+}
+
+/** Company lunch break window (WAT business hours). */
+export const LUNCH_BREAK = {
+  start: "13:00",
+  end: "14:00",
+  label: "1:00 PM – 2:00 PM",
+  durationMinutes: 60,
+};
+
+/** Is the given date inside the 13:00–14:00 lunch window? */
+export function isWithinLunchWindow(date: Date = new Date()): boolean {
+  const minutes = date.getHours() * 60 + date.getMinutes();
+  return minutes >= 13 * 60 && minutes < 14 * 60;
+}
+
+function _unusedDateOnly(value?: string | null): string {
+  if (!value) return "";
+  const raw = String(value);
+  const match = raw.match(/^\d{4}-\d{2}-\d{2}/);
+  if (match) return match[0];
+  const d = new Date(raw);
+  return isNaN(d.getTime()) ? "" : d.toISOString().slice(0, 10);
+}
+
 const STATUS_LABELS: Record<string, { label: string; className: string }> = {
   "present-physical": {
     label: "✅ Clocked in — Physical",

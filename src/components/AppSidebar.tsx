@@ -16,6 +16,7 @@ import {
   BookOpen,
   Bell,
   ShieldCheck,
+  ClipboardCheck,
   Receipt
 } from "lucide-react"
 import { useAuth } from "@/contexts/AuthContext"
@@ -112,6 +113,20 @@ const navigationItems: NavItem[] = [
     icon: ShieldCheck,
     permission: "approvals.manage",
     roles: ['line_manager', 'hr_manager', 'corporate_hr', 'executive']
+  },
+  {
+    title: "Attendance Approvals",
+    url: "/approvals/attendance",
+    icon: ClipboardCheck,
+    permission: "approvals.manage",
+    roles: ['line_manager', 'hr_manager', 'corporate_hr', 'executive']
+  },
+  {
+    title: "Org Attendance",
+    url: "/attendance/org-dashboard",
+    icon: Clock,
+    permission: "*",
+    roles: ['hr_manager', 'corporate_hr', 'executive']
   },
   {
     title: "Notifications",

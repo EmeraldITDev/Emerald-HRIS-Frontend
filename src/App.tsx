@@ -28,6 +28,8 @@ import LeaveApprovals from "./pages/LeaveApprovals";
 import MyPayslips from "./pages/MyPayslips";
 import PayslipDetail from "./pages/PayslipDetail";
 import PayrollReview from "./pages/PayrollReview";
+import ManagerApprovals from "./pages/attendance/ManagerApprovals";
+import OrgAttendanceDashboard from "./pages/attendance/OrgAttendanceDashboard";
 import React, { useEffect, useState } from "react";
 import { getUsers } from "./api";
 import { PasswordChangeModal } from "./components/PasswordChangeModal";
@@ -90,6 +92,8 @@ const AppContent = () => {
                   <Route path="/my-profile" element={<MyProfile />} />
                   <Route path="/notifications" element={<Notifications />} />
                   <Route path="/approvals/leave" element={<LeaveApprovals />} />
+                  <Route path="/approvals/attendance" element={<ManagerApprovals />} />
+                  <Route path="/attendance/org-dashboard" element={<OrgAttendanceDashboard />} />
                   <Route path="/payroll/my-payslips" element={<MyPayslips />} />
                   <Route path="/payroll/my-payslips/:period" element={<PayslipDetail />} />
                   <Route path="/payroll/review/:payPeriod" element={<PayrollReview />} />

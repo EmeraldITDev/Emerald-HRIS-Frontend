@@ -97,6 +97,47 @@ export interface Attendance {
   updated_at?: string;
 }
 
+export type AttendanceStatus =
+  | 'Present-Physical'
+  | 'Present-WFH'
+  | 'Late'
+  | 'Unapproved-WFH'
+  | 'Location-Mismatch'
+  | 'Missing-Clockout'
+  | 'Absent'
+  | string;
+
+export type WorkMode = 'Physical' | 'WFH' | 'Exception';
+
+export interface AttendanceTodayRecord {
+  id?: number;
+  employee_id?: number;
+  date?: string;
+  clock_in?: string | null;
+  clock_out?: string | null;
+  break_start?: string | null;
+  break_end?: string | null;
+  work_mode?: WorkMode;
+  attendance_status?: AttendanceStatus;
+  location_status?: 'Verified' | 'Mismatch' | 'Exempt' | 'Not Required' | 'N/A' | string;
+  expected_mode?: WorkMode;
+  assigned_location?: string;
+  missing_clockout_date?: string | null;
+  [key: string]: any;
+}
+
+export interface EmployeeAttendanceProfile {
+  employee_id?: number;
+  assigned_location?: 'Lagos' | 'Calabar' | 'Abuja' | string;
+  work_arrangement?: 'Hybrid' | 'Fully Onsite' | 'Fully Remote' | string;
+  expected_workdays?: string[];
+  expected_modes?: Record<string, WorkMode>;
+  clock_in_time?: string;
+  clock_out_time?: string;
+  effective_date?: string;
+  [key: string]: any;
+}
+
 export interface LeaveType {
   id?: number;
   name: string;
@@ -517,24 +558,177 @@ class ApiService {
     return this.request<Attendance[]>(`/attendance?_=${Date.now()}`, { cache: 'no-store' });
   }
 
-  async createAttendance(attendanceData: Attendance): Promise<{ message: string }> {
+  async createAttendance(
+    attendanceData: Partial<Attendance> & Record<string, any>,
+  ): Promise<{ message: string } & Record<string, any>> {
     return this.request<{ message: string }>('/attendance/clock-in', {
       method: 'POST',
       body: JSON.stringify(attendanceData),
     });
   }
 
-  async updateAttendance(id: number, attendanceData: Partial<Attendance>): Promise<{ message: string }> {
-    return this.request<{ message: string }>(`/attendance/${id}`, {
-      method: 'PUT',
+  async clockOut(
+    attendanceData: Partial<Attendance> & Record<string, any>,
+  ): Promise<{ message: string } & Record<string, any>> {
+    return this.request<{ message: string }>('/attendance/clock-out', {
+      method: 'POST',
       body: JSON.stringify(attendanceData),
     });
   }
 
-  async clockOut(attendanceData: Attendance): Promise<{ message: string }> {
-    return this.request<{ message: string }>('/attendance/clock-out', {
+  // ===== Attendance system v2 =====
+
+  async getAttendanceToday(): Promise<any> {
+    return this.request<any>(`/attendance/today?_=${Date.now()}`, { cache: 'no-store' });
+  }
+
+  async getAttendanceRange(params: {
+    start_date: string;
+    end_date: string;
+    employee_id?: number | string;
+  }): Promise<any> {
+    const qp = new URLSearchParams();
+    qp.append('start_date', params.start_date);
+    qp.append('end_date', params.end_date);
+    if (params.employee_id != null) qp.append('employee_id', String(params.employee_id));
+    qp.append('_', String(Date.now()));
+    return this.request<any>(`/attendance?${qp.toString()}`, { cache: 'no-store' });
+  }
+
+  async getAttendanceScheduleConfig(location: string, day: string): Promise<any> {
+    return this.request<any>(
+      `/attendance/schedule-config/${encodeURIComponent(location)}/${encodeURIComponent(day)}`,
+      { cache: 'no-store' },
+    );
+  }
+
+  async getEmployeeAttendanceProfile(id: number | string): Promise<any> {
+    return this.request<any>(`/employees/${id}/attendance-profile?_=${Date.now()}`, { cache: 'no-store' });
+  }
+
+  async updateEmployeeAttendanceProfile(id: number | string, data: any): Promise<any> {
+    return this.request<any>(`/employees/${id}/attendance-profile`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async startBreak(data: { employee_id: number; date?: string; notes?: string }): Promise<any> {
+    return this.request<any>('/attendance/break-start', {
       method: 'POST',
-      body: JSON.stringify(attendanceData),
+      body: JSON.stringify(data),
+    });
+  }
+
+  async endBreak(data: { employee_id: number; date?: string; notes?: string }): Promise<any> {
+    return this.request<any>('/attendance/break-end', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async submitExceptionRequest(data: any): Promise<any> {
+    const isForm = typeof FormData !== 'undefined' && data instanceof FormData;
+    return this.request<any>('/exception-requests', {
+      method: 'POST',
+      body: isForm ? data : JSON.stringify(data),
+    });
+  }
+
+  async getExceptionRequests(params?: {
+    status?: string;
+    employee_id?: number | string;
+    scope?: 'pending-manager' | 'pending-hr';
+  }): Promise<any> {
+    const qp = new URLSearchParams();
+    qp.append('_', String(Date.now()));
+    if (params?.status) qp.append('status', params.status);
+    if (params?.employee_id != null) qp.append('employee_id', String(params.employee_id));
+    const path = params?.scope ? `/exception-requests/${params.scope}` : '/exception-requests';
+    return this.request<any>(`${path}?${qp.toString()}`, { cache: 'no-store' });
+  }
+
+  async approveExceptionManager(id: number | string, notes?: string): Promise<any> {
+    return this.request<any>(`/exception-requests/${id}/manager-approve`, {
+      method: 'POST',
+      body: JSON.stringify({ notes: notes ?? '' }),
+    });
+  }
+
+  async rejectExceptionManager(id: number | string, notes: string): Promise<any> {
+    return this.request<any>(`/exception-requests/${id}/manager-reject`, {
+      method: 'POST',
+      body: JSON.stringify({ notes }),
+    });
+  }
+
+  async approveExceptionHR(id: number | string, notes?: string): Promise<any> {
+    return this.request<any>(`/exception-requests/${id}/hr-approve`, {
+      method: 'POST',
+      body: JSON.stringify({ notes: notes ?? '' }),
+    });
+  }
+
+  async rejectExceptionHR(id: number | string, notes: string): Promise<any> {
+    return this.request<any>(`/exception-requests/${id}/hr-reject`, {
+      method: 'POST',
+      body: JSON.stringify({ notes }),
+    });
+  }
+
+  async submitWFHRequest(data: { employee_id: number; date: string; reason: string }): Promise<any> {
+    return this.request<any>('/wfh-requests', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getWFHRequests(params?: { status?: string; employee_id?: number | string }): Promise<any> {
+    const qp = new URLSearchParams();
+    qp.append('_', String(Date.now()));
+    if (params?.status) qp.append('status', params.status);
+    if (params?.employee_id != null) qp.append('employee_id', String(params.employee_id));
+    return this.request<any>(`/wfh-requests?${qp.toString()}`, { cache: 'no-store' });
+  }
+
+  async approveWFHRequest(id: number | string, notes?: string): Promise<any> {
+    return this.request<any>(`/wfh-requests/${id}/approve`, {
+      method: 'POST',
+      body: JSON.stringify({ notes: notes ?? '' }),
+    });
+  }
+
+  async rejectWFHRequest(id: number | string, notes: string): Promise<any> {
+    return this.request<any>(`/wfh-requests/${id}/reject`, {
+      method: 'POST',
+      body: JSON.stringify({ notes }),
+    });
+  }
+
+  async getOrgAttendanceDashboard(params?: {
+    date?: string;
+    location?: string;
+    department?: string;
+    status?: string;
+    mode?: string;
+  }): Promise<any> {
+    const qp = new URLSearchParams();
+    qp.append('_', String(Date.now()));
+    Object.entries(params || {}).forEach(([k, v]) => {
+      if (v && v !== 'All' && v !== 'all') qp.append(k, String(v));
+    });
+    return this.request<any>(`/attendance/org-dashboard?${qp.toString()}`, { cache: 'no-store' });
+  }
+
+  async submitMissingClockoutRequest(data: {
+    employee_id: number;
+    date: string;
+    actual_clock_out: string;
+    reason: string;
+  }): Promise<any> {
+    return this.request<any>('/attendance/missing-clockout-request', {
+      method: 'POST',
+      body: JSON.stringify(data),
     });
   }
 

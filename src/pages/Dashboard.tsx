@@ -68,6 +68,9 @@ import { getCurrentMonthCelebrations, getUpcomingCelebrations, type Celebration 
 import { CelebrationsCard } from "@/components/CelebrationsCard"
 import { UpcomingAnniversariesCard } from "@/components/UpcomingAnniversariesCard"
 import { getAnnualGrossSalary } from "@/lib/payrollCalc"
+import TimeClockCard from "@/components/attendance/TimeClockCard"
+import MissingClockoutBanner from "@/components/attendance/MissingClockoutBanner"
+import { useAttendanceToday } from "@/hooks/useAttendanceToday"
 
 interface UserActivity {
   id: string
@@ -105,32 +108,6 @@ function dateOnly(value?: string | null): string {
   try { return format(new Date(raw), "yyyy-MM-dd") } catch { return "" }
 }
 
-function recordSortTime(record: any): number {
-  const value = record?.updated_at || record?.break_end || record?.clock_out || record?.break_start || record?.clock_in || record?.created_at || record?.date
-  const parsed = value ? new Date(String(value).replace(" ", "T")).getTime() : 0
-  return Number.isFinite(parsed) ? parsed : 0
-}
-
-function selectTodayRecord(records: any[], employeeId: number, today: string): any | null {
-  return records
-    .filter((r: any) => Number(r.employee_id) === Number(employeeId) && dateOnly(r.date) === today)
-    .sort((a: any, b: any) => (recordSortTime(b) - recordSortTime(a)) || (Number(b.id || 0) - Number(a.id || 0)))[0] || null
-}
-
-function isOnLunchBreak(record: any): boolean {
-  return !!(record?.break_start && !record?.break_end)
-}
-
-function lunchEndOverrideKey(employeeId: number, today: string): string {
-  return `lunchBreak:ended:${employeeId}:${today}`
-}
-
-function isApprovedPostLunchRequest(request: any): boolean {
-  return (request?.status || "").toLowerCase() === "approved" &&
-    typeof request?.reason === "string" &&
-    request.reason.toLowerCase().includes("late return from lunch")
-}
-
 export default function Dashboard() {
   const navigate = useNavigate()
   const { toast } = useToast()
@@ -140,18 +117,11 @@ export default function Dashboard() {
   const [recentEmployees, setRecentEmployees] = useState<Employee[]>([])
   const [departmentStats, setDepartmentStats] = useState<{ [key: string]: number }>({})
   const [isLoading, setIsLoading] = useState(true)
-  const [todayStatus, setTodayStatus] = useState<any>(null)
-  const [isPunching, setIsPunching] = useState(false)
-  const [showClockOutDialog, setShowClockOutDialog] = useState(false)
-  const [clockOutReason, setClockOutReason] = useState("")
-  const [isLunchBreak, setIsLunchBreak] = useState(false)
-  const [showLateClockInDialog, setShowLateClockInDialog] = useState(false)
-  const [lateClockInReason, setLateClockInReason] = useState("")
-  const [lateClockInContext, setLateClockInContext] = useState<"morning" | "post_lunch">("morning")
   const [recentActivities, setRecentActivities] = useState<UserActivity[]>([])
   const [currentMonthCelebrations, setCurrentMonthCelebrations] = useState<Celebration[]>([])
   const [upcomingCelebrations, setUpcomingCelebrations] = useState<Celebration[]>([])
   const [currentEmployeeId, setCurrentEmployeeId] = useState<number | null>(null)
+  const { todayStatus, refresh: refreshTodayStatus } = useAttendanceToday(!!user)
   // Message dialog state moved to CelebrationsCard component
 
   // Self-service real data
@@ -324,25 +294,6 @@ export default function Dashboard() {
     return actions
   }
 
-  const loadTodayStatus = async () => {
-    if (!user || !currentEmployeeId) return
-    try {
-      const response: any = await apiService.getAttendance()
-      const today = format(new Date(), 'yyyy-MM-dd')
-      const attendanceArray = extractRows(response)
-      let todayRecord = selectTodayRecord(attendanceArray, currentEmployeeId, today)
-      const localBreakEnd = localStorage.getItem(lunchEndOverrideKey(currentEmployeeId, today))
-      if (todayRecord && isOnLunchBreak(todayRecord) && localBreakEnd) {
-        todayRecord = { ...todayRecord, break_end: localBreakEnd }
-      }
-      setTodayStatus(todayRecord || null)
-      return todayRecord || null
-    } catch (e) {
-      console.error('Failed to load today attendance:', e)
-      return null
-    }
-  }
-
   useEffect(() => {
     loadUserActivities()
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -375,66 +326,6 @@ export default function Dashboard() {
     })()
     return () => { cancelled = true }
   }, [user, currentEmployeeId])
-
-  useEffect(() => {
-    loadTodayStatus()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentEmployeeId])
-
-  const findApprovedPostLunchRequest = async () => {
-    if (!currentEmployeeId) return null
-    const todayStr = format(new Date(), 'yyyy-MM-dd')
-    const res: any = await apiService.getLateClockinRequests({ employee_id: currentEmployeeId })
-    return extractRows(res).find((r: any) =>
-      Number(r.employee_id) === Number(currentEmployeeId) &&
-      dateOnly(r.requested_at || r.created_at) === todayStr &&
-      isApprovedPostLunchRequest(r)
-    ) || null
-  }
-
-  // Poll for approval of a pending post-lunch late-return request.
-  // When HR approves, automatically end the lunch break and refresh status
-  // so the dashboard reflects "clocked back in" without a manual refresh.
-  useEffect(() => {
-    if (!currentEmployeeId) return
-    const todayStr = format(new Date(), 'yyyy-MM-dd')
-    const processedKey = `latePostLunch:processed:${currentEmployeeId}:${todayStr}`
-
-    const check = async () => {
-      try {
-        const res: any = await apiService.getLateClockinRequests({ employee_id: currentEmployeeId })
-        const arr = extractRows(res)
-        const todays = arr.filter((r: any) => {
-          if (Number(r.employee_id) !== Number(currentEmployeeId)) return false
-          const ts = r.requested_at || r.created_at
-          return dateOnly(ts) === todayStr
-        })
-        const approvedPostLunch = todays.find(isApprovedPostLunchRequest)
-        if (!approvedPostLunch) return
-        const processedId = localStorage.getItem(processedKey)
-
-        // Refresh status first; only end break if still on break.
-        const latestStatus = await loadTodayStatus()
-        if (String(processedId) === String(approvedPostLunch.id) && !isOnLunchBreak(latestStatus)) return
-        if (isOnLunchBreak(latestStatus)) {
-          const ended = await endLunchBreak()
-          if (!ended) return
-          toast({
-            title: "Late return approved",
-            description: "HR approved your late return from lunch. You've been clocked back in.",
-          })
-        }
-        localStorage.setItem(processedKey, String(approvedPostLunch.id))
-      } catch (e) {
-        // non-fatal
-      }
-    }
-
-    check()
-    const id = window.setInterval(check, 30000)
-    return () => window.clearInterval(id)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentEmployeeId, todayStatus?.break_start, todayStatus?.break_end])
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -750,239 +641,6 @@ export default function Dashboard() {
     }
   };
 
-  // Test mode: bypass time restrictions for specific test users
-  const isTestMode = user?.email === 'bunmi.babajide@emeraldcfze.com'
-  
-  const handleClockIn = async () => {
-    if (!user || !currentEmployeeId) {
-      toast({ title: "Error", description: "No user logged in or employee record not found.", variant: "destructive" })
-      return
-    }
-
-    const nowDate = new Date()
-    const hour = nowDate.getHours()
-    const minute = nowDate.getMinutes()
-    const isAdminBypass = user.role === 'hr_manager' || user.role === 'corporate_hr' || isTestMode
-    const afterNine = hour > 9 || (hour === 9 && minute > 0)
-    if (afterNine && !isAdminBypass) {
-      // Open the late clock-in approval dialog instead of blocking outright.
-      setLateClockInReason("")
-      setLateClockInContext("morning")
-      setShowLateClockInDialog(true)
-      return
-    }
-
-    try {
-      setIsPunching(true)
-      const response = await apiService.createAttendance({
-        employee_id: currentEmployeeId,
-        date: new Date().toISOString().split('T')[0],
-        status: 'present',
-        location: 'office',
-        notes: afterNine && isAdminBypass ? 'Admin bypass clock-in (after 9:00 AM)' : ''
-      })
-      toast({ title: "Success", description: response.message || "Clocked in successfully!" })
-      saveActivity('clock_in', `Clocked in at ${format(new Date(), 'HH:mm:ss')}`)
-      await loadTodayStatus()
-    } catch (error: any) {
-      console.error('Clock in error:', error)
-      const msg = error?.response?.data?.message || error?.message || "Failed to clock in."
-      toast({ title: "Error", description: msg, variant: "destructive" })
-    } finally {
-      setIsPunching(false)
-    }
-  }
-
-  const handleClockOut = () => {
-    if (!user) {
-      toast({ title: "Error", description: "No user logged in.", variant: "destructive" })
-      return
-    }
-    const currentHour = new Date().getHours()
-    const isAdminBypass = user.role === 'hr_manager' || user.role === 'corporate_hr' || isTestMode
-    if (currentHour < 17 && !isAdminBypass) {
-      setIsLunchBreak(false)
-      setShowClockOutDialog(true)
-      return
-    }
-    performClockOut()
-  }
-
-  const handleLunchBreak = () => {
-    if (!user) {
-      toast({ title: "Error", description: "No user logged in.", variant: "destructive" })
-      return
-    }
-    // If currently on break, clicking again ends the break (resume working).
-    const onBreak = isOnLunchBreak(todayStatus)
-    if (onBreak) {
-      const currentHour = new Date().getHours()
-      const isAdminBypass = user.role === 'hr_manager' || user.role === 'corporate_hr' || isTestMode
-      // Lunch window ends at 2:00 PM. Returning after that requires HR approval.
-      if (currentHour >= 14 && !isAdminBypass) {
-        setIsPunching(true)
-        findApprovedPostLunchRequest()
-          .then((approvedRequest) => {
-            if (approvedRequest) {
-              return endLunchBreak()
-            }
-            setLateClockInReason("")
-            setLateClockInContext("post_lunch")
-            setShowLateClockInDialog(true)
-          })
-          .catch(() => {
-            setLateClockInReason("")
-            setLateClockInContext("post_lunch")
-            setShowLateClockInDialog(true)
-          })
-          .finally(() => setIsPunching(false))
-        return
-      }
-      endLunchBreak()
-      return
-    }
-    const currentHour = new Date().getHours()
-    const isAdminBypass = user.role === 'hr_manager' || user.role === 'corporate_hr' || isTestMode
-    if ((currentHour >= 12 && currentHour < 14) || isAdminBypass) {
-      performClockOut("", true)
-    } else {
-      toast({
-        title: "Invalid Time",
-        description: "Lunch break is only available between 12:00 PM and 2:00 PM.",
-        variant: "destructive"
-      })
-    }
-  }
-
-  const endLunchBreak = async (): Promise<boolean> => {
-    if (!user || !currentEmployeeId) return false
-    try {
-      setIsPunching(true)
-      const fallbackBreakEnd = new Date().toISOString()
-      const response = await apiService.createAttendance({
-        employee_id: currentEmployeeId,
-        date: new Date().toISOString().split('T')[0],
-        status: 'present',
-        location: 'office',
-        notes: 'Resumed from lunch break',
-      })
-      toast({ title: "Welcome back", description: response.message || "Lunch break ended. You're clocked back in." })
-      saveActivity('lunch_end', `Ended lunch break at ${format(new Date(), 'HH:mm:ss')}`)
-      localStorage.setItem(lunchEndOverrideKey(currentEmployeeId, format(new Date(), 'yyyy-MM-dd')), fallbackBreakEnd)
-      const refreshedStatus = await loadTodayStatus()
-      if (isOnLunchBreak(refreshedStatus)) {
-        setTodayStatus((previous: any) => previous ? { ...previous, break_end: fallbackBreakEnd } : previous)
-      }
-      return true
-    } catch (error: any) {
-      console.error('End lunch break error:', error)
-      const msg = error?.response?.data?.message || error?.message || "Failed to end lunch break."
-      toast({ title: "Error", description: msg, variant: "destructive" })
-      return false
-    } finally {
-      setIsPunching(false)
-    }
-  }
-
-  const performClockOut = async (reason?: string, isLunch?: boolean) => {
-    if (!user || !currentEmployeeId) return
-    try {
-      setIsPunching(true)
-      const response = await apiService.clockOut({
-        employee_id: currentEmployeeId,
-        date: new Date().toISOString().split('T')[0],
-        status: 'present',
-        notes: reason || (isLunch ? 'Lunch break' : ''),
-        location: 'office'
-      })
-      toast({
-        title: "Success",
-        description: response.message || (isLunch ? "Lunch break started. Remember to clock back in!" : "Clocked out successfully!")
-      })
-      saveActivity(isLunch ? 'lunch_start' : 'clock_out', `${isLunch ? 'Started lunch break' : 'Clocked out'} at ${format(new Date(), 'HH:mm:ss')}`)
-      await loadTodayStatus()
-      setShowClockOutDialog(false)
-      setClockOutReason("")
-    } catch (error: any) {
-      console.error('Clock out error:', error)
-      const msg = error?.response?.data?.message || error?.message || "Failed to clock out."
-      toast({ title: "Error", description: msg, variant: "destructive" })
-    } finally {
-      setIsPunching(false)
-    }
-  }
-
-  const handleConfirmClockOut = async () => {
-    if (isLunchBreak) {
-      performClockOut(clockOutReason, true)
-      return
-    }
-    if (!clockOutReason.trim()) {
-      toast({
-        title: "Reason Required",
-        description: "Please provide a reason for the early clock-out approval request.",
-        variant: "destructive",
-      })
-      return
-    }
-    try {
-      setIsPunching(true)
-      await apiService.submitEarlyClockoutRequest({
-        employee_id: currentEmployeeId as number,
-        reason: clockOutReason.trim(),
-        requested_at: new Date().toISOString(),
-      })
-      toast({
-        title: "Approval Request Submitted",
-        description: "Your early clock-out request has been sent to HR Manager / Corporate HR. You remain clocked in until it is approved.",
-      })
-      setShowClockOutDialog(false)
-      setClockOutReason("")
-    } catch (error: any) {
-      console.error('Early clock-out request error:', error)
-      const msg = error?.response?.data?.message || error?.message || "Failed to submit early clock-out request."
-      toast({ title: "Error", description: msg, variant: "destructive" })
-    } finally {
-      setIsPunching(false)
-    }
-  }
-
-  const handleConfirmLateClockIn = async () => {
-    if (!user || !currentEmployeeId) {
-      toast({ title: "Error", description: "No user logged in or employee record not found.", variant: "destructive" })
-      return
-    }
-    if (!lateClockInReason.trim()) {
-      toast({
-        title: "Reason Required",
-        description: "Please provide a reason for the late clock-in approval request.",
-        variant: "destructive",
-      })
-      return
-    }
-    try {
-      setIsPunching(true)
-      await apiService.submitLateClockinRequest({
-        employee_id: currentEmployeeId,
-        reason: `${lateClockInContext === "post_lunch" ? "[Late return from lunch] " : ""}${lateClockInReason.trim()}`,
-        requested_at: new Date().toISOString(),
-      })
-      toast({
-        title: "Approval Request Submitted",
-        description: lateClockInContext === "post_lunch"
-          ? "Your late-return-from-lunch request has been sent to HR Manager / Corporate HR. You remain on break until it is approved."
-          : "Your late clock-in request has been sent to HR Manager / Corporate HR for approval.",
-      })
-      setShowLateClockInDialog(false)
-      setLateClockInReason("")
-    } catch (error: any) {
-      console.error('Late clock-in request error:', error)
-      const msg = error?.data?.message || error?.message || "Failed to submit late clock-in request."
-      toast({ title: "Error", description: msg, variant: "destructive" })
-    } finally {
-      setIsPunching(false)
-    }
-  }
 
   return (
     <div className="space-y-4 md:space-y-6">
@@ -1043,155 +701,17 @@ export default function Dashboard() {
         className="hidden"
       />
 
-      {/* Clock In/Out Card - Visible to Everyone */}
-      <Card className="border-border/50 shadow-sm bg-gradient-to-r from-primary/5 to-primary/10">
-        <CardHeader>
-          <CardTitle className="flex items-center text-primary">
-            <Clock className="mr-2 h-5 w-5" />
-            Time Clock
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col sm:flex-row items-center gap-4">
-            <div className="flex-1 space-y-2">
-              <div className="text-sm text-muted-foreground">
-                {todayStatus?.clock_in ? (
-                  <>
-                    <div className="flex items-center gap-2">
-                      <LogIn className="h-4 w-4 text-success" />
-                      <span>Clocked in at {formatTimeOnly(todayStatus.clock_in)}</span>
-                    </div>
-                    {todayStatus?.clock_out && (
-                      <div className="flex items-center gap-2 mt-1">
-                        <LogOut className="h-4 w-4 text-destructive" />
-                        <span>Clocked out at {formatTimeOnly(todayStatus.clock_out)}</span>
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <span>Not clocked in today</span>
-                )}
-              </div>
-              <div className="text-lg font-semibold">
-                {format(new Date(), 'EEEE, MMMM d, yyyy')}
-              </div>
-            </div>
-            <div className="flex gap-2">
-              {!(todayStatus?.clock_in && !todayStatus?.clock_out) ? (
-                <Button 
-                  onClick={handleClockIn}
-                  disabled={isPunching}
-                  className="gap-2"
-                >
-                  <LogIn className="h-4 w-4" />
-                  Clock In
-                </Button>
-              ) : (
-                <>
-                  <Button 
-                    onClick={handleLunchBreak}
-                    disabled={isPunching || !!todayStatus?.clock_out}
-                    variant={todayStatus?.break_start && !todayStatus?.break_end ? "default" : "outline"}
-                    className={cn("gap-2", todayStatus?.break_start && !todayStatus?.break_end && "bg-success hover:bg-success/90 text-white")}
-                  >
-                    <Timer className="h-4 w-4" />
-                    {todayStatus?.break_start && !todayStatus?.break_end ? "On Lunch Break" : "Lunch Break"}
-                  </Button>
-                  <Button 
-                    onClick={handleClockOut}
-                    disabled={isPunching || !!todayStatus?.clock_out}
-                    variant="destructive"
-                    className="gap-2"
-                  >
-                    <LogOut className="h-4 w-4" />
-                    Clock Out
-                  </Button>
-                </>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Clock Out Dialog */}
-      <Dialog open={showClockOutDialog} onOpenChange={setShowClockOutDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {isLunchBreak ? "Lunch Break" : "Early Clock Out"}
-            </DialogTitle>
-            <DialogDescription>
-              {isLunchBreak 
-                ? "Please provide a reason for your lunch break."
-                : "You are clocking out before 5:00 PM. Please provide a reason."}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="reason">Reason</Label>
-              <Textarea
-                id="reason"
-                placeholder={isLunchBreak ? "e.g., Lunch break" : "e.g., Doctor's appointment, Personal emergency"}
-                value={clockOutReason}
-                onChange={(e) => setClockOutReason(e.target.value)}
-                rows={3}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => {
-              setShowClockOutDialog(false)
-              setClockOutReason("")
-            }}>
-              Cancel
-            </Button>
-            <Button onClick={handleConfirmClockOut} disabled={isPunching}>
-              Confirm
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Late Clock-In Approval Dialog */}
-      <Dialog open={showLateClockInDialog} onOpenChange={setShowLateClockInDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {lateClockInContext === "post_lunch"
-                ? "Late Return From Lunch — Approval Required"
-                : "Late Clock-In Approval Request"}
-            </DialogTitle>
-            <DialogDescription>
-              {lateClockInContext === "post_lunch"
-                ? "You are clocking in outside the allowed lunch window (12:00 PM – 2:00 PM). Please provide a reason for your late return. Your request will be sent to HR Manager / Corporate HR for approval."
-                : "Clock-in is only allowed before 9:00 AM. Please provide a reason for clocking in late. Your request will be sent to HR Manager / Corporate HR for approval and you will only be clocked in once it is approved."}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="late-reason">Reason</Label>
-              <Textarea
-                id="late-reason"
-                placeholder="e.g., Traffic delay, Medical appointment, Family emergency"
-                value={lateClockInReason}
-                onChange={(e) => setLateClockInReason(e.target.value)}
-                rows={3}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => {
-              setShowLateClockInDialog(false)
-              setLateClockInReason("")
-            }}>
-              Cancel
-            </Button>
-            <Button onClick={handleConfirmLateClockIn} disabled={isPunching}>
-              Submit for Approval
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Time Clock — shared component (schedule-aware, GPS, backend gates) */}
+      <MissingClockoutBanner
+        employeeId={currentEmployeeId}
+        todayStatus={todayStatus}
+        onSubmitted={refreshTodayStatus}
+      />
+      <TimeClockCard
+        employeeId={currentEmployeeId}
+        todayStatus={todayStatus}
+        refresh={refreshTodayStatus}
+      />
 
       {/* Hide aggregate stats for general_employee, finance, line_manager, it_admin, executive (corporate_hr sees HR admin view) */}
       {!['general_employee', 'finance', 'line_manager', 'it_admin', 'executive'].includes(user?.role || '') && (

@@ -43,3 +43,47 @@ export function canViewPayrollDrafts(
   if (canHrPayroll(user)) return true;
   return user.role === "line_manager";
 }
+
+/** Org-wide attendance dashboard: HR + executives only. */
+export function canViewOrgDashboard(
+  user: (User & Record<string, any>) | null | undefined,
+): boolean {
+  if (!user) return false;
+  if (user.role === "executive") return true;
+  return canHrPayroll(user);
+}
+
+/** Attendance approvals queue (late justifications, exceptions, WFH). */
+export function canApproveAttendance(
+  user: (User & Record<string, any>) | null | undefined,
+): boolean {
+  if (!user) return false;
+  if (user.role === "line_manager") return true;
+  return canViewOrgDashboard(user);
+}
+
+/** Every authenticated employee may request a work exception. */
+export function canSubmitException(
+  user: (User & Record<string, any>) | null | undefined,
+): boolean {
+  return !!user;
+}
+
+/** Only Hybrid employees may request WFH days. */
+export function canSubmitWFH(
+  user: (User & Record<string, any>) | null | undefined,
+  profile?: { work_arrangement?: string } | null,
+): boolean {
+  if (!user) return false;
+  const arrangement =
+    profile?.work_arrangement ?? (user as any)?.work_arrangement ?? null;
+  return String(arrangement || "").toLowerCase() === "hybrid";
+}
+
+/** Who may edit an employee's attendance profile. */
+export function canEditAttendanceProfile(
+  user: (User & Record<string, any>) | null | undefined,
+): boolean {
+  if (!user) return false;
+  return user.role === "hr_manager" || user.role === "corporate_hr";
+}

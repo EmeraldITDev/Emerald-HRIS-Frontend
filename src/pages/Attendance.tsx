@@ -55,6 +55,11 @@ import { CelebrationsCard } from "@/components/CelebrationsCard"
 import { LeaveBalanceCard } from "@/components/LeaveBalanceCard"
 import { AttendanceApprovalsCard } from "@/components/AttendanceApprovalsCard"
 import { MyAttendanceRequestsCard } from "@/components/MyAttendanceRequestsCard"
+import WeeklyAttendanceCard from "@/components/attendance/WeeklyAttendanceCard"
+import MyWorkRequestsCard from "@/components/attendance/MyWorkRequestsCard"
+import ExceptionRequestForm from "@/components/attendance/ExceptionRequestForm"
+import WFHRequestForm from "@/components/attendance/WFHRequestForm"
+import { canSubmitException, canSubmitWFH } from "@/lib/permissions"
 
 // Sample attendance records
 const attendanceRecords = [
@@ -1890,76 +1895,6 @@ export default function Attendance() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowLeaveDetailsDialog(false)}>
               Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Clock Out Confirmation Dialog */}
-      <Dialog open={showClockOutDialog} onOpenChange={setShowClockOutDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {isLunchBreak ? "Lunch Break Confirmation" : "Request Early Clock-Out Approval"}
-            </DialogTitle>
-            <DialogDescription>
-              {isLunchBreak 
-                ? "You're clocking out for lunch break. Please provide a note if needed."
-                : "Clocking out before 5:00 PM requires HR approval. Submit a reason below — your request will be routed to HR Manager / Corporate HR. You will remain clocked in until approved."
-              }
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <Label htmlFor="clockOutReason" className="mb-2 block">
-              {isLunchBreak ? "Note (optional)" : "Reason for early clock-out *"}
-            </Label>
-            <Textarea
-              id="clockOutReason"
-              placeholder={isLunchBreak ? "Optional note..." : "e.g. medical appointment, family emergency..."}
-              value={clockOutReason}
-              onChange={(e) => setClockOutReason(e.target.value)}
-              rows={3}
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowClockOutDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleConfirmClockOut} disabled={isPunching}>
-              {isLunchBreak ? "Start Break" : "Submit Approval Request"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Late Clock-In Approval Dialog */}
-      <Dialog open={showLateClockInDialog} onOpenChange={setShowLateClockInDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Request Late Clock-In Approval</DialogTitle>
-            <DialogDescription>
-              Clock-in is only allowed before 9:00 AM. Submit a reason below — your request will be
-              routed to HR Manager / Corporate HR. You will only be clocked in once it is approved.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <Label htmlFor="lateClockInReason" className="mb-2 block">
-              Reason for late clock-in *
-            </Label>
-            <Textarea
-              id="lateClockInReason"
-              placeholder="e.g. traffic delay, medical appointment, family emergency..."
-              value={lateClockInReason}
-              onChange={(e) => setLateClockInReason(e.target.value)}
-              rows={3}
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowLateClockInDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleConfirmLateClockIn} disabled={isPunching}>
-              Submit Approval Request
             </Button>
           </DialogFooter>
         </DialogContent>

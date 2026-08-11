@@ -101,6 +101,24 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
   const onBreak = !!(todayStatus?.break_start && !todayStatus?.break_end);
   const clockedIn = !!todayStatus?.clock_in && !todayStatus?.clock_out;
 
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!clockedIn) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [clockedIn]);
+
+  const elapsed = useMemo(() => {
+    if (!clockedIn || !todayStatus?.clock_in) return null;
+    const start = new Date(String(todayStatus.clock_in).replace(" ", "T")).getTime();
+    if (Number.isNaN(start)) return null;
+    const diff = Math.max(0, Math.floor((now - start) / 1000));
+    const h = String(Math.floor(diff / 3600)).padStart(2, "0");
+    const m = String(Math.floor((diff % 3600) / 60)).padStart(2, "0");
+    const s = String(diff % 60).padStart(2, "0");
+    return `${h}:${m}:${s}`;
+  }, [clockedIn, todayStatus?.clock_in, now]);
+
   const handleClockIn = useCallback(async () => {
     if (!employeeId) {
       toast({
@@ -231,6 +249,12 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
                     <div className="flex items-center gap-2">
                       <LogOut className="h-4 w-4 text-destructive" />
                       <span>Clocked out at {formatTimeOnly(todayStatus.clock_out)}</span>
+                    </div>
+                  )}
+                  {elapsed && (
+                    <div className="flex items-center gap-2">
+                      <Timer className="h-4 w-4 text-primary" />
+                      <span className="font-mono tabular-nums">{elapsed} worked today</span>
                     </div>
                   )}
                 </>

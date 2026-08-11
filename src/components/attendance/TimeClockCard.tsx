@@ -11,8 +11,6 @@ import { cn } from "@/lib/utils";
 import {
   AttendanceStatusBadge,
   formatTimeWithZone,
-  LUNCH_BREAK,
-  isWithinLunchWindow,
   todayWAT,
   todayDayNameWAT,
 } from "@/lib/attendanceUi";
@@ -100,8 +98,14 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
     return `Today is a Physical day — ${loc}`;
   }, [profile, expectedMode]);
 
-  const onBreak = !!(todayStatus?.break_start && !todayStatus?.break_end);
-  const clockedIn = !!todayStatus?.clock_in && !todayStatus?.clock_out;
+  const [justClockedOut, setJustClockedOut] = useState(false);
+
+  // Reset the local override once a new clock-in session starts.
+  useEffect(() => {
+    if (!todayStatus?.clock_in) setJustClockedOut(false);
+  }, [todayStatus?.clock_in]);
+
+  const clockedIn = !!todayStatus?.clock_in && !todayStatus?.clock_out && !justClockedOut;
 
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -152,6 +156,7 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
       if (locationStatus) payload.location_status = locationStatus;
 
       const res: any = await apiService.createAttendance(payload);
+      setJustClockedOut(false);
       await refresh();
       toast({
         title: "Clocked in",
@@ -173,6 +178,7 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
     setIsPunching(true);
     try {
       const res: any = await apiService.clockOut({ employee_id: employeeId, date: todayWAT() });
+      setJustClockedOut(true);
       await refresh();
       toast({ title: "Clocked out", description: res?.message || "Clock-out recorded." });
     } catch (e: any) {
@@ -185,38 +191,6 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
       setIsPunching(false);
     }
   }, [employeeId, refresh, toast]);
-
-  const handleBreak = useCallback(async () => {
-    if (!employeeId) return;
-    setIsPunching(true);
-    try {
-      const payload = { employee_id: employeeId, date: todayWAT() };
-      if (!onBreak && !isWithinLunchWindow()) {
-        toast({
-          title: "Outside lunch window",
-          description: `Company lunch break is ${LUNCH_BREAK.label}. Your break will still be recorded.`,
-        });
-      }
-      const res: any = onBreak
-        ? await apiService.endBreak(payload)
-        : await apiService.startBreak(payload);
-      await refresh();
-      toast({
-        title: onBreak ? "Welcome back" : "Break started",
-        description:
-          res?.message ||
-          (onBreak ? "Your break has ended." : "Remember to end your break when you return."),
-      });
-    } catch (e: any) {
-      toast({
-        title: onBreak ? "Could not end break" : "Could not start break",
-        description: e?.data?.message || e?.message || "Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsPunching(false);
-    }
-  }, [employeeId, onBreak, refresh, toast]);
 
   return (
     <Card className={cn("border-border/50 shadow-sm bg-gradient-to-r from-primary/5 to-primary/10", className)}>

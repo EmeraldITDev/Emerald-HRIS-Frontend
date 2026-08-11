@@ -159,7 +159,25 @@ export default function Reports() {
     }
   }
 
-  const handleDownloadReport = () => {
+  const COMPANY_LOGO_URL = "/lovable-uploads/cbfc52d9-b5d8-4ea8-9ec0-98664ee4afad.png"
+
+  const loadLogoDataUrl = async (): Promise<string | null> => {
+    try {
+      const res = await fetch(COMPANY_LOGO_URL)
+      if (!res.ok) return null
+      const blob = await res.blob()
+      return await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onloadend = () => resolve(reader.result as string)
+        reader.onerror = reject
+        reader.readAsDataURL(blob)
+      })
+    } catch {
+      return null
+    }
+  }
+
+  const handleDownloadReport = async () => {
     if (!reportData) {
       toast({
         title: "No employee selected",
@@ -174,7 +192,20 @@ export default function Reports() {
       const pageWidth = doc.internal.pageSize.getWidth()
       let yPos = 20
 
-      // Header
+      // Branded header
+      const logo = await loadLogoDataUrl()
+      if (logo) {
+        try {
+          doc.addImage(logo, 'PNG', 20, yPos - 8, 22, 22)
+        } catch {
+          // ignore logo rendering issues
+        }
+      }
+      doc.setFontSize(12)
+      doc.setFont('helvetica', 'bold')
+      doc.text('Emerald Industrial Co.', logo ? 46 : 20, yPos)
+      yPos += 14
+
       doc.setFontSize(20)
       doc.setFont('helvetica', 'bold')
       doc.text('EMPLOYEE REPORT', pageWidth / 2, yPos, { align: 'center' })

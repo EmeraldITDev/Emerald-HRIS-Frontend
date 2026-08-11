@@ -488,6 +488,104 @@ export default function Attendance() {
     const year = startDate.getFullYear()
 
     try {
+      const csvCell = (v: any) => {
+        const s = v === null || v === undefined || v === '' ? '' : String(v)
+        return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+      }
+      const brandingRows = (title: string) => [
+        ['Emerald Industrial Co.'],
+        [title],
+        [`Period: ${startStr} to ${endStr}`],
+        [`Generated: ${format(new Date(), 'yyyy-MM-dd HH:mm')}`],
+        [],
+      ].map((row) => row.map(csvCell).join(','))
+      const downloadCsv = (lines: string[], filename: string) => {
+        const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' })
+        const link = document.createElement('a')
+        const url = URL.createObjectURL(blob)
+        link.setAttribute('href', url)
+        link.setAttribute('download', filename)
+        link.style.visibility = 'hidden'
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        URL.revokeObjectURL(url)
+      }
+      const lunchMinutes = (r: any) => {
+        if (r.lunch_duration ?? r.lunch_duration_minutes) return r.lunch_duration ?? r.lunch_duration_minutes
+        const s = r.lunch_start ? new Date(r.lunch_start).getTime() : NaN
+        const e = r.lunch_end ? new Date(r.lunch_end).getTime() : NaN
+        if (!isNaN(s) && !isNaN(e) && e > s) return Math.round((e - s) / 60000)
+        return ''
+      }
+
+      // ===== Daily report: detailed per-employee records from the org dashboard =====
+      if (reportType === 'Daily') {
+        const dash = await apiService.getOrgAttendanceDashboard({ date: startStr })
+        const records: any[] = Array.isArray(dash?.records)
+          ? dash.records
+          : Array.isArray(dash?.data)
+            ? dash.data
+            : Array.isArray(dash)
+              ? dash
+              : []
+
+        if (records.length === 0) {
+          toast({
+            title: 'No Data',
+            description: `No attendance records found for ${startStr}.`,
+          })
+          return
+        }
+
+        const headers = [
+          'Employee ID',
+          'Employee Name',
+          'Department',
+          'Work Arrangement',
+          'Work Location',
+          'Clock In',
+          'Clock Out',
+          'Attendance Status',
+          'Late',
+          'Lunch Start',
+          'Lunch End',
+          'Lunch Duration (mins)',
+          'Location Status',
+        ]
+
+        const rows = records.map((r: any) => [
+          r.employee_code || r.employee_display || r.employee_id || '',
+          r.employee_name || [r.first_name, r.last_name].filter(Boolean).join(' ') || '',
+          r.department || '',
+          r.work_arrangement || r.employee?.work_arrangement || '',
+          r.assigned_location || r.work_location || '',
+          r.clock_in || '',
+          r.clock_out || '',
+          r.attendance_status || 'Absent',
+          String(r.attendance_status || r.status || '').toLowerCase().includes('late') || r.is_late ? 'Yes' : 'No',
+          r.lunch_start || '',
+          r.lunch_end || '',
+          lunchMinutes(r),
+          r.location_status || '',
+        ])
+
+        downloadCsv(
+          [
+            ...brandingRows('Daily Attendance Report'),
+            headers.map(csvCell).join(','),
+            ...rows.map((row: any[]) => row.map(csvCell).join(',')),
+          ],
+          `attendance_daily_${startStr}.csv`
+        )
+
+        toast({
+          title: 'Report Downloaded',
+          description: `Daily attendance report for ${startStr} has been downloaded.`,
+        })
+        return
+      }
+
       // Fetch reports from backend so they are based on real database data
       const [attendanceReport, leaveReport] = await Promise.all([
         apiService.getAttendanceReport(startStr, endStr),
@@ -501,12 +599,15 @@ export default function Attendance() {
 
       if (attendanceByEmployee.length > 0) {
         const attendanceHeaders = [
-          'Employee Code',
+          'Employee ID',
           'Employee Name',
           'Department',
-          'Total Present Days',
-          'Total Absent Days',
-          'Total Late Days',
+          'Days Present',
+          'Days Absent',
+          'Late Arrivals',
+          'WFH Days',
+          'On-site Days',
+          'Total Hours Worked',
           'Attendance Rate (%)',
           'Period Start',
           'Period End',
@@ -520,26 +621,23 @@ export default function Attendance() {
           item.total_present ?? 0,
           item.total_absent ?? 0,
           item.total_late ?? 0,
+          item.total_wfh_days ?? item.wfh_days ?? '',
+          item.total_onsite_days ?? item.onsite_days ?? '',
+          item.total_hours_worked ?? item.total_hours ?? '',
           item.attendance_rate ?? 0,
           attendanceReport?.period?.start || startStr,
           attendanceReport?.period?.end || endStr,
           attendanceReport?.period?.total_days ?? ''
         ])
 
-        const attendanceCsv = [
-          attendanceHeaders.join(','),
-          ...attendanceRows.map((row: any[]) => row.join(','))
-        ].join('\n')
-
-        const attendanceBlob = new Blob([attendanceCsv], { type: 'text/csv;charset=utf-8;' })
-        const attendanceLink = document.createElement('a')
-        const attendanceUrl = URL.createObjectURL(attendanceBlob)
-        attendanceLink.setAttribute('href', attendanceUrl)
-        attendanceLink.setAttribute('download', `attendance_${reportType.toLowerCase()}_${startStr}_${endStr}.csv`)
-        attendanceLink.style.visibility = 'hidden'
-        document.body.appendChild(attendanceLink)
-        attendanceLink.click()
-        document.body.removeChild(attendanceLink)
+        downloadCsv(
+          [
+            ...brandingRows(`${reportType} Attendance Report`),
+            attendanceHeaders.map(csvCell).join(','),
+            ...attendanceRows.map((row: any[]) => row.map(csvCell).join(','))
+          ],
+          `attendance_${reportType.toLowerCase()}_${startStr}_${endStr}.csv`
+        )
       }
 
       // ===== Leave report (request-level data) =====
@@ -549,13 +647,13 @@ export default function Attendance() {
 
       if (leaveRequestsReport.length > 0) {
         const leaveHeaders = [
-          'Employee Code',
+          'Employee ID',
           'Employee Name',
           'Department',
           'Leave Type',
           'Start Date',
           'End Date',
-          'Days Requested',
+          'Duration (days)',
           'Status',
           'Year'
         ]
@@ -572,20 +670,14 @@ export default function Attendance() {
           leaveReport?.year ?? year
         ])
 
-        const leaveCsv = [
-          leaveHeaders.join(','),
-          ...leaveRows.map((row: any[]) => row.join(','))
-        ].join('\n')
-
-        const leaveBlob = new Blob([leaveCsv], { type: 'text/csv;charset=utf-8;' })
-        const leaveLink = document.createElement('a')
-        const leaveUrl = URL.createObjectURL(leaveBlob)
-        leaveLink.setAttribute('href', leaveUrl)
-        leaveLink.setAttribute('download', `leave_${reportType.toLowerCase()}_${year}.csv`)
-        leaveLink.style.visibility = 'hidden'
-        document.body.appendChild(leaveLink)
-        leaveLink.click()
-        document.body.removeChild(leaveLink)
+        downloadCsv(
+          [
+            ...brandingRows(`${reportType} Leave Report`),
+            leaveHeaders.map(csvCell).join(','),
+            ...leaveRows.map((row: any[]) => row.map(csvCell).join(','))
+          ],
+          `leave_${reportType.toLowerCase()}_${year}.csv`
+        )
       }
 
       if (attendanceByEmployee.length === 0 && leaveRequestsReport.length === 0) {

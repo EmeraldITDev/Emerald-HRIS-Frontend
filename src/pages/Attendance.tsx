@@ -37,6 +37,12 @@ import { Textarea } from "@/components/ui/textarea"
 import { useAuth } from "@/contexts/AuthContext"
 import { RoleBasedComponent } from "@/components/RoleBasedComponent"
 import apiService, { Employee } from "@/lib/api"
+import {
+  AttendanceStatusBadge,
+  extractRows,
+  formatTimeWithZone,
+  locationStatusLabel,
+} from "@/lib/attendanceUi"
 import { getCurrentMonthCelebrations, type Celebration } from "@/utils/celebrations"
 
 // Extract HH:mm from a backend datetime string ("YYYY-MM-DD HH:MM:SS" or ISO).

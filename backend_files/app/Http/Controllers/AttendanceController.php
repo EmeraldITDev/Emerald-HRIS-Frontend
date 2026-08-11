@@ -158,7 +158,7 @@ class AttendanceController extends Controller
             $locationStatus   = 'Not Required';
 
             if ($workMode === 'Physical' && $locationLat && $locationLng) {
-                $empLocation = $employee->assigned_location ?? $employee->work_location ?? 'Lagos';
+                $empLocation = \App\Models\Employee::normalizeLocation($employee->assigned_location ?? $employee->work_location ?? 'Lagos');
                 $geoResult   = Attendance::checkGeofence($empLocation, (float)$locationLat, (float)$locationLng);
                 $locationVerified = $geoResult['verified'];
                 $locationStatus   = $geoResult['status'];
@@ -1502,7 +1502,7 @@ class AttendanceController extends Controller
         $rows      = [];
 
         foreach ($employees as $emp) {
-            $location  = $emp->assigned_location ?? $emp->work_location ?? 'Lagos';
+            $location  = \App\Models\Employee::normalizeLocation($emp->assigned_location ?? $emp->work_location ?? 'Lagos');
             $schedule  = \DB::table('attendance_schedules')
                 ->where('location', $location)
                 ->where('day_of_week', $dayOfWeek)

@@ -628,7 +628,6 @@ class ApiService {
     return this.request<any>('/exception-requests', {
       method: 'POST',
       body: isForm ? data : JSON.stringify(data),
-      ...(isForm ? { headers: {} as any } : {}),
     });
   }
 

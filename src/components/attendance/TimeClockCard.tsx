@@ -10,7 +10,9 @@ import apiService from "@/lib/api";
 import { cn } from "@/lib/utils";
 import {
   AttendanceStatusBadge,
-  formatTimeOnly,
+  formatTimeWithZone,
+  LUNCH_BREAK,
+  isWithinLunchWindow,
   todayWAT,
   todayDayNameWAT,
 } from "@/lib/attendanceUi";
@@ -189,6 +191,12 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
     setIsPunching(true);
     try {
       const payload = { employee_id: employeeId, date: todayWAT() };
+      if (!onBreak && !isWithinLunchWindow()) {
+        toast({
+          title: "Outside lunch window",
+          description: `Company lunch break is ${LUNCH_BREAK.label}. Your break will still be recorded.`,
+        });
+      }
       const res: any = onBreak
         ? await apiService.endBreak(payload)
         : await apiService.startBreak(payload);
@@ -238,17 +246,21 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
                 <Badge variant="outline">{expectedMode}</Badge>
               </div>
             )}
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Timer className="h-4 w-4" />
+              <span>Lunch break: {LUNCH_BREAK.label}</span>
+            </div>
             <div className="text-sm text-muted-foreground space-y-1">
               {todayStatus?.clock_in ? (
                 <>
                   <div className="flex items-center gap-2">
                     <LogIn className="h-4 w-4 text-success" />
-                    <span>Clocked in at {formatTimeOnly(todayStatus.clock_in)}</span>
+                    <span>Clocked in at {formatTimeWithZone(todayStatus.clock_in)}</span>
                   </div>
                   {todayStatus?.clock_out && (
                     <div className="flex items-center gap-2">
                       <LogOut className="h-4 w-4 text-destructive" />
-                      <span>Clocked out at {formatTimeOnly(todayStatus.clock_out)}</span>
+                      <span>Clocked out at {formatTimeWithZone(todayStatus.clock_out)}</span>
                     </div>
                   )}
                   {elapsed && (

@@ -29,7 +29,7 @@ import apiService from "@/lib/api";
 import {
   AttendanceStatusBadge,
   extractRows,
-  formatTimeOnly,
+  formatTimeWithZone,
   locationStatusLabel,
   todayWAT,
 } from "@/lib/attendanceUi";
@@ -296,8 +296,8 @@ export default function OrgAttendanceDashboard() {
                       <TableCell className="text-sm">{r.assigned_location || "—"}</TableCell>
                       <TableCell className="text-sm">{r.expected_mode || "—"}</TableCell>
                       <TableCell className="text-sm">{r.actual_mode || r.work_mode || "—"}</TableCell>
-                      <TableCell className="text-sm">{formatTimeOnly(r.clock_in) || "—"}</TableCell>
-                      <TableCell className="text-sm">{formatTimeOnly(r.clock_out) || "—"}</TableCell>
+                      <TableCell className="text-sm">{formatTimeWithZone(r.clock_in) || "—"}</TableCell>
+                      <TableCell className="text-sm">{formatTimeWithZone(r.clock_out) || "—"}</TableCell>
                       <TableCell className="text-sm">
                         {locationStatusLabel(r.location_status)}
                       </TableCell>
@@ -319,8 +319,8 @@ export default function OrgAttendanceDashboard() {
                                   `Employee #${r.employee_id}` ,
                                 description: `${r.attendance_status || "Absent"} · ${
                                   r.actual_mode || r.work_mode || "No mode"
-                                } · In ${formatTimeOnly(r.clock_in) || "—"} · Out ${
-                                  formatTimeOnly(r.clock_out) || "—"
+                                } · In ${formatTimeWithZone(r.clock_in) || "—"} · Out ${
+                                  formatTimeWithZone(r.clock_out) || "—"
                                 }`,
                               })
                             }

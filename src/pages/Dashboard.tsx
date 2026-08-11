@@ -117,18 +117,11 @@ export default function Dashboard() {
   const [recentEmployees, setRecentEmployees] = useState<Employee[]>([])
   const [departmentStats, setDepartmentStats] = useState<{ [key: string]: number }>({})
   const [isLoading, setIsLoading] = useState(true)
-  const [todayStatus, setTodayStatus] = useState<any>(null)
-  const [isPunching, setIsPunching] = useState(false)
-  const [showClockOutDialog, setShowClockOutDialog] = useState(false)
-  const [clockOutReason, setClockOutReason] = useState("")
-  const [isLunchBreak, setIsLunchBreak] = useState(false)
-  const [showLateClockInDialog, setShowLateClockInDialog] = useState(false)
-  const [lateClockInReason, setLateClockInReason] = useState("")
-  const [lateClockInContext, setLateClockInContext] = useState<"morning" | "post_lunch">("morning")
   const [recentActivities, setRecentActivities] = useState<UserActivity[]>([])
   const [currentMonthCelebrations, setCurrentMonthCelebrations] = useState<Celebration[]>([])
   const [upcomingCelebrations, setUpcomingCelebrations] = useState<Celebration[]>([])
   const [currentEmployeeId, setCurrentEmployeeId] = useState<number | null>(null)
+  const { todayStatus, refresh: refreshTodayStatus } = useAttendanceToday(!!user)
   // Message dialog state moved to CelebrationsCard component
 
   // Self-service real data
@@ -301,25 +294,6 @@ export default function Dashboard() {
     return actions
   }
 
-  const loadTodayStatus = async () => {
-    if (!user || !currentEmployeeId) return
-    try {
-      const response: any = await apiService.getAttendance()
-      const today = format(new Date(), 'yyyy-MM-dd')
-      const attendanceArray = extractRows(response)
-      let todayRecord = selectTodayRecord(attendanceArray, currentEmployeeId, today)
-      const localBreakEnd = localStorage.getItem(lunchEndOverrideKey(currentEmployeeId, today))
-      if (todayRecord && isOnLunchBreak(todayRecord) && localBreakEnd) {
-        todayRecord = { ...todayRecord, break_end: localBreakEnd }
-      }
-      setTodayStatus(todayRecord || null)
-      return todayRecord || null
-    } catch (e) {
-      console.error('Failed to load today attendance:', e)
-      return null
-    }
-  }
-
   useEffect(() => {
     loadUserActivities()
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -352,66 +326,6 @@ export default function Dashboard() {
     })()
     return () => { cancelled = true }
   }, [user, currentEmployeeId])
-
-  useEffect(() => {
-    loadTodayStatus()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentEmployeeId])
-
-  const findApprovedPostLunchRequest = async () => {
-    if (!currentEmployeeId) return null
-    const todayStr = format(new Date(), 'yyyy-MM-dd')
-    const res: any = await apiService.getLateClockinRequests({ employee_id: currentEmployeeId })
-    return extractRows(res).find((r: any) =>
-      Number(r.employee_id) === Number(currentEmployeeId) &&
-      dateOnly(r.requested_at || r.created_at) === todayStr &&
-      isApprovedPostLunchRequest(r)
-    ) || null
-  }
-
-  // Poll for approval of a pending post-lunch late-return request.
-  // When HR approves, automatically end the lunch break and refresh status
-  // so the dashboard reflects "clocked back in" without a manual refresh.
-  useEffect(() => {
-    if (!currentEmployeeId) return
-    const todayStr = format(new Date(), 'yyyy-MM-dd')
-    const processedKey = `latePostLunch:processed:${currentEmployeeId}:${todayStr}`
-
-    const check = async () => {
-      try {
-        const res: any = await apiService.getLateClockinRequests({ employee_id: currentEmployeeId })
-        const arr = extractRows(res)
-        const todays = arr.filter((r: any) => {
-          if (Number(r.employee_id) !== Number(currentEmployeeId)) return false
-          const ts = r.requested_at || r.created_at
-          return dateOnly(ts) === todayStr
-        })
-        const approvedPostLunch = todays.find(isApprovedPostLunchRequest)
-        if (!approvedPostLunch) return
-        const processedId = localStorage.getItem(processedKey)
-
-        // Refresh status first; only end break if still on break.
-        const latestStatus = await loadTodayStatus()
-        if (String(processedId) === String(approvedPostLunch.id) && !isOnLunchBreak(latestStatus)) return
-        if (isOnLunchBreak(latestStatus)) {
-          const ended = await endLunchBreak()
-          if (!ended) return
-          toast({
-            title: "Late return approved",
-            description: "HR approved your late return from lunch. You've been clocked back in.",
-          })
-        }
-        localStorage.setItem(processedKey, String(approvedPostLunch.id))
-      } catch (e) {
-        // non-fatal
-      }
-    }
-
-    check()
-    const id = window.setInterval(check, 30000)
-    return () => window.clearInterval(id)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentEmployeeId, todayStatus?.break_start, todayStatus?.break_end])
 
   useEffect(() => {
     const fetchDashboardData = async () => {

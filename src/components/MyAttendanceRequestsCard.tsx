@@ -7,7 +7,7 @@ import { ClipboardCheck, RefreshCw } from "lucide-react";
 import apiService from "@/lib/api";
 import { format } from "date-fns";
 
-type Kind = "late_clockin" | "early_clockout";
+type Kind = "early_clockout";
 
 interface Req {
   id: number | string;
@@ -51,14 +51,12 @@ export function MyAttendanceRequestsCard({ employeeId }: Props) {
     if (!employeeId) return;
     setLoading(true);
     try {
-      const [late, early] = await Promise.all([
-        apiService.getLateClockinRequests({ employee_id: employeeId }).catch(() => []),
-        apiService.getEarlyClockoutRequests({ employee_id: employeeId }).catch(() => []),
-      ]);
-      const merged = [
-        ...normalize(late, "late_clockin", employeeId),
-        ...normalize(early, "early_clockout", employeeId),
-      ].sort((a, b) => (a.requested_at < b.requested_at ? 1 : -1));
+      const early = await apiService
+        .getEarlyClockoutRequests({ employee_id: employeeId })
+        .catch(() => []);
+      const merged = normalize(early, "early_clockout", employeeId).sort((a, b) =>
+        a.requested_at < b.requested_at ? 1 : -1,
+      );
       setItems(merged);
     } catch (e) {
       console.error("Failed to load my attendance requests", e);
@@ -96,7 +94,7 @@ export function MyAttendanceRequestsCard({ employeeId }: Props) {
           <p className="text-sm text-muted-foreground">Loading your requests…</p>
         ) : items.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            You have no late clock-in or early clock-out approval requests.
+            You have no early clock-out approval requests.
           </p>
         ) : (
           <div className="overflow-x-auto">
@@ -114,9 +112,7 @@ export function MyAttendanceRequestsCard({ employeeId }: Props) {
                 {items.map((r) => (
                   <TableRow key={`${r.kind}-${r.id}`}>
                     <TableCell>
-                      <Badge variant={r.kind === "late_clockin" ? "secondary" : "outline"}>
-                        {r.kind === "late_clockin" ? "Late Clock-In" : "Early Clock-Out"}
-                      </Badge>
+                      <Badge variant="outline">Early Clock-Out</Badge>
                     </TableCell>
                     <TableCell className="text-sm">
                       {(() => {

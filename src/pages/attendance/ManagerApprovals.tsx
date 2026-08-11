@@ -28,7 +28,7 @@ import { canApproveAttendance, canHrPayroll } from "@/lib/permissions";
 import apiService from "@/lib/api";
 import { extractRows } from "@/lib/attendanceUi";
 
-type Kind = "late" | "exception" | "wfh";
+type Kind = "exception" | "wfh";
 
 interface Row {
   id: number | string;
@@ -55,7 +55,6 @@ export default function ManagerApprovals() {
   const { user } = useAuth();
   const { toast } = useToast();
   const isHr = canHrPayroll(user) || user?.role === "executive";
-  const [late, setLate] = useState<Row[]>([]);
   const [exceptions, setExceptions] = useState<Row[]>([]);
   const [wfh, setWfh] = useState<Row[]>([]);
   const [loading, setLoading] = useState(false);
@@ -68,24 +67,12 @@ export default function ManagerApprovals() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [lateRes, excRes, wfhRes] = await Promise.all([
-        apiService.getLateClockinRequests({ status: "pending" }).catch(() => []),
+      const [excRes, wfhRes] = await Promise.all([
         apiService
           .getExceptionRequests(isHr ? { scope: "pending-hr" } : { scope: "pending-manager" })
           .catch(() => []),
         apiService.getWFHRequests({ status: "pending" }).catch(() => []),
       ]);
-      setLate(
-        extractRows(lateRes).map((r: any) => ({
-          id: r.id,
-          kind: "late" as Kind,
-          employee: employeeLabel(r),
-          employeeId: r.employee?.employee_id || r.employee_id,
-          typeLabel: "Late Clock-In",
-          dates: r.requested_at || r.created_at || "",
-          reason: r.reason,
-        })),
-      );
       setExceptions(
         extractRows(excRes).map((r: any) => ({
           id: r.id,
@@ -139,10 +126,7 @@ export default function ManagerApprovals() {
     }
     setSubmitting(true);
     try {
-      if (active.kind === "late") {
-        if (action === "approve") await apiService.approveLateClockinRequest(active.id, notes || undefined);
-        else await apiService.rejectLateClockinRequest(active.id, notes);
-      } else if (active.kind === "exception") {
+      if (active.kind === "exception") {
         if (isHr) {
           if (action === "approve") await apiService.approveExceptionHR(active.id, notes || undefined);
           else await apiService.rejectExceptionHR(active.id, notes);
@@ -241,7 +225,7 @@ export default function ManagerApprovals() {
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-foreground">Attendance Approvals</h1>
           <p className="text-sm text-muted-foreground">
-            Review late justifications, work exceptions and WFH requests from your team.
+            Review work exceptions and WFH requests from your team.
           </p>
         </div>
         <Button variant="outline" onClick={load} disabled={loading}>
@@ -255,15 +239,11 @@ export default function ManagerApprovals() {
           <CardTitle className="text-primary">Pending Requests</CardTitle>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="late">
+          <Tabs defaultValue="exception">
             <TabsList>
-              <TabsTrigger value="late">Late Justifications ({late.length})</TabsTrigger>
               <TabsTrigger value="exception">Exception Requests ({exceptions.length})</TabsTrigger>
               <TabsTrigger value="wfh">WFH Requests ({wfh.length})</TabsTrigger>
             </TabsList>
-            <TabsContent value="late">
-              {renderTable(late, "No pending late justifications.")}
-            </TabsContent>
             <TabsContent value="exception">
               {renderTable(exceptions, "No pending exception requests.")}
             </TabsContent>

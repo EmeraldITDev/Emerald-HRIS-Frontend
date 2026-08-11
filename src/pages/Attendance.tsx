@@ -142,28 +142,21 @@ export default function Attendance() {
   const [leaveFilterDepartment, setLeaveFilterDepartment] = useState<string>("all")
   const [leaveTypes, setLeaveTypes] = useState<any[]>([])
   const [isLoadingLeaveTypes, setIsLoadingLeaveTypes] = useState(false)
-  const [todayStatus, setTodayStatus] = useState<any>(null);
-  const [isPunching, setIsPunching] = useState(false);
   const [todayAttendance, setTodayAttendance] = useState<any[]>([]);
-  const [showClockOutDialog, setShowClockOutDialog] = useState(false);
-  const [clockOutReason, setClockOutReason] = useState("");
-  const [showLateClockInDialog, setShowLateClockInDialog] = useState(false);
-  const [lateClockInReason, setLateClockInReason] = useState("");
-  const [isLunchBreak, setIsLunchBreak] = useState(false);
   const [selectedLeaveRequest, setSelectedLeaveRequest] = useState<any>(null);
   const [showLeaveDetailsDialog, setShowLeaveDetailsDialog] = useState(false);
   const [showApprovalDialog, setShowApprovalDialog] = useState(false);
   const [approvalAction, setApprovalAction] = useState<'approve' | 'reject'>('approve');
   const [approvalNotes, setApprovalNotes] = useState("");
   const [isSubmittingLeave, setIsSubmittingLeave] = useState(false);
-  const [showWeeklyAttendance, setShowWeeklyAttendance] = useState(true);
   const [showTodayAttendance, setShowTodayAttendance] = useState(true);
   const [currentEmployeeId, setCurrentEmployeeId] = useState<number | null>(null);
+  const [workRequestsKey, setWorkRequestsKey] = useState(0);
 
-  // Load today's attendance from database
+  // Load the org/team "Today's Attendance" table (managers & HR).
   const loadTodayStatus = async () => {
-    if (!user || !currentEmployeeId) return;
-    
+    if (!user) return;
+
     try {
       const response = await apiService.getAttendance();
       const today = format(new Date(), 'yyyy-MM-dd');
@@ -183,14 +176,7 @@ export default function Attendance() {
              : (res.data.data || []);
         }
       }
-      
-      // Find current user's record for today
-      const todayRecord = attendanceArray.find(
-        (record: any) => record.employee_id === currentEmployeeId && 
-        format(new Date(record.date), 'yyyy-MM-dd') === today
-      );
-      setTodayStatus(todayRecord || null);
-      
+
       // Load all today's attendance for display (already filtered by department from backend)
       let allTodayRecords = attendanceArray.filter(
         (record: any) => format(new Date(record.date), 'yyyy-MM-dd') === today

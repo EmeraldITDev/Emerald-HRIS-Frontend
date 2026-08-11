@@ -558,14 +558,18 @@ class ApiService {
     return this.request<Attendance[]>(`/attendance?_=${Date.now()}`, { cache: 'no-store' });
   }
 
-  async createAttendance(attendanceData: Attendance): Promise<{ message: string }> {
+  async createAttendance(
+    attendanceData: Partial<Attendance> & Record<string, any>,
+  ): Promise<{ message: string } & Record<string, any>> {
     return this.request<{ message: string }>('/attendance/clock-in', {
       method: 'POST',
       body: JSON.stringify(attendanceData),
     });
   }
 
-  async clockOut(attendanceData: Attendance): Promise<{ message: string }> {
+  async clockOut(
+    attendanceData: Partial<Attendance> & Record<string, any>,
+  ): Promise<{ message: string } & Record<string, any>> {
     return this.request<{ message: string }>('/attendance/clock-out', {
       method: 'POST',
       body: JSON.stringify(attendanceData),

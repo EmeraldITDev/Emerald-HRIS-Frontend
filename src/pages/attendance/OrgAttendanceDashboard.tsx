@@ -441,17 +441,25 @@ export default function OrgAttendanceDashboard() {
                           </Button>
                           <Button
                             size="sm"
-                            variant="ghost"
-                            onClick={() =>
+                            variant={flagged[rowKey(r, i)] ? "secondary" : "ghost"}
+                            disabled={flagged[rowKey(r, i)]}
+                            onClick={async () => {
+                              setFlagged((prev) => ({ ...prev, [rowKey(r, i)]: true }));
                               toast({
                                 title: "Flagged for review",
                                 description: `${
                                   r.employee_name || `Employee #${r.employee_id}`
                                 } was flagged for HR follow-up.`,
-                              })
-                            }
+                              });
+                              await load();
+                            }}
                           >
-                            <Flag className="h-4 w-4" />
+                            <Flag
+                              className={`h-4 w-4 ${
+                                flagged[rowKey(r, i)] ? "fill-current text-destructive" : ""
+                              }`}
+                            />
+                            {flagged[rowKey(r, i)] && <span className="ml-1 text-xs">Flagged</span>}
                           </Button>
                         </div>
                       </TableCell>

@@ -610,13 +610,7 @@ export default function Benefits() {
     }
   }
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-NG', {
-      style: 'currency',
-      currency: 'NGN',
-      minimumFractionDigits: 0
-    }).format(amount)
-  }
+  const formatCurrency = (amount: number) => formatNaira(amount)
 
   // Calculate benefit statistics from database
   const activeDbBenefits = dbBenefits.filter(b => b.status === 'active')
@@ -1018,7 +1012,7 @@ export default function Benefits() {
                         <TableCell>{b.benefit_name}</TableCell>
                         <TableCell className="hidden md:table-cell capitalize">{b.benefit_type}</TableCell>
                         <TableCell className="hidden md:table-cell">
-                          {b.value ? `₦${Number(b.value).toLocaleString()}` : '—'}
+                          {b.value ? formatNaira(b.value) : '—'}
                         </TableCell>
                         <TableCell className="hidden lg:table-cell text-xs">
                           {b.start_date ? new Date(b.start_date).toLocaleDateString() : '—'}

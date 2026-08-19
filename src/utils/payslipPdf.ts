@@ -1,9 +1,7 @@
 import jsPDF from "jspdf";
+import { formatNaira } from "@/lib/currency";
 
-const ngn = (v: any) =>
-  v == null || v === ""
-    ? "—"
-    : new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", maximumFractionDigits: 2 }).format(Number(v) || 0);
+const ngn = (v: any) => (v == null || v === "" ? "—" : formatNaira(v));
 
 export interface PayslipLike {
   employeeName?: string;

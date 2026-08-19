@@ -84,7 +84,7 @@ const POLL_INTERVAL_MS = 3000;
 const MAX_POLL_MS = 60_000;
 
 const fmtMoney = (n: any) =>
-  `₦${Number(n || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+  formatNaira(n);
 
 const shiftMonth = (period: string, delta: number) => {
   const [y, m] = period.split("-").map(Number);

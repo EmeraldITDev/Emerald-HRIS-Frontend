@@ -325,10 +325,7 @@ export default function EmployeeProfile() {
     }
   }
 
-  const formatCurrency = (amount: number | undefined) => {
-    if (!amount) return '₦0'
-    return `₦${amount.toLocaleString()}`
-  }
+  const formatCurrency = (amount: number | undefined) => formatNaira(amount ?? 0)
 
   const calculateTotalSalary = () => {
     if (!employee) return 0

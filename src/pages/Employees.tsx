@@ -53,6 +53,8 @@ import AttendanceProfilePanel from "@/components/attendance/AttendanceProfilePan
 import Papa from "papaparse";
 import { DEPARTMENTS } from "@/constants/departments";
 import jsPDF from "jspdf";
+import { formatNaira, formatNairaAmount } from "@/lib/currency";
+import { getEmployeePayrollPackage } from "@/lib/payrollCalc";
 import * as XLSX from "xlsx";
 import apiService, { Employee } from "@/lib/api";
 import { useLocation } from "react-router-dom";

@@ -41,6 +41,7 @@ import apiService, { Employee } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
 import { EmployeeEditDialog } from "@/components/EmployeeEditDialog"
 import { EmployeeDocumentsPanel } from "@/components/EmployeeDocumentsPanel"
+import { formatNaira } from "@/lib/currency"
 
 export default function EmployeeProfile() {
   const { id } = useParams<{ id: string }>()

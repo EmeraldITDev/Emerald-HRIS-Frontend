@@ -79,6 +79,7 @@ import { canHrPayroll, canViewPayrollDrafts } from "@/lib/permissions";
 import { useToast } from "@/hooks/use-toast";
 import { BulkGenerateDialog } from "@/components/payroll/BulkGenerateDialog";
 import { PayrollEditDrawer } from "@/components/payroll/PayrollEditDrawer";
+import { formatNaira } from "@/lib/currency";
 
 const POLL_INTERVAL_MS = 3000;
 const MAX_POLL_MS = 60_000;

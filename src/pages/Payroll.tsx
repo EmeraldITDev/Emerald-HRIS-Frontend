@@ -38,6 +38,7 @@ import { useAuth } from "@/contexts/AuthContext"
 import { RoleBasedComponent } from "@/components/RoleBasedComponent"
 import { canHrPayroll } from "@/lib/permissions"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { formatNaira, formatNairaAmount } from "@/lib/currency"
 import { calculateAnnualPaye, employeesMissingAnnualGross, getAnnualGrossSalary, getEmployeePayrollPackage, normalizePayrollRecord, roundMoney, toMoneyNumber } from "@/lib/payrollCalc"
 import {
   Dialog,
@@ -217,13 +218,7 @@ export default function Payroll() {
     }
   }
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-NG', {
-      style: 'currency',
-      currency: 'NGN',
-      minimumFractionDigits: 0,
-    }).format(amount)
-  }
+  const formatCurrency = (amount: number) => formatNaira(amount)
 
   const calculatePayroll = () => {
     const selectedEmp = onboardEmployees.find(emp => emp.id === selectedEmployee)
@@ -744,28 +739,28 @@ export default function Payroll() {
       pdf.line(20, yPos, pageWidth - 20, yPos)
       yPos += 7
       pdf.text("Basic Salary", 20, yPos)
-      pdf.text(`₦${monthlyBasic.toFixed(2)}`, 120, yPos)
+      pdf.text(formatNaira(monthlyBasic), 120, yPos)
       pdf.text("Gross ÷ 12", 160, yPos)
       
       yPos += 7
       pdf.text("Housing Allowance (20%)", 20, yPos)
-      pdf.text(`₦${monthlyHousing.toFixed(2)}`, 120, yPos)
+      pdf.text(formatNaira(monthlyHousing), 120, yPos)
       pdf.text("20% of Gross", 160, yPos)
       
       yPos += 7
       pdf.text("Transport Allowance (9%)", 20, yPos)
-      pdf.text(`₦${monthlyTransport.toFixed(2)}`, 120, yPos)
+      pdf.text(formatNaira(monthlyTransport), 120, yPos)
       pdf.text("9% of Gross", 160, yPos)
       
       yPos += 7
       pdf.text("All Other Allowances (31%)", 20, yPos)
-      pdf.text(`₦${monthlyOther.toFixed(2)}`, 120, yPos)
+      pdf.text(formatNaira(monthlyOther), 120, yPos)
       pdf.text("31% of Gross", 160, yPos)
       
       yPos += 7
       pdf.setFont("helvetica", "bold")
       pdf.text("Gross Monthly Salary", 20, yPos)
-      pdf.text(`₦${monthlyGross.toFixed(2)}`, 120, yPos)
+      pdf.text(formatNaira(monthlyGross), 120, yPos)
       
       // Deductions
       yPos += 12
@@ -776,27 +771,27 @@ export default function Payroll() {
       pdf.line(20, yPos, pageWidth - 20, yPos)
       yPos += 7
       pdf.text("PAYE", 20, yPos)
-      pdf.text(`₦${monthlyTax.toFixed(2)}`, 120, yPos)
+      pdf.text(formatNaira(monthlyTax), 120, yPos)
       pdf.text("Statutory tax", 160, yPos)
       
       yPos += 7
       pdf.text("Pension (Employee)", 20, yPos)
-      pdf.text(`₦${monthlyPension.toFixed(2)}`, 120, yPos)
+      pdf.text(formatNaira(monthlyPension), 120, yPos)
       pdf.text("8% of BHT", 160, yPos)
       
       yPos += 7
       pdf.text("NHF (2.5%)", 20, yPos)
-      pdf.text(`₦${monthlyNHF.toFixed(2)}`, 120, yPos)
+      pdf.text(formatNaira(monthlyNHF), 120, yPos)
       pdf.text("2.5% of Basic Salary", 160, yPos)
       
       yPos += 7
       pdf.setFont("helvetica", "bold")
       pdf.text("Total Deductions", 20, yPos)
-      pdf.text(`₦${totalDeductions.toFixed(2)}`, 120, yPos)
+      pdf.text(formatNaira(totalDeductions), 120, yPos)
       
       yPos += 7
       pdf.text("Net Monthly Pay", 20, yPos)
-      pdf.text(`₦${monthlyNet.toFixed(2)}`, 120, yPos)
+      pdf.text(formatNaira(monthlyNet), 120, yPos)
     } else {
       // Contractor payslip format
       pdf.setFont("helvetica", "bold")
@@ -807,7 +802,7 @@ export default function Payroll() {
       pdf.line(20, yPos, pageWidth - 20, yPos)
       yPos += 7
       pdf.text("Contract Fee (Gross)", 20, yPos)
-      pdf.text(`₦${monthlyGross.toFixed(2)}`, 120, yPos)
+      pdf.text(formatNaira(monthlyGross), 120, yPos)
       
       // Deductions
       yPos += 12
@@ -819,16 +814,16 @@ export default function Payroll() {
       pdf.line(20, yPos, pageWidth - 20, yPos)
       yPos += 7
       pdf.text("Withholding Tax (2%)", 20, yPos)
-      pdf.text(`₦${monthlyTax.toFixed(2)}`, 120, yPos)
+      pdf.text(formatNaira(monthlyTax), 120, yPos)
       
       yPos += 7
       pdf.setFont("helvetica", "bold")
       pdf.text("Total Deductions", 20, yPos)
-      pdf.text(`₦${monthlyTax.toFixed(2)}`, 120, yPos)
+      pdf.text(formatNaira(monthlyTax), 120, yPos)
       
       yPos += 7
       pdf.text("Net Pay", 20, yPos)
-      pdf.text(`₦${monthlyNet.toFixed(2)}`, 120, yPos)
+      pdf.text(formatNaira(monthlyNet), 120, yPos)
       pdf.text("Gross minus deduction", 160, yPos)
     }
 
@@ -1328,7 +1323,8 @@ export default function Payroll() {
                     : 0
                   const rows: Array<{ label: string; value: number }> = [
                     { label: `Monthly Gross (Annual Gross Salary ÷ 12)`, value: pkg.monthlyGross },
-                    { label: `Housing Allowance (${housingPctOfBasic}% of Basic)`, value: pkg.monthlyHousing },
+                    { label: `Basic Salary (40% of Monthly Gross)`, value: pkg.monthlyBasic },
+                    { label: `Housing Allowance (20% of Monthly Gross)`, value: pkg.monthlyHousing },
                     { label: `Transport Allowance (9% of Monthly Gross)`, value: pkg.monthlyTransport },
                     { label: `Other Allowances (31% of Monthly Gross)`, value: pkg.monthlyOther },
                     { label: `PAYE Tax (Auto-calculated)`, value: pkg.monthlyPaye },
@@ -1347,7 +1343,7 @@ export default function Payroll() {
                             <Input
                               readOnly
                               tabIndex={-1}
-                              value={Math.round(r.value).toLocaleString()}
+                              value={formatNairaAmount(r.value)}
                               className="pl-8 bg-muted/50 cursor-not-allowed"
                             />
                           </div>

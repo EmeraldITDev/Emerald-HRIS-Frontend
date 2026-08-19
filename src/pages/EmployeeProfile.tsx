@@ -41,6 +41,7 @@ import apiService, { Employee } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
 import { EmployeeEditDialog } from "@/components/EmployeeEditDialog"
 import { EmployeeDocumentsPanel } from "@/components/EmployeeDocumentsPanel"
+import { formatNaira } from "@/lib/currency"
 
 export default function EmployeeProfile() {
   const { id } = useParams<{ id: string }>()
@@ -325,10 +326,7 @@ export default function EmployeeProfile() {
     }
   }
 
-  const formatCurrency = (amount: number | undefined) => {
-    if (!amount) return '₦0'
-    return `₦${amount.toLocaleString()}`
-  }
+  const formatCurrency = (amount: number | undefined) => formatNaira(amount ?? 0)
 
   const calculateTotalSalary = () => {
     if (!employee) return 0

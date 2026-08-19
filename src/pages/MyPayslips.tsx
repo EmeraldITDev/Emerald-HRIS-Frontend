@@ -10,6 +10,7 @@ import { toast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { generatePayslipPdf, generatePayslipCsv, toPayslipLike } from "@/utils/payslipPdf";
 import { normalizePayrollRecord, normalizePayslipDetail } from "@/lib/payrollCalc";
+import { formatNaira } from "@/lib/currency";
 
 function triggerDownload(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
@@ -23,7 +24,7 @@ function triggerDownload(blob: Blob, filename: string) {
 }
 
 const ngn = (v: number | string | undefined) =>
-  v == null ? "—" : new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", maximumFractionDigits: 0 }).format(Number(v) || 0);
+  v == null ? "—" : formatNaira(v);
 
 const uniqueStrings = (values: any[]) => Array.from(new Set(values.filter(Boolean).map(String)));
 

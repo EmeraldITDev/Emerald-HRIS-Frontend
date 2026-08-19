@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { API_BASE_URL } from "@/lib/api";
+import { formatNaira as formatNgn } from "@/lib/currency";
 
 interface ImportRow {
   line?: number;
@@ -58,9 +59,7 @@ interface Props {
 }
 
 const formatNaira = (n: number | null | undefined) =>
-  typeof n === "number"
-    ? `₦${n.toLocaleString("en-NG", { maximumFractionDigits: 0 })}`
-    : "—";
+  typeof n === "number" ? formatNgn(n) : "—";
 
 const statusTone = (status: string): { label: string; cls: string } => {
   const s = status.toLowerCase();

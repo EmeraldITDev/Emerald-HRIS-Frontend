@@ -2409,7 +2409,7 @@ export default function Employees() {
                           <Input
                             id="basicSalary"
                             type="number"
-                            value={newEmployee.basicSalary}
+                            value={formatNairaAmount(newEmployee.basicSalary)}
                             readOnly
                             className="bg-muted cursor-not-allowed"
                             placeholder="Auto-calculated"
@@ -2424,7 +2424,7 @@ export default function Employees() {
                           <Input
                             id="housingAllowance"
                             type="number"
-                            value={newEmployee.housingAllowance}
+                            value={formatNairaAmount(newEmployee.housingAllowance)}
                             readOnly
                             className="bg-muted cursor-not-allowed"
                             placeholder="Auto-calculated"
@@ -2439,7 +2439,7 @@ export default function Employees() {
                           <Input
                             id="transportAllowance"
                             type="number"
-                            value={newEmployee.transportAllowance}
+                            value={formatNairaAmount(newEmployee.transportAllowance)}
                             readOnly
                             className="bg-muted cursor-not-allowed"
                             placeholder="Auto-calculated"
@@ -2454,7 +2454,7 @@ export default function Employees() {
                           <Input
                             id="otherAllowance"
                             type="number"
-                            value={newEmployee.otherAllowance}
+                            value={formatNairaAmount(newEmployee.otherAllowance)}
                             readOnly
                             className="bg-muted cursor-not-allowed"
                             placeholder="Auto-calculated"
@@ -4098,7 +4098,7 @@ export default function Employees() {
                         <Input
                           id="editBasicSalary"
                           type="number"
-                          value={editEmployee.basic_salary || ""}
+                          value={formatNairaAmount(editEmployee.basic_salary)}
                           readOnly
                           className="bg-muted cursor-not-allowed"
                           placeholder="Auto-calculated"
@@ -4110,7 +4110,7 @@ export default function Employees() {
                         <Input
                           id="editHousingAllowance"
                           type="number"
-                          value={editEmployee.housing_allowance || ""}
+                          value={formatNairaAmount(editEmployee.housing_allowance)}
                           readOnly
                           className="bg-muted cursor-not-allowed"
                           placeholder="Auto-calculated"
@@ -4122,7 +4122,7 @@ export default function Employees() {
                         <Input
                           id="editTransportAllowance"
                           type="number"
-                          value={editEmployee.transport_allowance || ""}
+                          value={formatNairaAmount(editEmployee.transport_allowance)}
                           readOnly
                           className="bg-muted cursor-not-allowed"
                           placeholder="Auto-calculated"
@@ -4134,7 +4134,7 @@ export default function Employees() {
                         <Input
                           id="editOtherAllowance"
                           type="number"
-                          value={editEmployee.other_allowance || ""}
+                          value={formatNairaAmount(editEmployee.other_allowance)}
                           readOnly
                           className="bg-muted cursor-not-allowed"
                           placeholder="Auto-calculated"

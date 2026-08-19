@@ -3363,41 +3363,58 @@ export default function Employees() {
                 </TabsContent>
 
                 <TabsContent value="financial" className="space-y-6">
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-muted-foreground">Gross Salary</Label>
-                    <p className="text-base font-semibold text-primary">
-                      ₦{selectedEmployee.financial_details?.gross_salary?.toLocaleString() || "N/A"}
-                    </p>
-                  </div>
+                  {(() => {
+                    const isFullTime =
+                      String(selectedEmployee.employment_type || "").toLowerCase() === "full-time";
+                    const pkg = getEmployeePayrollPackage(selectedEmployee as any);
+                    const fin: any = selectedEmployee.financial_details || {};
+                    const money = (v: any) => (v === null || v === undefined || v === "" ? "N/A" : formatNaira(v));
+                    // Full-time: 40/20/9/31 of Monthly Gross (Annual Gross ÷ 12).
+                    // Contract and other types keep their stored values untouched.
+                    const rows = isFullTime && pkg.annualGross > 0
+                      ? [
+                          { label: "Basic Salary (40% of Monthly Gross)", value: pkg.monthlyBasic },
+                          { label: "Housing Allowance (20% of Monthly Gross)", value: pkg.monthlyHousing },
+                          { label: "Transport Allowance (9% of Monthly Gross)", value: pkg.monthlyTransport },
+                          { label: "Other Allowances (31% of Monthly Gross)", value: pkg.monthlyOther },
+                        ]
+                      : [
+                          { label: "Basic Salary", value: fin.basic_salary },
+                          { label: "Housing Allowance", value: fin.housing_allowance },
+                          { label: "Transport Allowance", value: fin.transport_allowance },
+                          { label: "Other Allowance", value: fin.other_allowance },
+                        ];
+                    return (
+                      <>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium text-muted-foreground">Gross Salary (Annual)</Label>
+                            <p className="text-base font-semibold text-primary">
+                              {money(fin.gross_salary ?? (pkg.annualGross || null))}
+                            </p>
+                          </div>
+                          {isFullTime && pkg.annualGross > 0 && (
+                            <div className="space-y-2">
+                              <Label className="text-sm font-medium text-muted-foreground">
+                                Monthly Gross (Annual ÷ 12)
+                              </Label>
+                              <p className="text-base font-semibold text-primary">{money(pkg.monthlyGross)}</p>
+                            </div>
+                          )}
+                        </div>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                          {rows.map((r) => (
+                            <div className="space-y-2" key={r.label}>
+                              <Label className="text-sm font-medium text-muted-foreground">{r.label}</Label>
+                              <p className="text-base">{money(r.value)}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    );
+                  })()}
 
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium text-muted-foreground">Basic Salary</Label>
-                      <p className="text-base">
-                        ₦{selectedEmployee.financial_details?.basic_salary?.toLocaleString() || "N/A"}
-                      </p>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium text-muted-foreground">Housing Allowance</Label>
-                      <p className="text-base">
-                        ₦{selectedEmployee.financial_details?.housing_allowance?.toLocaleString() || "N/A"}
-                      </p>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium text-muted-foreground">Transport Allowance</Label>
-                      <p className="text-base">
-                        ₦{selectedEmployee.financial_details?.transport_allowance?.toLocaleString() || "N/A"}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium text-muted-foreground">Other Allowance</Label>
-                      <p className="text-base">
-                        ₦{selectedEmployee.financial_details?.other_allowance?.toLocaleString() || "N/A"}
-                      </p>
-                    </div>
                     <div className="space-y-2">
                       <Label className="text-sm font-medium text-muted-foreground">Bank Name</Label>
                       <p className="text-base">{

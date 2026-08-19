@@ -2408,8 +2408,8 @@ export default function Employees() {
                           <Label htmlFor="basicSalary">Basic Salary (40% of Gross)</Label>
                           <Input
                             id="basicSalary"
-                            type="number"
-                            value={formatNairaAmount(newEmployee.basicSalary)}
+                            type="text"
+                            value={formatNaira(newEmployee.basicSalary)}
                             readOnly
                             className="bg-muted cursor-not-allowed"
                             placeholder="Auto-calculated"
@@ -2423,8 +2423,8 @@ export default function Employees() {
                           <Label htmlFor="housingAllowance">Housing Allowance (20% of Gross)</Label>
                           <Input
                             id="housingAllowance"
-                            type="number"
-                            value={formatNairaAmount(newEmployee.housingAllowance)}
+                            type="text"
+                            value={formatNaira(newEmployee.housingAllowance)}
                             readOnly
                             className="bg-muted cursor-not-allowed"
                             placeholder="Auto-calculated"
@@ -2438,8 +2438,8 @@ export default function Employees() {
                           <Label htmlFor="transportAllowance">Transport Allowance (9% of Gross)</Label>
                           <Input
                             id="transportAllowance"
-                            type="number"
-                            value={formatNairaAmount(newEmployee.transportAllowance)}
+                            type="text"
+                            value={formatNaira(newEmployee.transportAllowance)}
                             readOnly
                             className="bg-muted cursor-not-allowed"
                             placeholder="Auto-calculated"
@@ -2453,8 +2453,8 @@ export default function Employees() {
                           <Label htmlFor="otherAllowance">Other Allowance (31% of Gross)</Label>
                           <Input
                             id="otherAllowance"
-                            type="number"
-                            value={formatNairaAmount(newEmployee.otherAllowance)}
+                            type="text"
+                            value={formatNaira(newEmployee.otherAllowance)}
                             readOnly
                             className="bg-muted cursor-not-allowed"
                             placeholder="Auto-calculated"
@@ -4097,8 +4097,8 @@ export default function Employees() {
                         <Label htmlFor="editBasicSalary">Basic Salary (40% of Gross)</Label>
                         <Input
                           id="editBasicSalary"
-                          type="number"
-                          value={formatNairaAmount(editEmployee.basic_salary)}
+                          type="text"
+                          value={formatNaira(editEmployee.basic_salary)}
                           readOnly
                           className="bg-muted cursor-not-allowed"
                           placeholder="Auto-calculated"
@@ -4109,8 +4109,8 @@ export default function Employees() {
                         <Label htmlFor="editHousingAllowance">Housing Allowance (20% of Gross)</Label>
                         <Input
                           id="editHousingAllowance"
-                          type="number"
-                          value={formatNairaAmount(editEmployee.housing_allowance)}
+                          type="text"
+                          value={formatNaira(editEmployee.housing_allowance)}
                           readOnly
                           className="bg-muted cursor-not-allowed"
                           placeholder="Auto-calculated"
@@ -4121,8 +4121,8 @@ export default function Employees() {
                         <Label htmlFor="editTransportAllowance">Transport Allowance (9% of Gross)</Label>
                         <Input
                           id="editTransportAllowance"
-                          type="number"
-                          value={formatNairaAmount(editEmployee.transport_allowance)}
+                          type="text"
+                          value={formatNaira(editEmployee.transport_allowance)}
                           readOnly
                           className="bg-muted cursor-not-allowed"
                           placeholder="Auto-calculated"
@@ -4133,8 +4133,8 @@ export default function Employees() {
                         <Label htmlFor="editOtherAllowance">Other Allowance (31% of Gross)</Label>
                         <Input
                           id="editOtherAllowance"
-                          type="number"
-                          value={formatNairaAmount(editEmployee.other_allowance)}
+                          type="text"
+                          value={formatNaira(editEmployee.other_allowance)}
                           readOnly
                           className="bg-muted cursor-not-allowed"
                           placeholder="Auto-calculated"

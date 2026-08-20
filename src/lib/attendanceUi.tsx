@@ -156,6 +156,20 @@ export function todayWAT(): string {
 }
 
 /** Weekday name (Monday…Sunday) in WAT. */
+export function parseAttendanceInstant(value?: string | null, dateHint?: string | null): number {
+  if (!value) return NaN;
+  const raw = String(value).trim();
+  // Time-only value from the backend (e.g. "14:36:00") — anchor to the WAT day.
+  const timeOnly = raw.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+  if (timeOnly) {
+    const day = dateOnly(dateHint) || todayWAT();
+    const hh = timeOnly[1].padStart(2, "0");
+    return new Date(`${day}T${hh}:${timeOnly[2]}:${timeOnly[3] ?? "00"}+01:00`).getTime();
+  }
+  const d = new Date(raw.includes("T") ? raw : raw.replace(" ", "T"));
+  return d.getTime();
+}
+
 export function todayDayNameWAT(): string {
   const names = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
   const now = new Date();

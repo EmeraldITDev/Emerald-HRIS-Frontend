@@ -30,10 +30,6 @@ export const ROLE_OPTIONS = [
   { label: 'General Employee', value: 'general_employee' },
 ];
 
-export const ROLE_PREFIX: Record<string, string> = {
-  executive: 'EX',
-};
-
 /** Full set of system roles accepted by the backend for PUT /employees/{id}. */
 export const SYSTEM_ROLE_OPTIONS = [
   { label: 'General Employee', value: 'general_employee' },
@@ -50,7 +46,7 @@ export const SYSTEM_ROLE_OPTIONS = [
   { label: 'Contract Staff', value: 'contract_staff' },
 ];
 
-const _ROLE_PREFIX_FULL: Record<string, string> = {
+export const ROLE_PREFIX: Record<string, string> = {
   executive: 'EX',
   hr_manager: 'HR',
   corporate_hr: 'CH',

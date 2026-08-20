@@ -62,7 +62,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import RoleBasedComponent from "@/components/RoleBasedComponent";
 import { ROLES } from "@/constants/roles";
 import { PERMISSIONS } from "@/constants/roles";
-import { ROLE_OPTIONS, ROLE_PREFIX } from "@/constants/roles";
+import { ROLE_OPTIONS, ROLE_PREFIX, SYSTEM_ROLE_OPTIONS } from "@/constants/roles";
 import { EmployeeCredentialsModal } from "@/components/EmployeeCredentialsModal";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -104,6 +104,26 @@ export default function Employees() {
   const [newEmployeeName, setNewEmployeeName] = useState<string>("");
   const [resetPasswordEmployee, setResetPasswordEmployee] = useState<any>(null);
   const [editSystemRole, setEditSystemRole] = useState<string>(""); // Add this line
+
+  // HR Manager / Corporate HR / Executive may assign system roles, but nobody
+  // may change their own role.
+  const canAssignSystemRole = (employee: any) => {
+    const allowed = ["hr_manager", "corporate_hr", "executive"];
+    if (!user?.role || !allowed.includes(user.role)) return false;
+    if (employee?.id && user?.employee_id && Number(employee.id) === Number(user.employee_id)) {
+      return false;
+    }
+    return true;
+  };
+
+  // Password reset is restricted the same way (and never for your own account).
+  const canResetPasswordFor = (employee: any) => {
+    const allowed = ["hr_manager", "corporate_hr", "executive"];
+    if (!user?.role || !allowed.includes(user.role)) return false;
+    if (!employee?.user_id) return false;
+    if (String(employee.user_id) === String(user.id)) return false;
+    return true;
+  };
   const [showValidationPreview, setShowValidationPreview] = useState(false);
   const [validationResult, setValidationResult] = useState<CSVValidationResult | null>(null);
   const [importFileName, setImportFileName] = useState("");
@@ -1207,7 +1227,9 @@ export default function Employees() {
 
     // Set the edit system role based on existing user role so the dropdown
     // reflects the employee's current role instead of appearing empty.
-    setEditSystemRole((employee as any).user_role || "");
+    setEditSystemRole(
+      (employee as any).user_role || (employee as any).user_roles?.[0] || "",
+    );
 
     setShowEditEmployee(true);
 
@@ -1376,7 +1398,7 @@ export default function Employees() {
         // Only executives and Corporate HR may assign system roles (FE guard; BE
         // currently has no role middleware on PUT /employees-full/{id}, so this
         // prevents accidental role changes from HR Manager edits).
-        ...((user?.role === "executive" || user?.role === "corporate_hr")
+        ...(canAssignSystemRole(editEmployee)
           ? { system_role: editSystemRole || null }
           : {}),
       };

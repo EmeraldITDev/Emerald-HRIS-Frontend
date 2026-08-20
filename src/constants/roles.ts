@@ -30,6 +30,22 @@ export const ROLE_OPTIONS = [
   { label: 'General Employee', value: 'general_employee' },
 ];
 
+/** Full set of system roles accepted by the backend for PUT /employees/{id}. */
+export const SYSTEM_ROLE_OPTIONS = [
+  { label: 'General Employee', value: 'general_employee' },
+  { label: 'Line Manager', value: 'line_manager' },
+  { label: 'HR Manager', value: 'hr_manager' },
+  { label: 'Corporate HR', value: 'corporate_hr' },
+  { label: 'Executive', value: 'executive' },
+  { label: 'Finance', value: 'finance' },
+  { label: 'IT Admin', value: 'it_admin' },
+  { label: 'IT Power User', value: 'it_power_user' },
+  { label: 'Consulting HR', value: 'consulting_hr' },
+  { label: 'Contract HR', value: 'contract_hr' },
+  { label: 'Corporate User', value: 'corporate_user' },
+  { label: 'Contract Staff', value: 'contract_staff' },
+];
+
 export const ROLE_PREFIX: Record<string, string> = {
   executive: 'EX',
   hr_manager: 'HR',

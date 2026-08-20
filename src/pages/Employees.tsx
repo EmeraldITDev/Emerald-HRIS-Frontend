@@ -104,6 +104,26 @@ export default function Employees() {
   const [newEmployeeName, setNewEmployeeName] = useState<string>("");
   const [resetPasswordEmployee, setResetPasswordEmployee] = useState<any>(null);
   const [editSystemRole, setEditSystemRole] = useState<string>(""); // Add this line
+
+  // HR Manager / Corporate HR / Executive may assign system roles, but nobody
+  // may change their own role.
+  const canAssignSystemRole = (employee: any) => {
+    const allowed = ["hr_manager", "corporate_hr", "executive"];
+    if (!user?.role || !allowed.includes(user.role)) return false;
+    if (employee?.id && user?.employee_id && Number(employee.id) === Number(user.employee_id)) {
+      return false;
+    }
+    return true;
+  };
+
+  // Password reset is restricted the same way (and never for your own account).
+  const canResetPasswordFor = (employee: any) => {
+    const allowed = ["hr_manager", "corporate_hr", "executive"];
+    if (!user?.role || !allowed.includes(user.role)) return false;
+    if (!employee?.user_id) return false;
+    if (String(employee.user_id) === String(user.id)) return false;
+    return true;
+  };
   const [showValidationPreview, setShowValidationPreview] = useState(false);
   const [validationResult, setValidationResult] = useState<CSVValidationResult | null>(null);
   const [importFileName, setImportFileName] = useState("");

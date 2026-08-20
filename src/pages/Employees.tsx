@@ -3388,7 +3388,7 @@ export default function Employees() {
                       <>
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                           <div className="space-y-2">
-                            <Label className="text-sm font-medium text-muted-foreground">Gross Salary (Annual)</Label>
+                            <Label className="text-sm font-medium text-muted-foreground">Annual Gross Salary</Label>
                             <p className="text-base font-semibold text-primary">
                               {money(fin.gross_salary ?? (pkg.annualGross || null))}
                             </p>

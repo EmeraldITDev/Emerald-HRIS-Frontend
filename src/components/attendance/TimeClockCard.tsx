@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import {
   AttendanceStatusBadge,
   formatTimeWithZone,
+  parseAttendanceInstant,
   todayWAT,
   todayDayNameWAT,
 } from "@/lib/attendanceUi";
@@ -116,14 +117,14 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
 
   const elapsed = useMemo(() => {
     if (!clockedIn || !todayStatus?.clock_in) return null;
-    const start = new Date(String(todayStatus.clock_in).replace(" ", "T")).getTime();
+    const start = parseAttendanceInstant(todayStatus.clock_in, todayStatus?.date);
     if (Number.isNaN(start)) return null;
     const diff = Math.max(0, Math.floor((now - start) / 1000));
     const h = String(Math.floor(diff / 3600)).padStart(2, "0");
     const m = String(Math.floor((diff % 3600) / 60)).padStart(2, "0");
     const s = String(diff % 60).padStart(2, "0");
     return `${h}:${m}:${s}`;
-  }, [clockedIn, todayStatus?.clock_in, now]);
+  }, [clockedIn, todayStatus?.clock_in, todayStatus?.date, now]);
 
   const handleClockIn = useCallback(async () => {
     if (!employeeId) {

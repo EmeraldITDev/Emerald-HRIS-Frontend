@@ -62,7 +62,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import RoleBasedComponent from "@/components/RoleBasedComponent";
 import { ROLES } from "@/constants/roles";
 import { PERMISSIONS } from "@/constants/roles";
-import { ROLE_OPTIONS, ROLE_PREFIX } from "@/constants/roles";
+import { ROLE_OPTIONS, ROLE_PREFIX, SYSTEM_ROLE_OPTIONS } from "@/constants/roles";
 import { EmployeeCredentialsModal } from "@/components/EmployeeCredentialsModal";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -1207,7 +1207,9 @@ export default function Employees() {
 
     // Set the edit system role based on existing user role so the dropdown
     // reflects the employee's current role instead of appearing empty.
-    setEditSystemRole((employee as any).user_role || "");
+    setEditSystemRole(
+      (employee as any).user_role || (employee as any).user_roles?.[0] || "",
+    );
 
     setShowEditEmployee(true);
 
@@ -1376,7 +1378,7 @@ export default function Employees() {
         // Only executives and Corporate HR may assign system roles (FE guard; BE
         // currently has no role middleware on PUT /employees-full/{id}, so this
         // prevents accidental role changes from HR Manager edits).
-        ...((user?.role === "executive" || user?.role === "corporate_hr")
+        ...(canAssignSystemRole(editEmployee)
           ? { system_role: editSystemRole || null }
           : {}),
       };

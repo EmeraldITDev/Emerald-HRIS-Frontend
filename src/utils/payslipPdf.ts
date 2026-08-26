@@ -1,7 +1,12 @@
 import jsPDF from "jspdf";
-import { formatNaira } from "@/lib/currency";
+import { formatNaira, formatNairaAmount } from "@/lib/currency";
 
 const ngn = (v: any) => (v == null || v === "" ? "—" : formatNaira(v));
+const amt = (v: any) => (v == null || v === "" ? "—" : formatNairaAmount(v));
+
+const COMPANY_NAME = "Emerald Industrial Co.";
+const COMPANY_ADDRESS = "Plot 1, Emerald Industrial Estate, Lagos, Nigeria";
+const COMPANY_CONTACT = "www.emeraldindustrial.com | hr@emeraldindustrial.com";
 
 export interface PayslipLike {
   employeeName?: string;
@@ -56,59 +61,186 @@ export function toPayslipLike(src: any): PayslipLike {
   };
 }
 
+type Row = [label: string, value: string, remarks: string, bold?: boolean];
+
 /** Generate a single-employee payslip PDF entirely on the client. */
 export function generatePayslipPdf(p: PayslipLike, filename: string) {
-  const pdf = new jsPDF();
+  const pdf = new jsPDF({ unit: "mm", format: "a4" });
   const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+  const M = 18; // margin
+  const contentW = pageWidth - M * 2;
 
-  pdf.setFontSize(16);
+  // ---------- Company header ----------
+  let y = 20;
   pdf.setFont("helvetica", "bold");
-  pdf.text("PAYSLIP", pageWidth / 2, 20, { align: "center" });
-
-  pdf.setFontSize(10);
+  pdf.setFontSize(15);
+  pdf.text(COMPANY_NAME, pageWidth / 2, y, { align: "center" });
+  y += 5.5;
   pdf.setFont("helvetica", "normal");
-  let y = 35;
-  const line = (label: string, value: string) => {
-    pdf.text(label, 20, y);
-    pdf.text(value, pageWidth - 20, y, { align: "right" });
-    y += 7;
+  pdf.setFontSize(8.5);
+  pdf.setTextColor(90);
+  pdf.text(COMPANY_ADDRESS, pageWidth / 2, y, { align: "center" });
+  y += 4.5;
+  pdf.text(COMPANY_CONTACT, pageWidth / 2, y, { align: "center" });
+  pdf.setTextColor(0);
+  y += 4;
+  pdf.setDrawColor(180);
+  pdf.line(M, y, pageWidth - M, y);
+
+  // ---------- Title ----------
+  y += 9;
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(13);
+  pdf.text("PAYSLIP", pageWidth / 2, y, { align: "center" });
+  y += 4;
+  pdf.setFont("helvetica", "normal");
+  pdf.setFontSize(9);
+  pdf.setTextColor(90);
+  pdf.text(`For the period: ${p.payPeriod || "—"}`, pageWidth / 2, y, { align: "center" });
+  pdf.setTextColor(0);
+
+  // ---------- Meta block ----------
+  y += 8;
+  const metaLeft: Array<[string, string]> = [
+    ["Employee Name", p.employeeName || "—"],
+    ["Employee ID", String(p.employeeCode || "—")],
+    ["Department", p.department || "—"],
+  ];
+  const metaRight: Array<[string, string]> = [
+    ["Job Title", p.jobTitle || "—"],
+    ["Pay Date", p.payDate ? String(p.payDate) : "—"],
+    ["Status", p.status ? String(p.status) : "—"],
+  ];
+  const metaRowH = 6.5;
+  const metaH = metaRowH * metaLeft.length + 4;
+  pdf.setFillColor(245, 247, 246);
+  pdf.rect(M, y, contentW, metaH, "F");
+  pdf.setDrawColor(200);
+  pdf.rect(M, y, contentW, metaH);
+
+  const colW = contentW / 2;
+  let my = y + 6;
+  pdf.setFontSize(9);
+  const metaLine = (pair: [string, string], x: number, atY: number) => {
+    pdf.setFont("helvetica", "normal");
+    pdf.setTextColor(110);
+    pdf.text(`${pair[0]}:`, x + 4, atY);
+    pdf.setFont("helvetica", "bold");
+    pdf.setTextColor(0);
+    pdf.text(pair[1], x + 34, atY);
+  };
+  metaLeft.forEach((pair, i) => metaLine(pair, M, my + i * metaRowH));
+  metaRight.forEach((pair, i) => metaLine(pair, M + colW, my + i * metaRowH));
+  y += metaH + 10;
+
+  // ---------- Table renderer ----------
+  const rowH = 7.5;
+  const cAmount = M + contentW * 0.5;
+  const cRemarks = M + contentW * 0.72;
+
+  const renderTable = (title: string, rows: Row[]) => {
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(10);
+    pdf.text(title, M, y);
+    y += 3;
+
+    // header row
+    pdf.setFillColor(16, 94, 66);
+    pdf.rect(M, y, contentW, rowH, "F");
+    pdf.setTextColor(255);
+    pdf.setFontSize(8.5);
+    pdf.text("Pay Component", M + 3, y + 5);
+    pdf.text("Amount (NGN)", cAmount + 3, y + 5);
+    pdf.text("Remarks", cRemarks + 3, y + 5);
+    pdf.setTextColor(0);
+    y += rowH;
+
+    rows.forEach((row, i) => {
+      const [label, value, remarks, bold] = row;
+      if (i % 2 === 1) {
+        pdf.setFillColor(248, 250, 249);
+        pdf.rect(M, y, contentW, rowH, "F");
+      }
+      pdf.setDrawColor(215);
+      pdf.line(M, y + rowH, pageWidth - M, y + rowH);
+      pdf.setFont("helvetica", bold ? "bold" : "normal");
+      pdf.setFontSize(9);
+      pdf.text(label, M + 3, y + 5);
+      pdf.text(value, cRemarks - 3, y + 5, { align: "right" });
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(8);
+      pdf.setTextColor(110);
+      pdf.text(remarks, cRemarks + 3, y + 5);
+      pdf.setTextColor(0);
+      y += rowH;
+    });
+
+    // outer border
+    pdf.setDrawColor(200);
+    pdf.rect(M, y - rowH * (rows.length + 1), contentW, rowH * (rows.length + 1));
+    y += 9;
   };
 
-  line("Employee:", p.employeeName || "—");
-  if (p.employeeCode) line("Employee ID:", String(p.employeeCode));
-  if (p.department) line("Department:", String(p.department));
-  if (p.jobTitle) line("Job Title:", String(p.jobTitle));
-  line("Pay Period:", p.payPeriod || "—");
-  if (p.payDate) line("Pay Date:", String(p.payDate));
-  if (p.status) line("Status:", String(p.status));
+  const earnings: Row[] = [
+    ["Basic Salary", amt(p.basicSalary), "40% of monthly gross"],
+    ["Housing Allowance", amt(p.housing), "20% of monthly gross"],
+    ["Transport Allowance", amt(p.transport), "9% of monthly gross"],
+    ["Other Allowances", amt(p.other), "31% of monthly gross"],
+  ];
+  if (p.bonus) earnings.push(["Bonus / Additional Earnings", amt(p.bonus), "Approved additions"]);
+  earnings.push(["Gross Monthly Pay", amt(p.gross), "Total earnings", true]);
+  renderTable("Earnings", earnings);
 
-  y += 4;
+  const deductions: Row[] = [
+    ["Income Tax (PAYE)", amt(p.tax), "Statutory — FIRS/LIRS"],
+    ["Pension Contribution", amt(p.pension), "Employee contribution"],
+    ["NHF", amt(p.nhf), "National Housing Fund"],
+    ["Total Deductions", amt(p.totalDeductions), "Sum of deductions", true],
+  ];
+  renderTable("Deductions", deductions);
+
+  // ---------- Net pay ----------
+  pdf.setFillColor(16, 94, 66);
+  pdf.rect(M, y, contentW, 12, "F");
+  pdf.setTextColor(255);
   pdf.setFont("helvetica", "bold");
-  pdf.text("Earnings", 20, y); y += 6;
-  pdf.line(20, y - 4, pageWidth - 20, y - 4);
+  pdf.setFontSize(11);
+  pdf.text("NET MONTHLY PAY", M + 4, y + 8);
+  pdf.text(ngn(p.net), pageWidth - M - 4, y + 8, { align: "right" });
+  pdf.setTextColor(0);
+  y += 22;
+
+  // ---------- Signature block ----------
+  const sigW = 60;
+  pdf.setDrawColor(120);
+  pdf.line(M, y, M + sigW, y);
+  pdf.line(pageWidth - M - sigW, y, pageWidth - M, y);
   pdf.setFont("helvetica", "normal");
-  line("Basic Salary", ngn(p.basicSalary));
-  line("Housing Allowance", ngn(p.housing));
-  line("Transport Allowance", ngn(p.transport));
-  line("Other Allowance", ngn(p.other));
-  if (p.bonus) line("Bonus", ngn(p.bonus));
-  pdf.setFont("helvetica", "bold");
-  line("Gross Pay", ngn(p.gross));
+  pdf.setFontSize(8.5);
+  pdf.setTextColor(90);
+  pdf.text("Employee Signature / Date", M, y + 5);
+  pdf.text("Authorised Signatory (HR)", pageWidth - M - sigW, y + 5);
+  pdf.setTextColor(0);
 
-  y += 4;
-  pdf.text("Deductions", 20, y); y += 6;
-  pdf.line(20, y - 4, pageWidth - 20, y - 4);
-  pdf.setFont("helvetica", "normal");
-  line("Income Tax (PAYE)", ngn(p.tax));
-  line("Pension", ngn(p.pension));
-  line("NHF", ngn(p.nhf));
-  pdf.setFont("helvetica", "bold");
-  line("Total Deductions", ngn(p.totalDeductions));
-
-  y += 4;
-  pdf.setFontSize(12);
-  pdf.text("Net Pay", 20, y);
-  pdf.text(ngn(p.net), pageWidth - 20, y, { align: "right" });
+  // ---------- Footer ----------
+  pdf.setDrawColor(200);
+  pdf.line(M, pageHeight - 22, pageWidth - M, pageHeight - 22);
+  pdf.setFontSize(7.5);
+  pdf.setTextColor(120);
+  pdf.text(
+    `${COMPANY_NAME} — ${COMPANY_ADDRESS}`,
+    pageWidth / 2,
+    pageHeight - 17,
+    { align: "center" },
+  );
+  pdf.text(
+    "This payslip is computer generated and confidential to the named employee.",
+    pageWidth / 2,
+    pageHeight - 12,
+    { align: "center" },
+  );
+  pdf.setTextColor(0);
 
   pdf.save(filename);
 }

@@ -1491,16 +1491,22 @@ export default function Employees() {
       )
     ) {
       try {
-        const response = await apiService.resetUserPassword(employee.user_id, employee.id);
+        const response: any = await apiService.resetUserPassword(employee.user_id, employee.id);
+
+        const creds = response?.user_credentials || response?.data?.user_credentials;
+        const tempPassword =
+          creds?.temporary_password || creds?.password || response?.temporary_password;
 
         // Show credentials modal with new temp password
-        setNewEmployeeCredentials(response.user_credentials);
+        setNewEmployeeCredentials(creds);
         setNewEmployeeName(`${employee.first_name} ${employee.last_name}`);
         setShowCredentialsModal(true);
 
         toast({
           title: "Password Reset",
-          description: "New temporary password generated. Please share with employee.",
+          description: tempPassword
+            ? `Temporary password: ${tempPassword} — share it with the employee.`
+            : "New temporary password generated. Please share with employee.",
         });
       } catch (error) {
         console.error("Error resetting password:", error);
@@ -3183,8 +3189,22 @@ export default function Employees() {
         <Dialog open={showViewDetails} onOpenChange={setShowViewDetails}>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
             <DialogHeader>
-              <DialogTitle>Employee Details</DialogTitle>
-              <DialogDescription className="sr-only">Employee dialog</DialogDescription>
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <DialogTitle>Employee Details</DialogTitle>
+                  <DialogDescription className="sr-only">Employee dialog</DialogDescription>
+                </div>
+                {canResetPasswordFor(selectedEmployee) && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleResetPassword(selectedEmployee as any)}
+                  >
+                    <KeyRound className="mr-2 h-4 w-4" />
+                    Reset Password
+                  </Button>
+                )}
+              </div>
             </DialogHeader>
             {selectedEmployee && (
               <Tabs defaultValue="personal" className="w-full">
@@ -3531,36 +3551,6 @@ export default function Employees() {
               <DialogDescription className="sr-only">Employee dialog</DialogDescription>
             </DialogHeader>
 
-            {/* Add System Role Dropdown at the top */}
-            {/* System Role assignment restricted to Executives and Corporate HR */}
-            {(user?.role === "executive" || user?.role === "corporate_hr") && (
-              <div className="space-y-2">
-                <Label>System Role</Label>
-                <Select
-                  value={editSystemRole}
-                  onValueChange={(val) => {
-                    setEditSystemRole(val);
-                    // Update employee code when system role changes
-                    const newEmployeeCode = getNextEmployeeCode(val);
-                    setEditEmployee((prev) => ({
-                      ...prev,
-                      employeeId: newEmployeeCode,
-                    }));
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select system role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ROLE_OPTIONS.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
 
             {editEmployee && (
               <Tabs value={editActiveTab} onValueChange={setEditActiveTab} className="w-full">
@@ -3857,6 +3847,37 @@ export default function Employees() {
                 </TabsContent>
 
                 <TabsContent value="job" className="space-y-4">
+                  {canAssignSystemRole(editEmployee) && (
+                    <div className="space-y-2">
+                      <Label>System Role</Label>
+                      <Select
+                        value={editSystemRole}
+                        onValueChange={(val) => {
+                          setEditSystemRole(val);
+                          const newEmployeeCode = getNextEmployeeCode(val);
+                          setEditEmployee((prev: any) => ({
+                            ...prev,
+                            employeeId: newEmployeeCode,
+                          }));
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select system role" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {SYSTEM_ROLE_OPTIONS.map((opt) => (
+                            <SelectItem key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        Controls what this employee can access in the system.
+                      </p>
+                    </div>
+                  )}
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="editJobTitle">Job Title *</Label>

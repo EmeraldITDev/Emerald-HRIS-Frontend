@@ -3183,8 +3183,22 @@ export default function Employees() {
         <Dialog open={showViewDetails} onOpenChange={setShowViewDetails}>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
             <DialogHeader>
-              <DialogTitle>Employee Details</DialogTitle>
-              <DialogDescription className="sr-only">Employee dialog</DialogDescription>
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <DialogTitle>Employee Details</DialogTitle>
+                  <DialogDescription className="sr-only">Employee dialog</DialogDescription>
+                </div>
+                {canResetPasswordFor(selectedEmployee) && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleResetPassword(selectedEmployee as any)}
+                  >
+                    <KeyRound className="mr-2 h-4 w-4" />
+                    Reset Password
+                  </Button>
+                )}
+              </div>
             </DialogHeader>
             {selectedEmployee && (
               <Tabs defaultValue="personal" className="w-full">

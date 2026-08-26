@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -42,20 +41,47 @@ export function AttendanceProfilePanel({ employeeId }: Props) {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [scheduleModes, setScheduleModes] = useState<Record<string, any>>({});
+
+  const loadSchedule = useCallback(async (location?: string) => {
+    if (!location) {
+      setScheduleModes({});
+      return;
+    }
+    try {
+      const entries = await Promise.all(
+        WEEK_DAYS.map(async (day) => {
+          try {
+            const res: any = await apiService.getAttendanceScheduleConfig(location, day);
+            return [day, res?.data ?? res ?? null] as const;
+          } catch {
+            return [day, null] as const;
+          }
+        }),
+      );
+      setScheduleModes(Object.fromEntries(entries));
+    } catch (e) {
+      console.error("Failed to load attendance schedule config:", e);
+      setScheduleModes({});
+    }
+  }, []);
 
   const load = useCallback(async () => {
     if (!employeeId) return;
     setLoading(true);
     try {
       const res: any = await apiService.getEmployeeAttendanceProfile(employeeId);
-      setProfile(res?.data ?? res ?? null);
+      const data = res?.data ?? res ?? null;
+      setProfile(data);
+      await loadSchedule(data?.assigned_location);
     } catch (e) {
       console.error("Failed to load attendance profile:", e);
       setProfile(null);
+      setScheduleModes({});
     } finally {
       setLoading(false);
     }
-  }, [employeeId]);
+  }, [employeeId, loadSchedule]);
 
   useEffect(() => {
     load();
@@ -65,10 +91,7 @@ export function AttendanceProfilePanel({ employeeId }: Props) {
     setDraft({
       assigned_location: profile?.assigned_location || "",
       work_arrangement: profile?.work_arrangement || "",
-      clock_in_time: profile?.clock_in_time || "",
-      clock_out_time: profile?.clock_out_time || "",
-      effective_date: profile?.effective_date || "",
-      expected_modes: { ...(profile?.expected_modes || {}) },
+      supervisor_id: profile?.supervisor_id ?? null,
     });
     setEditing(true);
   };
@@ -77,7 +100,11 @@ export function AttendanceProfilePanel({ employeeId }: Props) {
     if (!employeeId || !draft) return;
     setSaving(true);
     try {
-      await apiService.updateEmployeeAttendanceProfile(employeeId, draft);
+      await apiService.updateEmployeeAttendanceProfile(employeeId, {
+        work_arrangement: draft.work_arrangement || null,
+        assigned_location: draft.assigned_location || null,
+        supervisor_id: draft.supervisor_id ?? null,
+      });
       toast({ title: "Attendance profile updated" });
       setEditing(false);
       await load();
@@ -92,11 +119,23 @@ export function AttendanceProfilePanel({ employeeId }: Props) {
     }
   };
 
-  const workdays: string[] =
-    profile?.expected_workdays ||
-    WEEK_DAYS.filter((d) => (profile?.expected_modes || {})[d]);
+  const modeFor = (day: string) => {
+    const cfg = scheduleModes[day];
+    return cfg?.expected_mode || cfg?.mode || cfg?.work_mode || "";
+  };
 
-  const view = editing ? draft : profile;
+  const timesFor = (day: string) => {
+    const cfg = scheduleModes[day];
+    if (!cfg) return "";
+    const inT = cfg.clock_in_time || cfg.expected_clock_in;
+    const outT = cfg.clock_out_time || cfg.expected_clock_out;
+    return inT && outT ? `${inT} – ${outT}` : "";
+  };
+
+  const workdays: string[] =
+    profile?.expected_workdays || WEEK_DAYS.filter((d) => modeFor(d));
+
+  const view = editing ? { ...profile, ...draft } : profile;
 
   return (
     <Card className="border-border/50 shadow-sm">
@@ -138,7 +177,10 @@ export function AttendanceProfilePanel({ employeeId }: Props) {
                 {editing ? (
                   <Select
                     value={draft?.assigned_location || ""}
-                    onValueChange={(v) => setDraft({ ...draft, assigned_location: v })}
+                    onValueChange={(v) => {
+                      setDraft({ ...draft, assigned_location: v });
+                      loadSchedule(v);
+                    }}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select location" />
@@ -178,42 +220,6 @@ export function AttendanceProfilePanel({ employeeId }: Props) {
                 )}
               </div>
               <div className="space-y-1">
-                <Label>Clock-In Time</Label>
-                {editing ? (
-                  <Input
-                    type="time"
-                    value={draft?.clock_in_time || ""}
-                    onChange={(e) => setDraft({ ...draft, clock_in_time: e.target.value })}
-                  />
-                ) : (
-                  <p className="text-sm">{view?.clock_in_time || "—"}</p>
-                )}
-              </div>
-              <div className="space-y-1">
-                <Label>Clock-Out Time</Label>
-                {editing ? (
-                  <Input
-                    type="time"
-                    value={draft?.clock_out_time || ""}
-                    onChange={(e) => setDraft({ ...draft, clock_out_time: e.target.value })}
-                  />
-                ) : (
-                  <p className="text-sm">{view?.clock_out_time || "—"}</p>
-                )}
-              </div>
-              <div className="space-y-1">
-                <Label>Effective Date</Label>
-                {editing ? (
-                  <Input
-                    type="date"
-                    value={draft?.effective_date || ""}
-                    onChange={(e) => setDraft({ ...draft, effective_date: e.target.value })}
-                  />
-                ) : (
-                  <p className="text-sm">{view?.effective_date || "—"}</p>
-                )}
-              </div>
-              <div className="space-y-1">
                 <Label>Expected Workdays</Label>
                 <div className="flex flex-wrap gap-1">
                   {workdays.length ? (
@@ -231,45 +237,25 @@ export function AttendanceProfilePanel({ employeeId }: Props) {
 
             <div>
               <Label className="mb-2 block">Expected Work Mode per Day</Label>
+              <p className="mb-2 text-xs text-muted-foreground">
+                Set centrally by the location schedule configuration — read-only here.
+              </p>
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Day</TableHead>
                     <TableHead>Mode</TableHead>
+                    <TableHead>Expected Hours</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {WEEK_DAYS.map((day) => {
-                    const value = (view?.expected_modes || {})[day] || "";
-                    return (
-                      <TableRow key={day}>
-                        <TableCell className="font-medium">{day}</TableCell>
-                        <TableCell>
-                          {editing ? (
-                            <Select
-                              value={value}
-                              onValueChange={(v) =>
-                                setDraft({
-                                  ...draft,
-                                  expected_modes: { ...(draft?.expected_modes || {}), [day]: v },
-                                })
-                              }
-                            >
-                              <SelectTrigger className="w-40">
-                                <SelectValue placeholder="Select mode" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="Physical">Physical</SelectItem>
-                                <SelectItem value="WFH">WFH</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          ) : (
-                            <span className="text-sm">{value || "—"}</span>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
+                  {WEEK_DAYS.map((day) => (
+                    <TableRow key={day}>
+                      <TableCell className="font-medium">{day}</TableCell>
+                      <TableCell className="text-sm">{modeFor(day) || "—"}</TableCell>
+                      <TableCell className="text-sm">{timesFor(day) || "—"}</TableCell>
+                    </TableRow>
+                  ))}
                 </TableBody>
               </Table>
             </div>

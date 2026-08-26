@@ -527,7 +527,9 @@ export default function Employees() {
   // Auto-calculate salary components for Full-time employees
   useEffect(() => {
     if (newEmployee.employmentType === "Full-time" && newEmployee.grossSalary) {
-      const gross = parseFloat(newEmployee.grossSalary) || 0;
+      // Percentages apply to the MONTHLY gross (annual ÷ 12).
+      const annualGross = parseFloat(newEmployee.grossSalary) || 0;
+      const gross = annualGross / 12;
       const basicSalary = (gross * 0.4).toString();
       const housingAllowance = (gross * 0.2).toString();
       const transportAllowance = (gross * 0.09).toString();
@@ -548,8 +550,10 @@ export default function Employees() {
   useEffect(() => {
     if (!editEmployee) return;
     if (editEmployee.employment_type !== "Full-time") return;
-    const gross = parseFloat(String(editEmployee.gross_salary ?? "")) || 0;
-    if (gross <= 0) return;
+    const annualGross = parseFloat(String(editEmployee.gross_salary ?? "")) || 0;
+    if (annualGross <= 0) return;
+    // Percentages apply to the MONTHLY gross (annual ÷ 12).
+    const gross = annualGross / 12;
     const basic_salary = (gross * 0.4).toString();
     const housing_allowance = (gross * 0.2).toString();
     const transport_allowance = (gross * 0.09).toString();
@@ -2427,7 +2431,7 @@ export default function Employees() {
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="basicSalary">Basic Salary (40% of Gross)</Label>
+                          <Label htmlFor="basicSalary">Basic Salary (40% of Monthly Gross)</Label>
                           <Input
                             id="basicSalary"
                             type="text"
@@ -2437,12 +2441,12 @@ export default function Employees() {
                             placeholder="Auto-calculated"
                           />
                           <p className="text-xs text-muted-foreground">
-                            Automatically calculated as 40% of gross salary.
+                            Automatically calculated as 40% of monthly gross (annual ÷ 12).
                           </p>
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="housingAllowance">Housing Allowance (20% of Gross)</Label>
+                          <Label htmlFor="housingAllowance">Housing Allowance (20% of Monthly Gross)</Label>
                           <Input
                             id="housingAllowance"
                             type="text"
@@ -2452,12 +2456,12 @@ export default function Employees() {
                             placeholder="Auto-calculated"
                           />
                           <p className="text-xs text-muted-foreground">
-                            Automatically calculated as 20% of gross salary.
+                            Automatically calculated as 20% of monthly gross (annual ÷ 12).
                           </p>
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="transportAllowance">Transport Allowance (9% of Gross)</Label>
+                          <Label htmlFor="transportAllowance">Transport Allowance (9% of Monthly Gross)</Label>
                           <Input
                             id="transportAllowance"
                             type="text"
@@ -2467,12 +2471,12 @@ export default function Employees() {
                             placeholder="Auto-calculated"
                           />
                           <p className="text-xs text-muted-foreground">
-                            Automatically calculated as 9% of gross salary.
+                            Automatically calculated as 9% of monthly gross (annual ÷ 12).
                           </p>
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="otherAllowance">Other Allowance (31% of Gross)</Label>
+                          <Label htmlFor="otherAllowance">Other Allowance (31% of Monthly Gross)</Label>
                           <Input
                             id="otherAllowance"
                             type="text"
@@ -2482,7 +2486,7 @@ export default function Employees() {
                             placeholder="Auto-calculated"
                           />
                           <p className="text-xs text-muted-foreground">
-                            Automatically calculated as 31% of gross salary.
+                            Automatically calculated as 31% of monthly gross (annual ÷ 12).
                           </p>
                         </div>
                       </>
@@ -4116,7 +4120,7 @@ export default function Employees() {
                         <p className="text-xs text-muted-foreground">Enter annual amount in Naira (₦). Monthly = Annual ÷ 12.</p>
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="editBasicSalary">Basic Salary (40% of Gross)</Label>
+                        <Label htmlFor="editBasicSalary">Basic Salary (40% of Monthly Gross)</Label>
                         <Input
                           id="editBasicSalary"
                           type="text"
@@ -4125,10 +4129,10 @@ export default function Employees() {
                           className="bg-muted cursor-not-allowed"
                           placeholder="Auto-calculated"
                         />
-                        <p className="text-xs text-muted-foreground">Automatically calculated as 40% of gross salary.</p>
+                        <p className="text-xs text-muted-foreground">Automatically calculated as 40% of monthly gross (annual ÷ 12).</p>
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="editHousingAllowance">Housing Allowance (20% of Gross)</Label>
+                        <Label htmlFor="editHousingAllowance">Housing Allowance (20% of Monthly Gross)</Label>
                         <Input
                           id="editHousingAllowance"
                           type="text"
@@ -4137,10 +4141,10 @@ export default function Employees() {
                           className="bg-muted cursor-not-allowed"
                           placeholder="Auto-calculated"
                         />
-                        <p className="text-xs text-muted-foreground">Automatically calculated as 20% of gross salary.</p>
+                        <p className="text-xs text-muted-foreground">Automatically calculated as 20% of monthly gross (annual ÷ 12).</p>
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="editTransportAllowance">Transport Allowance (9% of Gross)</Label>
+                        <Label htmlFor="editTransportAllowance">Transport Allowance (9% of Monthly Gross)</Label>
                         <Input
                           id="editTransportAllowance"
                           type="text"
@@ -4149,10 +4153,10 @@ export default function Employees() {
                           className="bg-muted cursor-not-allowed"
                           placeholder="Auto-calculated"
                         />
-                        <p className="text-xs text-muted-foreground">Automatically calculated as 9% of gross salary.</p>
+                        <p className="text-xs text-muted-foreground">Automatically calculated as 9% of monthly gross (annual ÷ 12).</p>
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="editOtherAllowance">Other Allowance (31% of Gross)</Label>
+                        <Label htmlFor="editOtherAllowance">Other Allowance (31% of Monthly Gross)</Label>
                         <Input
                           id="editOtherAllowance"
                           type="text"
@@ -4161,7 +4165,7 @@ export default function Employees() {
                           className="bg-muted cursor-not-allowed"
                           placeholder="Auto-calculated"
                         />
-                        <p className="text-xs text-muted-foreground">Automatically calculated as 31% of gross salary.</p>
+                        <p className="text-xs text-muted-foreground">Automatically calculated as 31% of monthly gross (annual ÷ 12).</p>
                       </div>
                     </>
                   ) : editEmployee.employment_type === "Contract" ? (

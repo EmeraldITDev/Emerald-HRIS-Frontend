@@ -1491,16 +1491,22 @@ export default function Employees() {
       )
     ) {
       try {
-        const response = await apiService.resetUserPassword(employee.user_id, employee.id);
+        const response: any = await apiService.resetUserPassword(employee.user_id, employee.id);
+
+        const creds = response?.user_credentials || response?.data?.user_credentials;
+        const tempPassword =
+          creds?.temporary_password || creds?.password || response?.temporary_password;
 
         // Show credentials modal with new temp password
-        setNewEmployeeCredentials(response.user_credentials);
+        setNewEmployeeCredentials(creds);
         setNewEmployeeName(`${employee.first_name} ${employee.last_name}`);
         setShowCredentialsModal(true);
 
         toast({
           title: "Password Reset",
-          description: "New temporary password generated. Please share with employee.",
+          description: tempPassword
+            ? `Temporary password: ${tempPassword} — share it with the employee.`
+            : "New temporary password generated. Please share with employee.",
         });
       } catch (error) {
         console.error("Error resetting password:", error);

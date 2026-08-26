@@ -3827,6 +3827,37 @@ export default function Employees() {
                 </TabsContent>
 
                 <TabsContent value="job" className="space-y-4">
+                  {canAssignSystemRole(editEmployee) && (
+                    <div className="space-y-2">
+                      <Label>System Role</Label>
+                      <Select
+                        value={editSystemRole}
+                        onValueChange={(val) => {
+                          setEditSystemRole(val);
+                          const newEmployeeCode = getNextEmployeeCode(val);
+                          setEditEmployee((prev: any) => ({
+                            ...prev,
+                            employeeId: newEmployeeCode,
+                          }));
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select system role" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {SYSTEM_ROLE_OPTIONS.map((opt) => (
+                            <SelectItem key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        Controls what this employee can access in the system.
+                      </p>
+                    </div>
+                  )}
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="editJobTitle">Job Title *</Label>

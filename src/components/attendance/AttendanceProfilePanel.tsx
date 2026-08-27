@@ -119,9 +119,17 @@ export function AttendanceProfilePanel({ employeeId }: Props) {
     }
   };
 
-  const modeFor = (day: string) => {
+  const rawModeFor = (day: string) => {
     const cfg = scheduleModes[day];
     return cfg?.expected_mode || cfg?.mode || cfg?.work_mode || "";
+  };
+
+  const effectiveModeFor = (day: string) => {
+    const arrangement = (view?.work_arrangement || profile?.work_arrangement || "").trim();
+    if (arrangement === "Fully Remote") return "WFH";
+    if (arrangement === "Fully Onsite") return "Physical";
+    // Hybrid, null, or empty -> use the schedule data as returned by the API
+    return rawModeFor(day);
   };
 
   const timesFor = (day: string) => {
@@ -133,7 +141,7 @@ export function AttendanceProfilePanel({ employeeId }: Props) {
   };
 
   const workdays: string[] =
-    profile?.expected_workdays || WEEK_DAYS.filter((d) => modeFor(d));
+    profile?.expected_workdays || WEEK_DAYS.filter((d) => rawModeFor(d));
 
   const view = editing ? { ...profile, ...draft } : profile;
 

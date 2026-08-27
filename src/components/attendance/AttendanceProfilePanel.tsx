@@ -260,7 +260,7 @@ export function AttendanceProfilePanel({ employeeId }: Props) {
                   {WEEK_DAYS.map((day) => (
                     <TableRow key={day}>
                       <TableCell className="font-medium">{day}</TableCell>
-                      <TableCell className="text-sm">{modeFor(day) || "—"}</TableCell>
+                      <TableCell className="text-sm">{effectiveModeFor(day) || "—"}</TableCell>
                       <TableCell className="text-sm">{timesFor(day) || "—"}</TableCell>
                     </TableRow>
                   ))}

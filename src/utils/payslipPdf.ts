@@ -1,7 +1,6 @@
 import jsPDF from "jspdf";
-import { formatNaira, formatNairaAmount } from "@/lib/currency";
+import { formatNairaAmount } from "@/lib/currency";
 
-const ngn = (v: any) => (v == null || v === "" ? "—" : formatNaira(v));
 const amt = (v: any) => (v == null || v === "" ? "—" : formatNairaAmount(v));
 
 const COMPANY_NAME = "Emerald Industrial Co.";
@@ -128,7 +127,7 @@ export function generatePayslipPdf(p: PayslipLike, filename: string) {
     pdf.text(`${pair[0]}:`, x + 4, atY);
     pdf.setFont("helvetica", "bold");
     pdf.setTextColor(0);
-    pdf.text(pair[1], x + 34, atY);
+    pdf.text(pair[1], x + 34, atY, { maxWidth: colW - 40 });
   };
   metaLeft.forEach((pair, i) => metaLine(pair, M, my + i * metaRowH));
   metaRight.forEach((pair, i) => metaLine(pair, M + colW, my + i * metaRowH));
@@ -207,7 +206,7 @@ export function generatePayslipPdf(p: PayslipLike, filename: string) {
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(11);
   pdf.text("NET MONTHLY PAY", M + 4, y + 8);
-  pdf.text(ngn(p.net), pageWidth - M - 4, y + 8, { align: "right" });
+  pdf.text(`NGN ${amt(p.net)}`, pageWidth - M - 4, y + 8, { align: "right" });
   pdf.setTextColor(0);
   y += 22;
 

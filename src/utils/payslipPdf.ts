@@ -207,7 +207,7 @@ export function generatePayslipPdf(p: PayslipLike, filename: string) {
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(11);
   pdf.text("NET MONTHLY PAY", M + 4, y + 8);
-  pdf.text(ngn(p.net), pageWidth - M - 4, y + 8, { align: "right" });
+  pdf.text(`NGN ${amt(p.net)}`, pageWidth - M - 4, y + 8, { align: "right" });
   pdf.setTextColor(0);
   y += 22;
 

@@ -1,7 +1,6 @@
 import jsPDF from "jspdf";
 import { formatNaira, formatNairaAmount } from "@/lib/currency";
 
-const ngn = (v: any) => (v == null || v === "" ? "—" : formatNaira(v));
 const amt = (v: any) => (v == null || v === "" ? "—" : formatNairaAmount(v));
 
 const COMPANY_NAME = "Emerald Industrial Co.";

@@ -1,5 +1,5 @@
 import jsPDF from "jspdf";
-import { formatNaira, formatNairaAmount } from "@/lib/currency";
+import { formatNairaAmount } from "@/lib/currency";
 
 const amt = (v: any) => (v == null || v === "" ? "—" : formatNairaAmount(v));
 
@@ -127,7 +127,7 @@ export function generatePayslipPdf(p: PayslipLike, filename: string) {
     pdf.text(`${pair[0]}:`, x + 4, atY);
     pdf.setFont("helvetica", "bold");
     pdf.setTextColor(0);
-    pdf.text(pair[1], x + 34, atY);
+    pdf.text(pair[1], x + 34, atY, { maxWidth: colW - 40 });
   };
   metaLeft.forEach((pair, i) => metaLine(pair, M, my + i * metaRowH));
   metaRight.forEach((pair, i) => metaLine(pair, M + colW, my + i * metaRowH));

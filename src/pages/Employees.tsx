@@ -1478,10 +1478,19 @@ export default function Employees() {
   };
 
   const handleResetPassword = async (employee: Employee) => {
-    if (!employee.id || !employee.user_id) {
+    if (!employee.id) {
       toast({
         title: "Cannot Reset Password",
         description: "This employee doesn't have a user account",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!employee.user_id) {
+      toast({
+        title: "Cannot Reset Password",
+        description: "Cannot reset password — no user account linked to this employee.",
         variant: "destructive",
       });
       return;

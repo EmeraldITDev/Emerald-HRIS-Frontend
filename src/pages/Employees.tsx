@@ -120,8 +120,9 @@ export default function Employees() {
   const canResetPasswordFor = (employee: any) => {
     const allowed = ["hr_manager", "corporate_hr", "executive"];
     if (!user?.role || !allowed.includes(user.role)) return false;
-    if (!employee?.user_id) return false;
-    if (String(employee.user_id) === String(user.id)) return false;
+    const hasUserAccount = !!(employee?.user_id || employee?.user_role || employee?.user_roles?.length);
+    if (!hasUserAccount) return false;
+    if (String(employee.user_id || employee.user_role || employee.user_roles?.[0]) === String(user.id)) return false;
     return true;
   };
   const [showValidationPreview, setShowValidationPreview] = useState(false);

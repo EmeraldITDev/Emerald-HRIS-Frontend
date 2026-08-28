@@ -14,6 +14,8 @@ export { API_BASE_URL };
 export interface Employee {
   id?: number;
   user_id?: number;
+  user_role?: string | null;
+  user_roles?: string[] | string | null;
   first_name: string;
   last_name: string;
   email: string;

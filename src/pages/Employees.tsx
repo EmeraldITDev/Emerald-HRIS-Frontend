@@ -3165,7 +3165,7 @@ export default function Employees() {
                                   <Edit className="mr-2 h-4 w-4" />
                                   Edit Employee
                                 </DropdownMenuItem>
-                                {employee.user_id && (
+                                {!!(employee.user_id || employee.user_role || employee.user_roles?.length) && (
                                   <DropdownMenuItem onClick={() => handleResetPassword(employee)}>
                                     <KeyRound className="mr-2 h-4 w-4" />
                                     Reset Password

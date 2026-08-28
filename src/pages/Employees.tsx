@@ -122,7 +122,8 @@ export default function Employees() {
     if (!user?.role || !allowed.includes(user.role)) return false;
     const hasUserAccount = !!(employee?.user_id || employee?.user_role || employee?.user_roles?.length);
     if (!hasUserAccount) return false;
-    if (String(employee.user_id || employee.user_role || employee.user_roles?.[0]) === String(user.id)) return false;
+    if (employee?.user_id && String(employee.user_id) === String(user.id)) return false;
+    if (employee?.id && user?.employee_id && Number(employee.id) === Number(user.employee_id)) return false;
     return true;
   };
   const [showValidationPreview, setShowValidationPreview] = useState(false);

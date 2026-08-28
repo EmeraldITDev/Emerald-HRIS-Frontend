@@ -120,8 +120,10 @@ export default function Employees() {
   const canResetPasswordFor = (employee: any) => {
     const allowed = ["hr_manager", "corporate_hr", "executive"];
     if (!user?.role || !allowed.includes(user.role)) return false;
-    if (!employee?.user_id) return false;
-    if (String(employee.user_id) === String(user.id)) return false;
+    const hasUserAccount = !!(employee?.user_id || employee?.user_role || employee?.user_roles?.length);
+    if (!hasUserAccount) return false;
+    if (employee?.user_id && String(employee.user_id) === String(user.id)) return false;
+    if (employee?.id && user?.employee_id && Number(employee.id) === Number(user.employee_id)) return false;
     return true;
   };
   const [showValidationPreview, setShowValidationPreview] = useState(false);
@@ -1231,8 +1233,11 @@ export default function Employees() {
 
     // Set the edit system role based on existing user role so the dropdown
     // reflects the employee's current role instead of appearing empty.
+    const roleFromArray = Array.isArray((employee as any).user_roles)
+      ? (employee as any).user_roles[0]
+      : (employee as any).user_roles;
     setEditSystemRole(
-      (employee as any).user_role || (employee as any).user_roles?.[0] || "",
+      (employee as any).user_role || roleFromArray || "",
     );
 
     setShowEditEmployee(true);
@@ -1476,10 +1481,19 @@ export default function Employees() {
   };
 
   const handleResetPassword = async (employee: Employee) => {
-    if (!employee.id || !employee.user_id) {
+    if (!employee.id) {
       toast({
         title: "Cannot Reset Password",
         description: "This employee doesn't have a user account",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!employee.user_id) {
+      toast({
+        title: "Cannot Reset Password",
+        description: "Cannot reset password — no user account linked to this employee.",
         variant: "destructive",
       });
       return;
@@ -3151,7 +3165,7 @@ export default function Employees() {
                                   <Edit className="mr-2 h-4 w-4" />
                                   Edit Employee
                                 </DropdownMenuItem>
-                                {employee.user_id && (
+                                {!!(employee.user_id || employee.user_role || employee.user_roles?.length) && (
                                   <DropdownMenuItem onClick={() => handleResetPassword(employee)}>
                                     <KeyRound className="mr-2 h-4 w-4" />
                                     Reset Password

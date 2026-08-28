@@ -1233,8 +1233,11 @@ export default function Employees() {
 
     // Set the edit system role based on existing user role so the dropdown
     // reflects the employee's current role instead of appearing empty.
+    const roleFromArray = Array.isArray((employee as any).user_roles)
+      ? (employee as any).user_roles[0]
+      : (employee as any).user_roles;
     setEditSystemRole(
-      (employee as any).user_role || (employee as any).user_roles?.[0] || "",
+      (employee as any).user_role || roleFromArray || "",
     );
 
     setShowEditEmployee(true);

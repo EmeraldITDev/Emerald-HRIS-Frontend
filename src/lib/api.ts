@@ -325,8 +325,12 @@ class ApiService {
 
   private normalizeEmployee(employee: Employee): Employee {
     const financial = (employee as any)?.financial_details || {};
+    const raw = employee as any;
     return {
       ...employee,
+      user_id: raw.user_id ?? raw.userId ?? null,
+      user_role: raw.user_role ?? raw.userRole ?? null,
+      user_roles: raw.user_roles ?? raw.userRoles ?? [],
       gross_salary: employee.gross_salary ?? financial.gross_salary,
       basic_salary: employee.basic_salary ?? financial.basic_salary,
       housing_allowance: employee.housing_allowance ?? financial.housing_allowance,

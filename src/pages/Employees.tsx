@@ -3208,16 +3208,6 @@ export default function Employees() {
                   <DialogTitle>Employee Details</DialogTitle>
                   <DialogDescription className="sr-only">Employee dialog</DialogDescription>
                 </div>
-                {canResetPasswordFor(selectedEmployee) && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleResetPassword(selectedEmployee as any)}
-                  >
-                    <KeyRound className="mr-2 h-4 w-4" />
-                    Reset Password
-                  </Button>
-                )}
               </div>
             </DialogHeader>
             {selectedEmployee && (

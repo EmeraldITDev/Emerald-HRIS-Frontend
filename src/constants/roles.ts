@@ -19,32 +19,22 @@ export const PERMISSIONS = {
   SELF_SERVICE: [ROLES.EMPLOYEE, ROLES.LINE_MANAGER, ROLES.CORPORATE_HR, ROLES.HR_MANAGER, ROLES.EXECUTIVE],
 } as const;
 
-export const ROLE_OPTIONS = [
-  { label: 'Executive', value: 'executive' },
-  { label: 'HR Manager', value: 'hr_manager' },
-  { label: 'Corporate HR', value: 'corporate_hr' },
-  { label: 'Line Manager', value: 'line_manager' },
-  { label: 'Finance Manager', value: 'finance' },
-  { label: 'IT (Power User)', value: 'it_power_user' },
-  { label: 'Contract Employee', value: 'contract_employee' },
-  { label: 'General Employee', value: 'general_employee' },
-];
-
-/** Full set of system roles accepted by the backend for PUT /employees/{id}. */
+/** Exact set of system roles accepted by the backend EmployeeFullController. */
 export const SYSTEM_ROLE_OPTIONS = [
-  { label: 'General Employee', value: 'general_employee' },
-  { label: 'Line Manager', value: 'line_manager' },
+  { label: 'Executive', value: 'executive' },
   { label: 'HR Manager', value: 'hr_manager' },
   { label: 'Corporate HR', value: 'corporate_hr' },
-  { label: 'Executive', value: 'executive' },
+  { label: 'Line Manager', value: 'line_manager' },
   { label: 'Finance', value: 'finance' },
-  { label: 'IT Admin', value: 'it_admin' },
   { label: 'IT Power User', value: 'it_power_user' },
-  { label: 'Consulting HR', value: 'consulting_hr' },
   { label: 'Contract HR', value: 'contract_hr' },
   { label: 'Corporate User', value: 'corporate_user' },
   { label: 'Contract Staff', value: 'contract_staff' },
+  { label: 'General Employee', value: 'general_employee' },
 ];
+
+/** Kept as an alias so Add/Edit/Details all use the backend-accepted set. */
+export const ROLE_OPTIONS = SYSTEM_ROLE_OPTIONS;
 
 export const ROLE_PREFIX: Record<string, string> = {
   executive: 'EX',

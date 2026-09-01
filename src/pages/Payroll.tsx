@@ -60,6 +60,8 @@ export default function Payroll() {
   const [isLoadingPayroll, setIsLoadingPayroll] = useState(true)
   const [selectedEmployee, setSelectedEmployee] = useState("")
   const [selectedPeriod, setSelectedPeriod] = useState(new Date().toISOString().slice(0, 7))
+  /** Independent of Payroll Processor period — controls History table, bulk export, delete-all. */
+  const [historyPeriodFilter, setHistoryPeriodFilter] = useState<string>("all")
   const [allowedPeriods, setAllowedPeriods] = useState<Array<{ value: string; label: string; is_current: boolean }>>([])
   const [isPayrollLocked, setIsPayrollLocked] = useState(false)
   const [payrollData, setPayrollData] = useState({
@@ -146,8 +148,8 @@ export default function Payroll() {
         const filters: any = {}
         
         // Filter based on user role
-        if (user?.role === 'general_employee' || user?.role === 'finance') {
-          // Employees see only their own payroll
+        if (user?.role === 'general_employee' || user?.role === 'finance' || user?.role === 'line_manager') {
+          // Employees / line managers see only their own payroll
           const currentEmployee = employees.find(emp => emp.email === user.email)
           if (currentEmployee?.id) {
             filters.employee_id = currentEmployee.id
@@ -449,6 +451,25 @@ export default function Payroll() {
     ? normalizeRecord(rawCurrentPayrollRecord as PayrollRecord)
     : null
   const visiblePayrollRecords = getVisiblePayrollRecords().map(normalizeRecord)
+
+  const historyPeriodOptions = Array.from(
+    new Set(visiblePayrollRecords.map((r) => r.pay_period).filter(Boolean) as string[])
+  ).sort((a, b) => b.localeCompare(a))
+
+  const historyPeriodLabel =
+    historyPeriodFilter === "all"
+      ? "All periods"
+      : allowedPeriods.find((p) => p.value === historyPeriodFilter)?.label || historyPeriodFilter
+
+  const filteredHistoryRecords =
+    historyPeriodFilter === "all"
+      ? visiblePayrollRecords
+      : visiblePayrollRecords.filter((r) => r.pay_period === historyPeriodFilter)
+
+  const isPayrollRecordDeletable = (status?: string) => {
+    const s = (status || "").toLowerCase()
+    return s === "draft" || s === "pending_review" || s === "pending"
+  }
   const isPreviewFromFinancialDetails = currentPayrollRecord && !payrollRecords.some(record => 
     record.employee_id === currentPayrollRecord.employee_id && 
     record.pay_period === currentPayrollRecord.pay_period
@@ -1639,28 +1660,45 @@ export default function Payroll() {
                 <CardTitle className="text-primary">Payroll History - Edit & Update</CardTitle>
                 <p className="text-sm text-muted-foreground mt-1">Click edit to modify payroll records. Changes sync to employee records.</p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+              <Select value={historyPeriodFilter} onValueChange={setHistoryPeriodFilter}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Filter history" />
+                </SelectTrigger>
+                <SelectContent className="bg-popover border shadow-lg">
+                  <SelectItem value="all">All periods</SelectItem>
+                  {historyPeriodOptions.map((period) => (
+                    <SelectItem key={period} value={period}>
+                      {allowedPeriods.find((p) => p.value === period)?.label || period}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm">
-                    <Download className="h-4 w-4 mr-2" />Bulk export ({selectedPeriod})
+                    <Download className="h-4 w-4 mr-2" />Bulk export ({historyPeriodLabel})
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={async () => {
-                    const periodRows = visiblePayrollRecords.filter((r: any) => r.pay_period === selectedPeriod)
+                    if (historyPeriodFilter === "all") {
+                      toast({ title: 'Select a period', description: 'Choose a specific pay period to bulk-export.', variant: 'destructive' })
+                      return
+                    }
+                    const periodRows = filteredHistoryRecords
                     if (!periodRows.length) {
-                      toast({ title: 'No records to export', description: `No payroll records exist for ${selectedPeriod}. Generate payroll first.`, variant: 'destructive' })
+                      toast({ title: 'No records to export', description: `No payroll records exist for ${historyPeriodLabel}.`, variant: 'destructive' })
                       return
                     }
                     try {
-                      const blob = await apiService.exportPayrollBulkCsv(selectedPeriod)
+                      const blob = await apiService.exportPayrollBulkCsv(historyPeriodFilter)
                       const url = URL.createObjectURL(blob); const a = document.createElement('a')
-                      a.href = url; a.download = `Payroll_${selectedPeriod}.csv`; a.click(); URL.revokeObjectURL(url)
+                      a.href = url; a.download = `Payroll_${historyPeriodFilter}.csv`; a.click(); URL.revokeObjectURL(url)
                     } catch (e: any) {
                       // Backend failed — fall back to a client-side CSV from the rows already loaded
                       try {
-                        const rows = visiblePayrollRecords.filter((r: any) => r.pay_period === selectedPeriod)
+                        const rows = filteredHistoryRecords
                         if (!rows.length) throw e
                         const headers = ['Employee','Period','Basic Salary','Bonus','Gross Pay','Net Pay','Status']
                         const csv = [
@@ -1677,7 +1715,7 @@ export default function Payroll() {
                         ].join('\n')
                         const blob = new Blob([csv], { type: 'text/csv' })
                         const url = URL.createObjectURL(blob); const a = document.createElement('a')
-                        a.href = url; a.download = `Payroll_${selectedPeriod}.csv`; a.click(); URL.revokeObjectURL(url)
+                        a.href = url; a.download = `Payroll_${historyPeriodFilter}.csv`; a.click(); URL.revokeObjectURL(url)
                         toast({ title: 'Used local fallback', description: 'Server bulk export failed — exported on-screen rows instead.' })
                       } catch {
                         toast({ title: 'Bulk CSV failed', description: e?.message, variant: 'destructive' })
@@ -1685,15 +1723,19 @@ export default function Payroll() {
                     }
                   }}>CSV</DropdownMenuItem>
                   <DropdownMenuItem onClick={async () => {
-                    const periodRows = visiblePayrollRecords.filter((r: any) => r.pay_period === selectedPeriod)
+                    if (historyPeriodFilter === "all") {
+                      toast({ title: 'Select a period', description: 'Choose a specific pay period to bulk-export PDF.', variant: 'destructive' })
+                      return
+                    }
+                    const periodRows = filteredHistoryRecords
                     if (!periodRows.length) {
-                      toast({ title: 'No records to export', description: `No payroll records exist for ${selectedPeriod}. Generate payroll first.`, variant: 'destructive' })
+                      toast({ title: 'No records to export', description: `No payroll records exist for ${historyPeriodLabel}.`, variant: 'destructive' })
                       return
                     }
                     try {
-                      const blob = await apiService.exportPayrollBulkPdf(selectedPeriod)
+                      const blob = await apiService.exportPayrollBulkPdf(historyPeriodFilter)
                       const url = URL.createObjectURL(blob); const a = document.createElement('a')
-                      a.href = url; a.download = `Payroll_${selectedPeriod}.pdf`; a.click(); URL.revokeObjectURL(url)
+                      a.href = url; a.download = `Payroll_${historyPeriodFilter}.pdf`; a.click(); URL.revokeObjectURL(url)
                     } catch (e: any) { toast({ title: 'Bulk PDF failed', description: e?.message, variant: 'destructive' }) }
                   }}>PDF Summary</DropdownMenuItem>
                 </DropdownMenuContent>
@@ -1704,18 +1746,35 @@ export default function Payroll() {
                   size="sm"
                   className="text-destructive hover:bg-destructive/10 border-destructive/40"
                   onClick={async () => {
-                    const rows = visiblePayrollRecords.filter((r: any) => r.pay_period === selectedPeriod)
+                    const rows = filteredHistoryRecords
                     if (!rows.length) {
-                      toast({ title: 'Nothing to delete', description: `No payroll records found for ${selectedPeriod}.` })
+                      toast({ title: 'Nothing to delete', description: `No payroll records found for ${historyPeriodLabel}.` })
                       return
                     }
-                    if (!window.confirm(`Delete ALL ${rows.length} payroll record(s) for ${selectedPeriod}? This cannot be undone.`)) return
+                    const deletable = rows.filter((r: any) => isPayrollRecordDeletable(r.status))
+                    const locked = rows.length - deletable.length
+                    if (!deletable.length) {
+                      toast({
+                        title: 'Nothing to delete',
+                        description: locked
+                          ? `All ${rows.length} record(s) are approved/processed/paid. Only draft or pending_review can be deleted (use force-delete when available).`
+                          : 'No deletable records in this selection.',
+                        variant: 'destructive',
+                      })
+                      return
+                    }
+                    const scopeLabel = historyPeriodFilter === "all" ? "all periods" : historyPeriodLabel
+                    const lockedNote = locked ? ` (${locked} approved/paid record(s) will be skipped)` : ""
+                    if (!window.confirm(`Delete ${deletable.length} draft/pending payroll record(s) for ${scopeLabel}?${lockedNote} This cannot be undone.`)) return
                     const reason = window.prompt('Reason for deletion (optional):') || undefined
                     let ok = 0, fail = 0
+                    const skipped = locked
                     let firstError: string | null = null
-                    for (const r of rows) {
+                    const succeededIds = new Set<number>()
+                    for (const r of deletable) {
                       try {
-                        await apiService.forceDeletePayroll((r as any).id!, reason)
+                        await apiService.deletePayrollWithReason((r as any).id!, reason)
+                        succeededIds.add((r as any).id!)
                         ok++
                       } catch (e) {
                         console.error('Bulk delete row failed', r, e)
@@ -1723,16 +1782,17 @@ export default function Payroll() {
                         fail++
                       }
                     }
-                    const okIds = new Set(rows.map((r: any) => r.id))
-                    setPayrollRecords(prev => prev.filter(r => !okIds.has(r.id)))
+                    if (succeededIds.size > 0) {
+                      setPayrollRecords((prev) => prev.filter((r) => !succeededIds.has(r.id!)))
+                    }
                     toast({
                       title: fail ? 'Some deletions failed' : 'Payroll records deleted',
-                      description: `Deleted ${ok} of ${rows.length}${fail ? ` — ${fail} failed${firstError ? `: ${firstError}` : ''}` : ''}.`,
+                      description: `Deleted ${ok} of ${deletable.length} deletable record(s)${skipped ? `; skipped ${skipped} approved/paid` : ''}${fail ? ` — ${fail} failed${firstError ? `: ${firstError}` : ''}` : ''}.`,
                       variant: fail ? 'destructive' : undefined,
                     })
                   }}
                 >
-                  <Trash2 className="h-4 w-4 mr-2" />Delete all ({selectedPeriod})
+                  <Trash2 className="h-4 w-4 mr-2" />Delete all ({historyPeriodLabel})
                 </Button>
               )}
               </div>
@@ -1763,7 +1823,7 @@ export default function Payroll() {
                         </div>
                       </TableCell>
                     </TableRow>
-                  ) : visiblePayrollRecords.length === 0 ? (
+                  ) : filteredHistoryRecords.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={8} className="text-center py-12">
                         <div className="flex flex-col items-center space-y-3">
@@ -1773,14 +1833,14 @@ export default function Payroll() {
                             <p className="text-sm text-muted-foreground/70">
                               {user?.role === 'general_employee' || user?.role === 'finance' 
                                 ? "Your payroll information will appear here once it's been processed by HR."
-                                : "No payroll records found for the selected period. Generate payroll to get started."}
+                                : `No payroll records found for ${historyPeriodLabel}. Generate payroll or choose another period.`}
                             </p>
                           </div>
                         </div>
                       </TableCell>
                     </TableRow>
                   ) : (
-                    visiblePayrollRecords.map((record) => (
+                    filteredHistoryRecords.map((record) => (
                       <TableRow key={record.id}>
                         <TableCell className="font-medium text-xs md:text-sm">
                           {record.employee ? `${record.employee.first_name} ${record.employee.last_name}` : '-'}

@@ -114,6 +114,7 @@ export default function Dashboard() {
   const { user, hasPermission } = useAuth()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [allEmployees, setAllEmployees] = useState<Employee[]>([])
+  const [directoryEmployees, setDirectoryEmployees] = useState<Employee[]>([])
   const [recentEmployees, setRecentEmployees] = useState<Employee[]>([])
   const [departmentStats, setDepartmentStats] = useState<{ [key: string]: number }>({})
   const [isLoading, setIsLoading] = useState(true)
@@ -130,8 +131,10 @@ export default function Dashboard() {
   const [selfTrainingPending, setSelfTrainingPending] = useState<number>(0)
   const [selfReviewPending, setSelfReviewPending] = useState<boolean>(false)
 
-  const currentEmployee = allEmployees.find(
+  const currentEmployee = directoryEmployees.find(
     (e) => Number(e.id) === Number(currentEmployeeId)
+  ) || directoryEmployees.find(
+    (e) => e.email?.toLowerCase() === user?.email?.toLowerCase()
   ) || null
 
   const hasEmergencyContact = !!(
@@ -301,12 +304,12 @@ export default function Dashboard() {
 
   // Resolve current employee ID from loaded employees
   useEffect(() => {
-    if (!user || allEmployees.length === 0) return
-    const me = allEmployees.find(
+    if (!user || directoryEmployees.length === 0) return
+    const me = directoryEmployees.find(
       (e) => e.email?.toLowerCase() === user.email?.toLowerCase()
     )
     if (me && me.id) setCurrentEmployeeId(Number(me.id))
-  }, [user, allEmployees])
+  }, [user, directoryEmployees])
 
   // Fallback: ask backend for the authenticated user's employee_id
   // so admins / users without a directory email match can still clock in.
@@ -332,6 +335,7 @@ export default function Dashboard() {
       try {
         // Fetch ALL employees first for celebrations (should be visible to everyone)
         const allEmployeesData = await apiService.getEmployees()
+        setDirectoryEmployees(allEmployeesData)
         
         // Calculate celebrations from ALL employees - available to all users
         const celebrations = getCurrentMonthCelebrations(allEmployeesData)
@@ -340,17 +344,21 @@ export default function Dashboard() {
         const upcoming = getUpcomingCelebrations(allEmployeesData, 7)
         setUpcomingCelebrations(upcoming)
         
-        // Now apply role-based filtering for other dashboard data
-        let employees = allEmployeesData
         const isLineManager = user?.role === 'line_manager'
         const isExecutive = user?.role === 'executive'
-        const userDepartment = user?.department
+        const selfInDirectory = allEmployeesData.find(
+          (emp) =>
+            emp.email?.toLowerCase() === user?.email?.toLowerCase() ||
+            Number(emp.id) === Number(user?.employee_id)
+        )
+        // Align with backend EmployeeFullController: use employee record department, not auth-only field
+        const managedDepartment = selfInDirectory?.department || user?.department
         
-        if ((isLineManager || isExecutive) && userDepartment) {
-          employees = allEmployeesData.filter(emp => emp.department === userDepartment)
+        let employees = allEmployeesData
+        if ((isLineManager || isExecutive) && managedDepartment) {
+          employees = allEmployeesData.filter((emp) => emp.department === managedDepartment)
         }
         
-        // Store filtered employees for stats calculations
         setAllEmployees(employees)
         
         // Get recent employees (last 5 hired) for the recent activities section
@@ -1207,7 +1215,7 @@ export default function Dashboard() {
                   variant="outline" 
                   size="sm" 
                   className="w-full justify-start text-sm"
-                  onClick={() => navigate('/payroll')}
+                  onClick={() => navigate('/payroll/my-payslips')}
                 >
                   <DollarSign className="mr-2 h-4 w-4" />
                   View My Payroll
@@ -1255,7 +1263,11 @@ export default function Dashboard() {
                   variant="outline" 
                   size="sm" 
                   className="w-full justify-start text-sm"
-                  onClick={() => navigate('/payroll')}
+                  onClick={() => navigate(
+                    user?.role === 'line_manager' || user?.role === 'executive'
+                      ? '/payroll/my-payslips'
+                      : '/payroll'
+                  )}
                 >
                   <DollarSign className="mr-2 h-4 w-4" />
                   View My Payroll

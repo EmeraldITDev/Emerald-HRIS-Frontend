@@ -1074,10 +1074,10 @@ class ApiService {
 
   // HR-only force delete — bypasses draft/pending_review restriction.
   // Backend: DELETE /payroll/{id}?force=true (audited as forced).
-  async forceDeletePayroll(id: number, deletion_reason?: string): Promise<{ success: boolean; message: string; data?: any }> {
+  async forceDeletePayroll(id: number, deletion_reason: string): Promise<{ success: boolean; message: string; data?: any }> {
     return this.request(`/payroll/${id}?force=true`, {
       method: 'DELETE',
-      body: JSON.stringify({ deletion_reason: deletion_reason || 'Bulk delete by HR' }),
+      body: JSON.stringify({ deletion_reason }),
     });
   }
 

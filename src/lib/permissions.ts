@@ -87,3 +87,10 @@ export function canEditAttendanceProfile(
   if (!user) return false;
   return user.role === "hr_manager" || user.role === "corporate_hr";
 }
+
+/** Force-delete approved/paid payroll records — HR Manager only (audited on backend). */
+export function canForceDeletePayroll(
+  user: (User & Record<string, any>) | null | undefined,
+): boolean {
+  return user?.role === "hr_manager";
+}

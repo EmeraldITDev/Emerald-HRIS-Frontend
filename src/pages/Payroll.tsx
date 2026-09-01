@@ -14,7 +14,7 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table"
-import { Pencil, Save, X, Trash2 } from "lucide-react"
+import { Pencil, Save, X, Trash2, ShieldAlert } from "lucide-react"
 import {
   Select,
   SelectContent,
@@ -36,7 +36,7 @@ import {
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/contexts/AuthContext"
 import { RoleBasedComponent } from "@/components/RoleBasedComponent"
-import { canHrPayroll } from "@/lib/permissions"
+import { canHrPayroll, canForceDeletePayroll } from "@/lib/permissions"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { formatNaira, formatNairaAmount } from "@/lib/currency"
 import { calculateAnnualPaye, employeesMissingAnnualGross, getAnnualGrossSalary, getEmployeePayrollPackage, normalizePayrollRecord, roundMoney, toMoneyNumber } from "@/lib/payrollCalc"
@@ -44,9 +44,11 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { Textarea } from "@/components/ui/textarea"
 
 
 // Fetch employees from API - defined at component level
@@ -78,6 +80,10 @@ export default function Payroll() {
   const [editingValues, setEditingValues] = useState<Partial<PayrollRecord>>({})
   const [showEditDialog, setShowEditDialog] = useState(false)
   const [selectedRecord, setSelectedRecord] = useState<PayrollRecord | null>(null)
+  const [forceDeleteOpen, setForceDeleteOpen] = useState(false)
+  const [forceDeleteReason, setForceDeleteReason] = useState("")
+  const [forceDeleteTargets, setForceDeleteTargets] = useState<PayrollRecord[]>([])
+  const [forceDeleteSubmitting, setForceDeleteSubmitting] = useState(false)
   const { toast } = useToast()
   const { user } = useAuth()
 
@@ -469,6 +475,74 @@ export default function Payroll() {
   const isPayrollRecordDeletable = (status?: string) => {
     const s = (status || "").toLowerCase()
     return s === "draft" || s === "pending_review" || s === "pending"
+  }
+
+  const lockedHistoryRecords = filteredHistoryRecords.filter(
+    (r) => !isPayrollRecordDeletable(r.status)
+  )
+
+  const openForceDeleteDialog = (records: PayrollRecord[]) => {
+    setForceDeleteTargets(records)
+    setForceDeleteReason("")
+    setForceDeleteOpen(true)
+  }
+
+  const payrollRecordLabel = (record: PayrollRecord) => {
+    const name = record.employee
+      ? `${record.employee.first_name} ${record.employee.last_name}`.trim()
+      : `Employee ${record.employee_id}`
+    return `${name} — ${record.pay_period || "unknown period"} (${record.status || "unknown"})`
+  }
+
+  const executeForceDelete = async () => {
+    const reason = forceDeleteReason.trim()
+    if (!reason) {
+      toast({
+        title: "Deletion reason required",
+        description: "Enter a reason before force-deleting payroll records.",
+        variant: "destructive",
+      })
+      return
+    }
+    if (!forceDeleteTargets.length) return
+
+    setForceDeleteSubmitting(true)
+    let ok = 0
+    let fail = 0
+    let firstError: string | null = null
+    const succeededIds = new Set<number>()
+
+    try {
+      for (const record of forceDeleteTargets) {
+        try {
+          await apiService.forceDeletePayroll(record.id!, reason)
+          succeededIds.add(record.id!)
+          ok++
+        } catch (e: any) {
+          console.error("Force delete failed", record, e)
+          if (!firstError) firstError = e?.message || String(e)
+          fail++
+        }
+      }
+
+      if (succeededIds.size > 0) {
+        setPayrollRecords((prev) => prev.filter((r) => !succeededIds.has(r.id!)))
+      }
+
+      toast({
+        title: fail ? "Some force deletions failed" : "Payroll records force-deleted",
+        description: `Force-deleted ${ok} of ${forceDeleteTargets.length} record(s)${fail ? ` — ${fail} failed${firstError ? `: ${firstError}` : ""}` : ""}.`,
+        variant: fail ? "destructive" : undefined,
+      })
+
+      if (!fail) {
+        setForceDeleteOpen(false)
+        setForceDeleteTargets([])
+        setForceDeleteReason("")
+      }
+    } finally {
+      setForceDeleteSubmitting(false)
+    }
   }
   const isPreviewFromFinancialDetails = currentPayrollRecord && !payrollRecords.some(record => 
     record.employee_id === currentPayrollRecord.employee_id && 
@@ -1740,29 +1814,15 @@ export default function Payroll() {
                   }}>PDF Summary</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-              {canHrPayroll(user) && (
+              {canHrPayroll(user) && filteredHistoryRecords.some((r) => isPayrollRecordDeletable(r.status)) && (
                 <Button
                   variant="outline"
                   size="sm"
                   className="text-destructive hover:bg-destructive/10 border-destructive/40"
                   onClick={async () => {
                     const rows = filteredHistoryRecords
-                    if (!rows.length) {
-                      toast({ title: 'Nothing to delete', description: `No payroll records found for ${historyPeriodLabel}.` })
-                      return
-                    }
                     const deletable = rows.filter((r: any) => isPayrollRecordDeletable(r.status))
                     const locked = rows.length - deletable.length
-                    if (!deletable.length) {
-                      toast({
-                        title: 'Nothing to delete',
-                        description: locked
-                          ? `All ${rows.length} record(s) are approved/processed/paid. Only draft or pending_review can be deleted (use force-delete when available).`
-                          : 'No deletable records in this selection.',
-                        variant: 'destructive',
-                      })
-                      return
-                    }
                     const scopeLabel = historyPeriodFilter === "all" ? "all periods" : historyPeriodLabel
                     const lockedNote = locked ? ` (${locked} approved/paid record(s) will be skipped)` : ""
                     if (!window.confirm(`Delete ${deletable.length} draft/pending payroll record(s) for ${scopeLabel}?${lockedNote} This cannot be undone.`)) return
@@ -1793,6 +1853,16 @@ export default function Payroll() {
                   }}
                 >
                   <Trash2 className="h-4 w-4 mr-2" />Delete all ({historyPeriodLabel})
+                </Button>
+              )}
+              {canForceDeletePayroll(user) && lockedHistoryRecords.length > 0 && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => openForceDeleteDialog(lockedHistoryRecords)}
+                >
+                  <ShieldAlert className="h-4 w-4 mr-2" />
+                  Force delete all ({lockedHistoryRecords.length} locked)
                 </Button>
               )}
               </div>
@@ -1920,7 +1990,7 @@ export default function Payroll() {
                                 }}>Export CSV</DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
-                            {canHrPayroll(user) && (
+                            {canHrPayroll(user) && isPayrollRecordDeletable(record.status) && (
                               <Button
                                 size="sm"
                                 variant="outline"
@@ -1938,6 +2008,17 @@ export default function Payroll() {
                                 }}
                               >
                                 <Trash2 className="h-3 w-3" />
+                              </Button>
+                            )}
+                            {canForceDeletePayroll(user) && !isPayrollRecordDeletable(record.status) && (
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                className="h-7 px-2"
+                                onClick={() => openForceDeleteDialog([record])}
+                              >
+                                <ShieldAlert className="h-3 w-3 mr-1" />
+                                Force Delete
                               </Button>
                             )}
                           </div>
@@ -2117,6 +2198,78 @@ export default function Payroll() {
               Save Changes
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Force delete approved/paid payroll — HR Manager only */}
+      <Dialog
+        open={forceDeleteOpen}
+        onOpenChange={(open) => {
+          if (forceDeleteSubmitting) return
+          setForceDeleteOpen(open)
+          if (!open) {
+            setForceDeleteTargets([])
+            setForceDeleteReason("")
+          }
+        }}
+      >
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-destructive flex items-center gap-2">
+              <ShieldAlert className="h-5 w-5" />
+              Force delete payroll record(s)
+            </DialogTitle>
+            <DialogDescription>
+              This will permanently delete {forceDeleteTargets.length} approved/processed/paid payroll record(s). This cannot be undone.
+              {forceDeleteReason.trim() ? (
+                <> Reason for deletion: <span className="font-medium text-foreground">{forceDeleteReason.trim()}</span>.</>
+              ) : null}
+            </DialogDescription>
+          </DialogHeader>
+
+          {forceDeleteTargets.length > 0 && forceDeleteTargets.length <= 5 && (
+            <ul className="text-sm text-muted-foreground list-disc pl-5 space-y-1 max-h-32 overflow-y-auto">
+              {forceDeleteTargets.map((r) => (
+                <li key={r.id}>{payrollRecordLabel(r)}</li>
+              ))}
+            </ul>
+          )}
+          {forceDeleteTargets.length > 5 && (
+            <p className="text-sm text-muted-foreground">
+              {forceDeleteTargets.length} locked records selected
+              {historyPeriodFilter !== "all" ? ` for ${historyPeriodLabel}` : " across multiple periods"}.
+            </p>
+          )}
+
+          <div className="space-y-2">
+            <Label htmlFor="force-delete-reason">Deletion reason (required)</Label>
+            <Textarea
+              id="force-delete-reason"
+              value={forceDeleteReason}
+              onChange={(e) => setForceDeleteReason(e.target.value)}
+              placeholder="e.g. Duplicate payroll run, incorrect period, correction after offboarding"
+              rows={3}
+            />
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setForceDeleteOpen(false)}
+              disabled={forceDeleteSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={!forceDeleteReason.trim() || forceDeleteSubmitting}
+              onClick={executeForceDelete}
+            >
+              {forceDeleteSubmitting
+                ? "Deleting..."
+                : `Force delete ${forceDeleteTargets.length} record(s)`}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

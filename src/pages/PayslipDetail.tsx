@@ -10,6 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import { generatePayslipPdf, toPayslipLike } from "@/utils/payslipPdf";
 import { normalizePayslipDetail } from "@/lib/payrollCalc";
+import { formatPayDate } from "@/lib/formatPayDate";
 
 function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
@@ -67,7 +68,7 @@ export default function PayslipDetail() {
             } catch (err: any) {
               try {
                 generatePayslipPdf(toPayslipLike(data), `Payslip_${period}.pdf`);
-                toast({ title: "PDF generated locally", description: "Server export failed; built from this payslip." });
+                toast({ title: "PDF generated locally", description: `Server export failed (${err?.message || "unknown"}); built from this payslip.` });
               } catch {
                 toast({ title: "PDF failed", description: err?.message, variant: "destructive" });
               }
@@ -90,7 +91,7 @@ export default function PayslipDetail() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4 text-sm">
-            <div><span className="text-muted-foreground">Pay Date:</span> {data.payDate || "—"}</div>
+            <div><span className="text-muted-foreground">Pay Date:</span> {formatPayDate(data.payDate || data.pay_date)}</div>
             <div><span className="text-muted-foreground">Prepared by:</span> {data.preparedBy?.name || "—"} ({data.preparedBy?.role || ""})</div>
           </div>
           <Separator />

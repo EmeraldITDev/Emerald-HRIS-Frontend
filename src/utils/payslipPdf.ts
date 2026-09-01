@@ -1,11 +1,13 @@
 import jsPDF from "jspdf";
 import { formatNairaAmount } from "@/lib/currency";
+import { formatPayDate } from "@/lib/formatPayDate";
 
 const amt = (v: any) => (v == null || v === "" ? "—" : formatNairaAmount(v));
 
-const COMPANY_NAME = "Emerald Industrial Co.";
-const COMPANY_ADDRESS = "Plot 1, Emerald Industrial Estate, Lagos, Nigeria";
-const COMPANY_CONTACT = "www.emeraldindustrial.com | hr@emeraldindustrial.com";
+const COMPANY_NAME = "Emerald Industrial Co., CFZE";
+const COMPANY_ADDRESS =
+  "Sapetro Towers, 5th Floor Aureum Suite 1, Adeola Odeku Street, Victoria Island, Lagos, Nigeria";
+const COMPANY_CONTACT = "www.emeraldcfze.com | hr@emeraldcfze.com";
 
 export interface PayslipLike {
   employeeName?: string;
@@ -44,17 +46,17 @@ export function toPayslipLike(src: any): PayslipLike {
     department: src.department || emp.department,
     jobTitle: src.jobTitle || emp.job_title,
     payPeriod: src.payPeriodLabel || src.pay_period || src.payPeriod,
-    payDate: src.payDate || src.pay_date,
+    payDate: formatPayDate(src.payDate || src.pay_date),
     status: src.status,
     basicSalary: e.baseSalary ?? src.basic_salary,
     housing: e.housingAllowance ?? src.housing_allowance,
     transport: e.transportAllowance ?? src.transport_allowance,
     other: e.otherAllowance ?? src.other_allowance,
-    bonus: src.bonus,
+    bonus: e.bonus ?? src.bonus,
     gross: t.grossSalary ?? src.gross_pay,
-    tax: d.incomeTax ?? src.income_tax ?? src.tax,
-    pension: d.pensionContribution ?? src.pension,
-    nhf: d.nhf,
+    tax: d.incomeTax ?? src.paye_tax ?? src.income_tax ?? src.tax,
+    pension: d.pensionContribution ?? src.pension_employee ?? src.pension,
+    nhf: d.nhf ?? src.nhf,
     totalDeductions: s.totalDeductions ?? src.total_deductions,
     net: s.netSalary ?? src.net_pay,
   };
@@ -108,7 +110,7 @@ export function generatePayslipPdf(p: PayslipLike, filename: string) {
   ];
   const metaRight: Array<[string, string]> = [
     ["Job Title", p.jobTitle || "—"],
-    ["Pay Date", p.payDate ? String(p.payDate) : "—"],
+    ["Pay Date", p.payDate ? formatPayDate(p.payDate) : "—"],
     ["Status", p.status ? String(p.status) : "—"],
   ];
   const metaRowH = 6.5;

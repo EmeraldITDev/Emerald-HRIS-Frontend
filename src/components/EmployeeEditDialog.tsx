@@ -20,6 +20,8 @@ import {
 import { useToast } from "@/hooks/use-toast"
 import apiService, { Employee } from "@/lib/api"
 import { DEPARTMENTS } from "@/constants/departments"
+import { WorkLocationField } from "@/components/WorkLocationField"
+import { formatGrossSalaryDisplay, parseGrossSalaryInput } from "@/lib/grossSalaryFormat"
 import { Download, Trash2, Upload, Loader2, FileText, File } from "lucide-react"
 
 interface EmployeeDocument {
@@ -404,14 +406,11 @@ export function EmployeeEditDialog({ employee, open, onOpenChange, onSuccess }: 
                   </SelectContent>
                 </Select>
               </div>
-              <div>
-                <Label htmlFor="work_location">Work Location</Label>
-                <Input
-                  id="work_location"
-                  value={formData.work_location || ''}
-                  onChange={(e) => handleChange('work_location', e.target.value)}
-                />
-              </div>
+              <WorkLocationField
+                id="work_location"
+                value={formData.work_location || ""}
+                onChange={(work_location) => handleChange("work_location", work_location)}
+              />
               <div>
                 <Label htmlFor="supervisor_name">Supervisor</Label>
                 <Input
@@ -426,12 +425,15 @@ export function EmployeeEditDialog({ employee, open, onOpenChange, onSuccess }: 
           <TabsContent value="financial" className="space-y-4 mt-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="gross_salary">Basic Salary (₦)</Label>
+                <Label htmlFor="gross_salary">Gross Salary (Annual) (₦)</Label>
                 <Input
                   id="gross_salary"
-                  type="number"
-                  value={formData.gross_salary || ''}
-                  onChange={(e) => handleChange('gross_salary', Number(e.target.value))}
+                  type="text"
+                  inputMode="numeric"
+                  value={formatGrossSalaryDisplay(formData.gross_salary ?? "")}
+                  onChange={(e) =>
+                    handleChange("gross_salary", Number(parseGrossSalaryInput(e.target.value)) || 0)
+                  }
                 />
               </div>
               <div>

@@ -1826,8 +1826,17 @@ export default function Payroll() {
                                   } catch (e: any) {
                                     try {
                                       const { generatePayslipPdf, toPayslipLike } = await import('@/utils/payslipPdf')
-                                      generatePayslipPdf(toPayslipLike(record), filename)
-                                      toast({ title: 'PDF generated locally', description: 'Server export failed; built from displayed data.' })
+                                      const { normalizePayrollRecord, normalizePayslipDetail } = await import('@/lib/payrollCalc')
+                                      const emp = employees.find((em) => em.id === record.employee_id) || record.employee
+                                      let payslipLike
+                                      try {
+                                        const detail = await apiService.getPayslipDetail(record.employee_id, record.pay_period)
+                                        payslipLike = toPayslipLike(normalizePayslipDetail(detail, emp))
+                                      } catch {
+                                        payslipLike = toPayslipLike(normalizePayrollRecord(record, emp))
+                                      }
+                                      generatePayslipPdf(payslipLike, filename)
+                                      toast({ title: 'PDF generated locally', description: `Server export failed (${e?.message || 'unknown'}); built from payslip data.` })
                                     } catch (err: any) {
                                       toast({ title: 'PDF export failed', description: e?.message, variant: 'destructive' })
                                     }

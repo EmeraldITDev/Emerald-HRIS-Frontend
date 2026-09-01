@@ -65,6 +65,9 @@ import { PERMISSIONS } from "@/constants/roles";
 import { ROLE_OPTIONS, ROLE_PREFIX, SYSTEM_ROLE_OPTIONS } from "@/constants/roles";
 import { EmployeeCredentialsModal } from "@/components/EmployeeCredentialsModal";
 import { useAuth } from "@/contexts/AuthContext";
+import { WorkLocationField } from "@/components/WorkLocationField";
+import { STANDARD_WORK_LOCATIONS, matchesWorkLocationFilter } from "@/constants/workLocations";
+import { formatGrossSalaryDisplay, parseGrossSalaryInput } from "@/lib/grossSalaryFormat";
 
 // Put near top of file
 const VALID_SYSTEM_ROLES = new Set([
@@ -448,10 +451,7 @@ export default function Employees() {
       employee.department?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       employee.job_title?.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesLocation =
-      !filterLocation ||
-      filterLocation === "all" ||
-      (employee.work_location && employee.work_location === filterLocation);
+    const matchesLocation = matchesWorkLocationFilter(employee.work_location, filterLocation);
     const matchesDepartment =
       !filterDepartment ||
       filterDepartment === "all" ||
@@ -485,8 +485,7 @@ export default function Employees() {
     );
   });
 
-  // Get unique values for filter dropdowns
-  const uniqueLocations = [...new Set(employeeList.map((emp) => emp.work_location))].filter(Boolean);
+  // Standard work locations for filter dropdown (Item 8)
   // Use official departments list instead of unique values from employees
   const uniqueDepartments = departments;
   const uniqueEmploymentTypes = [...new Set(employeeList.map((emp) => emp.employment_type))].filter(Boolean);
@@ -2297,21 +2296,18 @@ export default function Employees() {
                           className={formErrors.supervisorName ? "border-destructive" : ""}
                         />
                       </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="workLocation">Work Location *</Label>
-                        <Input
-                          id="workLocation"
-                          value={newEmployee.workLocation}
-                          onChange={(e) =>
-                            setNewEmployee({
-                              ...newEmployee,
-                              workLocation: e.target.value,
-                            })
-                          }
-                          placeholder="e.g., Lagos Office"
-                          className={formErrors.workLocation ? "border-destructive" : ""}
-                        />
-                      </div>
+                      <WorkLocationField
+                        id="workLocation"
+                        required
+                        value={newEmployee.workLocation}
+                        onChange={(workLocation) =>
+                          setNewEmployee({
+                            ...newEmployee,
+                            workLocation,
+                          })
+                        }
+                        error={formErrors.workLocation}
+                      />
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -2437,15 +2433,16 @@ export default function Employees() {
                           <Label htmlFor="grossSalary">Gross Salary (Annual) *</Label>
                           <Input
                             id="grossSalary"
-                            type="number"
-                            value={newEmployee.grossSalary}
+                            type="text"
+                            inputMode="numeric"
+                            value={formatGrossSalaryDisplay(newEmployee.grossSalary)}
                             onChange={(e) =>
                               setNewEmployee({
                                 ...newEmployee,
-                                grossSalary: e.target.value,
+                                grossSalary: parseGrossSalaryInput(e.target.value),
                               })
                             }
-                            placeholder="2500000"
+                            placeholder="2,500,000.00"
                           />
                           <p className="text-xs text-muted-foreground">Enter annual amount in Naira (₦). Monthly = Annual ÷ 12.</p>
                         </div>
@@ -2513,18 +2510,19 @@ export default function Employees() {
                     ) : newEmployee.employmentType === "Contract" ? (
                       <>
                         <div className="space-y-2">
-                          <Label htmlFor="grossSalary">Gross Salary (Annual) *</Label>
+                          <Label htmlFor="grossSalaryContract">Gross Salary (Annual) *</Label>
                           <Input
-                            id="grossSalary"
-                            type="number"
-                            value={newEmployee.grossSalary}
+                            id="grossSalaryContract"
+                            type="text"
+                            inputMode="numeric"
+                            value={formatGrossSalaryDisplay(newEmployee.grossSalary)}
                             onChange={(e) =>
                               setNewEmployee({
                                 ...newEmployee,
-                                grossSalary: e.target.value,
+                                grossSalary: parseGrossSalaryInput(e.target.value),
                               })
                             }
-                            placeholder="1500000"
+                            placeholder="1,500,000.00"
                           />
                           <p className="text-xs text-muted-foreground">Enter annual gross salary in Naira (₦).</p>
                         </div>
@@ -3022,7 +3020,7 @@ export default function Employees() {
                   </SelectTrigger>
                   <SelectContent className="bg-popover border shadow-lg">
                     <SelectItem value="all">All Locations</SelectItem>
-                    {uniqueLocations.map((location) => (
+                    {STANDARD_WORK_LOCATIONS.map((location) => (
                       <SelectItem key={location} value={location}>
                         {location}
                       </SelectItem>
@@ -3986,21 +3984,18 @@ export default function Employees() {
                         className={editFormErrors.supervisor_name ? "border-destructive" : ""}
                       />
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="editWorkLocation">Work Location *</Label>
-                      <Input
-                        id="editWorkLocation"
-                        value={editEmployee.work_location || ""}
-                        onChange={(e) =>
-                          setEditEmployee({
-                            ...editEmployee,
-                            work_location: e.target.value,
-                          })
-                        }
-                        placeholder="e.g., Lagos Office"
-                        className={editFormErrors.work_location ? "border-destructive" : ""}
-                      />
-                    </div>
+                    <WorkLocationField
+                      id="editWorkLocation"
+                      required
+                      value={editEmployee.work_location || ""}
+                      onChange={(work_location) =>
+                        setEditEmployee({
+                          ...editEmployee,
+                          work_location,
+                        })
+                      }
+                      error={editFormErrors.work_location}
+                    />
                   </div>
 
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -4132,15 +4127,16 @@ export default function Employees() {
                         <Label htmlFor="editGrossSalary">Gross Salary (Annual) *</Label>
                         <Input
                           id="editGrossSalary"
-                          type="number"
-                          value={editEmployee.gross_salary || ""}
+                          type="text"
+                          inputMode="numeric"
+                          value={formatGrossSalaryDisplay(editEmployee.gross_salary || "")}
                           onChange={(e) =>
                             setEditEmployee({
                               ...editEmployee,
-                              gross_salary: e.target.value,
+                              gross_salary: parseGrossSalaryInput(e.target.value),
                             })
                           }
-                          placeholder="2500000"
+                          placeholder="2,500,000.00"
                         />
                         <p className="text-xs text-muted-foreground">Enter annual amount in Naira (₦). Monthly = Annual ÷ 12.</p>
                       </div>
@@ -4195,18 +4191,19 @@ export default function Employees() {
                     </>
                   ) : editEmployee.employment_type === "Contract" ? (
                     <div className="space-y-2">
-                      <Label htmlFor="editGrossSalary">Gross Salary (Annual) *</Label>
+                      <Label htmlFor="editGrossSalaryContract">Gross Salary (Annual) *</Label>
                       <Input
-                        id="editGrossSalary"
-                        type="number"
-                        value={editEmployee.gross_salary || ""}
+                        id="editGrossSalaryContract"
+                        type="text"
+                        inputMode="numeric"
+                        value={formatGrossSalaryDisplay(editEmployee.gross_salary || "")}
                         onChange={(e) =>
                           setEditEmployee({
                             ...editEmployee,
-                            gross_salary: e.target.value,
+                            gross_salary: parseGrossSalaryInput(e.target.value),
                           })
                         }
-                        placeholder="1500000"
+                        placeholder="1,500,000.00"
                       />
                       <p className="text-xs text-muted-foreground">Enter annual gross salary in Naira (₦).</p>
                     </div>

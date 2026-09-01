@@ -9,6 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { generatePayslipPdf, generatePayslipCsv, toPayslipLike } from "@/utils/payslipPdf";
+import { formatPayDate } from "@/lib/formatPayDate";
 import { normalizePayrollRecord, normalizePayslipDetail } from "@/lib/payrollCalc";
 import { formatNaira } from "@/lib/currency";
 
@@ -126,7 +127,7 @@ export default function MyPayslips() {
       const p = await buildLocal(period);
       if (p) {
         generatePayslipPdf(p, `Payslip_${period}.pdf`);
-        toast({ title: "PDF generated locally", description: "Server export failed; built from your payslip data." });
+        toast({ title: "PDF generated locally", description: `Server export failed (${e?.message || "unknown"}); built from your payslip data.` });
       } else {
         toast({ title: "PDF export failed", description: e?.message, variant: "destructive" });
       }
@@ -177,7 +178,7 @@ export default function MyPayslips() {
                   return (
                     <TableRow key={r.id || period}>
                       <TableCell className="font-medium">{period}</TableCell>
-                      <TableCell>{r.pay_date || r.payDate || "—"}</TableCell>
+                      <TableCell>{formatPayDate(r.pay_date || r.payDate)}</TableCell>
                       <TableCell>{ngn(r.net_pay ?? r.netSalary)}</TableCell>
                       <TableCell><Badge variant="outline">{r.status}</Badge></TableCell>
                       <TableCell className="text-right space-x-2">

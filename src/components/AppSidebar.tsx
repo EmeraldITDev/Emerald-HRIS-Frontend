@@ -17,6 +17,7 @@ import {
   Bell,
   ShieldCheck,
   ClipboardCheck,
+  Crown,
   Receipt
 } from "lucide-react"
 import { useAuth } from "@/contexts/AuthContext"

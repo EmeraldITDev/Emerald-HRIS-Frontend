@@ -34,6 +34,7 @@ import React, { useEffect, useState } from "react";
 import { getUsers } from "./api";
 import { PasswordChangeModal } from "./components/PasswordChangeModal";
 import { UpdateAvailableBanner } from "./components/UpdateAvailableBanner";
+import { PwaInstallPrompt } from "./components/PwaInstallPrompt";
 
 const queryClient = new QueryClient();
 
@@ -140,6 +141,7 @@ const App = () => {
             <Sonner />
             <AppContent />
             <UpdateAvailableBanner />
+            <PwaInstallPrompt />
           </TooltipProvider>
         </ThemeProvider>
       </AuthProvider>

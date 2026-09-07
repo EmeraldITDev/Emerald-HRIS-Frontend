@@ -222,14 +222,21 @@ export const byDepartment = (
     (r) => String(r.department || "Unassigned"),
   );
 
+export const normalizedLocation = (value?: string | null): string => {
+  const raw = String(value || "").trim();
+  if (!raw) return "Unassigned";
+  return proposeWorkLocationMigration(raw) || raw;
+};
+
 export const byLocation = (employees: Employee[], rows: AttendanceRow[], leaveIds: Set<number>) =>
   buildBreakdown(
     employees,
     rows,
     leaveIds,
-    (e) => String(e.work_location || "Unassigned"),
-    (r) => String(r.assigned_location || r.work_location || "Unassigned"),
+    (e) => normalizedLocation(e.work_location),
+    (r) => normalizedLocation(r.assigned_location || r.work_location),
   );
+
 
 export const byEmploymentType = (employees: Employee[]) => {
   const map = new Map<string, number>();

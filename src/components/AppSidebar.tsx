@@ -56,6 +56,13 @@ type NavItem = {
 }
 
 const navigationItems: NavItem[] = [
+  {
+    title: "Chairman's View",
+    url: "/executive",
+    icon: Crown,
+    permission: "*",
+    roles: ['executive', 'hr_manager']
+  },
   { 
     title: "Dashboard", 
     url: "/", 

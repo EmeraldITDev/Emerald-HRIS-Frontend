@@ -2,7 +2,7 @@
 
 # Never cache the build manifest or the app shell
 <IfModule mod_headers.c>
-  <FilesMatch "^(version\.json|index\.html)$">
+  <FilesMatch "^(version\.json|index\.html|manifest\.json)$">
     Header set Cache-Control "no-store, no-cache, must-revalidate, max-age=0"
     Header set Pragma "no-cache"
     Header set Expires "0"

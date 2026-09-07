@@ -141,6 +141,7 @@ const App = () => {
             <Sonner />
             <AppContent />
             <UpdateAvailableBanner />
+            <PwaInstallPrompt />
           </TooltipProvider>
         </ThemeProvider>
       </AuthProvider>

@@ -1,5 +1,7 @@
 import type { Employee, LeaveRequest, PayrollRecord } from "@/lib/api";
 import { getAnnualGrossSalary, toMoneyNumber } from "@/lib/payrollCalc";
+import { proposeWorkLocationMigration } from "@/constants/workLocations";
+
 
 /* ------------------------------------------------------------------ */
 /* Shared helpers                                                      */

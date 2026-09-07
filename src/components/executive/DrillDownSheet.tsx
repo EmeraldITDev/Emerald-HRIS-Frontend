@@ -30,7 +30,9 @@ import {
   isOnLeaveRow,
   isPresent,
   missingFieldsFor,
+  normalizedLocation,
   parseDate,
+
 } from "@/lib/executiveMetrics";
 
 export type DrillRequest = {
@@ -68,7 +70,7 @@ export function DrillDownSheet({ request, data, onOpenChange }: Props) {
       if (f.missingGross) list = list.filter((e) => isActiveEmployee(e) && getAnnualGrossSalary(e) < 12);
       if (f.missingInfo) list = employeesMissingInfo(list);
       if (f.department) list = list.filter((e) => (e.department || "Unassigned") === f.department);
-      if (f.location) list = list.filter((e) => (e.work_location || "Unassigned") === f.location);
+      if (f.location) list = list.filter((e) => normalizedLocation(e.work_location) === f.location);
       if (f.employmentType)
         list = list.filter((e) => (e.employment_type || "Unspecified") === f.employmentType);
       if (f.newThisMonth) {
@@ -126,8 +128,9 @@ export function DrillDownSheet({ request, data, onOpenChange }: Props) {
       if (f.department) rows = rows.filter((r) => String(r.department || "Unassigned") === f.department);
       if (f.location)
         rows = rows.filter(
-          (r) => String(r.assigned_location || r.work_location || "Unassigned") === f.location,
+          (r) => normalizedLocation(r.assigned_location || r.work_location) === f.location,
         );
+
       if (f.absentOnly) rows = rows.filter((r) => isAbsent(r) && !isOnLeaveRow(r));
       if (f.presentOnly) rows = rows.filter(isPresent);
       if (f.lateOnly) rows = rows.filter(isLateRow);

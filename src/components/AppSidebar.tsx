@@ -66,7 +66,7 @@ const navigationItems: NavItem[] = [
   },
   { 
     title: "Dashboard", 
-    url: "/", 
+    url: "/dashboard", 
     icon: Home,
     permission: "*"
   },

@@ -17,6 +17,7 @@ import {
   Bell,
   ShieldCheck,
   ClipboardCheck,
+  Crown,
   Receipt
 } from "lucide-react"
 import { useAuth } from "@/contexts/AuthContext"
@@ -56,9 +57,16 @@ type NavItem = {
 }
 
 const navigationItems: NavItem[] = [
+  {
+    title: "Chairman's View",
+    url: "/executive",
+    icon: Crown,
+    permission: "*",
+    roles: ['executive', 'hr_manager']
+  },
   { 
     title: "Dashboard", 
-    url: "/", 
+    url: "/dashboard", 
     icon: Home,
     permission: "*"
   },

@@ -30,6 +30,8 @@ import PayslipDetail from "./pages/PayslipDetail";
 import PayrollReview from "./pages/PayrollReview";
 import ManagerApprovals from "./pages/attendance/ManagerApprovals";
 import OrgAttendanceDashboard from "./pages/attendance/OrgAttendanceDashboard";
+import ExecutiveView from "./pages/ExecutiveView";
+import { canViewExecutiveView } from "@/lib/permissions";
 import React, { useEffect, useState } from "react";
 import { getUsers } from "./api";
 import { PasswordChangeModal } from "./components/PasswordChangeModal";
@@ -69,7 +71,18 @@ const AppContent = () => {
             <ProtectedRoute>
               <Layout>
                 <Routes>
-                  <Route path="/" element={<Dashboard />} />
+                  <Route
+                    path="/"
+                    element={
+                      canViewExecutiveView(user) ? (
+                        <Navigate to="/executive" replace />
+                      ) : (
+                        <Dashboard />
+                      )
+                    }
+                  />
+                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/executive" element={<ExecutiveView />} />
                   <Route path="/employees" element={<Employees />} />
                   <Route path="/attendance" element={<Attendance />} />
                   <Route path="/recruitment" element={<Recruitment />} />

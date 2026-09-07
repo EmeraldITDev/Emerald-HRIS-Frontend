@@ -88,6 +88,14 @@ export function canEditAttendanceProfile(
   return user.role === "hr_manager" || user.role === "corporate_hr";
 }
 
+/** Chairman's executive view — executives and HR Managers only. */
+export function canViewExecutiveView(
+  user: (User & Record<string, any>) | null | undefined,
+): boolean {
+  if (!user) return false;
+  return user.role === "executive" || user.role === "hr_manager";
+}
+
 /** Force-delete approved/paid payroll records — HR Manager only (audited on backend). */
 export function canForceDeletePayroll(
   user: (User & Record<string, any>) | null | undefined,

@@ -71,7 +71,18 @@ const AppContent = () => {
             <ProtectedRoute>
               <Layout>
                 <Routes>
-                  <Route path="/" element={<Dashboard />} />
+                  <Route
+                    path="/"
+                    element={
+                      canViewExecutiveView(user) ? (
+                        <Navigate to="/executive" replace />
+                      ) : (
+                        <Dashboard />
+                      )
+                    }
+                  />
+                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/executive" element={<ExecutiveView />} />
                   <Route path="/employees" element={<Employees />} />
                   <Route path="/attendance" element={<Attendance />} />
                   <Route path="/recruitment" element={<Recruitment />} />

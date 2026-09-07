@@ -30,6 +30,8 @@ import PayslipDetail from "./pages/PayslipDetail";
 import PayrollReview from "./pages/PayrollReview";
 import ManagerApprovals from "./pages/attendance/ManagerApprovals";
 import OrgAttendanceDashboard from "./pages/attendance/OrgAttendanceDashboard";
+import ExecutiveView from "./pages/ExecutiveView";
+import { canViewExecutiveView } from "@/lib/permissions";
 import React, { useEffect, useState } from "react";
 import { getUsers } from "./api";
 import { PasswordChangeModal } from "./components/PasswordChangeModal";

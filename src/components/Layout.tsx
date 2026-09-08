@@ -10,6 +10,7 @@ import { useAuth } from "@/contexts/AuthContext"
 import { Badge } from "@/components/ui/badge"
 import { PasswordChangeModal } from "@/components/PasswordChangeModal"
 import { NotificationBell } from "@/components/NotificationBell"
+import { PwaInstallButton } from "@/components/PwaInstallButton"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -95,6 +96,7 @@ export default function Layout({ children }: LayoutProps) {
                 </Badge>
               </div>
               
+              <PwaInstallButton />
               <ThemeToggle />
               <NotificationBell />
               

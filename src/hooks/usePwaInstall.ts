@@ -38,42 +38,64 @@ function wasDismissedRecently(): boolean {
   return Date.now() - dismissedAt < DISMISS_TTL_MS;
 }
 
+function clearDismissal() {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(DISMISS_KEY);
+}
+
 export function usePwaInstall() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [isInstallable, setIsInstallable] = useState(false);
   const [dismissed, setDismissed] = useState(false);
+  const [installed, setInstalled] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    if (isInstalled() || wasDismissedRecently()) {
+    const currentlyInstalled = isInstalled();
+    setInstalled(currentlyInstalled);
+
+    if (currentlyInstalled || wasDismissedRecently()) {
       setDismissed(true);
-      return;
     }
 
+    // Always listen for the install prompt — even after a dismissal — so the
+    // persistent install button keeps working if the app was uninstalled.
     const onBeforeInstall = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
-      setIsInstallable(true);
     };
 
     const onAppInstalled = () => {
       setDeferredPrompt(null);
-      setIsInstallable(false);
       setDismissed(true);
+      setInstalled(true);
+    };
+
+    // If the display mode changes (e.g. the PWA was uninstalled while the
+    // browser tab was open), re-evaluate and clear any stale dismissal.
+    const media = window.matchMedia("(display-mode: standalone)");
+    const onDisplayModeChange = () => {
+      const nowInstalled = isInstalled();
+      setInstalled(nowInstalled);
+      if (!nowInstalled) {
+        clearDismissal();
+        setDismissed(false);
+      }
     };
 
     window.addEventListener("beforeinstallprompt", onBeforeInstall);
     window.addEventListener("appinstalled", onAppInstalled);
+    media.addEventListener("change", onDisplayModeChange);
 
     return () => {
       window.removeEventListener("beforeinstallprompt", onBeforeInstall);
       window.removeEventListener("appinstalled", onAppInstalled);
+      media.removeEventListener("change", onDisplayModeChange);
     };
   }, []);
 
   const prompt = useCallback(async () => {
-    if (!deferredPrompt) return;
+    if (!deferredPrompt) return false;
 
     await deferredPrompt.prompt();
     const choice = await deferredPrompt.userChoice;
@@ -83,7 +105,7 @@ export function usePwaInstall() {
     }
 
     setDeferredPrompt(null);
-    setIsInstallable(false);
+    return choice.outcome === "accepted";
   }, [deferredPrompt]);
 
   const dismiss = useCallback(() => {
@@ -91,9 +113,15 @@ export function usePwaInstall() {
       window.localStorage.setItem(DISMISS_KEY, String(Date.now()));
     }
     setDismissed(true);
-    setDeferredPrompt(null);
-    setIsInstallable(false);
   }, []);
 
-  return { isInstallable: isInstallable && !dismissed, prompt, dismiss };
+  return {
+    /** Banner visibility: prompt available, not dismissed, not installed */
+    isInstallable: !!deferredPrompt && !dismissed && !installed,
+    /** Native install prompt is available right now (header button) */
+    canInstall: !!deferredPrompt && !installed,
+    installed,
+    prompt,
+    dismiss,
+  };
 }

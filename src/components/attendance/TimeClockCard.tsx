@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Clock, LogIn, LogOut, Timer, MapPin, Home } from "lucide-react";
+import { Clock, LogIn, LogOut, Timer, MapPin, Home, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -356,19 +356,71 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
                 <span>Not clocked in today</span>
               )}
             </div>
-            {gpsBlocked && expectedMode === "Physical" && (
-              <p className="text-xs text-warning">
-                Location access is blocked. Enable location permission in your browser so your
-                office presence can be verified — your clock-in was still recorded.
+            {/* Flags raised by the backend on today's record */}
+            {(todayStatus?.hr_location_review || todayStatus?.location_status === "Outside Radius") && (
+              <p className="flex items-start gap-2 text-xs text-warning">
+                <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                You clocked in away from your office location — HR has been asked to review it.
               </p>
+            )}
+            {todayStatus?.schedule_mismatch && (
+              <p className="flex items-start gap-2 text-xs text-warning">
+                <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                Today's clock-in does not match your expected work mode ({expectedMode}).
+              </p>
+            )}
+            {locationError && !clockedIn && (
+              <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-xs">
+                <p className="font-medium text-destructive">{LOCATION_ERROR_COPY[locationError].title}</p>
+                <p className="mt-1 text-muted-foreground">{LOCATION_ERROR_COPY[locationError].body}</p>
+              </div>
             )}
           </div>
           <div className="flex flex-wrap gap-2">
             {!clockedIn ? (
-              <Button onClick={handleClockIn} disabled={isPunching || !employeeId} className="gap-2">
-                <LogIn className="h-4 w-4" />
-                Clock In
-              </Button>
+              <div className="space-y-2">
+                {/* Pick the mode first — geolocation only runs after this choice */}
+                <div className="flex gap-2">
+                  {(["Physical", "WFH"] as const).map((mode) => {
+                    const active = (selectedMode ?? expectedMode) === mode;
+                    return (
+                      <Button
+                        key={mode}
+                        type="button"
+                        size="sm"
+                        variant={active ? "secondary" : "outline"}
+                        onClick={() => {
+                          setSelectedMode(mode);
+                          setLocationError(null);
+                        }}
+                        className="gap-2"
+                      >
+                        {mode === "WFH" ? <Home className="h-4 w-4" /> : <MapPin className="h-4 w-4" />}
+                        {mode === "WFH" ? "Working from home" : "At the office"}
+                      </Button>
+                    );
+                  })}
+                </div>
+                <Button
+                  onClick={handleClockIn}
+                  disabled={isPunching || !employeeId}
+                  className="w-full gap-2"
+                >
+                  <LogIn className="h-4 w-4" />
+                  {isPunching
+                    ? (selectedMode ?? expectedMode) === "Physical"
+                      ? "Checking your location…"
+                      : "Clocking in…"
+                    : locationError
+                      ? "Try again"
+                      : "Clock In"}
+                </Button>
+                {(selectedMode ?? expectedMode) === "Physical" && (
+                  <p className="text-[11px] text-muted-foreground">
+                    Your location is required to confirm office attendance.
+                  </p>
+                )}
+              </div>
             ) : (
               <Button
                 onClick={handleClockOut}

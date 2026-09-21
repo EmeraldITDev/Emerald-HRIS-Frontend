@@ -211,6 +211,13 @@ export default function Training() {
         delete payload.training_id
       }
 
+      // "Other" category: send the free-text value the backend expects.
+      if (payload.category === 'Other') {
+        payload.category_other = (newTraining.category_other || '').trim()
+      } else {
+        delete payload.category_other
+      }
+
       // Don't send the file through assignTraining — it goes via S3 separately.
       delete payload.attachment
 
@@ -242,6 +249,7 @@ export default function Training() {
       setNewTraining({
         title: '',
         category: '',
+        category_other: '',
         description: '',
         instructor: '',
         location: '',

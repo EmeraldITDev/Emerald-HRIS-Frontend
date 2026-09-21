@@ -146,6 +146,8 @@ export default function Performance() {
   const isLineManager = user?.role === 'line_manager'
   const isGeneralEmployee = !isExecutiveOrHR && !isLineManager
   const canManageReviews = isExecutiveOrHR || isLineManager
+  // Only HR opens a review cycle; managers contribute to existing ones.
+  const canCreateReviews = user?.role === 'hr_manager' || user?.role === 'corporate_hr'
   const userDepartment = user?.department
   const currentEmployeeIdFromUser = user?.employee_id ? String(user.employee_id) : undefined
   
@@ -176,6 +178,13 @@ export default function Performance() {
     return true
   })
   
+  // The employee may only self-assess when HR has requested it for them.
+  const selfAssessmentRequest = reviews.find(
+    r =>
+      String(r.rawStatus || '').toLowerCase() === 'self_assessment_requested' &&
+      (!currentEmployeeIdFromUser || r.employeeId === currentEmployeeIdFromUser),
+  )
+
   // Filter employees based on department for line managers
   const filteredEmployees = isLineManager && userDepartment
     ? employees.filter(emp => emp.department === userDepartment)
@@ -436,18 +445,21 @@ export default function Performance() {
         </div>
         
         <div className="flex gap-2 w-full sm:w-auto">
-          {/* Self-Assessment button for employees */}
-          {!isExecutiveOrHR && (
+          {/* Self-assessment is only available once HR has requested one */}
+          {selfAssessmentRequest && (
             <Button 
               className="bg-blue-600 hover:bg-blue-700 text-white w-full sm:w-auto"
-              onClick={() => setSelfAssessmentOpen(true)}
+              onClick={() => {
+                setSelfAssessmentPeriod(selfAssessmentRequest.reviewPeriod)
+                setSelfAssessmentOpen(true)
+              }}
             >
               <FileText className="mr-2 h-4 w-4" />
               <span className="text-sm md:text-base">Self-Assessment</span>
             </Button>
           )}
           
-          {canManageReviews && (
+          {canCreateReviews && (
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
                 <Button className="bg-emerald-600 hover:bg-emerald-700 text-white w-full sm:w-auto">

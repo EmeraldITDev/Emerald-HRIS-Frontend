@@ -512,18 +512,17 @@ export default function Performance() {
               <div className="grid gap-4 py-4">
                 <div className="space-y-2">
                   <Label htmlFor="employee">Employee *</Label>
-                  <Select onValueChange={(value) => setNewReview({...newReview, employeeId: value})}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select employee" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {filteredEmployees.map((employee) => (
-                        <SelectItem key={employee.id} value={employee.id?.toString() || ''}>
-                          {employee.first_name} {employee.last_name} - {employee.department}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SearchableSelect
+                    value={newReview.employeeId}
+                    onValueChange={(value) => setNewReview({...newReview, employeeId: value})}
+                    placeholder="Select employee"
+                    searchPlaceholder="Search employees…"
+                    options={filteredEmployees.map((employee) => ({
+                      value: employee.id?.toString() || '',
+                      label: `${employee.first_name} ${employee.last_name} - ${employee.department}`,
+                      keywords: `${employee.employee_code || ''} ${employee.email || ''}`,
+                    }))}
+                  />
                 </div>
                 
                 <div className="space-y-2">

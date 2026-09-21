@@ -48,6 +48,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
+import { SearchableSelect } from "@/components/ui/searchable-select"
 
 
 // Fetch employees from API - defined at component level
@@ -1156,29 +1157,22 @@ export default function Payroll() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label>Employee *</Label>
-                <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select employee" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover border shadow-lg">
-                    {isLoadingEmployees ? (
-                      <SelectItem value="loading" disabled>Loading employees...</SelectItem>
-                    ) : onboardEmployees.length === 0 ? (
-                      <SelectItem value="none" disabled>No employees found</SelectItem>
-                    ) : (
-                      onboardEmployees.map((emp) => {
-                        const full = employees.find((e) => e.id?.toString() === emp.id)
-                        const noGross = full ? getAnnualGrossSalary(full) < 12 : false
-                        return (
-                          <SelectItem key={emp.id} value={emp.id}>
-                            {emp.name} - {emp.employmentType}
-                            {noGross ? " (no annual gross)" : ""}
-                          </SelectItem>
-                        )
-                      })
-                    )}
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  value={selectedEmployee}
+                  onValueChange={setSelectedEmployee}
+                  placeholder={isLoadingEmployees ? "Loading employees..." : "Select employee"}
+                  searchPlaceholder="Search employees…"
+                  emptyText="No employees found"
+                  options={onboardEmployees.map((emp) => {
+                    const full = employees.find((e) => e.id?.toString() === emp.id)
+                    const noGross = full ? getAnnualGrossSalary(full) < 12 : false
+                    return {
+                      value: emp.id,
+                      label: `${emp.name} - ${emp.employmentType}${noGross ? " (no annual gross)" : ""}`,
+                      keywords: `${full?.employee_code || ''} ${full?.department || ''}`,
+                    }
+                  })}
+                />
                 {selectedEmployee && (
                   <p className="text-xs text-muted-foreground">
                     Type: {onboardEmployees.find(e => e.id === selectedEmployee)?.employmentType}

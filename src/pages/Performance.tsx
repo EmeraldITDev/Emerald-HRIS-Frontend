@@ -493,10 +493,10 @@ export default function Performance() {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="goals">Goals</Label>
+                  <Label htmlFor="goals">KPIs</Label>
                   <Textarea
                     id="goals"
-                    placeholder="List the employee's goals for this period"
+                    placeholder="List the employee's KPIs for this period"
                     value={newReview.goals}
                     onChange={(e) => setNewReview({...newReview, goals: e.target.value})}
                   />
@@ -750,7 +750,7 @@ export default function Performance() {
               </div>
               
               <div>
-                <Label className="text-sm text-muted-foreground">Goals</Label>
+                <Label className="text-sm text-muted-foreground">KPIs</Label>
                 <p className="mt-1">{selectedReview.goals}</p>
               </div>
               
@@ -1011,23 +1011,23 @@ export default function Performance() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="completedGoals">3. Which goals or tasks did you complete successfully?</Label>
+                <Label htmlFor="completedGoals">3. Which KPIs or tasks did you complete successfully?</Label>
                 <Textarea
                   id="completedGoals"
                   value={selfAssessmentData.completedGoals}
                   onChange={(e) => setSelfAssessmentData({...selfAssessmentData, completedGoals: e.target.value})}
-                  placeholder="List completed goals..."
+                  placeholder="List completed KPIs..."
                   className="min-h-[80px]"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="unachievedGoals">4. Were there any goals you did not achieve? If yes, please explain.</Label>
+                <Label htmlFor="unachievedGoals">4. Were there any KPIs you did not achieve? If yes, please explain.</Label>
                 <Textarea
                   id="unachievedGoals"
                   value={selfAssessmentData.unachievedGoals}
                   onChange={(e) => setSelfAssessmentData({...selfAssessmentData, unachievedGoals: e.target.value})}
-                  placeholder="Explain any unachieved goals..."
+                  placeholder="Explain any unachieved KPIs..."
                   className="min-h-[80px]"
                 />
               </div>
@@ -1139,17 +1139,17 @@ export default function Performance() {
               </div>
             </div>
 
-            {/* Section D: Future Goals */}
+            {/* Section D: Future KPIs */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-foreground border-b pb-2">Section D: Future Goals</h3>
+              <h3 className="text-lg font-semibold text-foreground border-b pb-2">Section D: Future KPIs</h3>
               
               <div className="space-y-2">
-                <Label htmlFor="futureGoals">13. What are your key goals for the next review period?</Label>
+                <Label htmlFor="futureGoals">13. What are your key KPIs for the next review period?</Label>
                 <Textarea
                   id="futureGoals"
                   value={selfAssessmentData.futureGoals}
                   onChange={(e) => setSelfAssessmentData({...selfAssessmentData, futureGoals: e.target.value})}
-                  placeholder="Describe your future goals..."
+                  placeholder="Describe your future KPIs..."
                   className="min-h-[80px]"
                 />
               </div>

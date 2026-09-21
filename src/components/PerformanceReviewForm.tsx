@@ -95,7 +95,7 @@ interface PerformanceReviewFormProps {
 }
 
 const defaultKPAs: KPA[] = [
-  { id: '1', name: 'Goal Achievement', description: 'Ability to meet and exceed set objectives and targets', rating: 0, justification: '' },
+  { id: '1', name: 'KPI Achievement', description: 'Ability to meet and exceed set objectives and targets', rating: 0, justification: '' },
   { id: '2', name: 'Quality of Work', description: 'Consistency and excellence in work output and deliverables', rating: 0, justification: '' },
   { id: '3', name: 'Productivity & Efficiency', description: 'Effective use of time and resources to maximize output', rating: 0, justification: '' },
   { id: '4', name: 'Problem Solving & Decision Making', description: 'Ability to analyze issues and make sound decisions', rating: 0, justification: '' },

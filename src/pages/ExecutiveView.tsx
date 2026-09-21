@@ -186,29 +186,20 @@ export default function ExecutiveView() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <MetricTile
-          label="Total workforce"
-          value={data.headcount.toLocaleString()}
-          icon={Users}
-          hint="Active employees"
-        />
-        <MetricTile
-          label="New hires"
-          value={data.newHires.toLocaleString()}
-          icon={UserPlus}
-          hint="This month"
-        />
+        <MetricTile label="Total workforce" value={data.headcount.toLocaleString()} sub="Active employees" />
+        <MetricTile label="New hires" value={data.newHires.toLocaleString()} sub="This month" />
         <MetricTile
           label="Attendance rate"
           value={`${data.attendanceRate.toFixed(0)}%`}
-          icon={TrendingUp}
-          hint="Company average"
+          sub="Company average"
         />
         <MetricTile
           label="Monthly payroll"
           value={formatNaira(data.payrollTotal)}
-          icon={Wallet}
-          hint={data.period ? `Period ${data.period}` : "Current period"}
+          sub={data.period ? `Period ${data.period}` : "Current period"}
+          delta={data.payrollChangePct || null}
+          deltaLabel="vs last period"
+          higherIsBetter={false}
         />
       </div>
 

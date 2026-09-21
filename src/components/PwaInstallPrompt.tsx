@@ -1,4 +1,4 @@
-import { Download, X } from "lucide-react";
+import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePwaInstall } from "@/hooks/usePwaInstall";
 
@@ -16,9 +16,11 @@ export function PwaInstallPrompt() {
     <div className="fixed inset-x-0 bottom-0 z-50 p-4 flex justify-center pointer-events-none">
       <div className="pointer-events-auto w-full max-w-md rounded-2xl border bg-card px-4 py-4 shadow-2xl">
         <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
-            <Download className="h-5 w-5 text-primary" />
-          </div>
+          <img
+            src="/icons/icon-192.png"
+            alt="Emerald HRIS"
+            className="h-10 w-10 shrink-0 rounded-lg"
+          />
           <div className="flex-1 min-w-0">
             <h3 className="text-sm font-semibold text-foreground">
               Install Emerald HRIS

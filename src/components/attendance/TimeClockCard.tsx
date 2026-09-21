@@ -25,6 +25,25 @@ interface TimeClockCardProps {
 
 type Coords = { lat: number; lng: number; accuracy?: number } | null;
 
+type OfficeLocation = {
+  id?: number | string;
+  name: string;
+  address?: string;
+  latitude: number;
+  longitude: number;
+  radiusMetres: number;
+};
+
+type LocationIssue = {
+  officeName: string;
+  distanceMetres: number;
+  accuracyMetres: number;
+  reason: "outside" | "imprecise";
+};
+
+const MAX_LOCATION_ATTEMPTS = 3;
+const MAX_ACCEPTABLE_ACCURACY_METRES = 200;
+
 // Distinct states the backend recognises, mapped from the browser's own errors.
 type LocationError = "permission_denied" | "position_unavailable" | "timeout" | "unsupported" | null;
 
@@ -71,9 +90,89 @@ async function captureGps(): Promise<{ coords: Coords; error: LocationError }> {
               : "position_unavailable";
         resolve({ coords: null, error });
       },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
     );
   });
+}
+
+function normaliseLocation(value: unknown): string {
+  return String(value ?? "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function unwrapOfficeLocations(raw: any): OfficeLocation[] {
+  const rows = Array.isArray(raw)
+    ? raw
+    : Array.isArray(raw?.data)
+      ? raw.data
+      : Array.isArray(raw?.data?.data)
+        ? raw.data.data
+        : [];
+
+  return rows.flatMap((row: any) => {
+    const latitude = Number(row?.latitude);
+    const longitude = Number(row?.longitude);
+    const radiusMetres = Number(row?.radius_meters ?? row?.radius_metres ?? row?.radius);
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || !Number.isFinite(radiusMetres)) {
+      return [];
+    }
+    return [{
+      id: row?.id,
+      name: String(row?.name ?? row?.location ?? "Office"),
+      address: row?.address ? String(row.address) : undefined,
+      latitude,
+      longitude,
+      radiusMetres,
+    }];
+  });
+}
+
+function findAssignedOffice(offices: OfficeLocation[], assignedLocation: unknown): OfficeLocation | null {
+  const assigned = normaliseLocation(assignedLocation);
+  if (!assigned) return null;
+
+  const city = assigned.includes("calabar")
+    ? "calabar"
+    : assigned.includes("lagos") || assigned.includes("victoria island")
+      ? "lagos"
+      : "";
+
+  return offices.find((office) => {
+    const searchable = normaliseLocation(`${office.name} ${office.address ?? ""}`);
+    return searchable.includes(assigned) || assigned.includes(normaliseLocation(office.name)) || (!!city && searchable.includes(city));
+  }) ?? null;
+}
+
+function distanceMetres(a: Coords, office: OfficeLocation): number {
+  if (!a) return Number.POSITIVE_INFINITY;
+  const earthRadius = 6_371_000;
+  const toRadians = (degrees: number) => (degrees * Math.PI) / 180;
+  const latDelta = toRadians(office.latitude - a.lat);
+  const lngDelta = toRadians(office.longitude - a.lng);
+  const startLat = toRadians(a.lat);
+  const officeLat = toRadians(office.latitude);
+  const haversine =
+    Math.sin(latDelta / 2) ** 2 +
+    Math.cos(startLat) * Math.cos(officeLat) * Math.sin(lngDelta / 2) ** 2;
+  return earthRadius * 2 * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine));
+}
+
+function checkOfficeLocation(coords: Coords, office: OfficeLocation | null): LocationIssue | null {
+  if (!coords || !office) return null;
+  const accuracyMetres = Math.max(0, coords.accuracy ?? 0);
+  const distance = distanceMetres(coords, office);
+  const isImprecise = accuracyMetres > MAX_ACCEPTABLE_ACCURACY_METRES;
+  const accuracyAllowance = Math.min(accuracyMetres, MAX_ACCEPTABLE_ACCURACY_METRES);
+  const isOutside = distance > office.radiusMetres + accuracyAllowance;
+  if (!isImprecise && !isOutside) return null;
+  return {
+    officeName: office.name,
+    distanceMetres: Math.round(distance),
+    accuracyMetres: Math.round(accuracyMetres),
+    reason: isImprecise ? "imprecise" : "outside",
+  };
 }
 
 export function TimeClockCard({ employeeId, todayStatus, refresh, className }: TimeClockCardProps) {
@@ -81,8 +180,11 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
   const { user } = useAuth();
   const [profile, setProfile] = useState<any>(null);
   const [scheduleConfig, setScheduleConfig] = useState<any>(null);
+  const [officeLocations, setOfficeLocations] = useState<OfficeLocation[]>([]);
   const [isPunching, setIsPunching] = useState(false);
   const [locationError, setLocationError] = useState<LocationError>(null);
+  const [locationIssue, setLocationIssue] = useState<LocationIssue | null>(null);
+  const [locationAttempt, setLocationAttempt] = useState(0);
   const [selectedMode, setSelectedMode] = useState<"Physical" | "WFH" | null>(null);
   // The mode picker only appears after the user presses Clock In.
   const [choosingMode, setChoosingMode] = useState(false);
@@ -116,6 +218,20 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
     };
   }, [employeeId, dayName]);
 
+  useEffect(() => {
+    let cancelled = false;
+    apiService.getOfficeLocations()
+      .then((res) => {
+        if (!cancelled) setOfficeLocations(unwrapOfficeLocations(res));
+      })
+      .catch(() => {
+        if (!cancelled) setOfficeLocations([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const expectedMode: "Physical" | "WFH" = useMemo(() => {
     const arrangement = String(profile?.work_arrangement || "").toLowerCase();
     if (arrangement === "fully remote") return "WFH";
@@ -135,6 +251,17 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
     const loc = profile.assigned_location ? `${profile.assigned_location} Office` : "office";
     return `Today is a Physical day — ${loc}`;
   }, [profile, expectedMode]);
+
+  const assignedOffice = useMemo(
+    () => findAssignedOffice(officeLocations, profile?.assigned_location ?? profile?.work_location),
+    [officeLocations, profile?.assigned_location, profile?.work_location],
+  );
+
+  const resetLocationAttempt = useCallback(() => {
+    setLocationError(null);
+    setLocationIssue(null);
+    setLocationAttempt(0);
+  }, []);
 
   const [justClockedOut, setJustClockedOut] = useState(false);
 
@@ -176,7 +303,7 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
     const m = String(Math.floor((diff % 3600) / 60)).padStart(2, "0");
     const s = String(diff % 60).padStart(2, "0");
     return `${h}:${m}:${s}`;
-  }, [clockedIn, todayStatus?.clock_in, todayStatus?.date, now]);
+  }, [clockedIn, now, startedAt]);
 
   const handleClockIn = useCallback(async () => {
     if (!employeeId) {
@@ -192,6 +319,7 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
     setLocationError(null);
     try {
       let coords: Coords = null;
+      let currentLocationIssue: LocationIssue | null = null;
       if (mode === "Physical") {
         // Location is mandatory for office clock-in — never bypass it.
         const gps = await captureGps();
@@ -205,6 +333,20 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
           return;
         }
         coords = gps.coords;
+        const nextAttempt = locationAttempt + 1;
+        currentLocationIssue = checkOfficeLocation(coords, assignedOffice);
+        if (currentLocationIssue && nextAttempt < MAX_LOCATION_ATTEMPTS) {
+          setLocationAttempt(nextAttempt);
+          setLocationIssue(currentLocationIssue);
+          toast({
+            title: "Office location not confirmed",
+            description: `Move near a window or open area, then retry. ${MAX_LOCATION_ATTEMPTS - nextAttempt} ${MAX_LOCATION_ATTEMPTS - nextAttempt === 1 ? "retry" : "retries"} remaining before HR review.`,
+            variant: "destructive",
+          });
+          return;
+        }
+        setLocationAttempt(nextAttempt);
+        setLocationIssue(currentLocationIssue);
       }
       const payload: Record<string, any> = {
         employee_id: employeeId,
@@ -215,14 +357,25 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
         payload.location_lat = coords.lat;
         payload.location_lng = coords.lng;
         if (coords.accuracy != null) payload.location_accuracy = Math.round(coords.accuracy);
+        payload.location_attempt = Math.max(1, locationAttempt + 1);
+        if (currentLocationIssue) {
+          payload.force_location_review = true;
+          payload.location_review_reason = "Location remained outside the accuracy-aware office boundary after three attempts.";
+        }
       }
 
       const res: any = await apiService.createAttendance(payload);
       setJustClockedOut(false);
       setChoosingMode(false);
+      setSelectedMode(null);
+      resetLocationAttempt();
       const record = (await refresh()) ?? res;
+      const responseRecord = res?.data ?? res;
       const flagged =
-        record?.hr_location_review || res?.hr_location_review || /outside/i.test(String(res?.message || ""));
+        record?.hr_location_review ||
+        responseRecord?.hr_location_review ||
+        ["Mismatch", "Outside Radius"].includes(String(record?.location_status ?? responseRecord?.location_status ?? "")) ||
+        /outside|review/i.test(String(res?.message || ""));
       toast({
         title: "Clocked in",
         description: flagged
@@ -238,7 +391,7 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
     } finally {
       setIsPunching(false);
     }
-  }, [employeeId, expectedMode, selectedMode, refresh, toast]);
+  }, [assignedOffice, employeeId, expectedMode, locationAttempt, resetLocationAttempt, selectedMode, refresh, toast]);
 
   const handleClockOut = useCallback(async () => {
     if (!employeeId) return;
@@ -378,6 +531,20 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
                 <p className="mt-1 text-muted-foreground">{LOCATION_ERROR_COPY[locationError].body}</p>
               </div>
             )}
+            {locationIssue && !clockedIn && (
+              <div className="rounded-md border border-warning/40 bg-warning/5 p-3 text-xs">
+                <p className="font-medium text-warning">Office location not confirmed</p>
+                <p className="mt-1 text-muted-foreground">
+                  {locationIssue.reason === "imprecise"
+                    ? `Your device location is only accurate to about ${locationIssue.accuracyMetres} metres.`
+                    : `Your device currently appears outside ${locationIssue.officeName}.`}
+                  {" "}Move near a window or open area, then try again.
+                </p>
+                <p className="mt-1 font-medium text-foreground">
+                  Attempt {locationAttempt} of {MAX_LOCATION_ATTEMPTS}. The third attempt will be recorded and flagged for HR review.
+                </p>
+              </div>
+            )}
           </div>
           <div className="flex flex-wrap gap-2">
             {!clockedIn ? (
@@ -401,7 +568,7 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
                           variant={active ? "secondary" : "outline"}
                           onClick={() => {
                             setSelectedMode(mode);
-                            setLocationError(null);
+                            resetLocationAttempt();
                           }}
                           className="gap-2"
                         >
@@ -422,8 +589,8 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
                         ? (selectedMode ?? expectedMode) === "Physical"
                           ? "Checking your location…"
                           : "Clocking in…"
-                        : locationError
-                          ? "Try again"
+                        : locationError || locationIssue
+                          ? `Retry location (${locationAttempt + 1} of ${MAX_LOCATION_ATTEMPTS})`
                           : "Confirm Clock In"}
                     </Button>
                     <Button
@@ -434,7 +601,7 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
                       onClick={() => {
                         setChoosingMode(false);
                         setSelectedMode(null);
-                        setLocationError(null);
+                        resetLocationAttempt();
                       }}
                     >
                       Cancel

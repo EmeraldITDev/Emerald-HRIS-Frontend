@@ -51,7 +51,8 @@ export default function Performance() {
     goals: '',
     achievements: '',
     areasForImprovement: '',
-    comments: ''
+    comments: '',
+    requestSelfAssessment: true,
   })
 
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -194,11 +195,11 @@ export default function Performance() {
   // Check if any filters are active
   const hasActiveFilters = searchTerm || statusFilter || periodFilter || departmentFilter
   
-  const handleCreateNewReview = () => {
-    if (!newReview.employeeId || !newReview.reviewPeriod || !newReview.rating) {
+  const handleCreateNewReview = async () => {
+    if (!newReview.employeeId || !newReview.reviewPeriod) {
       toast({
         title: "Missing information",
-        description: "Please fill in all required fields.",
+        description: "Please select an employee and enter the review period.",
         variant: "destructive"
       })
       return
@@ -207,23 +208,28 @@ export default function Performance() {
     const employee = employees.find(emp => emp.id?.toString() === newReview.employeeId)
     if (!employee) return
 
-    const review: Review = {
-      id: (reviews.length + 1).toString(),
-      employeeId: newReview.employeeId,
-      employeeName: `${employee.first_name} ${employee.last_name}`,
-      department: employee.department || 'N/A',
-      reviewPeriod: newReview.reviewPeriod,
-      reviewDate: new Date().toISOString().split('T')[0],
-      rating: newReview.rating,
-      status: 'Completed',
-      reviewer: user?.firstName + " " + user?.lastName || 'System',
-      goals: newReview.goals,
-      achievements: newReview.achievements,
-      areasForImprovement: newReview.areasForImprovement,
-      comments: newReview.comments
+    try {
+      // HR opens the cycle on the backend; the employee only gets a
+      // self-assessment when HR asks for one here.
+      await apiService.createPerformanceReview({
+        employee_id: Number(newReview.employeeId),
+        period: newReview.reviewPeriod,
+        request_self_assessment: newReview.requestSelfAssessment,
+        kpis: newReview.goals
+          ? newReview.goals.split('\n').map(k => k.trim()).filter(Boolean)
+          : undefined,
+        notes: newReview.comments || undefined,
+      })
+      await fetchReviews()
+    } catch (e: any) {
+      toast({
+        title: "Could not create review",
+        description: e?.data?.message || e?.message || "Please try again.",
+        variant: "destructive"
+      })
+      return
     }
 
-    setReviews([review, ...reviews])
     setNewReview({
       employeeId: '',
       reviewPeriod: '',
@@ -231,13 +237,16 @@ export default function Performance() {
       goals: '',
       achievements: '',
       areasForImprovement: '',
-      comments: ''
+      comments: '',
+      requestSelfAssessment: true,
     })
     setIsDialogOpen(false)
-    
+
     toast({
       title: "Review created",
-      description: `Performance review for ${employee.first_name} ${employee.last_name} has been created.`
+      description: newReview.requestSelfAssessment
+        ? `${employee.first_name} ${employee.last_name} has been asked to complete a self-assessment.`
+        : `Performance review for ${employee.first_name} ${employee.last_name} has been created.`
     })
   }
   

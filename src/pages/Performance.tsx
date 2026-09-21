@@ -24,6 +24,7 @@ interface Review {
   reviewDate: string
   rating: number
   status: string
+  rawStatus?: string
   reviewer: string
   goals: string
   achievements: string
@@ -123,6 +124,7 @@ export default function Performance() {
         reviewDate: (r.created_at || '').split('T')[0] || '',
         rating: Number(r.manager_review?.overall_rating ?? r.self_assessment?.overallRating ?? 0),
         status: r.status.replace(/_/g, ' '),
+        rawStatus: r.status,
         reviewer: r.manager?.name ?? '—',
         goals: r.self_assessment?.futureGoals ?? '',
         achievements: r.self_assessment?.achievements ?? '',
@@ -382,11 +384,14 @@ export default function Performance() {
   const handleHRApproval = async () => {
     if (!selectedReview) return
     try {
-      await apiService.approvePerformance(Number(selectedReview.id))
+      // HR final screen closes the review out on the backend
+      await apiService.completePerformanceReview(Number(selectedReview.id), {
+        hr_comments: hrComments || undefined,
+      })
       await fetchReviews()
       setHrComments("")
       setHrReviewDialogOpen(false)
-      toast({ title: "Review approved", description: "Employee can now sign off." })
+      toast({ title: "Review completed", description: "This review is now closed." })
     } catch (e) {
       toast({ title: "Approval failed", description: "Please try again.", variant: 'destructive' })
     }

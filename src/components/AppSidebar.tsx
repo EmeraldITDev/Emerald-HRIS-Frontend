@@ -137,12 +137,6 @@ const navigationItems: NavItem[] = [
     roles: ['hr_manager', 'corporate_hr', 'executive']
   },
   {
-    title: "Movements",
-    url: "/movements",
-    icon: ArrowLeftRight,
-    permission: "*"
-  },
-  {
     title: "Announcements",
     url: "/announcements",
     icon: MessageSquare,

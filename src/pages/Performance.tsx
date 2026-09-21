@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -518,6 +519,24 @@ export default function Performance() {
                   </Select>
                 </div>
                 
+                <div className="flex items-start gap-2 rounded-md border p-3">
+                  <Checkbox
+                    id="requestSelfAssessment"
+                    checked={newReview.requestSelfAssessment}
+                    onCheckedChange={(checked) =>
+                      setNewReview({ ...newReview, requestSelfAssessment: !!checked })
+                    }
+                  />
+                  <div>
+                    <Label htmlFor="requestSelfAssessment" className="cursor-pointer font-medium">
+                      Ask the employee to complete a self-assessment
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      Leave this off to run the review without employee input.
+                    </p>
+                  </div>
+                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="goals">KPIs</Label>
                   <Textarea

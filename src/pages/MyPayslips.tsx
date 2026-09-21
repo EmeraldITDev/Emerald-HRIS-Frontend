@@ -126,8 +126,8 @@ export default function MyPayslips() {
     } catch (e: any) {
       const p = await buildLocal(period);
       if (p) {
-        generatePayslipPdf(p, `Payslip_${period}.pdf`);
-        toast({ title: "PDF generated locally", description: `Server export failed (${e?.message || "unknown"}); built from your payslip data.` });
+        await generatePayslipPdf(p, `Payslip_${period}.pdf`);
+        toast({ title: "Backup PDF downloaded", description: `The official PDF service failed (${e?.message || "unknown"}), so a clearly marked backup copy was created.` });
       } else {
         toast({ title: "PDF export failed", description: e?.message, variant: "destructive" });
       }

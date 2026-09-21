@@ -66,6 +66,7 @@ import MyWorkRequestsCard from "@/components/attendance/MyWorkRequestsCard"
 import ExceptionRequestForm from "@/components/attendance/ExceptionRequestForm"
 import WFHRequestForm from "@/components/attendance/WFHRequestForm"
 import { canSubmitException, canSubmitWFH } from "@/lib/permissions"
+import { SearchableSelect } from "@/components/ui/searchable-select"
 
 // Sample attendance records
 const attendanceRecords = [
@@ -1183,26 +1184,20 @@ export default function Attendance() {
                   <div className="space-y-2">
                     <Label htmlFor="employee">Employee *</Label>
                     {(user?.role === 'hr_manager' || user?.role === 'corporate_hr') ? (
-                      <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
-                        <SelectTrigger>
-                          <SelectValue placeholder={isLoadingEmployees ? "Loading employees..." : "Select employee"} />
-                        </SelectTrigger>
-                        <SelectContent className="bg-popover border shadow-lg max-h-60">
-                          {employees.length > 0 ? (
-                            employees
-                              .filter(emp => emp.employment_type !== 'Contract')
-                              .map((emp) => (
-                                <SelectItem key={emp.id} value={emp.id?.toString() || '0'}>
-                                  {emp.employee_display || `${emp.employee_code ? emp.employee_code + ' - ' : ''}${emp.first_name} ${emp.last_name}`}
-                                </SelectItem>
-                              ))
-                          ) : (
-                            <SelectItem value="no-employees" disabled>
-                              {isLoadingEmployees ? "Loading..." : "No employees available"}
-                            </SelectItem>
-                          )}
-                        </SelectContent>
-                      </Select>
+                      <SearchableSelect
+                        value={selectedEmployee}
+                        onValueChange={setSelectedEmployee}
+                        placeholder={isLoadingEmployees ? "Loading employees..." : "Select employee"}
+                        searchPlaceholder="Search employees…"
+                        emptyText={isLoadingEmployees ? "Loading..." : "No employees available"}
+                        options={employees
+                          .filter(emp => emp.employment_type !== 'Contract')
+                          .map((emp) => ({
+                            value: emp.id?.toString() || '0',
+                            label: emp.employee_display || `${emp.employee_code ? emp.employee_code + ' - ' : ''}${emp.first_name} ${emp.last_name}`,
+                            keywords: `${emp.employee_code || ''} ${emp.department || ''} ${emp.email || ''}`,
+                          }))}
+                      />
                     ) : (
                       <Input
                         id="employee"
@@ -1527,19 +1522,21 @@ export default function Attendance() {
                   {(user?.role === 'hr_manager' || user?.role === 'corporate_hr' || user?.role === 'executive') && (
                     <div className="space-y-1">
                       <Label className="text-xs">Employee</Label>
-                      <Select value={leaveFilterEmployee} onValueChange={setLeaveFilterEmployee}>
-                        <SelectTrigger className="h-9">
-                          <SelectValue placeholder="All Employees" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All Employees</SelectItem>
-                          {employees.map((emp) => (
-                            <SelectItem key={emp.id} value={emp.id?.toString() || ''}>
-                              {emp.first_name} {emp.last_name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <SearchableSelect
+                        value={leaveFilterEmployee}
+                        onValueChange={setLeaveFilterEmployee}
+                        className="h-9"
+                        placeholder="All Employees"
+                        searchPlaceholder="Search employees…"
+                        options={[
+                          { value: 'all', label: 'All Employees' },
+                          ...employees.map((emp) => ({
+                            value: emp.id?.toString() || '',
+                            label: `${emp.first_name} ${emp.last_name}`,
+                            keywords: `${emp.employee_code || ''} ${emp.department || ''}`,
+                          })),
+                        ]}
+                      />
                     </div>
                   )}
 

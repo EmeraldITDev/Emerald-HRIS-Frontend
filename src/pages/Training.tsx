@@ -40,7 +40,8 @@ const trainingTypes = [
   'Soft Skills',
   'Professional Certification',
   'Product Training',
-  'Software Training'
+  'Software Training',
+  'Other'
 ]
 
 export default function Training() {
@@ -58,6 +59,7 @@ export default function Training() {
   const [newTraining, setNewTraining] = useState({
     title: '',
     category: '',
+    category_other: '',
     description: '',
     instructor: '',
     location: '',

@@ -187,6 +187,7 @@ export default function Benefits() {
     notes: '',
     is_recurring: false,
     recurrence: 'none' as 'none' | 'monthly' | 'yearly',
+    include_dependants: false,
   })
   const { toast } = useToast()
   const { user, refreshUser } = useAuth()
@@ -418,6 +419,7 @@ export default function Benefits() {
           start_date: assignBenefitForm.start_date,
           end_date: assignBenefitForm.end_date || null,
           notes: assignBenefitForm.notes,
+          include_dependants: assignBenefitForm.include_dependants,
         })
       } else {
         response = await apiService.assignBenefit({
@@ -443,6 +445,7 @@ export default function Benefits() {
         notes: '',
         is_recurring: false,
         recurrence: 'none',
+        include_dependants: false,
       })
       setIsAssignDialogOpen(false)
       const wasEditing = !!editingBenefitId
@@ -559,6 +562,7 @@ export default function Benefits() {
       notes: benefit.notes || '',
       is_recurring: false,
       recurrence: 'none',
+      include_dependants: !!benefit.include_dependants,
     })
     setIsAssignDialogOpen(true)
   }
@@ -1485,6 +1489,27 @@ export default function Benefits() {
                 {assignBenefitForm.end_date && assignBenefitForm.start_date && new Date(assignBenefitForm.end_date) <= new Date(assignBenefitForm.start_date) && (
                   <p className="text-xs text-destructive">End date must be after start date.</p>
                 )}
+              </div>
+            </div>
+
+            {/* Dependants */}
+            <div className="rounded-md border p-3">
+              <div className="flex items-start gap-2">
+                <Checkbox
+                  id="include_dependants"
+                  checked={assignBenefitForm.include_dependants}
+                  onCheckedChange={(checked) =>
+                    setAssignBenefitForm({ ...assignBenefitForm, include_dependants: !!checked })
+                  }
+                />
+                <div className="flex-1">
+                  <Label htmlFor="include_dependants" className="cursor-pointer font-medium">
+                    Include Dependants
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Extend this benefit to the employee's registered dependants.
+                  </p>
+                </div>
               </div>
             </div>
 

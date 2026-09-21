@@ -525,89 +525,9 @@ export default function Performance() {
                   />
                 </div>
                 
-                <div className="space-y-2">
-                  <Label htmlFor="reviewPeriod">Review Period *</Label>
-                  <Input
-                    id="reviewPeriod"
-                    placeholder="e.g., Q4 2024"
-                    value={newReview.reviewPeriod}
-                    onChange={(e) => setNewReview({...newReview, reviewPeriod: e.target.value})}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="rating">Overall Rating (1-5) *</Label>
-                  <Select onValueChange={(value) => setNewReview({...newReview, rating: parseInt(value)})}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select rating" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1">1 - Needs Improvement</SelectItem>
-                      <SelectItem value="2">2 - Below Expectations</SelectItem>
-                      <SelectItem value="3">3 - Meets Expectations</SelectItem>
-                      <SelectItem value="4">4 - Exceeds Expectations</SelectItem>
-                      <SelectItem value="5">5 - Outstanding</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="flex items-start gap-2 rounded-md border p-3">
-                  <Checkbox
-                    id="requestSelfAssessment"
-                    checked={newReview.requestSelfAssessment}
-                    onCheckedChange={(checked) =>
-                      setNewReview({ ...newReview, requestSelfAssessment: !!checked })
-                    }
-                  />
-                  <div>
-                    <Label htmlFor="requestSelfAssessment" className="cursor-pointer font-medium">
-                      Ask the employee to complete a self-assessment
-                    </Label>
-                    <p className="text-xs text-muted-foreground">
-                      Leave this off to run the review without employee input.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="goals">KPIs</Label>
-                  <Textarea
-                    id="goals"
-                    placeholder="List the employee's KPIs for this period"
-                    value={newReview.goals}
-                    onChange={(e) => setNewReview({...newReview, goals: e.target.value})}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="achievements">Achievements</Label>
-                  <Textarea
-                    id="achievements"
-                    placeholder="Describe key achievements"
-                    value={newReview.achievements}
-                    onChange={(e) => setNewReview({...newReview, achievements: e.target.value})}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="areasForImprovement">Areas for Improvement</Label>
-                  <Textarea
-                    id="areasForImprovement"
-                    placeholder="Identify areas needing development"
-                    value={newReview.areasForImprovement}
-                    onChange={(e) => setNewReview({...newReview, areasForImprovement: e.target.value})}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="comments">Additional Comments</Label>
-                  <Textarea
-                    id="comments"
-                    placeholder="Any additional feedback"
-                    value={newReview.comments}
-                    onChange={(e) => setNewReview({...newReview, comments: e.target.value})}
-                  />
-                </div>
+                <p className="text-xs text-muted-foreground">
+                  The employee will be asked to complete a self-assessment.
+                </p>
               </div>
               
               <DialogFooter>

@@ -173,12 +173,6 @@ const systemItems: NavItem[] = [
     permission: "reports.view"
   },
   { 
-    title: "Announcements", 
-    url: "/announcements", 
-    icon: MessageSquare,
-    permission: "*"
-  },
-  { 
     title: "Policies", 
     url: "/policies", 
     icon: BookOpen,

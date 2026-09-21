@@ -15,6 +15,7 @@ import { DEPARTMENTS } from '@/constants/departments'
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from '@/contexts/AuthContext'
 import { apiService, Employee, PerformanceReview } from '@/lib/api'
+import { SearchableSelect } from '@/components/ui/searchable-select'
 
 interface Review {
   id: string

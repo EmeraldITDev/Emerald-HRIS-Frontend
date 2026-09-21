@@ -219,6 +219,7 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
 
       const res: any = await apiService.createAttendance(payload);
       setJustClockedOut(false);
+      setChoosingMode(false);
       const record = (await refresh()) ?? res;
       const flagged =
         record?.hr_location_review || res?.hr_location_review || /outside/i.test(String(res?.message || ""));

@@ -230,10 +230,10 @@ export default function Performance() {
   const hasActiveFilters = searchTerm || statusFilter || periodFilter || departmentFilter
   
   const handleCreateNewReview = async () => {
-    if (!newReview.employeeId || !newReview.reviewPeriod) {
+    if (!newReview.employeeId) {
       toast({
         title: "Missing information",
-        description: "Please select an employee and enter the review period.",
+        description: "Please select an employee.",
         variant: "destructive"
       })
       return
@@ -242,17 +242,16 @@ export default function Performance() {
     const employee = employees.find(emp => emp.id?.toString() === newReview.employeeId)
     if (!employee) return
 
+    const now = new Date()
+    const period = `Q${Math.floor(now.getMonth() / 3) + 1} ${now.getFullYear()}`
+
     try {
-      // HR opens the cycle on the backend; the employee only gets a
-      // self-assessment when HR asks for one here.
+      // HR opens the cycle on the backend; the employee always gets a
+      // self-assessment request.
       await apiService.createPerformanceReview({
         employee_id: Number(newReview.employeeId),
-        period: newReview.reviewPeriod,
-        request_self_assessment: newReview.requestSelfAssessment,
-        kpis: newReview.goals
-          ? newReview.goals.split('\n').map(k => k.trim()).filter(Boolean)
-          : undefined,
-        notes: newReview.comments || undefined,
+        period,
+        request_self_assessment: true,
       })
       await fetchReviews()
     } catch (e: any) {

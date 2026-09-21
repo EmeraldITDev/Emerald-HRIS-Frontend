@@ -93,6 +93,10 @@ export default function Performance() {
     overallRating: "3"
   })
   const [managerNotes, setManagerNotes] = useState("")
+  const [managerRating, setManagerRating] = useState("3")
+  const [managerStrengths, setManagerStrengths] = useState("")
+  const [managerAreasForImprovement, setManagerAreasForImprovement] = useState("")
+  const [managerRecommendations, setManagerRecommendations] = useState("")
   const [meetingDate, setMeetingDate] = useState("")
   const [hrComments, setHrComments] = useState("")
   const { toast } = useToast()
@@ -350,10 +354,21 @@ export default function Performance() {
       return
     }
     try {
-      await apiService.managerReview(Number(selectedReview.id), { comments: managerNotes })
+      await apiService.managerReview(Number(selectedReview.id), {
+        ratings: { overall: Number(managerRating) || 0 },
+        observations: managerNotes,
+        strengths: managerStrengths,
+        areas_for_improvement: managerAreasForImprovement,
+        recommendations: managerRecommendations,
+        comments: managerNotes,
+      })
       await apiService.schedulePerformanceMeeting(Number(selectedReview.id), new Date(meetingDate).toISOString())
       await fetchReviews()
       setManagerNotes("")
+      setManagerRating("3")
+      setManagerStrengths("")
+      setManagerAreasForImprovement("")
+      setManagerRecommendations("")
       setMeetingDate("")
       setManageReviewDialogOpen(false)
       toast({ title: "Review updated", description: "Sent and meeting scheduled." })
@@ -897,13 +912,59 @@ export default function Performance() {
               )}
               
               <div className="space-y-2">
-                <Label htmlFor="manager-notes">Manager Comments & Ratings</Label>
+                <Label htmlFor="manager-rating">Overall Rating (1-5)</Label>
+                <Select value={managerRating} onValueChange={setManagerRating}>
+                  <SelectTrigger id="manager-rating">
+                    <SelectValue placeholder="Select a rating" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover">
+                    <SelectItem value="1">1 - Needs significant improvement</SelectItem>
+                    <SelectItem value="2">2 - Below expectations</SelectItem>
+                    <SelectItem value="3">3 - Meets expectations</SelectItem>
+                    <SelectItem value="4">4 - Exceeds expectations</SelectItem>
+                    <SelectItem value="5">5 - Outstanding</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="manager-notes">Observations</Label>
                 <Textarea
                   id="manager-notes"
                   value={managerNotes}
                   onChange={(e) => setManagerNotes(e.target.value)}
-                  placeholder="Add your evaluation, feedback, and notes..."
-                  className="min-h-[150px]"
+                  placeholder="What you observed over the review period..."
+                  className="min-h-[120px]"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="manager-strengths">Strengths</Label>
+                <Textarea
+                  id="manager-strengths"
+                  value={managerStrengths}
+                  onChange={(e) => setManagerStrengths(e.target.value)}
+                  placeholder="What this person does well..."
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="manager-areas">Areas for Improvement</Label>
+                <Textarea
+                  id="manager-areas"
+                  value={managerAreasForImprovement}
+                  onChange={(e) => setManagerAreasForImprovement(e.target.value)}
+                  placeholder="Where there is room to grow..."
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="manager-recommendations">Recommendations</Label>
+                <Textarea
+                  id="manager-recommendations"
+                  value={managerRecommendations}
+                  onChange={(e) => setManagerRecommendations(e.target.value)}
+                  placeholder="Training, support or next steps..."
                 />
               </div>
               

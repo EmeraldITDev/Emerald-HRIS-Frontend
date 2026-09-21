@@ -82,7 +82,8 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
   const [profile, setProfile] = useState<any>(null);
   const [scheduleConfig, setScheduleConfig] = useState<any>(null);
   const [isPunching, setIsPunching] = useState(false);
-  const [gpsBlocked, setGpsBlocked] = useState(false);
+  const [locationError, setLocationError] = useState<LocationError>(null);
+  const [selectedMode, setSelectedMode] = useState<"Physical" | "WFH" | null>(null);
 
   const dayName = todayDayNameWAT();
 
@@ -149,9 +150,24 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
     return () => clearInterval(id);
   }, [clockedIn]);
 
+  // The backend is the source of truth for when the shift started: prefer its
+  // ISO clock_in_at, then its elapsed_seconds, and only then the local time string.
+  const startedAt = useMemo(() => {
+    if (!todayStatus) return NaN;
+    if (todayStatus.clock_in_at) {
+      const t = Date.parse(todayStatus.clock_in_at);
+      if (!Number.isNaN(t)) return t;
+    }
+    if (typeof todayStatus.elapsed_seconds === "number") {
+      return Date.now() - todayStatus.elapsed_seconds * 1000;
+    }
+    if (todayStatus.clock_in) return parseAttendanceInstant(todayStatus.clock_in, todayStatus?.date);
+    return NaN;
+  }, [todayStatus]);
+
   const elapsed = useMemo(() => {
-    if (!clockedIn || !todayStatus?.clock_in) return null;
-    const start = parseAttendanceInstant(todayStatus.clock_in, todayStatus?.date);
+    if (!clockedIn) return null;
+    const start = startedAt;
     if (Number.isNaN(start)) return null;
     const diff = Math.max(0, Math.floor((now - start) / 1000));
     const h = String(Math.floor(diff / 3600)).padStart(2, "0");
@@ -169,33 +185,46 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
       });
       return;
     }
+    const mode = selectedMode ?? expectedMode;
     setIsPunching(true);
+    setLocationError(null);
     try {
       let coords: Coords = null;
-      let locationStatus: string | undefined;
-      if (expectedMode === "Physical") {
+      if (mode === "Physical") {
+        // Location is mandatory for office clock-in — never bypass it.
         const gps = await captureGps();
+        if (!gps.coords) {
+          setLocationError(gps.error);
+          toast({
+            title: LOCATION_ERROR_COPY[gps.error ?? "position_unavailable"].title,
+            description: LOCATION_ERROR_COPY[gps.error ?? "position_unavailable"].body,
+            variant: "destructive",
+          });
+          return;
+        }
         coords = gps.coords;
-        setGpsBlocked(gps.denied);
-        if (!coords) locationStatus = "Not Required";
       }
       const payload: Record<string, any> = {
         employee_id: employeeId,
         date: todayWAT(),
-        work_mode: expectedMode,
+        work_mode: mode,
       };
       if (coords) {
         payload.location_lat = coords.lat;
         payload.location_lng = coords.lng;
+        if (coords.accuracy != null) payload.location_accuracy = Math.round(coords.accuracy);
       }
-      if (locationStatus) payload.location_status = locationStatus;
 
       const res: any = await apiService.createAttendance(payload);
       setJustClockedOut(false);
-      await refresh();
+      const record = (await refresh()) ?? res;
+      const flagged =
+        record?.hr_location_review || res?.hr_location_review || /outside/i.test(String(res?.message || ""));
       toast({
         title: "Clocked in",
-        description: res?.message || res?.attendance_status || "Clock-in recorded.",
+        description: flagged
+          ? "Recorded outside the office radius — sent to HR for review."
+          : res?.message || res?.attendance_status || "Clock-in recorded.",
       });
     } catch (e: any) {
       toast({
@@ -206,7 +235,7 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
     } finally {
       setIsPunching(false);
     }
-  }, [employeeId, expectedMode, refresh, toast]);
+  }, [employeeId, expectedMode, selectedMode, refresh, toast]);
 
   const handleClockOut = useCallback(async () => {
     if (!employeeId) return;

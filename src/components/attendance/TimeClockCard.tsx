@@ -84,6 +84,8 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
   const [isPunching, setIsPunching] = useState(false);
   const [locationError, setLocationError] = useState<LocationError>(null);
   const [selectedMode, setSelectedMode] = useState<"Physical" | "WFH" | null>(null);
+  // The mode picker only appears after the user presses Clock In.
+  const [choosingMode, setChoosingMode] = useState(false);
 
   const dayName = todayDayNameWAT();
 
@@ -378,49 +380,72 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
           </div>
           <div className="flex flex-wrap gap-2">
             {!clockedIn ? (
-              <div className="space-y-2">
-                {/* Pick the mode first — geolocation only runs after this choice */}
-                <div className="flex gap-2">
-                  {(["Physical", "WFH"] as const).map((mode) => {
-                    const active = (selectedMode ?? expectedMode) === mode;
-                    return (
-                      <Button
-                        key={mode}
-                        type="button"
-                        size="sm"
-                        variant={active ? "secondary" : "outline"}
-                        onClick={() => {
-                          setSelectedMode(mode);
-                          setLocationError(null);
-                        }}
-                        className="gap-2"
-                      >
-                        {mode === "WFH" ? <Home className="h-4 w-4" /> : <MapPin className="h-4 w-4" />}
-                        {mode === "WFH" ? "Working from home" : "At the office"}
-                      </Button>
-                    );
-                  })}
-                </div>
-                <Button
-                  onClick={handleClockIn}
-                  disabled={isPunching || !employeeId}
-                  className="w-full gap-2"
-                >
+              !choosingMode ? (
+                <Button onClick={() => setChoosingMode(true)} disabled={!employeeId} className="gap-2">
                   <LogIn className="h-4 w-4" />
-                  {isPunching
-                    ? (selectedMode ?? expectedMode) === "Physical"
-                      ? "Checking your location…"
-                      : "Clocking in…"
-                    : locationError
-                      ? "Try again"
-                      : "Clock In"}
+                  Clock In
                 </Button>
-                {(selectedMode ?? expectedMode) === "Physical" && (
-                  <p className="text-[11px] text-muted-foreground">
-                    Your location is required to confirm office attendance.
-                  </p>
-                )}
-              </div>
+              ) : (
+                <div className="space-y-2">
+                  {/* Mode is picked here — geolocation only runs after this choice */}
+                  <p className="text-xs text-muted-foreground">Where are you working from today?</p>
+                  <div className="flex gap-2">
+                    {(["Physical", "WFH"] as const).map((mode) => {
+                      const active = (selectedMode ?? expectedMode) === mode;
+                      return (
+                        <Button
+                          key={mode}
+                          type="button"
+                          size="sm"
+                          variant={active ? "secondary" : "outline"}
+                          onClick={() => {
+                            setSelectedMode(mode);
+                            setLocationError(null);
+                          }}
+                          className="gap-2"
+                        >
+                          {mode === "WFH" ? <Home className="h-4 w-4" /> : <MapPin className="h-4 w-4" />}
+                          {mode === "WFH" ? "Working from home" : "At the office"}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={handleClockIn}
+                      disabled={isPunching || !employeeId}
+                      className="flex-1 gap-2"
+                    >
+                      <LogIn className="h-4 w-4" />
+                      {isPunching
+                        ? (selectedMode ?? expectedMode) === "Physical"
+                          ? "Checking your location…"
+                          : "Clocking in…"
+                        : locationError
+                          ? "Try again"
+                          : "Confirm Clock In"}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      disabled={isPunching}
+                      onClick={() => {
+                        setChoosingMode(false);
+                        setSelectedMode(null);
+                        setLocationError(null);
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                  {(selectedMode ?? expectedMode) === "Physical" && (
+                    <p className="text-[11px] text-muted-foreground">
+                      Your location is required to confirm office attendance.
+                    </p>
+                  )}
+                </div>
+              )
             ) : (
               <Button
                 onClick={handleClockOut}

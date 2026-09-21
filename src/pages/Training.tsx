@@ -486,7 +486,10 @@ export default function Training() {
 
               <div className="space-y-2">
                 <Label htmlFor="category">Category *</Label>
-                <Select onValueChange={(value) => setNewTraining({...newTraining, category: value})}>
+                <Select
+                  value={newTraining.category}
+                  onValueChange={(value) => setNewTraining({...newTraining, category: value, category_other: value === 'Other' ? newTraining.category_other : ''})}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
@@ -497,6 +500,18 @@ export default function Training() {
                   </SelectContent>
                 </Select>
               </div>
+
+              {newTraining.category === 'Other' && (
+                <div className="space-y-2">
+                  <Label htmlFor="category_other">Specify category *</Label>
+                  <Input
+                    id="category_other"
+                    value={newTraining.category_other}
+                    onChange={(e) => setNewTraining({...newTraining, category_other: e.target.value})}
+                    placeholder="e.g., HSE Refresher"
+                  />
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="description">Description</Label>

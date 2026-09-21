@@ -23,21 +23,55 @@ interface TimeClockCardProps {
   className?: string;
 }
 
-type Coords = { lat: number; lng: number } | null;
+type Coords = { lat: number; lng: number; accuracy?: number } | null;
 
-async function captureGps(): Promise<{ coords: Coords; denied: boolean }> {
+// Distinct states the backend recognises, mapped from the browser's own errors.
+type LocationError = "permission_denied" | "position_unavailable" | "timeout" | "unsupported" | null;
+
+const LOCATION_ERROR_COPY: Record<Exclude<LocationError, null>, { title: string; body: string }> = {
+  permission_denied: {
+    title: "Location permission is blocked",
+    body: "Allow location for this site in your browser settings, then try again. Office clock-in cannot be recorded without it.",
+  },
+  position_unavailable: {
+    title: "Your location could not be determined",
+    body: "Your device could not get a GPS fix. Move near a window or switch on device location, then try again.",
+  },
+  timeout: {
+    title: "Getting your location took too long",
+    body: "The location request timed out. Check your connection and try again.",
+  },
+  unsupported: {
+    title: "This browser cannot share your location",
+    body: "Open the HRIS in a browser that supports location, or ask HR to record today's attendance for you.",
+  },
+};
+
+async function captureGps(): Promise<{ coords: Coords; error: LocationError }> {
   if (typeof navigator === "undefined" || !navigator.geolocation) {
-    return { coords: null, denied: true };
+    return { coords: null, error: "unsupported" };
   }
   return new Promise((resolve) => {
     navigator.geolocation.getCurrentPosition(
       (pos) =>
         resolve({
-          coords: { lat: pos.coords.latitude, lng: pos.coords.longitude },
-          denied: false,
+          coords: {
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
+            accuracy: pos.coords.accuracy,
+          },
+          error: null,
         }),
-      () => resolve({ coords: null, denied: true }),
-      { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 },
+      (err) => {
+        const error: LocationError =
+          err.code === err.PERMISSION_DENIED
+            ? "permission_denied"
+            : err.code === err.TIMEOUT
+              ? "timeout"
+              : "position_unavailable";
+        resolve({ coords: null, error });
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 },
     );
   });
 }

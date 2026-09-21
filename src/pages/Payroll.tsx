@@ -26,7 +26,6 @@ import { Calculator, Download, FileText, Lock, Settings, ChevronDown } from "luc
 import { ListChecks } from "lucide-react"
 import { ClipboardEdit } from "lucide-react"
 import { BulkGenerateDialog } from "@/components/payroll/BulkGenerateDialog"
-import jsPDF from "jspdf"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -697,7 +696,7 @@ export default function Payroll() {
     })
   }
 
-  const handleExportPDF = () => {
+  const handleExportPDF = async () => {
     let selectedEmp;
     
     // For non-HR-admin users, automatically use their own data
@@ -727,218 +726,37 @@ export default function Payroll() {
     }
     if (!selectedEmp) return
 
-    // Calculate payroll for selected employee
-    const basicSalary = selectedEmp.basicSalary
-    const employmentType = selectedEmp.employmentType
-    
-    let annualGross, housing, transport, other, pensionEmployee, nhf, annualTax, annualNet;
-    
-    if (employmentType === "Full-time") {
-      // Monthly Basic = Annual Gross / 12, so annual basic input already equals annual gross
-      annualGross = Math.round(basicSalary)
-      housing = Math.round(annualGross * 0.20)
-      transport = Math.round(annualGross * 0.09)
-      other = Math.round(annualGross * 0.31)
-      pensionEmployee = (housing + transport + basicSalary) * 0.08
-      nhf = basicSalary * 0.025
-      const grossForCRA = annualGross - (pensionEmployee + nhf)
-      const cra = (grossForCRA * 0.20) + Math.max(grossForCRA * 0.01, 200000)
-      const totalRelief = cra + pensionEmployee + nhf
-      const taxableIncome = annualGross - totalRelief
-      
-      // PAYE Tax Calculation
-      if (taxableIncome > 3200000) {
-        annualTax = 560000 + (taxableIncome - 3200000) * 0.24
-      } else if (taxableIncome > 1600000) {
-        annualTax = 224000 + (taxableIncome - 1600000) * 0.21
-      } else if (taxableIncome > 1100000) {
-        annualTax = 129000 + (taxableIncome - 1100000) * 0.19
-      } else if (taxableIncome > 600000) {
-        annualTax = 54000 + (taxableIncome - 600000) * 0.15
-      } else if (taxableIncome > 300000) {
-        annualTax = 21000 + (taxableIncome - 300000) * 0.11
-      } else {
-        annualTax = taxableIncome * 0.07
-      }
-      
-      annualNet = annualGross - annualTax
-    } else {
-      annualGross = basicSalary
-      housing = 0
-      transport = 0
-      other = 0
-      pensionEmployee = 0
-      nhf = 0
-      annualTax = annualGross * 0.02 // 2% Withholding Tax for contractors
-      annualNet = annualGross - annualTax
+    const record = visiblePayrollRecords.find((item) =>
+      item.employee_id?.toString() === selectedEmp.id && item.pay_period === selectedPeriod
+    )
+    if (!record?.id) {
+      toast({
+        title: "Save payroll first",
+        description: `No saved payroll record exists for ${selectedEmp.name} in ${selectedPeriod}.`,
+        variant: "destructive",
+      })
+      return
     }
 
-    // Monthly values
-    const monthlyGross = annualGross / 12
-    const monthlyBasic = basicSalary / 12
-    const monthlyHousing = housing / 12
-    const monthlyTransport = transport / 12
-    const monthlyOther = other / 12
-    const monthlyPension = pensionEmployee / 12
-    const monthlyNHF = nhf / 12
-    const monthlyTax = annualTax / 12
-    const monthlyNet = annualNet / 12
-    const totalDeductions = monthlyTax + monthlyPension + monthlyNHF
-
-    // Create PDF
-    const pdf = new jsPDF()
-    const pageWidth = pdf.internal.pageSize.getWidth()
-    
-    // Company Header
-    pdf.setFontSize(10)
-    pdf.text("Sapetro Towers,", pageWidth / 2, 15, { align: "center" })
-    pdf.setFontSize(12)
-    pdf.setFont("helvetica", "bold")
-    pdf.text("EMERALD", 20, 22)
-    pdf.setFontSize(10)
-    pdf.setFont("helvetica", "normal")
-    pdf.text("5th Floor Aureum Suite 1,", pageWidth / 2, 22, { align: "center" })
-    pdf.text("Adeola Odeku Street,", pageWidth / 2, 27, { align: "center" })
-    pdf.setFont("helvetica", "bold")
-    pdf.text("INDUSTRIAL CO.", 20, 29)
-    pdf.setFontSize(9)
-    pdf.setFont("helvetica", "normal")
-    pdf.text("Victoria Island, Lagos, Nigeria.", pageWidth / 2, 32, { align: "center" })
-    pdf.text("CFZE", 20, 35)
-    pdf.text("+234 123 456 7890", pageWidth / 2, 37, { align: "center" })
-    pdf.text("employee@emeraldcfze.com", pageWidth / 2, 42, { align: "center" })
-
-    // Title
-    pdf.setFontSize(16)
-    pdf.setFont("helvetica", "bold")
-    pdf.text("PAYSLIP", pageWidth / 2, 55, { align: "center" })
-
-    // Employee Details
-    pdf.setFontSize(10)
-    pdf.setFont("helvetica", "normal")
-    pdf.text(`${employmentType === "Full-time" ? "Employee" : "Contractor"} Name: ${selectedEmp.name}`, 20, 70)
-    const currentDate = new Date()
-    const monthYear = currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-    pdf.text(`Month and Year: ${monthYear}`, 20, 77)
-
-    let yPos = 90
-
-    if (employmentType === "Full-time") {
-      // Full-time payslip format
-      pdf.setFont("helvetica", "bold")
-      pdf.text("Pay Component", 20, yPos)
-      pdf.setFont("helvetica", "normal")
-      
-      // Table headers
-      yPos += 5
-      pdf.line(20, yPos, pageWidth - 20, yPos)
-      yPos += 7
-      pdf.text("Basic Salary", 20, yPos)
-      pdf.text(formatNaira(monthlyBasic), 120, yPos)
-      pdf.text("Gross ÷ 12", 160, yPos)
-      
-      yPos += 7
-      pdf.text("Housing Allowance (20%)", 20, yPos)
-      pdf.text(formatNaira(monthlyHousing), 120, yPos)
-      pdf.text("20% of Gross", 160, yPos)
-      
-      yPos += 7
-      pdf.text("Transport Allowance (9%)", 20, yPos)
-      pdf.text(formatNaira(monthlyTransport), 120, yPos)
-      pdf.text("9% of Gross", 160, yPos)
-      
-      yPos += 7
-      pdf.text("All Other Allowances (31%)", 20, yPos)
-      pdf.text(formatNaira(monthlyOther), 120, yPos)
-      pdf.text("31% of Gross", 160, yPos)
-      
-      yPos += 7
-      pdf.setFont("helvetica", "bold")
-      pdf.text("Gross Monthly Salary", 20, yPos)
-      pdf.text(formatNaira(monthlyGross), 120, yPos)
-      
-      // Deductions
-      yPos += 12
-      pdf.text("Deductions", 20, yPos)
-      pdf.setFont("helvetica", "normal")
-      
-      yPos += 5
-      pdf.line(20, yPos, pageWidth - 20, yPos)
-      yPos += 7
-      pdf.text("PAYE", 20, yPos)
-      pdf.text(formatNaira(monthlyTax), 120, yPos)
-      pdf.text("Statutory tax", 160, yPos)
-      
-      yPos += 7
-      pdf.text("Pension (Employee)", 20, yPos)
-      pdf.text(formatNaira(monthlyPension), 120, yPos)
-      pdf.text("8% of BHT", 160, yPos)
-      
-      yPos += 7
-      pdf.text("NHF (2.5%)", 20, yPos)
-      pdf.text(formatNaira(monthlyNHF), 120, yPos)
-      pdf.text("2.5% of Basic Salary", 160, yPos)
-      
-      yPos += 7
-      pdf.setFont("helvetica", "bold")
-      pdf.text("Total Deductions", 20, yPos)
-      pdf.text(formatNaira(totalDeductions), 120, yPos)
-      
-      yPos += 7
-      pdf.text("Net Monthly Pay", 20, yPos)
-      pdf.text(formatNaira(monthlyNet), 120, yPos)
-    } else {
-      // Contractor payslip format
-      pdf.setFont("helvetica", "bold")
-      pdf.text("Pay Component", 20, yPos)
-      pdf.setFont("helvetica", "normal")
-      
-      yPos += 5
-      pdf.line(20, yPos, pageWidth - 20, yPos)
-      yPos += 7
-      pdf.text("Contract Fee (Gross)", 20, yPos)
-      pdf.text(formatNaira(monthlyGross), 120, yPos)
-      
-      // Deductions
-      yPos += 12
-      pdf.setFont("helvetica", "bold")
-      pdf.text("Deductions", 20, yPos)
-      pdf.setFont("helvetica", "normal")
-      
-      yPos += 5
-      pdf.line(20, yPos, pageWidth - 20, yPos)
-      yPos += 7
-      pdf.text("Withholding Tax (2%)", 20, yPos)
-      pdf.text(formatNaira(monthlyTax), 120, yPos)
-      
-      yPos += 7
-      pdf.setFont("helvetica", "bold")
-      pdf.text("Total Deductions", 20, yPos)
-      pdf.text(formatNaira(monthlyTax), 120, yPos)
-      
-      yPos += 7
-      pdf.text("Net Pay", 20, yPos)
-      pdf.text(formatNaira(monthlyNet), 120, yPos)
-      pdf.text("Gross minus deduction", 160, yPos)
+    const filename = `Payslip_${record.id}_${record.pay_period}.pdf`
+    try {
+      const blob = await apiService.exportPayrollRecordPdf(record.id)
+      const url = URL.createObjectURL(blob)
+      const anchor = document.createElement("a")
+      anchor.href = url
+      anchor.download = filename
+      anchor.click()
+      URL.revokeObjectURL(url)
+    } catch (error: any) {
+      const { generatePayslipPdf, toPayslipLike } = await import("@/utils/payslipPdf")
+      const employee = employees.find((item) => item.id === record.employee_id) || record.employee
+      const localPayslip = toPayslipLike(normalizePayrollRecord(record, employee))
+      await generatePayslipPdf(localPayslip, filename)
+      toast({
+        title: "Backup PDF downloaded",
+        description: `The official PDF service failed (${error?.message || "unknown"}), so a clearly marked backup copy was created.`,
+      })
     }
-
-    // Signature
-    yPos += 15
-    pdf.setFont("helvetica", "normal")
-    pdf.setFontSize(9)
-    pdf.text("Signature:", 20, yPos)
-    yPos += 10
-    pdf.text("Human Resource Department", 20, yPos)
-
-    // Save PDF
-    const firstName = selectedEmp.name.split(' ')[0]
-    const lastName = selectedEmp.name.split(' ').slice(1).join('_')
-    pdf.save(`${firstName}_${lastName}_Payslip.pdf`)
-
-    toast({
-      title: "PDF Export Complete",
-      description: `Payslip generated for ${selectedEmp.name}`
-    })
   }
 
   const handleLockPeriod = () => {
@@ -1965,8 +1783,8 @@ export default function Payroll() {
                                       } catch {
                                         payslipLike = toPayslipLike(normalizePayrollRecord(record, emp))
                                       }
-                                      generatePayslipPdf(payslipLike, filename)
-                                      toast({ title: 'PDF generated locally', description: `Server export failed (${e?.message || 'unknown'}); built from payslip data.` })
+                                      await generatePayslipPdf(payslipLike, filename)
+                                      toast({ title: 'Backup PDF downloaded', description: `The official PDF service failed (${e?.message || 'unknown'}), so a clearly marked backup copy was created.` })
                                     } catch (err: any) {
                                       toast({ title: 'PDF export failed', description: e?.message, variant: 'destructive' })
                                     }

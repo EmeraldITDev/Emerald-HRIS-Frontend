@@ -67,8 +67,8 @@ export default function PayslipDetail() {
               downloadBlob(blob, `Payslip_${period}.pdf`);
             } catch (err: any) {
               try {
-                generatePayslipPdf(toPayslipLike(data), `Payslip_${period}.pdf`);
-                toast({ title: "PDF generated locally", description: `Server export failed (${err?.message || "unknown"}); built from this payslip.` });
+                await generatePayslipPdf(toPayslipLike(data), `Payslip_${period}.pdf`);
+                toast({ title: "Backup PDF downloaded", description: `The official PDF service failed (${err?.message || "unknown"}), so a clearly marked backup copy was created.` });
               } catch {
                 toast({ title: "PDF failed", description: err?.message, variant: "destructive" });
               }

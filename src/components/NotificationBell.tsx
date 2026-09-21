@@ -32,12 +32,38 @@ export function NotificationBell() {
   const navigate = useNavigate();
   const { user } = useAuth();
 
+  // Backend may return { unread_count } at the top level, nested under data,
+  // or alongside a notifications array. Accept every shape it advertises.
+  const readCount = (res: any): number | null => {
+    const candidates = [
+      res?.unread_count,
+      res?.data?.unread_count,
+      res?.count,
+      res?.data?.count,
+    ];
+    const found = candidates.find((c) => typeof c === "number");
+    return typeof found === "number" ? found : null;
+  };
+
+  const readList = (res: any): Notification[] => {
+    const candidates = [
+      res?.data?.notifications,
+      res?.notifications,
+      res?.data?.data,
+      res?.data,
+      res,
+    ];
+    const found = candidates.find((c) => Array.isArray(c));
+    return Array.isArray(found) ? (found as Notification[]) : [];
+  };
+
   const fetchCount = useCallback(async () => {
     try {
-      const res = await apiService.getUnreadNotificationCount();
-      setUnread(res.unread_count || 0);
+      const res: any = await apiService.getUnreadNotificationCount();
+      const count = readCount(res);
+      if (count !== null) setUnread(count);
     } catch {
-      // silent — backend may not be ready
+      // silent — a count failure should never block the UI
     }
   }, []);
 
@@ -45,8 +71,11 @@ export function NotificationBell() {
     setLoading(true);
     try {
       const res: any = await apiService.getNotifications(5, 1);
-      setItems(res?.data || []);
-      if (typeof res?.unread_count === "number") setUnread(res.unread_count);
+      // An empty list with success: true is a valid "no notifications" state,
+      // not a failure — only a thrown request error counts as one.
+      setItems(readList(res));
+      const count = readCount(res);
+      if (count !== null) setUnread(count);
     } catch {
       setItems([]);
     } finally {

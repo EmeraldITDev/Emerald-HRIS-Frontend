@@ -117,6 +117,23 @@ export default function Performance() {
     }
   }
 
+  // Readable labels for the backend workflow statuses (historical rows were
+  // migrated: submitted -> self_assessment_submitted, pending_hr_review -> hr_review,
+  // closed/hr_approved -> completed).
+  const STATUS_LABELS: Record<string, string> = {
+    draft: 'Draft',
+    self_assessment_requested: 'Awaiting Self-Assessment',
+    self_assessment_submitted: 'Self-Assessment Submitted',
+    manager_review: 'With Line Manager',
+    hr_review: 'With HR',
+    completed: 'Completed',
+  }
+
+  const statusLabel = (raw?: string) => {
+    const key = String(raw || '').toLowerCase()
+    return STATUS_LABELS[key] || key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+  }
+
   const fetchReviews = async () => {
     try {
       const data = await apiService.getPerformanceReviews()
@@ -128,7 +145,7 @@ export default function Performance() {
         reviewPeriod: r.period,
         reviewDate: (r.created_at || '').split('T')[0] || '',
         rating: Number(r.manager_review?.overall_rating ?? r.self_assessment?.overallRating ?? 0),
-        status: r.status.replace(/_/g, ' '),
+        status: statusLabel(r.status),
         rawStatus: r.status,
         reviewer: r.manager?.name ?? '—',
         goals: r.self_assessment?.futureGoals ?? '',

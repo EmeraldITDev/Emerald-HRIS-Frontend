@@ -69,6 +69,9 @@ import { CelebrationsCard } from "@/components/CelebrationsCard"
 import { UpcomingAnniversariesCard } from "@/components/UpcomingAnniversariesCard"
 import { getAnnualGrossSalary } from "@/lib/payrollCalc"
 import TimeClockCard from "@/components/attendance/TimeClockCard"
+import WFHRequestForm from "@/components/attendance/WFHRequestForm"
+import ExceptionRequestForm from "@/components/attendance/ExceptionRequestForm"
+import { canSubmitWFH, canSubmitException } from "@/lib/permissions"
 import MissingClockoutBanner from "@/components/attendance/MissingClockoutBanner"
 import { useAttendanceToday } from "@/hooks/useAttendanceToday"
 
@@ -720,6 +723,18 @@ export default function Dashboard() {
         todayStatus={todayStatus}
         refresh={refreshTodayStatus}
       />
+
+      {/* Work-from-home & attendance exception requests, available right here on the dashboard */}
+      {(canSubmitWFH(user) || canSubmitException(user)) && (
+        <div className="flex flex-wrap gap-2">
+          {canSubmitWFH(user) && (
+            <WFHRequestForm employeeId={currentEmployeeId} onSubmitted={refreshTodayStatus} />
+          )}
+          {canSubmitException(user) && (
+            <ExceptionRequestForm employeeId={currentEmployeeId} onSubmitted={refreshTodayStatus} />
+          )}
+        </div>
+      )}
 
       {/* Hide aggregate stats for general_employee, finance, line_manager, it_admin, executive (corporate_hr sees HR admin view) */}
       {!['general_employee', 'finance', 'line_manager', 'it_admin', 'executive'].includes(user?.role || '') && (

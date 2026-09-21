@@ -40,7 +40,8 @@ const trainingTypes = [
   'Soft Skills',
   'Professional Certification',
   'Product Training',
-  'Software Training'
+  'Software Training',
+  'Other'
 ]
 
 export default function Training() {
@@ -58,6 +59,7 @@ export default function Training() {
   const [newTraining, setNewTraining] = useState({
     title: '',
     category: '',
+    category_other: '',
     description: '',
     instructor: '',
     location: '',
@@ -198,6 +200,15 @@ export default function Training() {
       return
     }
 
+    if (newTraining.category === 'Other' && !newTraining.category_other.trim()) {
+      toast({
+        title: "Specify the category",
+        description: "Please describe the training category.",
+        variant: "destructive"
+      })
+      return
+    }
+
     try {
       // Send training details + assignment data together
       const payload: any = {
@@ -207,6 +218,13 @@ export default function Training() {
 
       if (!payload.training_id) {
         delete payload.training_id
+      }
+
+      // "Other" category: send the free-text value the backend expects.
+      if (payload.category === 'Other') {
+        payload.category_other = (newTraining.category_other || '').trim()
+      } else {
+        delete payload.category_other
       }
 
       // Don't send the file through assignTraining — it goes via S3 separately.
@@ -240,6 +258,7 @@ export default function Training() {
       setNewTraining({
         title: '',
         category: '',
+        category_other: '',
         description: '',
         instructor: '',
         location: '',
@@ -476,7 +495,10 @@ export default function Training() {
 
               <div className="space-y-2">
                 <Label htmlFor="category">Category *</Label>
-                <Select onValueChange={(value) => setNewTraining({...newTraining, category: value})}>
+                <Select
+                  value={newTraining.category}
+                  onValueChange={(value) => setNewTraining({...newTraining, category: value, category_other: value === 'Other' ? newTraining.category_other : ''})}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
@@ -487,6 +509,18 @@ export default function Training() {
                   </SelectContent>
                 </Select>
               </div>
+
+              {newTraining.category === 'Other' && (
+                <div className="space-y-2">
+                  <Label htmlFor="category_other">Specify category *</Label>
+                  <Input
+                    id="category_other"
+                    value={newTraining.category_other}
+                    onChange={(e) => setNewTraining({...newTraining, category_other: e.target.value})}
+                    placeholder="e.g., HSE Refresher"
+                  />
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="description">Description</Label>

@@ -62,7 +62,7 @@ const navigationItems: NavItem[] = [
     url: "/executive",
     icon: Crown,
     permission: "*",
-    roles: ['executive', 'hr_manager']
+    roles: ['executive']
   },
   { 
     title: "Dashboard", 
@@ -137,6 +137,12 @@ const navigationItems: NavItem[] = [
     roles: ['hr_manager', 'corporate_hr', 'executive']
   },
   {
+    title: "Announcements",
+    url: "/announcements",
+    icon: MessageSquare,
+    permission: "*"
+  },
+  {
     title: "Notifications",
     url: "/notifications",
     icon: Bell,
@@ -165,12 +171,6 @@ const systemItems: NavItem[] = [
     url: "/reports", 
     icon: FileText,
     permission: "reports.view"
-  },
-  { 
-    title: "Announcements", 
-    url: "/announcements", 
-    icon: MessageSquare,
-    permission: "*"
   },
   { 
     title: "Policies", 

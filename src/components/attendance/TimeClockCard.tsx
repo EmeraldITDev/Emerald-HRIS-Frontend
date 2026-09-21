@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Clock, LogIn, LogOut, Timer, MapPin, Home } from "lucide-react";
+import { Clock, LogIn, LogOut, Timer, MapPin, Home, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -23,21 +23,55 @@ interface TimeClockCardProps {
   className?: string;
 }
 
-type Coords = { lat: number; lng: number } | null;
+type Coords = { lat: number; lng: number; accuracy?: number } | null;
 
-async function captureGps(): Promise<{ coords: Coords; denied: boolean }> {
+// Distinct states the backend recognises, mapped from the browser's own errors.
+type LocationError = "permission_denied" | "position_unavailable" | "timeout" | "unsupported" | null;
+
+const LOCATION_ERROR_COPY: Record<Exclude<LocationError, null>, { title: string; body: string }> = {
+  permission_denied: {
+    title: "Location permission is blocked",
+    body: "Allow location for this site in your browser settings, then try again. Office clock-in cannot be recorded without it.",
+  },
+  position_unavailable: {
+    title: "Your location could not be determined",
+    body: "Your device could not get a GPS fix. Move near a window or switch on device location, then try again.",
+  },
+  timeout: {
+    title: "Getting your location took too long",
+    body: "The location request timed out. Check your connection and try again.",
+  },
+  unsupported: {
+    title: "This browser cannot share your location",
+    body: "Open the HRIS in a browser that supports location, or ask HR to record today's attendance for you.",
+  },
+};
+
+async function captureGps(): Promise<{ coords: Coords; error: LocationError }> {
   if (typeof navigator === "undefined" || !navigator.geolocation) {
-    return { coords: null, denied: true };
+    return { coords: null, error: "unsupported" };
   }
   return new Promise((resolve) => {
     navigator.geolocation.getCurrentPosition(
       (pos) =>
         resolve({
-          coords: { lat: pos.coords.latitude, lng: pos.coords.longitude },
-          denied: false,
+          coords: {
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
+            accuracy: pos.coords.accuracy,
+          },
+          error: null,
         }),
-      () => resolve({ coords: null, denied: true }),
-      { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 },
+      (err) => {
+        const error: LocationError =
+          err.code === err.PERMISSION_DENIED
+            ? "permission_denied"
+            : err.code === err.TIMEOUT
+              ? "timeout"
+              : "position_unavailable";
+        resolve({ coords: null, error });
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 },
     );
   });
 }
@@ -48,7 +82,8 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
   const [profile, setProfile] = useState<any>(null);
   const [scheduleConfig, setScheduleConfig] = useState<any>(null);
   const [isPunching, setIsPunching] = useState(false);
-  const [gpsBlocked, setGpsBlocked] = useState(false);
+  const [locationError, setLocationError] = useState<LocationError>(null);
+  const [selectedMode, setSelectedMode] = useState<"Physical" | "WFH" | null>(null);
 
   const dayName = todayDayNameWAT();
 
@@ -115,9 +150,24 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
     return () => clearInterval(id);
   }, [clockedIn]);
 
+  // The backend is the source of truth for when the shift started: prefer its
+  // ISO clock_in_at, then its elapsed_seconds, and only then the local time string.
+  const startedAt = useMemo(() => {
+    if (!todayStatus) return NaN;
+    if (todayStatus.clock_in_at) {
+      const t = Date.parse(todayStatus.clock_in_at);
+      if (!Number.isNaN(t)) return t;
+    }
+    if (typeof todayStatus.elapsed_seconds === "number") {
+      return Date.now() - todayStatus.elapsed_seconds * 1000;
+    }
+    if (todayStatus.clock_in) return parseAttendanceInstant(todayStatus.clock_in, todayStatus?.date);
+    return NaN;
+  }, [todayStatus]);
+
   const elapsed = useMemo(() => {
-    if (!clockedIn || !todayStatus?.clock_in) return null;
-    const start = parseAttendanceInstant(todayStatus.clock_in, todayStatus?.date);
+    if (!clockedIn) return null;
+    const start = startedAt;
     if (Number.isNaN(start)) return null;
     const diff = Math.max(0, Math.floor((now - start) / 1000));
     const h = String(Math.floor(diff / 3600)).padStart(2, "0");
@@ -135,33 +185,46 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
       });
       return;
     }
+    const mode = selectedMode ?? expectedMode;
     setIsPunching(true);
+    setLocationError(null);
     try {
       let coords: Coords = null;
-      let locationStatus: string | undefined;
-      if (expectedMode === "Physical") {
+      if (mode === "Physical") {
+        // Location is mandatory for office clock-in — never bypass it.
         const gps = await captureGps();
+        if (!gps.coords) {
+          setLocationError(gps.error);
+          toast({
+            title: LOCATION_ERROR_COPY[gps.error ?? "position_unavailable"].title,
+            description: LOCATION_ERROR_COPY[gps.error ?? "position_unavailable"].body,
+            variant: "destructive",
+          });
+          return;
+        }
         coords = gps.coords;
-        setGpsBlocked(gps.denied);
-        if (!coords) locationStatus = "Not Required";
       }
       const payload: Record<string, any> = {
         employee_id: employeeId,
         date: todayWAT(),
-        work_mode: expectedMode,
+        work_mode: mode,
       };
       if (coords) {
         payload.location_lat = coords.lat;
         payload.location_lng = coords.lng;
+        if (coords.accuracy != null) payload.location_accuracy = Math.round(coords.accuracy);
       }
-      if (locationStatus) payload.location_status = locationStatus;
 
       const res: any = await apiService.createAttendance(payload);
       setJustClockedOut(false);
-      await refresh();
+      const record = (await refresh()) ?? res;
+      const flagged =
+        record?.hr_location_review || res?.hr_location_review || /outside/i.test(String(res?.message || ""));
       toast({
         title: "Clocked in",
-        description: res?.message || res?.attendance_status || "Clock-in recorded.",
+        description: flagged
+          ? "Recorded outside the office radius — sent to HR for review."
+          : res?.message || res?.attendance_status || "Clock-in recorded.",
       });
     } catch (e: any) {
       toast({
@@ -172,7 +235,7 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
     } finally {
       setIsPunching(false);
     }
-  }, [employeeId, expectedMode, refresh, toast]);
+  }, [employeeId, expectedMode, selectedMode, refresh, toast]);
 
   const handleClockOut = useCallback(async () => {
     if (!employeeId) return;
@@ -293,19 +356,71 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
                 <span>Not clocked in today</span>
               )}
             </div>
-            {gpsBlocked && expectedMode === "Physical" && (
-              <p className="text-xs text-warning">
-                Location access is blocked. Enable location permission in your browser so your
-                office presence can be verified — your clock-in was still recorded.
+            {/* Flags raised by the backend on today's record */}
+            {(todayStatus?.hr_location_review || todayStatus?.location_status === "Outside Radius") && (
+              <p className="flex items-start gap-2 text-xs text-warning">
+                <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                You clocked in away from your office location — HR has been asked to review it.
               </p>
+            )}
+            {todayStatus?.schedule_mismatch && (
+              <p className="flex items-start gap-2 text-xs text-warning">
+                <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                Today's clock-in does not match your expected work mode ({expectedMode}).
+              </p>
+            )}
+            {locationError && !clockedIn && (
+              <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-xs">
+                <p className="font-medium text-destructive">{LOCATION_ERROR_COPY[locationError].title}</p>
+                <p className="mt-1 text-muted-foreground">{LOCATION_ERROR_COPY[locationError].body}</p>
+              </div>
             )}
           </div>
           <div className="flex flex-wrap gap-2">
             {!clockedIn ? (
-              <Button onClick={handleClockIn} disabled={isPunching || !employeeId} className="gap-2">
-                <LogIn className="h-4 w-4" />
-                Clock In
-              </Button>
+              <div className="space-y-2">
+                {/* Pick the mode first — geolocation only runs after this choice */}
+                <div className="flex gap-2">
+                  {(["Physical", "WFH"] as const).map((mode) => {
+                    const active = (selectedMode ?? expectedMode) === mode;
+                    return (
+                      <Button
+                        key={mode}
+                        type="button"
+                        size="sm"
+                        variant={active ? "secondary" : "outline"}
+                        onClick={() => {
+                          setSelectedMode(mode);
+                          setLocationError(null);
+                        }}
+                        className="gap-2"
+                      >
+                        {mode === "WFH" ? <Home className="h-4 w-4" /> : <MapPin className="h-4 w-4" />}
+                        {mode === "WFH" ? "Working from home" : "At the office"}
+                      </Button>
+                    );
+                  })}
+                </div>
+                <Button
+                  onClick={handleClockIn}
+                  disabled={isPunching || !employeeId}
+                  className="w-full gap-2"
+                >
+                  <LogIn className="h-4 w-4" />
+                  {isPunching
+                    ? (selectedMode ?? expectedMode) === "Physical"
+                      ? "Checking your location…"
+                      : "Clocking in…"
+                    : locationError
+                      ? "Try again"
+                      : "Clock In"}
+                </Button>
+                {(selectedMode ?? expectedMode) === "Physical" && (
+                  <p className="text-[11px] text-muted-foreground">
+                    Your location is required to confirm office attendance.
+                  </p>
+                )}
+              </div>
             ) : (
               <Button
                 onClick={handleClockOut}

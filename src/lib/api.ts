@@ -604,6 +604,11 @@ class ApiService {
     return this.request<any>(`/attendance?${qp.toString()}`, { cache: 'no-store' });
   }
 
+  // Office locations with their GPS coordinates + allowed radius
+  async getOfficeLocations(): Promise<any> {
+    return this.request<any>('/attendance/office-locations', { cache: 'no-store' });
+  }
+
   async getAttendanceScheduleConfig(location: string, day: string): Promise<any> {
     return this.request<any>(
       `/attendance/schedule-config/${encodeURIComponent(location)}/${encodeURIComponent(day)}`,
@@ -1396,6 +1401,32 @@ class ApiService {
     return this.request<any>('/analytics/vacation-details');
   }
 
+  // Executive-only consolidated dashboard (no leave data by design)
+  async getChairmanDashboard(): Promise<any> {
+    return this.request<any>(`/analytics/chairman-dashboard?_=${Date.now()}`, { cache: 'no-store' });
+  }
+
+  // Settings — audit trail
+  async getAuditLogs(params?: {
+    page?: number;
+    per_page?: number;
+    user_id?: number | string;
+    action?: string;
+    start_date?: string;
+    end_date?: string;
+  }): Promise<any> {
+    const qp = new URLSearchParams();
+    Object.entries(params ?? {}).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '') qp.append(k, String(v));
+    });
+    qp.append('_', String(Date.now()));
+    return this.request<any>(`/settings/audit-logs?${qp.toString()}`, { cache: 'no-store' });
+  }
+
+  async getAuditLog(id: number | string): Promise<any> {
+    return this.request<any>(`/settings/audit-logs/${id}`);
+  }
+
   // Policies
   async getPolicies(params?: { status?: string; category?: string }): Promise<Policy[]> {
     const queryParams = new URLSearchParams();
@@ -1535,6 +1566,28 @@ class ApiService {
 
   async closePerformance(id: number): Promise<PerformanceReview> {
     return this.request<PerformanceReview>(`/performance/${id}/close`, { method: 'PUT' });
+  }
+
+  // HR creates a review cycle for an employee (optionally requesting a self-assessment)
+  async createPerformanceReview(data: {
+    employee_id: number;
+    period: string;
+    request_self_assessment?: boolean;
+    kpis?: any[];
+    notes?: string;
+  }): Promise<PerformanceReview> {
+    return this.request<PerformanceReview>('/performance', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // HR final screen — closes out the review
+  async completePerformanceReview(id: number, data?: any): Promise<PerformanceReview> {
+    return this.request<PerformanceReview>(`/performance/${id}/complete`, {
+      method: 'PUT',
+      body: JSON.stringify(data ?? {}),
+    });
   }
 
   // Training Assignments

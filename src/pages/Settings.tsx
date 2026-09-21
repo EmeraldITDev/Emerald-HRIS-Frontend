@@ -19,12 +19,19 @@ import {
   Calendar,
   DollarSign,
   FileText,
-  Settings as SettingsIcon
+  Settings as SettingsIcon,
+  ScrollText
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { useAuth } from "@/contexts/AuthContext"
+import AuditTrailPanel from "@/components/settings/AuditTrailPanel"
 
 export default function Settings() {
   const { toast } = useToast()
+  const { user } = useAuth()
+  const canViewAuditTrail = ["executive", "hr_manager", "corporate_hr", "it_power_user"].includes(
+    user?.role ?? ""
+  )
   const [loading, setLoading] = useState(false)
 
   const handleSave = async (section: string) => {
@@ -47,7 +54,7 @@ export default function Settings() {
       </div>
 
       <Tabs defaultValue="profile" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3 lg:grid-cols-6">
+        <TabsList className={`grid w-full grid-cols-3 ${canViewAuditTrail ? "lg:grid-cols-7" : "lg:grid-cols-6"}`}>
           <TabsTrigger value="profile">
             <User className="h-4 w-4 mr-2" />
             Profile
@@ -72,6 +79,12 @@ export default function Settings() {
             <SettingsIcon className="h-4 w-4 mr-2" />
             System
           </TabsTrigger>
+          {canViewAuditTrail && (
+            <TabsTrigger value="audit">
+              <ScrollText className="h-4 w-4 mr-2" />
+              Audit Trail
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="profile" className="space-y-4">
@@ -497,6 +510,12 @@ export default function Settings() {
             </Button>
           </div>
         </TabsContent>
+
+        {canViewAuditTrail && (
+          <TabsContent value="audit" className="space-y-4">
+            <AuditTrailPanel />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   )

@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -24,6 +25,7 @@ interface Review {
   reviewDate: string
   rating: number
   status: string
+  rawStatus?: string
   reviewer: string
   goals: string
   achievements: string
@@ -51,7 +53,8 @@ export default function Performance() {
     goals: '',
     achievements: '',
     areasForImprovement: '',
-    comments: ''
+    comments: '',
+    requestSelfAssessment: true,
   })
 
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -90,6 +93,10 @@ export default function Performance() {
     overallRating: "3"
   })
   const [managerNotes, setManagerNotes] = useState("")
+  const [managerRating, setManagerRating] = useState("3")
+  const [managerStrengths, setManagerStrengths] = useState("")
+  const [managerAreasForImprovement, setManagerAreasForImprovement] = useState("")
+  const [managerRecommendations, setManagerRecommendations] = useState("")
   const [meetingDate, setMeetingDate] = useState("")
   const [hrComments, setHrComments] = useState("")
   const { toast } = useToast()
@@ -110,6 +117,23 @@ export default function Performance() {
     }
   }
 
+  // Readable labels for the backend workflow statuses (historical rows were
+  // migrated: submitted -> self_assessment_submitted, pending_hr_review -> hr_review,
+  // closed/hr_approved -> completed).
+  const STATUS_LABELS: Record<string, string> = {
+    draft: 'Draft',
+    self_assessment_requested: 'Awaiting Self-Assessment',
+    self_assessment_submitted: 'Self-Assessment Submitted',
+    manager_review: 'With Line Manager',
+    hr_review: 'With HR',
+    completed: 'Completed',
+  }
+
+  const statusLabel = (raw?: string) => {
+    const key = String(raw || '').toLowerCase()
+    return STATUS_LABELS[key] || key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+  }
+
   const fetchReviews = async () => {
     try {
       const data = await apiService.getPerformanceReviews()
@@ -121,7 +145,8 @@ export default function Performance() {
         reviewPeriod: r.period,
         reviewDate: (r.created_at || '').split('T')[0] || '',
         rating: Number(r.manager_review?.overall_rating ?? r.self_assessment?.overallRating ?? 0),
-        status: r.status.replace(/_/g, ' '),
+        status: statusLabel(r.status),
+        rawStatus: r.status,
         reviewer: r.manager?.name ?? '—',
         goals: r.self_assessment?.futureGoals ?? '',
         achievements: r.self_assessment?.achievements ?? '',
@@ -143,6 +168,8 @@ export default function Performance() {
   const isLineManager = user?.role === 'line_manager'
   const isGeneralEmployee = !isExecutiveOrHR && !isLineManager
   const canManageReviews = isExecutiveOrHR || isLineManager
+  // Only HR opens a review cycle; managers contribute to existing ones.
+  const canCreateReviews = user?.role === 'hr_manager' || user?.role === 'corporate_hr'
   const userDepartment = user?.department
   const currentEmployeeIdFromUser = user?.employee_id ? String(user.employee_id) : undefined
   
@@ -173,6 +200,13 @@ export default function Performance() {
     return true
   })
   
+  // The employee may only self-assess when HR has requested it for them.
+  const selfAssessmentRequest = reviews.find(
+    r =>
+      String(r.rawStatus || '').toLowerCase() === 'self_assessment_requested' &&
+      (!currentEmployeeIdFromUser || r.employeeId === currentEmployeeIdFromUser),
+  )
+
   // Filter employees based on department for line managers
   const filteredEmployees = isLineManager && userDepartment
     ? employees.filter(emp => emp.department === userDepartment)
@@ -194,11 +228,11 @@ export default function Performance() {
   // Check if any filters are active
   const hasActiveFilters = searchTerm || statusFilter || periodFilter || departmentFilter
   
-  const handleCreateNewReview = () => {
-    if (!newReview.employeeId || !newReview.reviewPeriod || !newReview.rating) {
+  const handleCreateNewReview = async () => {
+    if (!newReview.employeeId || !newReview.reviewPeriod) {
       toast({
         title: "Missing information",
-        description: "Please fill in all required fields.",
+        description: "Please select an employee and enter the review period.",
         variant: "destructive"
       })
       return
@@ -207,23 +241,28 @@ export default function Performance() {
     const employee = employees.find(emp => emp.id?.toString() === newReview.employeeId)
     if (!employee) return
 
-    const review: Review = {
-      id: (reviews.length + 1).toString(),
-      employeeId: newReview.employeeId,
-      employeeName: `${employee.first_name} ${employee.last_name}`,
-      department: employee.department || 'N/A',
-      reviewPeriod: newReview.reviewPeriod,
-      reviewDate: new Date().toISOString().split('T')[0],
-      rating: newReview.rating,
-      status: 'Completed',
-      reviewer: user?.firstName + " " + user?.lastName || 'System',
-      goals: newReview.goals,
-      achievements: newReview.achievements,
-      areasForImprovement: newReview.areasForImprovement,
-      comments: newReview.comments
+    try {
+      // HR opens the cycle on the backend; the employee only gets a
+      // self-assessment when HR asks for one here.
+      await apiService.createPerformanceReview({
+        employee_id: Number(newReview.employeeId),
+        period: newReview.reviewPeriod,
+        request_self_assessment: newReview.requestSelfAssessment,
+        kpis: newReview.goals
+          ? newReview.goals.split('\n').map(k => k.trim()).filter(Boolean)
+          : undefined,
+        notes: newReview.comments || undefined,
+      })
+      await fetchReviews()
+    } catch (e: any) {
+      toast({
+        title: "Could not create review",
+        description: e?.data?.message || e?.message || "Please try again.",
+        variant: "destructive"
+      })
+      return
     }
 
-    setReviews([review, ...reviews])
     setNewReview({
       employeeId: '',
       reviewPeriod: '',
@@ -231,13 +270,16 @@ export default function Performance() {
       goals: '',
       achievements: '',
       areasForImprovement: '',
-      comments: ''
+      comments: '',
+      requestSelfAssessment: true,
     })
     setIsDialogOpen(false)
-    
+
     toast({
       title: "Review created",
-      description: `Performance review for ${employee.first_name} ${employee.last_name} has been created.`
+      description: newReview.requestSelfAssessment
+        ? `${employee.first_name} ${employee.last_name} has been asked to complete a self-assessment.`
+        : `Performance review for ${employee.first_name} ${employee.last_name} has been created.`
     })
   }
   
@@ -329,10 +371,21 @@ export default function Performance() {
       return
     }
     try {
-      await apiService.managerReview(Number(selectedReview.id), { comments: managerNotes })
+      await apiService.managerReview(Number(selectedReview.id), {
+        ratings: { overall: Number(managerRating) || 0 },
+        observations: managerNotes,
+        strengths: managerStrengths,
+        areas_for_improvement: managerAreasForImprovement,
+        recommendations: managerRecommendations,
+        comments: managerNotes,
+      })
       await apiService.schedulePerformanceMeeting(Number(selectedReview.id), new Date(meetingDate).toISOString())
       await fetchReviews()
       setManagerNotes("")
+      setManagerRating("3")
+      setManagerStrengths("")
+      setManagerAreasForImprovement("")
+      setManagerRecommendations("")
       setMeetingDate("")
       setManageReviewDialogOpen(false)
       toast({ title: "Review updated", description: "Sent and meeting scheduled." })
@@ -373,11 +426,14 @@ export default function Performance() {
   const handleHRApproval = async () => {
     if (!selectedReview) return
     try {
-      await apiService.approvePerformance(Number(selectedReview.id))
+      // HR final screen closes the review out on the backend
+      await apiService.completePerformanceReview(Number(selectedReview.id), {
+        hr_comments: hrComments || undefined,
+      })
       await fetchReviews()
       setHrComments("")
       setHrReviewDialogOpen(false)
-      toast({ title: "Review approved", description: "Employee can now sign off." })
+      toast({ title: "Review completed", description: "This review is now closed." })
     } catch (e) {
       toast({ title: "Approval failed", description: "Please try again.", variant: 'destructive' })
     }
@@ -422,18 +478,21 @@ export default function Performance() {
         </div>
         
         <div className="flex gap-2 w-full sm:w-auto">
-          {/* Self-Assessment button for employees */}
-          {!isExecutiveOrHR && (
+          {/* Self-assessment is only available once HR has requested one */}
+          {selfAssessmentRequest && (
             <Button 
               className="bg-blue-600 hover:bg-blue-700 text-white w-full sm:w-auto"
-              onClick={() => setSelfAssessmentOpen(true)}
+              onClick={() => {
+                setSelfAssessmentPeriod(selfAssessmentRequest.reviewPeriod)
+                setSelfAssessmentOpen(true)
+              }}
             >
               <FileText className="mr-2 h-4 w-4" />
               <span className="text-sm md:text-base">Self-Assessment</span>
             </Button>
           )}
           
-          {canManageReviews && (
+          {canCreateReviews && (
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
                 <Button className="bg-emerald-600 hover:bg-emerald-700 text-white w-full sm:w-auto">
@@ -492,11 +551,29 @@ export default function Performance() {
                   </Select>
                 </div>
                 
+                <div className="flex items-start gap-2 rounded-md border p-3">
+                  <Checkbox
+                    id="requestSelfAssessment"
+                    checked={newReview.requestSelfAssessment}
+                    onCheckedChange={(checked) =>
+                      setNewReview({ ...newReview, requestSelfAssessment: !!checked })
+                    }
+                  />
+                  <div>
+                    <Label htmlFor="requestSelfAssessment" className="cursor-pointer font-medium">
+                      Ask the employee to complete a self-assessment
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      Leave this off to run the review without employee input.
+                    </p>
+                  </div>
+                </div>
+
                 <div className="space-y-2">
-                  <Label htmlFor="goals">Goals</Label>
+                  <Label htmlFor="goals">KPIs</Label>
                   <Textarea
                     id="goals"
-                    placeholder="List the employee's goals for this period"
+                    placeholder="List the employee's KPIs for this period"
                     value={newReview.goals}
                     onChange={(e) => setNewReview({...newReview, goals: e.target.value})}
                   />
@@ -750,7 +827,7 @@ export default function Performance() {
               </div>
               
               <div>
-                <Label className="text-sm text-muted-foreground">Goals</Label>
+                <Label className="text-sm text-muted-foreground">KPIs</Label>
                 <p className="mt-1">{selectedReview.goals}</p>
               </div>
               
@@ -852,13 +929,59 @@ export default function Performance() {
               )}
               
               <div className="space-y-2">
-                <Label htmlFor="manager-notes">Manager Comments & Ratings</Label>
+                <Label htmlFor="manager-rating">Overall Rating (1-5)</Label>
+                <Select value={managerRating} onValueChange={setManagerRating}>
+                  <SelectTrigger id="manager-rating">
+                    <SelectValue placeholder="Select a rating" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover">
+                    <SelectItem value="1">1 - Needs significant improvement</SelectItem>
+                    <SelectItem value="2">2 - Below expectations</SelectItem>
+                    <SelectItem value="3">3 - Meets expectations</SelectItem>
+                    <SelectItem value="4">4 - Exceeds expectations</SelectItem>
+                    <SelectItem value="5">5 - Outstanding</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="manager-notes">Observations</Label>
                 <Textarea
                   id="manager-notes"
                   value={managerNotes}
                   onChange={(e) => setManagerNotes(e.target.value)}
-                  placeholder="Add your evaluation, feedback, and notes..."
-                  className="min-h-[150px]"
+                  placeholder="What you observed over the review period..."
+                  className="min-h-[120px]"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="manager-strengths">Strengths</Label>
+                <Textarea
+                  id="manager-strengths"
+                  value={managerStrengths}
+                  onChange={(e) => setManagerStrengths(e.target.value)}
+                  placeholder="What this person does well..."
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="manager-areas">Areas for Improvement</Label>
+                <Textarea
+                  id="manager-areas"
+                  value={managerAreasForImprovement}
+                  onChange={(e) => setManagerAreasForImprovement(e.target.value)}
+                  placeholder="Where there is room to grow..."
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="manager-recommendations">Recommendations</Label>
+                <Textarea
+                  id="manager-recommendations"
+                  value={managerRecommendations}
+                  onChange={(e) => setManagerRecommendations(e.target.value)}
+                  placeholder="Training, support or next steps..."
                 />
               </div>
               
@@ -1011,23 +1134,23 @@ export default function Performance() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="completedGoals">3. Which goals or tasks did you complete successfully?</Label>
+                <Label htmlFor="completedGoals">3. Which KPIs or tasks did you complete successfully?</Label>
                 <Textarea
                   id="completedGoals"
                   value={selfAssessmentData.completedGoals}
                   onChange={(e) => setSelfAssessmentData({...selfAssessmentData, completedGoals: e.target.value})}
-                  placeholder="List completed goals..."
+                  placeholder="List completed KPIs..."
                   className="min-h-[80px]"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="unachievedGoals">4. Were there any goals you did not achieve? If yes, please explain.</Label>
+                <Label htmlFor="unachievedGoals">4. Were there any KPIs you did not achieve? If yes, please explain.</Label>
                 <Textarea
                   id="unachievedGoals"
                   value={selfAssessmentData.unachievedGoals}
                   onChange={(e) => setSelfAssessmentData({...selfAssessmentData, unachievedGoals: e.target.value})}
-                  placeholder="Explain any unachieved goals..."
+                  placeholder="Explain any unachieved KPIs..."
                   className="min-h-[80px]"
                 />
               </div>
@@ -1139,17 +1262,17 @@ export default function Performance() {
               </div>
             </div>
 
-            {/* Section D: Future Goals */}
+            {/* Section D: Future KPIs */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-foreground border-b pb-2">Section D: Future Goals</h3>
+              <h3 className="text-lg font-semibold text-foreground border-b pb-2">Section D: Future KPIs</h3>
               
               <div className="space-y-2">
-                <Label htmlFor="futureGoals">13. What are your key goals for the next review period?</Label>
+                <Label htmlFor="futureGoals">13. What are your key KPIs for the next review period?</Label>
                 <Textarea
                   id="futureGoals"
                   value={selfAssessmentData.futureGoals}
                   onChange={(e) => setSelfAssessmentData({...selfAssessmentData, futureGoals: e.target.value})}
-                  placeholder="Describe your future goals..."
+                  placeholder="Describe your future KPIs..."
                   className="min-h-[80px]"
                 />
               </div>

@@ -740,11 +740,12 @@ export default function Attendance() {
       return
     }
 
-    // All users (including HR Manager) can only submit leave requests for themselves.
+    // HR may submit on behalf of any employee; everyone else is limited to themselves.
     // Compare against the employee record id (user.employee_id), NOT the auth user id (user.id) —
     // they are different identifiers and `selectedEmployee` holds the employee id.
+    const canSubmitForOthers = user?.role === 'hr_manager' || user?.role === 'corporate_hr'
     const ownEmployeeId = user?.employee_id?.toString()
-    if (ownEmployeeId && selectedEmployee !== ownEmployeeId) {
+    if (!canSubmitForOthers && ownEmployeeId && selectedEmployee !== ownEmployeeId) {
       toast({
         title: "Access Denied",
         description: "You can only submit leave requests for yourself",
@@ -1181,7 +1182,7 @@ export default function Attendance() {
                   
                   <div className="space-y-2">
                     <Label htmlFor="employee">Employee *</Label>
-                    {user?.role === 'hr_manager' ? (
+                    {(user?.role === 'hr_manager' || user?.role === 'corporate_hr') ? (
                       <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
                         <SelectTrigger>
                           <SelectValue placeholder={isLoadingEmployees ? "Loading employees..." : "Select employee"} />

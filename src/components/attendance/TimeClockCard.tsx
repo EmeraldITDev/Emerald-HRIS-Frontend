@@ -319,6 +319,7 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
     setLocationError(null);
     try {
       let coords: Coords = null;
+      let currentLocationIssue: LocationIssue | null = null;
       if (mode === "Physical") {
         // Location is mandatory for office clock-in — never bypass it.
         const gps = await captureGps();
@@ -333,10 +334,10 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
         }
         coords = gps.coords;
         const nextAttempt = locationAttempt + 1;
-        const issue = checkOfficeLocation(coords, assignedOffice);
-        if (issue && nextAttempt < MAX_LOCATION_ATTEMPTS) {
+        currentLocationIssue = checkOfficeLocation(coords, assignedOffice);
+        if (currentLocationIssue && nextAttempt < MAX_LOCATION_ATTEMPTS) {
           setLocationAttempt(nextAttempt);
-          setLocationIssue(issue);
+          setLocationIssue(currentLocationIssue);
           toast({
             title: "Office location not confirmed",
             description: `Move near a window or open area, then retry. ${MAX_LOCATION_ATTEMPTS - nextAttempt} ${MAX_LOCATION_ATTEMPTS - nextAttempt === 1 ? "retry" : "retries"} remaining before HR review.`,
@@ -345,7 +346,7 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
           return;
         }
         setLocationAttempt(nextAttempt);
-        setLocationIssue(issue);
+        setLocationIssue(currentLocationIssue);
       }
       const payload: Record<string, any> = {
         employee_id: employeeId,
@@ -357,7 +358,7 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
         payload.location_lng = coords.lng;
         if (coords.accuracy != null) payload.location_accuracy = Math.round(coords.accuracy);
         payload.location_attempt = Math.max(1, locationAttempt + 1);
-        if (locationIssue || checkOfficeLocation(coords, assignedOffice)) {
+        if (currentLocationIssue) {
           payload.force_location_review = true;
           payload.location_review_reason = "Location remained outside the accuracy-aware office boundary after three attempts.";
         }

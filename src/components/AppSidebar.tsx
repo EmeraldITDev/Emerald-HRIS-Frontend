@@ -62,7 +62,7 @@ const navigationItems: NavItem[] = [
     url: "/executive",
     icon: Crown,
     permission: "*",
-    roles: ['executive', 'hr_manager']
+    roles: ['executive']
   },
   { 
     title: "Dashboard", 
@@ -135,6 +135,18 @@ const navigationItems: NavItem[] = [
     icon: Clock,
     permission: "*",
     roles: ['hr_manager', 'corporate_hr', 'executive']
+  },
+  {
+    title: "Movements",
+    url: "/movements",
+    icon: ArrowLeftRight,
+    permission: "*"
+  },
+  {
+    title: "Announcements",
+    url: "/announcements",
+    icon: MessageSquare,
+    permission: "*"
   },
   {
     title: "Notifications",

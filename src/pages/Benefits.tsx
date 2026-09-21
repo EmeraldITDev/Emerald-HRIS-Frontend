@@ -15,6 +15,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { apiService, Employee } from '@/lib/api'
 import RoleBasedComponent from '@/components/RoleBasedComponent'
 import { formatNaira } from "@/lib/currency"
+import { SearchableSelect } from "@/components/ui/searchable-select"
 
 const BENEFIT_TYPE_STYLES: Record<string, { label: string; icon: any; color: string; bar: string; text: string }> = {
   health:     { label: 'Health / HMO',      icon: Heart,         color: 'text-red-500',     bar: 'bg-red-500',     text: 'text-red-600' },
@@ -1091,22 +1092,18 @@ export default function Benefits() {
           <div className="space-y-6 py-4">
             <div className="space-y-2">
               <Label>Employee *</Label>
-              <Select 
-                value={selectedEmployee} 
+              <SearchableSelect
+                value={selectedEmployee}
                 onValueChange={setSelectedEmployee}
                 disabled={!!editingBenefit}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select employee" />
-                </SelectTrigger>
-                <SelectContent>
-                  {employees.map((employee) => (
-                    <SelectItem key={employee.id} value={employee.id?.toString() || ''}>
-                      {employee.first_name} {employee.last_name} - {employee.department}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                placeholder="Select employee"
+                searchPlaceholder="Search employees…"
+                options={employees.map((employee) => ({
+                  value: employee.id?.toString() || '',
+                  label: `${employee.first_name} ${employee.last_name} - ${employee.department}`,
+                  keywords: `${employee.employee_code || ''} ${employee.email || ''}`,
+                }))}
+              />
             </div>
             
             {/* HMO */}

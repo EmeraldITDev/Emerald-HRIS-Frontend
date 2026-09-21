@@ -10,6 +10,7 @@ import { useAuth } from "@/contexts/AuthContext"
 import { apiService, Employee } from '@/lib/api'
 import { format } from 'date-fns'
 import jsPDF from 'jspdf'
+import { SearchableSelect } from '@/components/ui/searchable-select'
 
 export default function Reports() {
   const { user } = useAuth()
@@ -416,18 +417,18 @@ export default function Reports() {
           <CardDescription>Choose an employee to generate a detailed report</CardDescription>
         </CardHeader>
         <CardContent>
-          <Select onValueChange={handleEmployeeSelect} value={selectedEmployee}>
-            <SelectTrigger className="w-full md:w-[300px]">
-              <SelectValue placeholder="Select an employee" />
-            </SelectTrigger>
-            <SelectContent>
-              {employees.map((employee) => (
-                <SelectItem key={employee.id} value={employee.id?.toString() || ''}>
-                  {employee.first_name} {employee.last_name} - {employee.employee_code || `EMP${employee.id?.toString().padStart(3, '0')}`}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <SearchableSelect
+            value={selectedEmployee}
+            onValueChange={handleEmployeeSelect}
+            className="w-full md:w-[300px]"
+            placeholder="Select an employee"
+            searchPlaceholder="Search employees…"
+            options={employees.map((employee) => ({
+              value: employee.id?.toString() || '',
+              label: `${employee.first_name} ${employee.last_name} - ${employee.employee_code || `EMP${employee.id?.toString().padStart(3, '0')}`}`,
+              keywords: `${employee.department || ''} ${employee.email || ''}`,
+            }))}
+          />
           {isLoading && (
             <p className="mt-2 text-sm text-muted-foreground">Loading report data...</p>
           )}

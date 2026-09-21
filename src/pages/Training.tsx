@@ -200,6 +200,15 @@ export default function Training() {
       return
     }
 
+    if (newTraining.category === 'Other' && !newTraining.category_other.trim()) {
+      toast({
+        title: "Specify the category",
+        description: "Please describe the training category.",
+        variant: "destructive"
+      })
+      return
+    }
+
     try {
       // Send training details + assignment data together
       const payload: any = {

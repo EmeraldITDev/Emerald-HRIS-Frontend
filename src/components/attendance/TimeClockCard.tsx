@@ -303,7 +303,7 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
     const m = String(Math.floor((diff % 3600) / 60)).padStart(2, "0");
     const s = String(diff % 60).padStart(2, "0");
     return `${h}:${m}:${s}`;
-  }, [clockedIn, todayStatus?.clock_in, todayStatus?.date, now]);
+  }, [clockedIn, now, startedAt]);
 
   const handleClockIn = useCallback(async () => {
     if (!employeeId) {
@@ -391,7 +391,7 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
     } finally {
       setIsPunching(false);
     }
-  }, [assignedOffice, employeeId, expectedMode, locationAttempt, locationIssue, resetLocationAttempt, selectedMode, refresh, toast]);
+  }, [assignedOffice, employeeId, expectedMode, locationAttempt, resetLocationAttempt, selectedMode, refresh, toast]);
 
   const handleClockOut = useCallback(async () => {
     if (!employeeId) return;

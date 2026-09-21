@@ -1182,7 +1182,7 @@ export default function Attendance() {
                   
                   <div className="space-y-2">
                     <Label htmlFor="employee">Employee *</Label>
-                    {user?.role === 'hr_manager' ? (
+                    {(user?.role === 'hr_manager' || user?.role === 'corporate_hr') ? (
                       <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
                         <SelectTrigger>
                           <SelectValue placeholder={isLoadingEmployees ? "Loading employees..." : "Select employee"} />

@@ -27,8 +27,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Calendar, Plus, Clock, CalendarDays, LogIn, LogOut, Bell, ChevronDown, ChevronUp, Download, FileText, User, Phone, Building, Users, Upload, Eye, File } from "lucide-react"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+import { Calendar, Plus, Clock, CalendarDays, LogIn, LogOut, Bell, ChevronDown, Download, FileText, User, Phone, Building, Users, Upload, Eye, File } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -43,7 +42,6 @@ import {
   formatTimeWithZone,
   locationStatusLabel,
 } from "@/lib/attendanceUi"
-import { getCurrentMonthCelebrations, type Celebration } from "@/utils/celebrations"
 
 // Extract HH:mm from a backend datetime string ("YYYY-MM-DD HH:MM:SS" or ISO).
 function formatAttTime(value?: string | null): string {
@@ -57,7 +55,6 @@ function formatAttTime(value?: string | null): string {
   }
   return s.length >= 16 ? s.slice(11, 16) : s
 }
-import { CelebrationsCard } from "@/components/CelebrationsCard"
 import { LeaveBalanceCard } from "@/components/LeaveBalanceCard"
 import { AttendanceApprovalsCard } from "@/components/AttendanceApprovalsCard"
 import { MyAttendanceRequestsCard } from "@/components/MyAttendanceRequestsCard"
@@ -136,8 +133,6 @@ export default function Attendance() {
   const [records, setRecords] = useState(leaveRecords)
   const [attendance, setAttendance] = useState(attendanceRecords)
   const [currentTime] = useState(new Date())
-  const [currentMonthCelebrations, setCurrentMonthCelebrations] = useState<Celebration[]>([])
-  const [isCelebrationsLoading, setIsCelebrationsLoading] = useState(false)
   const [startDateOpen, setStartDateOpen] = useState(false)
   const [endDateOpen, setEndDateOpen] = useState(false)
   const { toast } = useToast()
@@ -292,23 +287,6 @@ export default function Attendance() {
     return () => { cancelled = true }
   }, [user, selectedEmployee])
 
-  // Update celebrations when all employees are loaded
-  useEffect(() => {
-    const fetchCelebrations = async () => {
-      setIsCelebrationsLoading(true)
-      try {
-        // Get all employees for celebrations regardless of role filtering
-        const allEmployees = await apiService.getEmployees()
-        const celebrations = getCurrentMonthCelebrations(allEmployees)
-        setCurrentMonthCelebrations(celebrations)
-      } catch (error) {
-        console.error('Error loading celebrations:', error)
-      } finally {
-        setIsCelebrationsLoading(false)
-      }
-    }
-    fetchCelebrations()
-  }, [])
 
   const fetchEmployees = async () => {
     try {
@@ -2021,56 +1999,6 @@ export default function Attendance() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* This Month's Birthdays & Anniversaries - Collapsible */}
-      <CollapsibleCelebrations 
-        celebrations={currentMonthCelebrations} 
-        isLoading={isCelebrationsLoading}
-      />
     </div>
-  )
-}
-
-// Collapsible Celebrations Component
-function CollapsibleCelebrations({ 
-  celebrations, 
-  isLoading 
-}: { 
-  celebrations: Celebration[], 
-  isLoading: boolean 
-}) {
-  const [isOpen, setIsOpen] = useState(true)
-
-  return (
-    <Collapsible open={isOpen} onOpenChange={setIsOpen} className="space-y-2">
-      <div className="flex items-center justify-between">
-        <CollapsibleTrigger asChild>
-          <Button variant="ghost" className="w-full justify-between p-4 h-auto bg-gradient-to-r from-pink-500/10 via-amber-500/10 to-purple-500/10 hover:from-pink-500/20 hover:via-amber-500/20 hover:to-purple-500/20 rounded-lg border border-border/30">
-            <span className="flex items-center gap-2 font-semibold text-foreground">
-              <span className="p-2 rounded-lg bg-gradient-to-br from-pink-500 to-amber-500 text-white">
-                🎉
-              </span>
-              This Month's Birthdays & Anniversaries
-              <Badge variant="secondary" className="ml-2">
-                {celebrations.length}
-              </Badge>
-            </span>
-            {isOpen ? (
-              <ChevronUp className="h-5 w-5 text-muted-foreground" />
-            ) : (
-              <ChevronDown className="h-5 w-5 text-muted-foreground" />
-            )}
-          </Button>
-        </CollapsibleTrigger>
-      </div>
-      <CollapsibleContent className="space-y-2">
-        <CelebrationsCard 
-          celebrations={celebrations} 
-          isLoading={isLoading}
-          title=""
-          className="border-t-0 rounded-t-none"
-        />
-      </CollapsibleContent>
-    </Collapsible>
   )
 }

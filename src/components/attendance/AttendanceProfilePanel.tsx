@@ -90,11 +90,13 @@ export function AttendanceProfilePanel({ employeeId }: Props) {
   }, [load]);
 
   const startEdit = () => {
+    const current = profile?.assigned_location || "";
     setDraft({
-      assigned_location: profile?.assigned_location || "",
+      assigned_location: current,
       work_arrangement: profile?.work_arrangement || "",
       supervisor_id: profile?.supervisor_id ?? null,
     });
+    setOtherLocation(Boolean(current) && !LOCATIONS.includes(current));
     setEditing(true);
   };
 

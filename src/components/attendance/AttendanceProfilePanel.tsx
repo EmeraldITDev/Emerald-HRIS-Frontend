@@ -43,6 +43,7 @@ export function AttendanceProfilePanel({ employeeId }: Props) {
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState(false);
   const [scheduleModes, setScheduleModes] = useState<Record<string, any>>({});
+  const [otherLocation, setOtherLocation] = useState(false);
 
   const loadSchedule = useCallback(async (location?: string) => {
     if (!location) {

@@ -133,8 +133,6 @@ export default function Attendance() {
   const [records, setRecords] = useState(leaveRecords)
   const [attendance, setAttendance] = useState(attendanceRecords)
   const [currentTime] = useState(new Date())
-  const [currentMonthCelebrations, setCurrentMonthCelebrations] = useState<Celebration[]>([])
-  const [isCelebrationsLoading, setIsCelebrationsLoading] = useState(false)
   const [startDateOpen, setStartDateOpen] = useState(false)
   const [endDateOpen, setEndDateOpen] = useState(false)
   const { toast } = useToast()
@@ -289,23 +287,6 @@ export default function Attendance() {
     return () => { cancelled = true }
   }, [user, selectedEmployee])
 
-  // Update celebrations when all employees are loaded
-  useEffect(() => {
-    const fetchCelebrations = async () => {
-      setIsCelebrationsLoading(true)
-      try {
-        // Get all employees for celebrations regardless of role filtering
-        const allEmployees = await apiService.getEmployees()
-        const celebrations = getCurrentMonthCelebrations(allEmployees)
-        setCurrentMonthCelebrations(celebrations)
-      } catch (error) {
-        console.error('Error loading celebrations:', error)
-      } finally {
-        setIsCelebrationsLoading(false)
-      }
-    }
-    fetchCelebrations()
-  }, [])
 
   const fetchEmployees = async () => {
     try {

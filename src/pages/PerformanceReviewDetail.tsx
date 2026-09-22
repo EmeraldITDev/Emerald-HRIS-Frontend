@@ -450,8 +450,13 @@ export default function PerformanceReviewDetail() {
                     </Button>
                   </>
                 ) : (
-                  <ReadOnlyBlock
-                    value={review.hr_review ?? review.hr_assessment ?? review.hr_comments}
+                  <AnswerList
+                    fields={HR_FIELDS}
+                    source={
+                      typeof review.hr_review === "object" && review.hr_review
+                        ? review.hr_review
+                        : review
+                    }
                     emptyText="Not completed yet."
                   />
                 )}

@@ -20,8 +20,8 @@
 
 ## Batch D — Attendance, leave balances, training selection
 - [ ] Attendance & Leave page redesign (remove duplicated birthdays/anniversaries)
-- [ ] Org attendance: details modal via GET /attendance/{id} instead of toast
-- [ ] Leave balances bound to total/used/remaining (no annual_cap fallback)
+- [x] Org attendance: details modal via GET /attendance/{id} instead of toast
+- [x] Leave balances bound to total/used/remaining (no annual_cap fallback)
 - [x] Training: GET /training/eligible-employees for the picker
 - [x] Searchable multi-employee selector used everywhere "Select Employees" appears
 

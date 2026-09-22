@@ -87,6 +87,27 @@ export default function OrgAttendanceDashboard() {
   const [status, setStatus] = useState("All");
   const [chip, setChip] = useState<ChipKey>("total");
   const [flagged, setFlagged] = useState<Record<string, boolean>>({});
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState<string | null>(null);
+  const [detail, setDetail] = useState<any>(null);
+
+  const openDetail = async (row: any) => {
+    setDetailOpen(true);
+    setDetail(row);
+    setDetailError(null);
+    const id = row?.attendance_id ?? row?.id;
+    if (!id) return;
+    setDetailLoading(true);
+    try {
+      const full = await apiService.getAttendanceDetail(id);
+      setDetail({ ...row, ...(full || {}) });
+    } catch (e: any) {
+      setDetailError(e?.data?.message || e?.message || "We couldn't load the full record.");
+    } finally {
+      setDetailLoading(false);
+    }
+  };
 
   const load = useCallback(async () => {
     setLoading(true);

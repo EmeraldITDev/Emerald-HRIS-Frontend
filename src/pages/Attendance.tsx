@@ -27,8 +27,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Calendar, Plus, Clock, CalendarDays, LogIn, LogOut, Bell, ChevronDown, ChevronUp, Download, FileText, User, Phone, Building, Users, Upload, Eye, File } from "lucide-react"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+import { Calendar, Plus, Clock, CalendarDays, LogIn, LogOut, Bell, ChevronDown, Download, FileText, User, Phone, Building, Users, Upload, Eye, File } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -43,7 +42,6 @@ import {
   formatTimeWithZone,
   locationStatusLabel,
 } from "@/lib/attendanceUi"
-import { getCurrentMonthCelebrations, type Celebration } from "@/utils/celebrations"
 
 // Extract HH:mm from a backend datetime string ("YYYY-MM-DD HH:MM:SS" or ISO).
 function formatAttTime(value?: string | null): string {
@@ -57,7 +55,6 @@ function formatAttTime(value?: string | null): string {
   }
   return s.length >= 16 ? s.slice(11, 16) : s
 }
-import { CelebrationsCard } from "@/components/CelebrationsCard"
 import { LeaveBalanceCard } from "@/components/LeaveBalanceCard"
 import { AttendanceApprovalsCard } from "@/components/AttendanceApprovalsCard"
 import { MyAttendanceRequestsCard } from "@/components/MyAttendanceRequestsCard"

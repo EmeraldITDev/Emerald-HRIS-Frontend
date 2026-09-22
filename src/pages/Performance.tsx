@@ -543,7 +543,26 @@ export default function Performance() {
                     }))}
                   />
                 </div>
-                
+
+                <div className="space-y-2">
+                  <Label htmlFor="review-period">Review Period *</Label>
+                  <Select
+                    value={newReview.reviewPeriod}
+                    onValueChange={(value) => setNewReview({ ...newReview, reviewPeriod: value })}
+                  >
+                    <SelectTrigger id="review-period">
+                      <SelectValue placeholder="Select quarter" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {periodOptions.map((option) => (
+                        <SelectItem key={option} value={option}>
+                          {option}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 <p className="text-xs text-muted-foreground">
                   The employee will be asked to complete a self-assessment.
                 </p>

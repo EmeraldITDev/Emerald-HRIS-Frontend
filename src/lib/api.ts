@@ -1517,6 +1517,12 @@ class ApiService {
     return this.request<PerformanceReview[]>(`/performance${qs}`);
   }
 
+  /** Single review with workflow + form schema metadata. */
+  async getPerformanceReview(id: number | string): Promise<any> {
+    const res: any = await this.request<any>(`/performance/${id}`);
+    return res?.data ?? res;
+  }
+
   async createSelfAssessment(data: { period: string; self_assessment: any }): Promise<PerformanceReview> {
     return this.request<PerformanceReview>('/performance/self', {
       method: 'POST',

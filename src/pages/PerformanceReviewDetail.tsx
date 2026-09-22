@@ -411,7 +411,15 @@ export default function PerformanceReviewDetail() {
                     </Button>
                   </>
                 ) : (
-                  <ReadOnlyBlock value={review.manager_review} emptyText="Not submitted yet." />
+                  <AnswerList
+                    fields={MANAGER_FIELDS}
+                    source={
+                      typeof review.manager_review === "object" && review.manager_review
+                        ? review.manager_review
+                        : review
+                    }
+                    emptyText="Not submitted yet."
+                  />
                 )}
                 <div className="flex justify-between">
                   <Button variant="outline" size="sm" onClick={() => setStep(0)}>

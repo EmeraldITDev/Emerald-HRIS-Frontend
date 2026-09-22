@@ -78,6 +78,28 @@ export default function ProfileSettingsPanel() {
     }
   };
 
+  const saveContactDetails = async () => {
+    const id = Number(profile?.id);
+    if (!id) {
+      toast({ title: "Your record could not be found", variant: "destructive" });
+      return;
+    }
+    setSavingProfile(true);
+    try {
+      await apiService.updateEmployee(id, { phone } as any);
+      setProfile((p: any) => ({ ...(p || {}), phone }));
+      toast({ title: "Details updated", description: "Your phone number has been saved." });
+    } catch (e: any) {
+      toast({
+        title: "Not saved",
+        description: e?.data?.message || e?.message || "Please try again in a moment.",
+        variant: "destructive",
+      });
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
   const field = (label: string, value: any) => (
     <div className="space-y-2">
       <Label>{label}</Label>

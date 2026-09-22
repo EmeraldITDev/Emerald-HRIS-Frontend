@@ -28,7 +28,10 @@ export default function ProfileSettingsPanel() {
     (async () => {
       try {
         const data: any = await apiService.getMyProfile();
-        if (!cancelled) setProfile(data);
+        if (!cancelled) {
+          setProfile(data);
+          setPhone(String(data?.phone || data?.phone_number || ""));
+        }
       } catch (e: any) {
         if (!cancelled) setError(e?.message || "Your details could not be loaded.");
       } finally {

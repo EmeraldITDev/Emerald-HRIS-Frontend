@@ -87,11 +87,14 @@ export default function MyPayslips() {
         );
         setDetailsByPeriod(Object.fromEntries(entries.filter(Boolean) as Array<readonly [string, any]>));
       } catch (e: any) {
-        toast({ title: "Failed to load payslips", description: e?.message, variant: "destructive" });
+        setItems([]);
+        setLoadError(e?.message || "We couldn't reach the server.");
       } finally { setLoading(false); }
-    };
+  };
 
+  useEffect(() => {
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.employee_id]);
 
   const normalizedItems = items.map((r) => {

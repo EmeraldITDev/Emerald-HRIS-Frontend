@@ -51,6 +51,18 @@ export function resolveNotificationLink(
     return "/attendance";
   }
 
+  // Performance reviews → dedicated review page when we know the id
+  if (type.includes("performance") || type.includes("self_assessment") || type.includes("appraisal")) {
+    const pid =
+      n?.data?.performance_review_id ??
+      n?.data?.review_id ??
+      n?.data?.id ??
+      n?.related_id ??
+      (typeof n?.link === "string" ? n.link.match(/(\d+)\s*$/)?.[1] : null) ??
+      null;
+    return pid != null ? `/performance/${pid}` : "/performance";
+  }
+
   if (raw) {
     // Announcements: app only has a list page
     if (/^\/announcements(\/|$|\?)/i.test(raw)) {

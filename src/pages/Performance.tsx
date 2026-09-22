@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast"
 import { useAuth } from '@/contexts/AuthContext'
 import { apiService, Employee, PerformanceReview } from '@/lib/api'
 import { SearchableSelect } from '@/components/ui/searchable-select'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 
 interface Review {
   id: string
@@ -62,6 +63,11 @@ export default function Performance() {
   const [viewDialogOpen, setViewDialogOpen] = useState(false)
   const [commentDialogOpen, setCommentDialogOpen] = useState(false)
   const [selfAssessmentOpen, setSelfAssessmentOpen] = useState(false)
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  useEffect(() => {
+    if (searchParams.get('selfAssessment')) setSelfAssessmentOpen(true)
+  }, [searchParams])
   const [manageReviewDialogOpen, setManageReviewDialogOpen] = useState(false)
   const [hrReviewDialogOpen, setHrReviewDialogOpen] = useState(false)
   const [selectedReview, setSelectedReview] = useState<Review | null>(null)
@@ -708,10 +714,7 @@ export default function Performance() {
                      <TableCell className="text-right">
                       <div className="flex justify-end gap-1 md:gap-2 flex-wrap">
                         {/* View button - everyone can view */}
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => {
-                          setSelectedReview(review)
-                          setViewDialogOpen(true)
-                        }} title="View Review">
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => navigate(`/performance/${review.id}`)} title="Open Review">
                           <Eye className="h-3 w-3 md:h-4 md:w-4" />
                         </Button>
                         

@@ -46,17 +46,25 @@ export default function MyPayslips() {
   const [items, setItems] = useState<any[]>([]);
   const [detailsByPeriod, setDetailsByPeriod] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [employee, setEmployee] = useState<any>(null);
 
-  useEffect(() => {
-    const load = async () => {
+  const load = async () => {
       setLoading(true);
+      setLoadError(null);
       try {
         const [res, profile] = await Promise.all([
           apiService.getMyPayslips(1),
           apiService.getMyProfile().catch(() => null),
         ]);
-        const rows = Array.isArray((res as any)?.data) ? (res as any).data : [];
+        const raw: any = res;
+        const rows = Array.isArray(raw)
+          ? raw
+          : Array.isArray(raw?.data)
+          ? raw.data
+          : Array.isArray(raw?.data?.data)
+          ? raw.data.data
+          : [];
         setEmployee(profile);
         setItems(rows);
 
@@ -79,11 +87,14 @@ export default function MyPayslips() {
         );
         setDetailsByPeriod(Object.fromEntries(entries.filter(Boolean) as Array<readonly [string, any]>));
       } catch (e: any) {
-        toast({ title: "Failed to load payslips", description: e?.message, variant: "destructive" });
+        setItems([]);
+        setLoadError(e?.message || "We couldn't reach the server.");
       } finally { setLoading(false); }
-    };
+  };
 
+  useEffect(() => {
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.employee_id]);
 
   const normalizedItems = items.map((r) => {
@@ -159,8 +170,19 @@ export default function MyPayslips() {
         <CardContent>
           {loading ? (
             <p className="text-sm text-muted-foreground">Loading…</p>
+          ) : loadError ? (
+            <div className="py-8 text-center space-y-3">
+              <p className="text-sm font-medium">We couldn't load your payslips</p>
+              <p className="text-xs text-muted-foreground">{loadError}</p>
+              <Button variant="outline" size="sm" onClick={load}>Try again</Button>
+            </div>
           ) : items.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No payslips yet.</p>
+            <div className="py-8 text-center">
+              <p className="text-sm font-medium">No payslip available</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Your payroll has not been generated yet, so there is currently no payslip to show.
+              </p>
+            </div>
           ) : (
             <Table>
               <TableHeader>

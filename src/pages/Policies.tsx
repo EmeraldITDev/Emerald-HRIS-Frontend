@@ -39,6 +39,7 @@ import { format } from 'date-fns'
 export default function Policies() {
   const [policyList, setPolicyList] = useState<Policy[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [showAddPolicy, setShowAddPolicy] = useState(false)
   const [showViewPolicy, setShowViewPolicy] = useState(false)
   const [showEditPolicy, setShowEditPolicy] = useState(false)
@@ -77,15 +78,13 @@ export default function Policies() {
   const fetchPolicies = async () => {
     try {
       setIsLoading(true)
+      setLoadError(null)
       const policies = await apiService.getPolicies()
-      setPolicyList(policies)
-    } catch (error) {
+      setPolicyList(Array.isArray(policies) ? policies : [])
+    } catch (error: any) {
       console.error('Failed to fetch policies:', error)
-      toast({
-        title: "Error",
-        description: "Failed to load policies",
-        variant: "destructive"
-      })
+      setPolicyList([])
+      setLoadError(error?.message || "We couldn't reach the server.")
     } finally {
       setIsLoading(false)
     }
@@ -451,7 +450,11 @@ ${policy.approved_at ? `\nApproved on: ${format(new Date(policy.approved_at), 'M
         <CardHeader>
           <CardTitle className="text-primary">Policy Documents</CardTitle>
           <CardDescription>
-            {isLoading ? "Loading policies..." : `${policyList.length} policies available`}
+            {isLoading
+              ? "Loading policies..."
+              : loadError
+              ? "Policies could not be loaded"
+              : `${policyList.length} policies available`}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -459,9 +462,18 @@ ${policy.approved_at ? `\nApproved on: ${format(new Date(policy.approved_at), 'M
             <div className="text-center py-8 text-muted-foreground">
               Loading policies...
             </div>
+          ) : loadError ? (
+            <div className="text-center py-8 space-y-3">
+              <p className="text-sm font-medium">We couldn't load the policy documents</p>
+              <p className="text-xs text-muted-foreground">{loadError}</p>
+              <Button variant="outline" size="sm" onClick={fetchPolicies}>Try again</Button>
+            </div>
           ) : policyList.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              No policies found. {canManagePolicy && "Create your first policy to get started."}
+            <div className="text-center py-8">
+              <p className="text-sm font-medium">No policy documents available</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {canManagePolicy ? "Create your first policy to get started." : "Nothing has been published yet."}
+              </p>
             </div>
           ) : (
             <div className="overflow-x-auto">

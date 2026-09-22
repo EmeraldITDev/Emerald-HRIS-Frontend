@@ -15,13 +15,14 @@ import { useAuth } from '@/contexts/AuthContext'
 import { apiService, Employee } from '@/lib/api'
 import RoleBasedComponent from '@/components/RoleBasedComponent'
 import { formatNaira } from "@/lib/currency"
+import { NairaIcon } from "@/components/icons/NairaIcon"
 import { SearchableSelect } from "@/components/ui/searchable-select"
 
 const BENEFIT_TYPE_STYLES: Record<string, { label: string; icon: any; color: string; bar: string; text: string }> = {
   health:     { label: 'Health / HMO',      icon: Heart,         color: 'text-red-500',     bar: 'bg-red-500',     text: 'text-red-600' },
   wellness:   { label: 'Wellness',          icon: Stethoscope,   color: 'text-pink-500',    bar: 'bg-pink-500',    text: 'text-pink-600' },
   insurance:  { label: 'Insurance',         icon: Shield,        color: 'text-blue-500',    bar: 'bg-blue-500',    text: 'text-blue-600' },
-  allowance:  { label: 'Allowance',         icon: DollarSign,    color: 'text-green-500',   bar: 'bg-green-500',   text: 'text-green-600' },
+  allowance:  { label: 'Allowance',         icon: NairaIcon,     color: 'text-green-500',   bar: 'bg-green-500',   text: 'text-green-600' },
   equipment:  { label: 'Equipment',         icon: Monitor,       color: 'text-purple-500',  bar: 'bg-purple-500',  text: 'text-purple-600' },
   transport:  { label: 'Transport',         icon: Briefcase,     color: 'text-amber-500',   bar: 'bg-amber-500',   text: 'text-amber-600' },
   training:   { label: 'Training',          icon: GraduationCap, color: 'text-indigo-500',  bar: 'bg-indigo-500',  text: 'text-indigo-600' },

@@ -1434,7 +1434,10 @@ class ApiService {
     if (params?.category) queryParams.append('category', params.category);
     
     const url = `/policies${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
-    return this.request<Policy[]>(url);
+    const res: any = await this.request<any>(url);
+    if (Array.isArray(res)) return res as Policy[];
+    const list = res?.data ?? res?.policies ?? [];
+    return (Array.isArray(list) ? list : []) as Policy[];
   }
 
   async getPolicy(id: number): Promise<Policy> {
@@ -1512,6 +1515,12 @@ class ApiService {
     if (filters?.period) params.append('period', filters.period);
     const qs = params.toString() ? `?${params.toString()}` : '';
     return this.request<PerformanceReview[]>(`/performance${qs}`);
+  }
+
+  /** Single review with workflow + form schema metadata. */
+  async getPerformanceReview(id: number | string): Promise<any> {
+    const res: any = await this.request<any>(`/performance/${id}`);
+    return res?.data ?? res;
   }
 
   async createSelfAssessment(data: { period: string; self_assessment: any }): Promise<PerformanceReview> {

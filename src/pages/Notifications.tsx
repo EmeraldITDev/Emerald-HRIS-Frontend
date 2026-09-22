@@ -14,17 +14,23 @@ import { useAuth } from "@/contexts/AuthContext";
 export default function NotificationsPage() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [tab, setTab] = useState<"all" | "unread">("all");
   const navigate = useNavigate();
   const { user } = useAuth();
 
   const load = async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const res: any = await apiService.getNotifications(50, 1);
-      setItems(res?.data || []);
+      const list = Array.isArray(res)
+        ? res
+        : res?.data ?? res?.notifications ?? res?.data?.data ?? [];
+      setItems(Array.isArray(list) ? list : []);
     } catch (e: any) {
-      toast({ title: "Failed to load notifications", description: e?.message, variant: "destructive" });
+      setItems([]);
+      setLoadError(e?.message || "We couldn't reach the server.");
     } finally {
       setLoading(false);
     }
@@ -84,8 +90,17 @@ export default function NotificationsPage() {
             <CardContent>
               {loading ? (
                 <p className="text-sm text-muted-foreground">Loading…</p>
+              ) : loadError ? (
+                <div className="py-8 text-center space-y-3">
+                  <p className="text-sm font-medium">We couldn't load your notifications</p>
+                  <p className="text-xs text-muted-foreground">{loadError}</p>
+                  <Button variant="outline" size="sm" onClick={load}>Try again</Button>
+                </div>
               ) : visible.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No notifications</p>
+                <div className="py-8 text-center">
+                  <p className="text-sm font-medium">No notifications</p>
+                  <p className="text-xs text-muted-foreground mt-1">You're all caught up.</p>
+                </div>
               ) : (
                 <ul className="divide-y">
                   {visible.map((n) => (

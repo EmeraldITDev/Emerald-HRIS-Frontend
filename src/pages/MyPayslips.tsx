@@ -46,17 +46,25 @@ export default function MyPayslips() {
   const [items, setItems] = useState<any[]>([]);
   const [detailsByPeriod, setDetailsByPeriod] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [employee, setEmployee] = useState<any>(null);
 
-  useEffect(() => {
-    const load = async () => {
+  const load = async () => {
       setLoading(true);
+      setLoadError(null);
       try {
         const [res, profile] = await Promise.all([
           apiService.getMyPayslips(1),
           apiService.getMyProfile().catch(() => null),
         ]);
-        const rows = Array.isArray((res as any)?.data) ? (res as any).data : [];
+        const raw: any = res;
+        const rows = Array.isArray(raw)
+          ? raw
+          : Array.isArray(raw?.data)
+          ? raw.data
+          : Array.isArray(raw?.data?.data)
+          ? raw.data.data
+          : [];
         setEmployee(profile);
         setItems(rows);
 

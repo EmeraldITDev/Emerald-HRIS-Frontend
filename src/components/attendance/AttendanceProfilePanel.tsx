@@ -183,24 +183,49 @@ export function AttendanceProfilePanel({ employeeId }: Props) {
               <div className="space-y-1">
                 <Label>Assigned Location</Label>
                 {editing ? (
-                  <Select
-                    value={draft?.assigned_location || ""}
-                    onValueChange={(v) => {
-                      setDraft({ ...draft, assigned_location: v });
-                      loadSchedule(v);
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select location" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {LOCATIONS.map((l) => (
-                        <SelectItem key={l} value={l}>
-                          {l}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="space-y-2">
+                    <Select
+                      value={
+                        otherLocation
+                          ? "__other__"
+                          : draft?.assigned_location || ""
+                      }
+                      onValueChange={(v) => {
+                        if (v === "__other__") {
+                          setOtherLocation(true);
+                          setDraft({ ...draft, assigned_location: "" });
+                          setScheduleModes({});
+                          return;
+                        }
+                        setOtherLocation(false);
+                        setDraft({ ...draft, assigned_location: v });
+                        loadSchedule(v);
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select location" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {LOCATIONS.map((l) => (
+                          <SelectItem key={l} value={l}>
+                            {l}
+                          </SelectItem>
+                        ))}
+                        <SelectItem value="__other__">Other…</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {otherLocation && (
+                      <Input
+                        autoFocus
+                        placeholder="Enter location (e.g. Port Harcourt office)"
+                        value={draft?.assigned_location || ""}
+                        onChange={(e) =>
+                          setDraft({ ...draft, assigned_location: e.target.value })
+                        }
+                        onBlur={(e) => loadSchedule(e.target.value.trim())}
+                      />
+                    )}
+                  </div>
                 ) : (
                   <p className="text-sm">{view?.assigned_location || "—"}</p>
                 )}

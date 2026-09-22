@@ -148,7 +148,21 @@ export default function Training() {
   useEffect(() => {
     const fetchEmployees = async () => {
       try {
-        const employeesList = await apiService.getEmployees()
+        let employeesList: Employee[] = []
+        try {
+          const res: any = await apiService.getTrainingEligibleEmployees()
+          const list =
+            (Array.isArray(res) && res) ||
+            (Array.isArray(res?.data) && res.data) ||
+            (Array.isArray(res?.employees) && res.employees) ||
+            []
+          employeesList = list as Employee[]
+        } catch {
+          employeesList = []
+        }
+        if (!employeesList.length) {
+          employeesList = await apiService.getEmployees()
+        }
         let assignableEmployees = employeesList.filter((emp: Employee) => emp.id !== undefined && emp.id !== null)
         
         // Executives, HR Managers, and Corporate HR see ALL employees

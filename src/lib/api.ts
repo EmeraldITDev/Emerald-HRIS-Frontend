@@ -1427,6 +1427,24 @@ class ApiService {
     return this.request<any>(`/settings/audit-logs/${id}`);
   }
 
+  // System users (Security & Administration)
+  async getSystemUsers(params?: { page?: number; per_page?: number; search?: string }): Promise<any> {
+    const qp = new URLSearchParams();
+    Object.entries(params ?? {}).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '') qp.append(k, String(v));
+    });
+    qp.append('_', String(Date.now()));
+    return this.request<any>(`/users?${qp.toString()}`, { cache: 'no-store' });
+  }
+
+  async deleteSystemUser(id: number | string): Promise<any> {
+    return this.request<any>(`/users/${id}`, { method: 'DELETE' });
+  }
+
+  async deactivateSystemUser(id: number | string): Promise<any> {
+    return this.request<any>(`/users/${id}/deactivate`, { method: 'POST' });
+  }
+
   // Policies
   async getPolicies(params?: { status?: string; category?: string }): Promise<Policy[]> {
     const queryParams = new URLSearchParams();

@@ -1445,6 +1445,10 @@ class ApiService {
     return this.request<any>(`/users/${id}/deactivate`, { method: 'POST' });
   }
 
+  async getTrainingEligibleEmployees(): Promise<any> {
+    return this.request<any>(`/training/eligible-employees`, { cache: 'no-store' });
+  }
+
   // Policies
   async getPolicies(params?: { status?: string; category?: string }): Promise<Policy[]> {
     const queryParams = new URLSearchParams();

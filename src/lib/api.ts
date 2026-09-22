@@ -491,7 +491,28 @@ class ApiService {
     remaining: number;
     year: number;
   }> {
-    return this.request(`/leave/balance/${employeeId}`);
+    const raw: any = await this.request<any>(`/leave/balance/${employeeId}?_=${Date.now()}`, {
+      cache: 'no-store',
+    });
+    const b: any = raw?.data ?? raw?.balance ?? raw ?? {};
+    const s: any = b?.summary ?? {};
+    const num = (...vals: any[]) => {
+      for (const v of vals) {
+        const n = Number(v);
+        if (v !== null && v !== undefined && v !== '' && Number.isFinite(n)) return n;
+      }
+      return undefined;
+    };
+    const limit = num(b.total, b.limit, b.entitlement, b.total_days, b.allocated, s.vacation_days_total);
+    const used = num(b.used, b.used_days, b.taken, s.vacation_days_used);
+    const remaining = num(b.remaining, b.remaining_days, b.balance, s.vacation_days_remaining);
+    const resolvedLimit = limit ?? ((used ?? 0) + (remaining ?? 0));
+    return {
+      used: used ?? Math.max(0, resolvedLimit - (remaining ?? 0)),
+      limit: resolvedLimit,
+      remaining: remaining ?? Math.max(0, resolvedLimit - (used ?? 0)),
+      year: Number(b.year) || new Date().getFullYear(),
+    };
   }
 
   // Detailed payslip (Requirement 4)

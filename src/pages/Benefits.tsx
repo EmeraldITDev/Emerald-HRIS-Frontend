@@ -17,6 +17,7 @@ import RoleBasedComponent from '@/components/RoleBasedComponent'
 import { formatNaira } from "@/lib/currency"
 import { NairaIcon } from "@/components/icons/NairaIcon"
 import { SearchableSelect } from "@/components/ui/searchable-select"
+import EmployeeMultiSelect from "@/components/EmployeeMultiSelect"
 
 const BENEFIT_TYPE_STYLES: Record<string, { label: string; icon: any; color: string; bar: string; text: string }> = {
   health:     { label: 'Health / HMO',      icon: Heart,         color: 'text-red-500',     bar: 'bg-red-500',     text: 'text-red-600' },

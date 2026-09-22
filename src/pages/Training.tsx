@@ -14,6 +14,7 @@ import { Eye, Pencil, Trash2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/contexts/AuthContext"
 import RoleBasedComponent from "@/components/RoleBasedComponent"
+import EmployeeMultiSelect from "@/components/EmployeeMultiSelect"
 
 interface TrainingRecord {
   id: string

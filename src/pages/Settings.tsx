@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -6,46 +6,64 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Textarea } from "@/components/ui/textarea"
-import { 
-  User, 
-  Building2, 
-  Bell, 
-  Shield, 
-  Palette, 
-  Globe, 
-  Mail, 
+import {
+  User,
+  Building2,
+  Bell,
+  Shield,
+  Palette,
   Database,
-  Calendar,
-  DollarSign,
-  FileText,
   Settings as SettingsIcon,
   ScrollText
 } from "lucide-react"
+import { useTheme } from "next-themes"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/contexts/AuthContext"
 import AuditTrailPanel from "@/components/settings/AuditTrailPanel"
 import ProfileSettingsPanel from "@/components/settings/ProfileSettingsPanel"
 import CompanySettingsPanel from "@/components/settings/CompanySettingsPanel"
+import { DEFAULT_SETTINGS, loadUserSettings, saveUserSettings, type UserSettings } from "@/lib/userSettings"
 
 export default function Settings() {
   const { toast } = useToast()
   const { user } = useAuth()
+  const { setTheme } = useTheme()
   const canViewAuditTrail = ["executive", "hr_manager", "corporate_hr", "it_power_user"].includes(
     user?.role ?? ""
   )
+  const canEditSystem = ["executive", "hr_manager", "corporate_hr", "it_power_user"].includes(
+    user?.role ?? ""
+  )
+
+  const [settings, setSettings] = useState<UserSettings>(DEFAULT_SETTINGS)
   const [loading, setLoading] = useState(false)
 
-  const handleSave = async (section: string) => {
+  useEffect(() => {
+    setSettings(loadUserSettings(user?.id))
+  }, [user?.id])
+
+  const update = <K extends keyof UserSettings>(section: K, patch: Partial<UserSettings[K]>) => {
+    setSettings((prev) => ({ ...prev, [section]: { ...prev[section], ...patch } }))
+  }
+
+  const handleSave = (label: string, next?: UserSettings) => {
     setLoading(true)
-    // Simulate API call
-    setTimeout(() => {
-      setLoading(false)
+    try {
+      const toStore = next ?? settings
+      saveUserSettings(user?.id, toStore)
       toast({
-        title: "Settings saved",
-        description: `${section} settings have been updated successfully.`
+        title: "Saved",
+        description: `Your ${label.toLowerCase()} preferences have been updated.`
       })
-    }, 1000)
+    } catch {
+      toast({
+        title: "Could not save",
+        description: "Your browser blocked saving these preferences.",
+        variant: "destructive"
+      })
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -105,50 +123,27 @@ export default function Settings() {
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Email Notifications</Label>
-                    <p className="text-sm text-muted-foreground">Receive notifications via email</p>
+                {[
+                  { key: "email", label: "Email Notifications", hint: "Receive notifications via email" },
+                  { key: "onboarding", label: "New Employee Onboarding", hint: "Notify when new employees join" },
+                  { key: "leaveRequests", label: "Leave Requests", hint: "Notify about pending leave requests" },
+                  { key: "payrollReminders", label: "Payroll Reminders", hint: "Remind about payroll deadlines" },
+                  { key: "performanceReviews", label: "Performance Reviews", hint: "Notify about scheduled reviews" },
+                  { key: "trainingReminders", label: "Training Reminders", hint: "Remind about upcoming training sessions" },
+                ].map((row) => (
+                  <div key={row.key} className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>{row.label}</Label>
+                      <p className="text-sm text-muted-foreground">{row.hint}</p>
+                    </div>
+                    <Switch
+                      checked={settings.notifications[row.key as keyof UserSettings["notifications"]]}
+                      onCheckedChange={(v) => update("notifications", { [row.key]: v } as any)}
+                    />
                   </div>
-                  <Switch defaultChecked />
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>New Employee Onboarding</Label>
-                    <p className="text-sm text-muted-foreground">Notify when new employees join</p>
-                  </div>
-                  <Switch defaultChecked />
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Leave Requests</Label>
-                    <p className="text-sm text-muted-foreground">Notify about pending leave requests</p>
-                  </div>
-                  <Switch defaultChecked />
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Payroll Reminders</Label>
-                    <p className="text-sm text-muted-foreground">Remind about payroll deadlines</p>
-                  </div>
-                  <Switch />
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Performance Reviews</Label>
-                    <p className="text-sm text-muted-foreground">Notify about scheduled reviews</p>
-                  </div>
-                  <Switch defaultChecked />
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Training Reminders</Label>
-                    <p className="text-sm text-muted-foreground">Remind about upcoming training sessions</p>
-                  </div>
-                  <Switch defaultChecked />
-                </div>
+                ))}
               </div>
-              <Button onClick={() => handleSave("Notifications")} disabled={loading}>
+              <Button onClick={() => handleSave("Notification")} disabled={loading}>
                 Save Preferences
               </Button>
             </CardContent>
@@ -159,34 +154,30 @@ export default function Settings() {
           <Card>
             <CardHeader>
               <CardTitle>Security Settings</CardTitle>
-              <CardDescription>Manage your account security and access controls</CardDescription>
+              <CardDescription>
+                Manage sign-in protection. To change your password, use the Profile tab.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="currentPassword">Current Password</Label>
-                <Input id="currentPassword" type="password" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="newPassword">New Password</Label>
-                <Input id="newPassword" type="password" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                <Input id="confirmPassword" type="password" />
-              </div>
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label>Two-Factor Authentication</Label>
-                  <p className="text-sm text-muted-foreground">Add an extra layer of security</p>
+                  <p className="text-sm text-muted-foreground">Ask for a one-time code when you sign in</p>
                 </div>
-                <Switch />
+                <Switch
+                  checked={settings.security.twoFactor}
+                  onCheckedChange={(v) => update("security", { twoFactor: v })}
+                />
               </div>
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label>Session Timeout</Label>
                   <p className="text-sm text-muted-foreground">Automatically log out after inactivity</p>
                 </div>
-                <Select defaultValue="30">
+                <Select
+                  value={settings.security.sessionTimeout}
+                  onValueChange={(v) => update("security", { sessionTimeout: v })}
+                >
                   <SelectTrigger className="w-32">
                     <SelectValue />
                   </SelectTrigger>
@@ -214,7 +205,13 @@ export default function Settings() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label>Theme</Label>
-                <Select defaultValue="system">
+                <Select
+                  value={settings.appearance.theme}
+                  onValueChange={(v) => {
+                    update("appearance", { theme: v as UserSettings["appearance"]["theme"] })
+                    setTheme(v)
+                  }}
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -227,7 +224,10 @@ export default function Settings() {
               </div>
               <div className="space-y-2">
                 <Label>Language</Label>
-                <Select defaultValue="en">
+                <Select
+                  value={settings.appearance.language}
+                  onValueChange={(v) => update("appearance", { language: v })}
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -241,7 +241,10 @@ export default function Settings() {
               </div>
               <div className="space-y-2">
                 <Label>Date Format</Label>
-                <Select defaultValue="mm/dd/yyyy">
+                <Select
+                  value={settings.appearance.dateFormat}
+                  onValueChange={(v) => update("appearance", { dateFormat: v })}
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -254,7 +257,10 @@ export default function Settings() {
               </div>
               <div className="space-y-2">
                 <Label>Currency</Label>
-                <Select defaultValue="ngn">
+                <Select
+                  value={settings.appearance.currency}
+                  onValueChange={(v) => update("appearance", { currency: v })}
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -283,7 +289,11 @@ export default function Settings() {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label>Payroll Frequency</Label>
-                  <Select defaultValue="monthly">
+                  <Select
+                    value={settings.system.payrollFrequency}
+                    onValueChange={(v) => update("system", { payrollFrequency: v })}
+                    disabled={!canEditSystem}
+                  >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -296,13 +306,17 @@ export default function Settings() {
                 </div>
                 <div className="space-y-2">
                   <Label>Tax Year</Label>
-                  <Select defaultValue="2024">
+                  <Select
+                    value={settings.system.taxYear}
+                    onValueChange={(v) => update("system", { taxYear: v })}
+                    disabled={!canEditSystem}
+                  >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="2024">2024</SelectItem>
                       <SelectItem value="2025">2025</SelectItem>
+                      <SelectItem value="2026">2026</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -311,7 +325,11 @@ export default function Settings() {
                     <Label>Auto-calculate Taxes</Label>
                     <p className="text-sm text-muted-foreground">Automatically calculate tax deductions</p>
                   </div>
-                  <Switch defaultChecked />
+                  <Switch
+                    checked={settings.system.autoCalculateTaxes}
+                    onCheckedChange={(v) => update("system", { autoCalculateTaxes: v })}
+                    disabled={!canEditSystem}
+                  />
                 </div>
               </CardContent>
             </Card>
@@ -324,18 +342,32 @@ export default function Settings() {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label>Annual Leave Days</Label>
-                  <Input type="number" defaultValue="25" />
+                  <Input
+                    type="number"
+                    value={settings.system.annualLeaveDays}
+                    onChange={(e) => update("system", { annualLeaveDays: Number(e.target.value) })}
+                    disabled={!canEditSystem}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label>Sick Leave Days</Label>
-                  <Input type="number" defaultValue="10" />
+                  <Input
+                    type="number"
+                    value={settings.system.sickLeaveDays}
+                    onChange={(e) => update("system", { sickLeaveDays: Number(e.target.value) })}
+                    disabled={!canEditSystem}
+                  />
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
                     <Label>Carry Forward Leave</Label>
                     <p className="text-sm text-muted-foreground">Allow unused leave to carry forward</p>
                   </div>
-                  <Switch defaultChecked />
+                  <Switch
+                    checked={settings.system.carryForwardLeave}
+                    onCheckedChange={(v) => update("system", { carryForwardLeave: v })}
+                    disabled={!canEditSystem}
+                  />
                 </div>
               </CardContent>
             </Card>
@@ -348,7 +380,11 @@ export default function Settings() {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label>Review Frequency</Label>
-                  <Select defaultValue="annual">
+                  <Select
+                    value={settings.system.reviewFrequency}
+                    onValueChange={(v) => update("system", { reviewFrequency: v })}
+                    disabled={!canEditSystem}
+                  >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -364,7 +400,11 @@ export default function Settings() {
                     <Label>360-Degree Reviews</Label>
                     <p className="text-sm text-muted-foreground">Enable peer and subordinate feedback</p>
                   </div>
-                  <Switch />
+                  <Switch
+                    checked={settings.system.threeSixtyReviews}
+                    onCheckedChange={(v) => update("system", { threeSixtyReviews: v })}
+                    disabled={!canEditSystem}
+                  />
                 </div>
               </CardContent>
             </Card>
@@ -377,7 +417,11 @@ export default function Settings() {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label>Data Retention Period</Label>
-                  <Select defaultValue="7years">
+                  <Select
+                    value={settings.system.dataRetention}
+                    onValueChange={(v) => update("system", { dataRetention: v })}
+                    disabled={!canEditSystem}
+                  >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -394,18 +438,22 @@ export default function Settings() {
                     <Label>Auto Backup</Label>
                     <p className="text-sm text-muted-foreground">Automatically backup data daily</p>
                   </div>
-                  <Switch defaultChecked />
+                  <Switch
+                    checked={settings.system.autoBackup}
+                    onCheckedChange={(v) => update("system", { autoBackup: v })}
+                    disabled={!canEditSystem}
+                  />
                 </div>
-                <Button variant="outline" className="w-full">
+                <Button variant="outline" className="w-full" disabled>
                   <Database className="mr-2 h-4 w-4" />
                   Export Data
                 </Button>
               </CardContent>
             </Card>
           </div>
-          
+
           <div className="flex justify-end">
-            <Button onClick={() => handleSave("System")} disabled={loading}>
+            <Button onClick={() => handleSave("System")} disabled={loading || !canEditSystem}>
               Save All System Settings
             </Button>
           </div>

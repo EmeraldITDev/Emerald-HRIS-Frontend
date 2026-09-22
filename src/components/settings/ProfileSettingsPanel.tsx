@@ -6,12 +6,17 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import apiService from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function ProfileSettingsPanel() {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const canEditOwnRecord = ["executive", "hr_manager", "corporate_hr"].includes(user?.role ?? "");
   const [profile, setProfile] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [phone, setPhone] = useState("");
+  const [savingProfile, setSavingProfile] = useState(false);
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -23,7 +28,10 @@ export default function ProfileSettingsPanel() {
     (async () => {
       try {
         const data: any = await apiService.getMyProfile();
-        if (!cancelled) setProfile(data);
+        if (!cancelled) {
+          setProfile(data);
+          setPhone(String(data?.phone || data?.phone_number || ""));
+        }
       } catch (e: any) {
         if (!cancelled) setError(e?.message || "Your details could not be loaded.");
       } finally {
@@ -70,6 +78,28 @@ export default function ProfileSettingsPanel() {
     }
   };
 
+  const saveContactDetails = async () => {
+    const id = Number(profile?.id);
+    if (!id) {
+      toast({ title: "Your record could not be found", variant: "destructive" });
+      return;
+    }
+    setSavingProfile(true);
+    try {
+      await apiService.updateEmployee(id, { phone } as any);
+      setProfile((p: any) => ({ ...(p || {}), phone }));
+      toast({ title: "Details updated", description: "Your phone number has been saved." });
+    } catch (e: any) {
+      toast({
+        title: "Not saved",
+        description: e?.data?.message || e?.message || "Please try again in a moment.",
+        variant: "destructive",
+      });
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
   const field = (label: string, value: any) => (
     <div className="space-y-2">
       <Label>{label}</Label>
@@ -102,12 +132,29 @@ export default function ProfileSettingsPanel() {
               {field("Middle Name", profile?.middle_name)}
               {field("Last Name", profile?.last_name)}
               {field("Email Address", profile?.email)}
-              {field("Phone Number", profile?.phone || profile?.phone_number)}
+              {canEditOwnRecord ? (
+                <div className="space-y-2">
+                  <Label htmlFor="own-phone">Phone Number</Label>
+                  <Input
+                    id="own-phone"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="e.g. 09068024754"
+                  />
+                </div>
+              ) : (
+                field("Phone Number", profile?.phone || profile?.phone_number)
+              )}
               {field("Job Title", profile?.job_title || profile?.position)}
               {field("Department", profile?.department)}
               {field("Location", profile?.location)}
               {field("Employment Type", profile?.employment_type)}
             </div>
+          )}
+          {!loading && !error && canEditOwnRecord && (
+            <Button onClick={saveContactDetails} disabled={savingProfile}>
+              {savingProfile ? "Saving..." : "Save Changes"}
+            </Button>
           )}
         </CardContent>
       </Card>

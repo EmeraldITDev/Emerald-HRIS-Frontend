@@ -17,6 +17,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { apiService, Employee, PerformanceReview } from '@/lib/api'
 import { SearchableSelect } from '@/components/ui/searchable-select'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { generatePerformanceReviewPdf } from '@/utils/performanceReviewPdf'
 
 interface Review {
   id: string

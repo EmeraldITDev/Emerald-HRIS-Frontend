@@ -62,7 +62,7 @@ const navigationItems: NavItem[] = [
     url: "/executive",
     icon: Crown,
     permission: "*",
-    roles: ['executive']
+    roles: ['executive', 'hr_manager']
   },
   { 
     title: "Dashboard", 

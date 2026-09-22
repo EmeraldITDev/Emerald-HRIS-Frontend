@@ -93,8 +93,9 @@ export function canViewExecutiveView(
   user: (User & Record<string, any>) | null | undefined,
 ): boolean {
   if (!user) return false;
-  // Executive only — the backend serves /analytics/chairman-dashboard to this role alone.
-  return user.role === "executive";
+  // The backend serves /analytics/chairman-dashboard to executives; HR Managers
+  // are granted view access to the Chairman's View per product decision.
+  return user.role === "executive" || user.role === "hr_manager";
 }
 
 /** Force-delete approved/paid payroll records — HR Manager only (audited on backend). */

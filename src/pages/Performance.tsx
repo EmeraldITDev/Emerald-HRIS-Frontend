@@ -731,19 +731,6 @@ export default function Performance() {
                           </>
                         )}
                         
-                        {/* Line Manager and Executive actions */}
-                        {(isLineManager || isExecutiveOrHR) && (
-                          <>
-                            {/* Comment button */}
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => {
-                              setSelectedReview(review)
-                              setEmployeeComment(review.employeeComments || "")
-                              setCommentDialogOpen(true)
-                            }} title="Add Comment">
-                              <MessageSquare className="h-3 w-3 md:h-4 md:w-4" />
-                            </Button>
-                          </>
-                        )}
                         
                         {/* Export button */}
                         <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hidden sm:inline-flex" onClick={() => handleExportReview(review)}>

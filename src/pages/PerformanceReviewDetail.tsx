@@ -35,16 +35,59 @@ const LEGACY: Record<string, string> = {
   closed: "completed",
 };
 
-/** Structured line-manager questions (mirrors the review framework fields). */
-const MANAGER_FIELDS: Array<{ key: string; label: string; type?: "text" | "rating" }> = [
-  { key: "performance_assessment", label: "Your assessment of the employee's reported performance" },
-  { key: "self_rating_accuracy", label: "Is the employee's self-rating accurate against observed performance and KPIs?" },
-  { key: "key_strengths", label: "Key strengths" },
+/**
+ * Structured line-manager questions. Keys match the fields the backend stores
+ * on manager_review; `aliases` cover values saved by earlier versions so older
+ * reviews still display.
+ */
+const MANAGER_FIELDS: Array<{ key: string; label: string; type?: "text" | "rating"; aliases?: string[] }> = [
+  { key: "performance_assessment", label: "Your assessment of the employee's reported performance", aliases: ["observations"] },
+  { key: "self_assessment_accuracy", label: "Is the employee's self-rating accurate against observed performance and KPIs?", aliases: ["self_rating_accuracy"] },
+  { key: "strengths", label: "Key strengths", aliases: ["key_strengths"] },
   { key: "areas_for_improvement", label: "Areas requiring improvement" },
-  { key: "development_actions", label: "Development actions or recommendations" },
-  { key: "overall_rating", label: "Overall manager rating (1-5)", type: "rating" },
-  { key: "overall_comments", label: "Overall manager comments" },
+  { key: "recommendations", label: "Development actions or recommendations", aliases: ["development_actions"] },
+  { key: "ratings", label: "Overall manager rating (1-5)", type: "rating", aliases: ["overall_rating", "rating"] },
+  { key: "comments", label: "Overall manager comments", aliases: ["overall_comments", "observations"] },
 ];
+
+/** Read a manager/HR answer, tolerating older field names. */
+function pickAnswer(
+  source: any,
+  field: { key: string; aliases?: string[] },
+): string {
+  if (!source || typeof source !== "object") return "";
+  for (const k of [field.key, ...(field.aliases || [])]) {
+    const v = source[k];
+    if (v !== undefined && v !== null && String(v).trim() !== "") return String(v);
+  }
+  return "";
+}
+
+/** Render saved answers against a known question list, with labels. */
+function AnswerList({
+  fields,
+  source,
+  emptyText,
+}: {
+  fields: Array<{ key: string; label: string; aliases?: string[] }>;
+  source: any;
+  emptyText: string;
+}) {
+  const rows = fields
+    .map((f) => ({ label: f.label, value: pickAnswer(source, f) }))
+    .filter((r) => r.value);
+  if (!rows.length) return <p className="text-sm text-muted-foreground">{emptyText}</p>;
+  return (
+    <div className="space-y-3">
+      {rows.map((r) => (
+        <div key={r.label}>
+          <p className="text-xs uppercase tracking-wide text-muted-foreground">{r.label}</p>
+          <p className="text-sm whitespace-pre-wrap">{r.value}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 /** Structured HR final questions. */
 const HR_FIELDS: Array<{ key: string; label: string; type?: "text" | "rating" }> = [
@@ -195,6 +238,34 @@ export default function PerformanceReviewDetail() {
     else setStep(0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [review?.id, status]);
+
+  // Prefill any answers already saved, so reopening the review keeps them.
+  useEffect(() => {
+    if (!review) return;
+    const mr = typeof review.manager_review === "object" ? review.manager_review : review;
+    const hr = typeof review.hr_review === "object" && review.hr_review ? review.hr_review : review;
+    setManagerValues((prev) => {
+      const next = { ...prev };
+      MANAGER_FIELDS.forEach((f) => {
+        if (!next[f.key]) {
+          const v = pickAnswer(mr, f);
+          if (v) next[f.key] = v;
+        }
+      });
+      return next;
+    });
+    setHrValues((prev) => {
+      const next = { ...prev };
+      HR_FIELDS.forEach((f) => {
+        if (!next[f.key]) {
+          const v = pickAnswer(hr, f);
+          if (v) next[f.key] = v;
+        }
+      });
+      return next;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [review?.id, review?.manager_review, review?.hr_review]);
 
   const act = async (fn: () => Promise<any>, successMsg: string) => {
     setSaving(true);
@@ -368,7 +439,15 @@ export default function PerformanceReviewDetail() {
                     </Button>
                   </>
                 ) : (
-                  <ReadOnlyBlock value={review.manager_review} emptyText="Not submitted yet." />
+                  <AnswerList
+                    fields={MANAGER_FIELDS}
+                    source={
+                      typeof review.manager_review === "object" && review.manager_review
+                        ? review.manager_review
+                        : review
+                    }
+                    emptyText="Not submitted yet."
+                  />
                 )}
                 <div className="flex justify-between">
                   <Button variant="outline" size="sm" onClick={() => setStep(0)}>
@@ -407,8 +486,13 @@ export default function PerformanceReviewDetail() {
                     </Button>
                   </>
                 ) : (
-                  <ReadOnlyBlock
-                    value={review.hr_review ?? review.hr_assessment ?? review.hr_comments}
+                  <AnswerList
+                    fields={HR_FIELDS}
+                    source={
+                      typeof review.hr_review === "object" && review.hr_review
+                        ? review.hr_review
+                        : review
+                    }
                     emptyText="Not completed yet."
                   />
                 )}

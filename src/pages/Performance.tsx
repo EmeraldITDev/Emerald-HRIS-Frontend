@@ -17,6 +17,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { apiService, Employee, PerformanceReview } from '@/lib/api'
 import { SearchableSelect } from '@/components/ui/searchable-select'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { generatePerformanceReviewPdf } from '@/utils/performanceReviewPdf'
 
 interface Review {
   id: string
@@ -465,11 +466,99 @@ export default function Performance() {
     }
   }
   
-  const handleExportReview = (review: Review) => {
-    toast({
-      title: "Review exported",
-      description: `Performance review for ${review.employeeName} has been exported.`
-    })
+  const handleExportReview = async (review: Review) => {
+    try {
+      // Pull the full record so manager/HR answers are included when present.
+      let full: any = null
+      try {
+        full = await apiService.getPerformanceReview(Number(review.id))
+      } catch {
+        full = null
+      }
+      const mr = full && typeof full.manager_review === "object" ? full.manager_review : full || {}
+      const hr = full && typeof full.hr_review === "object" && full.hr_review ? full.hr_review : full || {}
+      const sa = full?.self_assessment
+
+      const val = (...keys: string[]) => {
+        for (const k of keys) {
+          const v = mr?.[k]
+          if (v !== undefined && v !== null && String(v).trim() !== "") return String(v)
+        }
+        return ""
+      }
+      const hrVal = (...keys: string[]) => {
+        for (const k of keys) {
+          const v = hr?.[k]
+          if (v !== undefined && v !== null && String(v).trim() !== "") return String(v)
+        }
+        return ""
+      }
+      const selfText =
+        typeof sa === "string"
+          ? sa
+          : sa && typeof sa === "object"
+            ? Object.entries(sa)
+                .filter(([, v]) => v !== null && v !== undefined && String(v).trim() !== "")
+                .map(([k, v]) => `${k.replace(/_/g, " ")}: ${v}`)
+                .join("\n")
+            : review.selfAssessment || ""
+
+      await generatePerformanceReviewPdf(
+        {
+          employeeName: review.employeeName,
+          employeeId: full?.employee?.employee_id || review.employeeId,
+          department: review.department,
+          period: review.reviewPeriod,
+          reviewer: review.reviewer,
+          status: review.status,
+          rating: review.rating,
+          sections: [
+            {
+              heading: "Employee self-assessment",
+              entries: [["Self-assessment", selfText]],
+            },
+            {
+              heading: "Line manager assessment",
+              entries: [
+                ["Assessment of reported performance", val("performance_assessment", "observations") || review.goals],
+                ["Accuracy of self-rating", val("self_assessment_accuracy", "self_rating_accuracy")],
+                ["Key strengths", val("strengths", "key_strengths") || review.achievements],
+                ["Areas requiring improvement", val("areas_for_improvement") || review.areasForImprovement],
+                ["Development actions", val("recommendations", "development_actions")],
+                ["Manager rating", val("ratings", "overall_rating", "rating")],
+                ["Manager comments", val("comments", "overall_comments") || review.comments],
+              ],
+            },
+            {
+              heading: "HR final review",
+              entries: [
+                ["HR assessment", hrVal("hr_assessment")],
+                ["Review adequacy", hrVal("review_adequacy")],
+                ["Development recommendations", hrVal("development_recommendations")],
+                ["Final rating", hrVal("final_rating")],
+                ["HR comments", hrVal("hr_comments") || review.hrComments || ""],
+              ],
+            },
+            {
+              heading: "Employee comments",
+              entries: [["Comments", review.employeeComments || ""]],
+            },
+          ],
+        },
+        `${review.employeeName.replace(/\s+/g, "_")}_${review.reviewPeriod.replace(/\s+/g, "_")}_Performance_Review.pdf`,
+      )
+
+      toast({
+        title: "Review downloaded",
+        description: `Performance review for ${review.employeeName} saved as a PDF.`
+      })
+    } catch (e: any) {
+      toast({
+        title: "Export failed",
+        description: "We couldn't build the PDF. Please try again.",
+        variant: "destructive",
+      })
+    }
   }
   
   const renderStars = (rating: number) => {

@@ -638,63 +638,13 @@ export default function Training() {
               <h4 className="font-semibold">Assignment Details</h4>
 
               <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label>Select Employees *</Label>
-                  {employees.length > 0 && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        const allIds = employees.map(e => e.id!).filter(Boolean)
-                        const allSelected = allIds.length > 0 && allIds.every(id => assignmentData.employee_ids.includes(id))
-                        setAssignmentData({
-                          ...assignmentData,
-                          employee_ids: allSelected ? [] : allIds,
-                        })
-                      }}
-                    >
-                      {employees.length > 0 && employees.every(e => assignmentData.employee_ids.includes(e.id!)) ? 'Clear All' : 'Select All'}
-                    </Button>
-                  )}
-                </div>
-                <div className="border rounded-md p-3 max-h-32 overflow-y-auto">
-                  {isLoadingEmployees ? (
-                    <div className="text-sm text-muted-foreground">Loading employees...</div>
-                  ) : employees.length === 0 ? (
-                    <div className="text-sm text-muted-foreground">No employees available</div>
-                  ) : (
-                    employees.map((employee) => (
-                      <div key={employee.id} className="flex items-center space-x-2 py-1">
-                        <input
-                          type="checkbox"
-                          id={`emp-${employee.id}`}
-                          checked={assignmentData.employee_ids.includes(employee.id!)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setAssignmentData({
-                                ...assignmentData,
-                                employee_ids: [...assignmentData.employee_ids, employee.id!]
-                              })
-                            } else {
-                              setAssignmentData({
-                                ...assignmentData,
-                                employee_ids: assignmentData.employee_ids.filter(id => id !== employee.id)
-                              })
-                            }
-                          }}
-                          className="rounded"
-                        />
-                        <label htmlFor={`emp-${employee.id}`} className="text-sm cursor-pointer">
-                          {employee.first_name} {employee.last_name} - {employee.department}
-                        </label>
-                      </div>
-                    ))
-                  )}
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  {assignmentData.employee_ids.length} employee(s) selected
-                </div>
+                <Label>Select Employees *</Label>
+                <EmployeeMultiSelect
+                  employees={employees as any}
+                  selectedIds={assignmentData.employee_ids}
+                  loading={isLoadingEmployees}
+                  onChange={(ids) => setAssignmentData({ ...assignmentData, employee_ids: ids as number[] })}
+                />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

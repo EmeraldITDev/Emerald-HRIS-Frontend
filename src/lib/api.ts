@@ -584,6 +584,11 @@ class ApiService {
 
   // ===== Attendance system v2 =====
 
+  async getAttendanceDetail(id: number | string): Promise<any> {
+    const res: any = await this.request<any>(`/attendance/${id}`, { cache: 'no-store' });
+    return res?.data ?? res;
+  }
+
   async getAttendanceToday(employeeId?: number | string | null): Promise<any> {
     const qp = new URLSearchParams();
     if (employeeId != null) qp.append('employee_id', String(employeeId));

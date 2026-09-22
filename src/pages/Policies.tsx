@@ -39,6 +39,7 @@ import { format } from 'date-fns'
 export default function Policies() {
   const [policyList, setPolicyList] = useState<Policy[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [showAddPolicy, setShowAddPolicy] = useState(false)
   const [showViewPolicy, setShowViewPolicy] = useState(false)
   const [showEditPolicy, setShowEditPolicy] = useState(false)

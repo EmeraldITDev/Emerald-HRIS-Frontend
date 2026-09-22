@@ -64,6 +64,8 @@ import ExceptionRequestForm from "@/components/attendance/ExceptionRequestForm"
 import WFHRequestForm from "@/components/attendance/WFHRequestForm"
 import { canSubmitException, canSubmitWFH } from "@/lib/permissions"
 import { SearchableSelect } from "@/components/ui/searchable-select"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import EmployeeLeaveBalancesCard from "@/components/EmployeeLeaveBalancesCard"
 
 // Sample attendance records
 const attendanceRecords = [
@@ -1044,17 +1046,21 @@ export default function Attendance() {
         </RoleBasedComponent>
       </div>
 
-      {/* HR / Corporate HR: pending late clock-in & early clock-out approvals */}
-      <AttendanceApprovalsCard />
+      <Tabs defaultValue="my-attendance" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="my-attendance">My Attendance</TabsTrigger>
+          <TabsTrigger value="leave">Leave</TabsTrigger>
+          <RoleBasedComponent allowedRoles={['hr_manager', 'corporate_hr', 'executive', 'line_manager']}>
+            <TabsTrigger value="organization">Organization</TabsTrigger>
+          </RoleBasedComponent>
+        </TabsList>
 
-      {/* Employee self-service: status of my submitted justifications */}
-      <MyAttendanceRequestsCard employeeId={currentEmployeeId} />
-
+      <TabsContent value="my-attendance" className="space-y-6">
       {/* Employee self-service: weekly attendance from the backend */}
       <WeeklyAttendanceCard employeeId={currentEmployeeId} />
 
       {/* Employee self-service: exception & WFH requests */}
-      <div className="flex flex-wrap gap-2 mb-6">
+      <div className="flex flex-wrap gap-2">
         {canSubmitException(user) && (
           <ExceptionRequestForm
             employeeId={currentEmployeeId}
@@ -1070,6 +1076,13 @@ export default function Attendance() {
       </div>
       <MyWorkRequestsCard employeeId={currentEmployeeId} refreshKey={workRequestsKey} />
 
+      {/* Employee self-service: status of my submitted justifications */}
+      <MyAttendanceRequestsCard employeeId={currentEmployeeId} />
+      </TabsContent>
+
+      <TabsContent value="organization" className="space-y-6">
+      {/* HR / Corporate HR: pending late clock-in & early clock-out approvals */}
+      <AttendanceApprovalsCard />
 
       {/* Today's Attendance Section - Manager View */}
       <RoleBasedComponent allowedRoles={['hr_manager', 'corporate_hr', 'executive', 'line_manager']}>
@@ -1138,7 +1151,9 @@ export default function Attendance() {
           )}
         </Card>
       </RoleBasedComponent>
+      </TabsContent>
 
+      <TabsContent value="leave" className="space-y-6">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
         {/* Enhanced Leave Request Form */}
         {user?.role !== 'contract_staff' && (
@@ -1775,38 +1790,12 @@ export default function Attendance() {
         </Card>
       </div>
 
-      {/* Employee Leave Balances */}
+      {/* Employee Leave Balances — sourced from the authoritative leave balance API */}
       <RoleBasedComponent allowedRoles={['hr_manager', 'corporate_hr', 'executive']}>
-        <Card className="border-border/50 shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-primary">Employee Leave Balances</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {employees.map((emp) => (
-                <div key={emp.id} className="p-4 border rounded-lg bg-card">
-                  <div className="font-medium text-sm">{emp.first_name} {emp.last_name}</div>
-                  <div className="text-xs text-muted-foreground">{emp.employee_code || emp.id}</div>
-                  <div className="mt-2 space-y-1">
-                    <div className="flex justify-between text-xs">
-                      <span>Total:</span>
-                      <span>{emp.vacation_days || 0} days</span>
-                    </div>
-                    <div className="flex justify-between text-xs">
-                      <span>Used:</span>
-                      <span>0 days</span>
-                    </div>
-                    <div className="flex justify-between text-xs font-medium">
-                      <span>Remaining:</span>
-                      <span className="text-primary">{emp.vacation_days || 0} days</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        <EmployeeLeaveBalancesCard employees={employees} />
       </RoleBasedComponent>
+      </TabsContent>
+      </Tabs>
 
       {/* Approval/Rejection Dialog */}
       <Dialog open={showApprovalDialog} onOpenChange={setShowApprovalDialog}>

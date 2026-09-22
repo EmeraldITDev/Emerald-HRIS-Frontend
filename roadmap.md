@@ -15,11 +15,11 @@
 ## Batch C — Performance review workflow
 - [x] Route /performance/:id loading GET /performance/{id}
 - [x] Notification links resolve to the specific review (no 404)
-- [ ] Multi-step: Self-assessment (read-only for LM/HR) → Manager form → HR final → Completed
-- [ ] Structured manager & HR forms from form_schema; clear action labels
+- [x] Multi-step: Self-assessment (read-only for LM/HR) → Manager form → HR final → Completed
+- [x] Structured manager & HR forms; clear action labels
 
 ## Batch D — Attendance, leave balances, training selection
-- [ ] Attendance & Leave page redesign (remove duplicated birthdays/anniversaries)
+- [x] Attendance & Leave page redesign (tabs: My Attendance / Leave / Organization; birthdays removed)
 - [x] Org attendance: details modal via GET /attendance/{id} instead of toast
 - [x] Leave balances bound to total/used/remaining (no annual_cap fallback)
 - [x] Training: GET /training/eligible-employees for the picker

@@ -14,17 +14,23 @@ import { useAuth } from "@/contexts/AuthContext";
 export default function NotificationsPage() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [tab, setTab] = useState<"all" | "unread">("all");
   const navigate = useNavigate();
   const { user } = useAuth();
 
   const load = async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const res: any = await apiService.getNotifications(50, 1);
-      setItems(res?.data || []);
+      const list = Array.isArray(res)
+        ? res
+        : res?.data ?? res?.notifications ?? res?.data?.data ?? [];
+      setItems(Array.isArray(list) ? list : []);
     } catch (e: any) {
-      toast({ title: "Failed to load notifications", description: e?.message, variant: "destructive" });
+      setItems([]);
+      setLoadError(e?.message || "We couldn't reach the server.");
     } finally {
       setLoading(false);
     }

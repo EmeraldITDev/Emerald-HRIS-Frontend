@@ -22,8 +22,8 @@
 - [ ] Attendance & Leave page redesign (remove duplicated birthdays/anniversaries)
 - [ ] Org attendance: details modal via GET /attendance/{id} instead of toast
 - [ ] Leave balances bound to total/used/remaining (no annual_cap fallback)
-- [ ] Training: GET /training/eligible-employees for the picker
-- [ ] Searchable multi-employee selector used everywhere "Select Employees" appears
+- [x] Training: GET /training/eligible-employees for the picker
+- [x] Searchable multi-employee selector used everywhere "Select Employees" appears
 
 ## Blocked / pending
 - Work Exception submit: backend fix deployed by user; verify after redeploy

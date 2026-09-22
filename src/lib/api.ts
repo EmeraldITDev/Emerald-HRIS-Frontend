@@ -1434,7 +1434,10 @@ class ApiService {
     if (params?.category) queryParams.append('category', params.category);
     
     const url = `/policies${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
-    return this.request<Policy[]>(url);
+    const res: any = await this.request<any>(url);
+    if (Array.isArray(res)) return res as Policy[];
+    const list = res?.data ?? res?.policies ?? [];
+    return (Array.isArray(list) ? list : []) as Policy[];
   }
 
   async getPolicy(id: number): Promise<Policy> {

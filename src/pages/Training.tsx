@@ -164,15 +164,35 @@ export default function Training() {
           employeesList = await apiService.getEmployees()
         }
         let assignableEmployees = employeesList.filter((emp: Employee) => emp.id !== undefined && emp.id !== null)
-        
+
         // Executives, HR Managers, and Corporate HR see ALL employees
         // Line Managers only see employees in their own department
-        if (isLineManager && !isExecutiveOrHR && userDepartment) {
+        if (isLineManager && !isExecutiveOrHR) {
           const norm = (s?: string) => (s || '').trim().toLowerCase()
-          const target = norm(userDepartment)
-          assignableEmployees = assignableEmployees.filter(emp => norm(emp.department) === target)
+          // Resolve the manager's department from the session, falling back to
+          // their own employee record (the session copy is sometimes missing).
+          let dept = userDepartment
+          if (!dept) {
+            try {
+              const profile: any = await apiService.getMyProfile()
+              dept = profile?.department || profile?.data?.department || profile?.employee?.department
+            } catch {
+              dept = undefined
+            }
+          }
+          const target = norm(dept)
+          if (target) {
+            const matches = assignableEmployees.filter(emp => {
+              const d = norm(emp.department)
+              if (!d) return false
+              return d === target || d.includes(target) || target.includes(d)
+            })
+            // Only narrow the list when the department actually matches something;
+            // a naming mismatch shouldn't leave the manager with an empty list.
+            if (matches.length) assignableEmployees = matches
+          }
         }
-        
+
         setEmployees(assignableEmployees)
       } catch (error) {
         console.error('Failed to fetch employees:', error)

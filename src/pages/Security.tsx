@@ -1,354 +1,198 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, UserPlus, Edit, Trash2, Shield, Eye, Settings } from "lucide-react";
+import { Search, Trash2, Shield, Eye, Settings, RefreshCw, UserX, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import apiService from "@/lib/api";
 
 type AccessLevel = "Power User" | "Leadership" | "Line Manager" | "Staff";
 
-interface User {
-  id: string;
+interface SystemUser {
+  id: number | string;
   name: string;
   email: string;
   department: string;
+  role: string;
   accessLevel: AccessLevel;
   lastLogin: string;
   status: "Active" | "Inactive";
 }
 
-const initialUsers: User[] = [
-  // Power Users (IT)
-  {
-    id: "1",
-    name: "Ibrahim Suleiman",
-    email: "it@emeraldcfze.com",
-    department: "IT",
-    accessLevel: "Power User",
-    lastLogin: "2024-01-15 09:30",
-    status: "Active"
-  },
-  
-  // Leadership (Executives and HR Manager)
-  {
-    id: "2", 
-    name: "Bunmi Babajide",
-    email: "bunmi.babajide@emeraldcfze.com",
-    department: "Executive",
-    accessLevel: "Leadership",
-    lastLogin: "2024-01-15 08:45",
-    status: "Active"
-  },
-  {
-    id: "3",
-    name: "LAA",
-    email: "laa@emeraldcfze.com",
-    department: "Executive",
-    accessLevel: "Leadership",
-    lastLogin: "2024-01-15 08:30",
-    status: "Active"
-  },
-  {
-    id: "4",
-    name: "Austin Nwachwukwu",
-    email: "austin.nwachwukwu@emeraldcfze.com",
-    department: "Human Resources",
-    accessLevel: "Leadership",
-    lastLogin: "2024-01-15 10:20",
-    status: "Active"
-  },
-  
-  // Line Managers
-  {
-    id: "5",
-    name: "Henry Marcus",
-    email: "henry.marcus@emeraldcfze.com",
-    department: "Technical Operations",
-    accessLevel: "Line Manager",
-    lastLogin: "2024-01-15 11:15",
-    status: "Active"
-  },
-  {
-    id: "6",
-    name: "Aisha Bello",
-    email: "aisha.bello@emeraldcfze.com",
-    department: "Business Development",
-    accessLevel: "Line Manager",
-    lastLogin: "2024-01-15 09:50",
-    status: "Active"
-  },
-  {
-    id: "7",
-    name: "Temitope Lawal",
-    email: "temitope.lawal@emeraldcfze.com",
-    department: "Finance",
-    accessLevel: "Line Manager",
-    lastLogin: "2024-01-15 08:30",
-    status: "Active"
-  },
-  {
-    id: "8",
-    name: "Folake Williams",
-    email: "folake.williams@emeraldcfze.com",
-    department: "Operations",
-    accessLevel: "Line Manager",
-    lastLogin: "2024-01-15 10:45",
-    status: "Active"
-  },
-  {
-    id: "9",
-    name: "Ngozi Eze",
-    email: "ngozi.eze@emeraldcfze.com",
-    department: "Marketing",
-    accessLevel: "Line Manager",
-    lastLogin: "2024-01-15 09:20",
-    status: "Active"
-  },
-  {
-    id: "10",
-    name: "Amina Yusuf",
-    email: "amina.yusuf@emeraldcfze.com",
-    department: "Sales",
-    accessLevel: "Line Manager",
-    lastLogin: "2024-01-15 08:55",
-    status: "Active"
-  },
-  {
-    id: "11",
-    name: "Blessing Okoro",
-    email: "blessing.okoro@emeraldcfze.com",
-    department: "Customer Service",
-    accessLevel: "Line Manager",
-    lastLogin: "2024-01-15 10:10",
-    status: "Active"
-  },
-  
-  // Staff (Corporate HR and other employees)
-  {
-    id: "12",
-    name: "Oluwapelumi Adeyefa",
-    email: "oluwapelumi.adeyefa@emeraldcfze.com",
-    department: "Human Resources",
-    accessLevel: "Staff",
-    lastLogin: "2024-01-15 09:15",
-    status: "Active"
-  },
-  {
-    id: "13",
-    name: "Chidi Okonkwo",
-    email: "chidi.okonkwo@emeraldcfze.com",
-    department: "Technical Operations",
-    accessLevel: "Staff",
-    lastLogin: "2024-01-15 08:40",
-    status: "Active"
-  },
-  {
-    id: "14",
-    name: "Kunle Adeyemi",
-    email: "kunle.adeyemi@emeraldcfze.com",
-    department: "Business Development",
-    accessLevel: "Staff",
-    lastLogin: "2024-01-14 17:20",
-    status: "Active"
-  },
-  {
-    id: "15",
-    name: "Rachael Daniel",
-    email: "rachael.daniel@emeraldcfze.com",
-    department: "Finance",
-    accessLevel: "Staff",
-    lastLogin: "2024-01-15 09:50",
-    status: "Active"
-  },
-  {
-    id: "16",
-    name: "Adeniyi Bamigbade",
-    email: "adeniyi.bamigbade@emeraldcfze.com",
-    department: "Finance",
-    accessLevel: "Staff",
-    lastLogin: "2024-01-15 08:25",
-    status: "Active"
-  },
-  {
-    id: "17",
-    name: "Chioma Nwosu",
-    email: "chioma.nwosu@emeraldcfze.com",
-    department: "IT",
-    accessLevel: "Staff",
-    lastLogin: "2024-01-15 10:30",
-    status: "Active"
-  },
-  {
-    id: "18",
-    name: "Yusuf Mohammed",
-    email: "yusuf.mohammed@emeraldcfze.com",
-    department: "Operations",
-    accessLevel: "Staff",
-    lastLogin: "2024-01-15 09:05",
-    status: "Active"
-  },
-  {
-    id: "19",
-    name: "Segun Oladipo",
-    email: "segun.oladipo@emeraldcfze.com",
-    department: "Marketing",
-    accessLevel: "Staff",
-    lastLogin: "2024-01-15 08:50",
-    status: "Active"
-  },
-  {
-    id: "20",
-    name: "Tunde Akinola",
-    email: "tunde.akinola@emeraldcfze.com",
-    department: "Sales",
-    accessLevel: "Staff",
-    lastLogin: "2024-01-15 10:00",
-    status: "Active"
-  },
-  {
-    id: "21",
-    name: "Zainab Idris",
-    email: "zainab.idris@emeraldcfze.com",
-    department: "Customer Service",
-    accessLevel: "Staff",
-    lastLogin: "2024-01-15 09:35",
-    status: "Active"
-  },
-  {
-    id: "22",
-    name: "Emeka Nwankwo",
-    email: "emeka.nwankwo@emeraldcfze.com",
-    department: "Customer Service",
-    accessLevel: "Staff",
-    lastLogin: "2024-01-14 16:45",
-    status: "Active"
+const LEADERSHIP_ROLES = ["executive", "hr_manager"];
+const POWER_ROLES = ["it_power_user", "it_admin"];
+
+const prettyRole = (role: string) =>
+  String(role || "")
+    .replace(/[_-]/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase()) || "General Employee";
+
+const toAccessLevel = (role: string): AccessLevel => {
+  const r = String(role || "").toLowerCase();
+  if (POWER_ROLES.includes(r)) return "Power User";
+  if (LEADERSHIP_ROLES.includes(r)) return "Leadership";
+  if (r === "line_manager") return "Line Manager";
+  return "Staff";
+};
+
+const normalizeUser = (raw: any): SystemUser => {
+  const role = raw?.role ?? raw?.user_role ?? raw?.roles?.[0] ?? "";
+  const name =
+    raw?.name ??
+    [raw?.first_name, raw?.last_name].filter(Boolean).join(" ") ??
+    raw?.employee?.full_name ??
+    "";
+  const active =
+    raw?.is_active ?? raw?.active ?? (raw?.status ? String(raw.status).toLowerCase() === "active" : true);
+  const last = raw?.last_login_at ?? raw?.last_login ?? raw?.last_seen_at;
+  return {
+    id: raw?.id ?? raw?.user_id,
+    name: name || raw?.email || "Unnamed user",
+    email: raw?.email ?? "—",
+    department: raw?.department ?? raw?.employee?.department ?? "—",
+    role: String(role || ""),
+    accessLevel: toAccessLevel(String(role || "")),
+    lastLogin: last ? new Date(last).toLocaleString() : "Never",
+    status: active ? "Active" : "Inactive",
+  };
+};
+
+const getAccessLevelColor = (level: AccessLevel) => {
+  switch (level) {
+    case "Power User":
+      return "destructive" as const;
+    case "Leadership":
+      return "default" as const;
+    default:
+      return "secondary" as const;
   }
-];
+};
+
+const getAccessLevelIcon = (level: AccessLevel) => {
+  switch (level) {
+    case "Power User":
+      return <Settings className="h-4 w-4" />;
+    case "Leadership":
+      return <Shield className="h-4 w-4" />;
+    case "Line Manager":
+      return <Users className="h-4 w-4" />;
+    default:
+      return <Eye className="h-4 w-4" />;
+  }
+};
+
+const accessLevelDescriptions: Record<AccessLevel, string> = {
+  "Power User": "IT administrators with full system access and troubleshooting capabilities",
+  Leadership: "Executives and HR Manager with full management access",
+  "Line Manager": "Department managers with team oversight and approval capabilities",
+  Staff: "General employees including Corporate HR and contract staff with personal information access",
+};
 
 const Security = () => {
-  const [users, setUsers] = useState<User[]>(initialUsers);
+  const [users, setUsers] = useState<SystemUser[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isEditMode, setIsEditMode] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<SystemUser | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const filteredUsers = users.filter(user =>
-    user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.department.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const getAccessLevelColor = (level: AccessLevel) => {
-    switch (level) {
-      case "Power User":
-        return "destructive";
-      case "Leadership":
-        return "default";
-      case "Staff":
-        return "secondary";
-      default:
-        return "secondary";
+  const load = async () => {
+    setLoading(true);
+    setLoadError(null);
+    try {
+      const res: any = await apiService.getSystemUsers({ per_page: 200 });
+      const list =
+        (Array.isArray(res) && res) ||
+        (Array.isArray(res?.data) && res.data) ||
+        (Array.isArray(res?.data?.data) && res.data.data) ||
+        (Array.isArray(res?.users) && res.users) ||
+        [];
+      setUsers((list as any[]).map(normalizeUser).filter((u) => u.id !== undefined));
+    } catch (e: any) {
+      setLoadError(e?.data?.message || e?.message || "We couldn't load the user list.");
+      setUsers([]);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const getAccessLevelIcon = (level: AccessLevel) => {
-    switch (level) {
-      case "Power User":
-        return <Settings className="h-4 w-4" />;
-      case "Leadership":
-        return <Shield className="h-4 w-4" />;
-      case "Staff":
-        return <Eye className="h-4 w-4" />;
-      default:
-        return <Eye className="h-4 w-4" />;
-    }
-  };
+  useEffect(() => {
+    load();
+  }, []);
 
-  const handleSaveUser = (userData: Partial<User>) => {
-    if (isEditMode && selectedUser) {
-      setUsers(prev => prev.map(user => 
-        user.id === selectedUser.id 
-          ? { ...user, ...userData }
-          : user
-      ));
+  const filteredUsers = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase();
+    if (!q) return users;
+    return users.filter((u) =>
+      [u.name, u.email, u.department, prettyRole(u.role)]
+        .filter(Boolean)
+        .some((v) => String(v).toLowerCase().includes(q)),
+    );
+  }, [users, searchTerm]);
+
+  const handleDeactivate = async (user: SystemUser) => {
+    setBusyId(String(user.id));
+    try {
+      await apiService.deactivateSystemUser(user.id);
+      toast({ title: "Access suspended", description: `${user.name} can no longer sign in.` });
+      await load();
+    } catch (e: any) {
       toast({
-        title: "Access Level Updated",
-        description: `${selectedUser.name}'s access level has been updated to ${userData.accessLevel}`,
+        title: "Could not suspend access",
+        description: e?.data?.message || e?.message || "Please try again.",
+        variant: "destructive",
       });
-    } else {
-      const newUser: User = {
-        id: Date.now().toString(),
-        name: userData.name || "",
-        email: userData.email || "",
-        department: userData.department || "",
-        accessLevel: userData.accessLevel || "Staff",
-        lastLogin: "Never",
-        status: "Active"
-      };
-      setUsers(prev => [...prev, newUser]);
-      toast({
-        title: "User Added",
-        description: `${newUser.name} has been added with ${newUser.accessLevel} access`,
-      });
+    } finally {
+      setBusyId(null);
     }
-    setIsDialogOpen(false);
-    setSelectedUser(null);
-    setIsEditMode(false);
   };
 
-  const handleEditUser = (user: User) => {
-    setSelectedUser(user);
-    setIsEditMode(true);
-    setIsDialogOpen(true);
-  };
-
-  const handleDeleteUser = (userId: string) => {
-    const user = users.find(u => u.id === userId);
-    setUsers(prev => prev.filter(user => user.id !== userId));
-    toast({
-      title: "User Removed",
-      description: `${user?.name} has been removed from the system`,
-      variant: "destructive"
-    });
-  };
-
-  const accessLevelDescriptions = {
-    "Power User": "IT administrators with full system access and troubleshooting capabilities",
-    "Leadership": "Executives and HR Manager with full management access",
-    "Line Manager": "Department managers with team oversight and approval capabilities", 
-    "Staff": "General employees including Corporate HR and contract staff with personal information access"
+  const handleDelete = async () => {
+    if (!pendingDelete) return;
+    const user = pendingDelete;
+    setBusyId(String(user.id));
+    try {
+      await apiService.deleteSystemUser(user.id);
+      setPendingDelete(null);
+      toast({ title: "User removed", description: `${user.name} has been removed from the system.` });
+      await load();
+    } catch (e: any) {
+      toast({
+        title: "Could not remove user",
+        description: e?.data?.message || e?.message || "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setBusyId(null);
+    }
   };
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Security & Administration</h1>
-          <p className="text-muted-foreground">
-            Manage user access levels and system permissions
-          </p>
+          <h1 className="text-3xl font-bold tracking-tight">Security &amp; Administration</h1>
+          <p className="text-muted-foreground">Manage who can sign in and what they can reach</p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={() => { setIsEditMode(false); setSelectedUser(null); }}>
-              <UserPlus className="mr-2 h-4 w-4" />
-              Add User
-            </Button>
-          </DialogTrigger>
-          <UserDialog 
-            user={selectedUser}
-            isEditMode={isEditMode}
-            onSave={handleSaveUser}
-            onClose={() => setIsDialogOpen(false)}
-          />
-        </Dialog>
+        <Button variant="outline" onClick={load} disabled={loading} className="gap-2 w-fit">
+          <RefreshCw className="h-4 w-4" />
+          Refresh
+        </Button>
       </div>
 
       <Tabs defaultValue="users" className="space-y-4">
@@ -362,72 +206,97 @@ const Security = () => {
             <CardHeader>
               <CardTitle>User Access Management</CardTitle>
               <CardDescription>
-                Manage user access levels and permissions
+                Accounts come from employee records. Suspend access or remove an account permanently.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <Search className="h-4 w-4 opacity-70" />
+              <div className="relative max-w-sm">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                  placeholder="Search users..."
+                  placeholder="Search by name, email, department or role"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="max-w-sm"
+                  className="pl-9"
                 />
               </div>
 
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Department</TableHead>
-                    <TableHead>Access Level</TableHead>
-                    <TableHead>Last Login</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredUsers.map((user) => (
-                    <TableRow key={user.id}>
-                      <TableCell className="font-medium">{user.name}</TableCell>
-                      <TableCell>{user.email}</TableCell>
-                      <TableCell>{user.department}</TableCell>
-                      <TableCell>
-                        <Badge variant={getAccessLevelColor(user.accessLevel)} className="flex items-center gap-1 w-fit">
-                          {getAccessLevelIcon(user.accessLevel)}
-                          {user.accessLevel}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{user.lastLogin}</TableCell>
-                      <TableCell>
-                        <Badge variant={user.status === "Active" ? "default" : "secondary"}>
-                          {user.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleEditUser(user)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDeleteUser(user.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
+              {loading ? (
+                <div className="space-y-2">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <Skeleton key={i} className="h-10 w-full" />
                   ))}
-                </TableBody>
-              </Table>
+                </div>
+              ) : loadError ? (
+                <div className="py-10 text-center space-y-3">
+                  <p className="text-sm text-muted-foreground">{loadError}</p>
+                  <Button variant="outline" onClick={load}>
+                    Try again
+                  </Button>
+                </div>
+              ) : filteredUsers.length === 0 ? (
+                <p className="py-10 text-center text-sm text-muted-foreground">
+                  {users.length === 0 ? "No user accounts yet." : "No users match your search."}
+                </p>
+              ) : (
+                <div className="overflow-x-auto rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Department</TableHead>
+                        <TableHead>Role</TableHead>
+                        <TableHead>Access Level</TableHead>
+                        <TableHead>Last Login</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredUsers.map((user) => (
+                        <TableRow key={String(user.id)}>
+                          <TableCell className="font-medium">{user.name}</TableCell>
+                          <TableCell>{user.email}</TableCell>
+                          <TableCell>{user.department}</TableCell>
+                          <TableCell>{prettyRole(user.role)}</TableCell>
+                          <TableCell>
+                            <Badge variant={getAccessLevelColor(user.accessLevel)} className="flex w-fit items-center gap-1">
+                              {getAccessLevelIcon(user.accessLevel)}
+                              {user.accessLevel}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="whitespace-nowrap">{user.lastLogin}</TableCell>
+                          <TableCell>
+                            <Badge variant={user.status === "Active" ? "default" : "secondary"}>{user.status}</Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center justify-end gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={busyId === String(user.id) || user.status === "Inactive"}
+                                onClick={() => handleDeactivate(user)}
+                                title="Suspend sign-in access"
+                              >
+                                <UserX className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={busyId === String(user.id)}
+                                onClick={() => setPendingDelete(user)}
+                                title="Remove account"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -443,17 +312,16 @@ const Security = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-muted-foreground mb-4">{description}</p>
+                  <p className="mb-4 text-sm text-muted-foreground">{description}</p>
                   <div className="space-y-2">
                     <h4 className="font-medium">Permissions:</h4>
-                    <ul className="text-sm space-y-1">
+                    <ul className="space-y-1 text-sm">
                       {level === "Power User" && (
                         <>
                           <li>• Full system administration</li>
                           <li>• System troubleshooting</li>
                           <li>• Override system controls</li>
                           <li>• Technical configuration</li>
-                          <li>• IT support and maintenance</li>
                         </>
                       )}
                       {level === "Leadership" && (
@@ -462,7 +330,6 @@ const Security = () => {
                           <li>• Full payroll management</li>
                           <li>• Financial reporting</li>
                           <li>• Approvals and reviews</li>
-                          <li>• Strategic planning access</li>
                         </>
                       )}
                       {level === "Line Manager" && (
@@ -470,7 +337,6 @@ const Security = () => {
                           <li>• Team member data access</li>
                           <li>• Leave approvals</li>
                           <li>• Performance reviews</li>
-                          <li>• Team reports</li>
                           <li>• Departmental oversight</li>
                         </>
                       )}
@@ -480,7 +346,6 @@ const Security = () => {
                           <li>• Own payroll information</li>
                           <li>• Benefits and leave requests</li>
                           <li>• Training access</li>
-                          <li>• Limited system features</li>
                         </>
                       )}
                     </ul>
@@ -491,96 +356,22 @@ const Security = () => {
           </div>
         </TabsContent>
       </Tabs>
+
+      <AlertDialog open={!!pendingDelete} onOpenChange={(open) => !open && setPendingDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove {pendingDelete?.name}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently removes their account and sign-in access. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete}>Remove user</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
-  );
-};
-
-interface UserDialogProps {
-  user: User | null;
-  isEditMode: boolean;
-  onSave: (userData: Partial<User>) => void;
-  onClose: () => void;
-}
-
-const UserDialog = ({ user, isEditMode, onSave, onClose }: UserDialogProps) => {
-  const [formData, setFormData] = useState({
-    name: user?.name || "",
-    email: user?.email || "",
-    department: user?.department || "",
-    accessLevel: user?.accessLevel || "Staff" as AccessLevel
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSave(formData);
-  };
-
-  return (
-    <DialogContent className="sm:max-w-[425px]">
-      <DialogHeader>
-        <DialogTitle>{isEditMode ? "Edit User Access" : "Add New User"}</DialogTitle>
-        <DialogDescription>
-          {isEditMode ? "Update user access level and information" : "Add a new user to the system"}
-        </DialogDescription>
-      </DialogHeader>
-      <form onSubmit={handleSubmit}>
-        <div className="grid gap-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Name</Label>
-            <Input
-              id="name"
-              value={formData.name}
-              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              value={formData.email}
-              onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="department">Department</Label>
-            <Input
-              id="department"
-              value={formData.department}
-              onChange={(e) => setFormData(prev => ({ ...prev, department: e.target.value }))}
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="accessLevel">Access Level</Label>
-            <Select 
-              value={formData.accessLevel} 
-              onValueChange={(value: AccessLevel) => setFormData(prev => ({ ...prev, accessLevel: value }))}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Staff">Staff - View Only</SelectItem>
-                <SelectItem value="Line Manager">Line Manager - Team Oversight</SelectItem>
-                <SelectItem value="Leadership">Leadership - Team Management</SelectItem>
-                <SelectItem value="Power User">Power User - Full Admin</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button type="submit">
-            {isEditMode ? "Update" : "Add"} User
-          </Button>
-        </DialogFooter>
-      </form>
-    </DialogContent>
   );
 };
 

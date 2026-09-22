@@ -6,12 +6,17 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import apiService from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function ProfileSettingsPanel() {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const canEditOwnRecord = ["executive", "hr_manager", "corporate_hr"].includes(user?.role ?? "");
   const [profile, setProfile] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [phone, setPhone] = useState("");
+  const [savingProfile, setSavingProfile] = useState(false);
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");

@@ -77,15 +77,13 @@ export default function Policies() {
   const fetchPolicies = async () => {
     try {
       setIsLoading(true)
+      setLoadError(null)
       const policies = await apiService.getPolicies()
-      setPolicyList(policies)
-    } catch (error) {
+      setPolicyList(Array.isArray(policies) ? policies : [])
+    } catch (error: any) {
       console.error('Failed to fetch policies:', error)
-      toast({
-        title: "Error",
-        description: "Failed to load policies",
-        variant: "destructive"
-      })
+      setPolicyList([])
+      setLoadError(error?.message || "We couldn't reach the server.")
     } finally {
       setIsLoading(false)
     }

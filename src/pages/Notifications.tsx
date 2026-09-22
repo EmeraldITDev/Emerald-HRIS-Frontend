@@ -90,8 +90,17 @@ export default function NotificationsPage() {
             <CardContent>
               {loading ? (
                 <p className="text-sm text-muted-foreground">Loading…</p>
+              ) : loadError ? (
+                <div className="py-8 text-center space-y-3">
+                  <p className="text-sm font-medium">We couldn't load your notifications</p>
+                  <p className="text-xs text-muted-foreground">{loadError}</p>
+                  <Button variant="outline" size="sm" onClick={load}>Try again</Button>
+                </div>
               ) : visible.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No notifications</p>
+                <div className="py-8 text-center">
+                  <p className="text-sm font-medium">No notifications</p>
+                  <p className="text-xs text-muted-foreground mt-1">You're all caught up.</p>
+                </div>
               ) : (
                 <ul className="divide-y">
                   {visible.map((n) => (

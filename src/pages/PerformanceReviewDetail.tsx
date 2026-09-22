@@ -239,6 +239,34 @@ export default function PerformanceReviewDetail() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [review?.id, status]);
 
+  // Prefill any answers already saved, so reopening the review keeps them.
+  useEffect(() => {
+    if (!review) return;
+    const mr = typeof review.manager_review === "object" ? review.manager_review : review;
+    const hr = typeof review.hr_review === "object" && review.hr_review ? review.hr_review : review;
+    setManagerValues((prev) => {
+      const next = { ...prev };
+      MANAGER_FIELDS.forEach((f) => {
+        if (!next[f.key]) {
+          const v = pickAnswer(mr, f);
+          if (v) next[f.key] = v;
+        }
+      });
+      return next;
+    });
+    setHrValues((prev) => {
+      const next = { ...prev };
+      HR_FIELDS.forEach((f) => {
+        if (!next[f.key]) {
+          const v = pickAnswer(hr, f);
+          if (v) next[f.key] = v;
+        }
+      });
+      return next;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [review?.id, review?.manager_review, review?.hr_review]);
+
   const act = async (fn: () => Promise<any>, successMsg: string) => {
     setSaving(true);
     try {

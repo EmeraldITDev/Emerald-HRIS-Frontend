@@ -132,12 +132,29 @@ export default function ProfileSettingsPanel() {
               {field("Middle Name", profile?.middle_name)}
               {field("Last Name", profile?.last_name)}
               {field("Email Address", profile?.email)}
-              {field("Phone Number", profile?.phone || profile?.phone_number)}
+              {canEditOwnRecord ? (
+                <div className="space-y-2">
+                  <Label htmlFor="own-phone">Phone Number</Label>
+                  <Input
+                    id="own-phone"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="e.g. 09068024754"
+                  />
+                </div>
+              ) : (
+                field("Phone Number", profile?.phone || profile?.phone_number)
+              )}
               {field("Job Title", profile?.job_title || profile?.position)}
               {field("Department", profile?.department)}
               {field("Location", profile?.location)}
               {field("Employment Type", profile?.employment_type)}
             </div>
+          )}
+          {!loading && !error && canEditOwnRecord && (
+            <Button onClick={saveContactDetails} disabled={savingProfile}>
+              {savingProfile ? "Saving..." : "Save Changes"}
+            </Button>
           )}
         </CardContent>
       </Card>

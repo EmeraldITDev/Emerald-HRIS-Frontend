@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Star, Plus, Eye, Download, MessageSquare, Calendar, CheckCircle, ClipboardCheck, FileText, Search, Filter, X } from "lucide-react"
+import { Star, Plus, Eye, Download, Calendar, CheckCircle, ClipboardCheck, FileText, Search, Filter, X } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { DEPARTMENTS } from '@/constants/departments'
 import { useToast } from "@/hooks/use-toast"
@@ -731,19 +731,6 @@ export default function Performance() {
                           </>
                         )}
                         
-                        {/* Line Manager and Executive actions */}
-                        {(isLineManager || isExecutiveOrHR) && (
-                          <>
-                            {/* Comment button */}
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => {
-                              setSelectedReview(review)
-                              setEmployeeComment(review.employeeComments || "")
-                              setCommentDialogOpen(true)
-                            }} title="Add Comment">
-                              <MessageSquare className="h-3 w-3 md:h-4 md:w-4" />
-                            </Button>
-                          </>
-                        )}
                         
                         {/* Export button */}
                         <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hidden sm:inline-flex" onClick={() => handleExportReview(review)}>

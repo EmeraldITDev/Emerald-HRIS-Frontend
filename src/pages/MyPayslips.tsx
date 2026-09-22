@@ -170,8 +170,19 @@ export default function MyPayslips() {
         <CardContent>
           {loading ? (
             <p className="text-sm text-muted-foreground">Loading…</p>
+          ) : loadError ? (
+            <div className="py-8 text-center space-y-3">
+              <p className="text-sm font-medium">We couldn't load your payslips</p>
+              <p className="text-xs text-muted-foreground">{loadError}</p>
+              <Button variant="outline" size="sm" onClick={load}>Try again</Button>
+            </div>
           ) : items.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No payslips yet.</p>
+            <div className="py-8 text-center">
+              <p className="text-sm font-medium">No payslip available</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Your payroll has not been generated yet, so there is currently no payslip to show.
+              </p>
+            </div>
           ) : (
             <Table>
               <TableHeader>

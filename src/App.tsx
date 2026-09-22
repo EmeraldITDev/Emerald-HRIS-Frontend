@@ -15,6 +15,8 @@ import Recruitment from "./pages/Recruitment";
 import ComingSoon from "./pages/ComingSoon";
 import NotFound from "./pages/NotFound";
 import Performance from "./pages/Performance";
+import PerformanceReviewDetail from "./pages/PerformanceReviewDetail";
+import Settings from "./pages/Settings";
 import Training from "./pages/Training";
 import Benefits from "./pages/Benefits";
 import Analytics from "./pages/Analytics";
@@ -112,15 +114,7 @@ const AppContent = () => {
                   <Route path="/payroll/my-payslips" element={<MyPayslips />} />
                   <Route path="/payroll/my-payslips/:period" element={<PayslipDetail />} />
                   <Route path="/payroll/review/:payPeriod" element={<PayrollReview />} />
-                  <Route
-                    path="/settings"
-                    element={
-                      <ComingSoon
-                        title="Settings"
-                        description="System configuration and preferences"
-                      />
-                    }
-                  />
+                  <Route path="/settings" element={<Settings />} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>

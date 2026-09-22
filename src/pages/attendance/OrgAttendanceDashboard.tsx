@@ -424,18 +424,9 @@ export default function OrgAttendanceDashboard() {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() =>
-                              toast({
-                                title:
-                                  r.employee_name ||
-                                  `Employee #${r.employee_id}` ,
-                                description: `${r.attendance_status || "Absent"} · ${
-                                  r.actual_mode || r.work_mode || "No mode"
-                                } · In ${formatTimeWithZone(r.clock_in) || "—"} · Out ${
-                                  formatTimeWithZone(r.clock_out) || "—"
-                                }`,
-                              })
-                            }
+                            title="View details"
+                            aria-label="View attendance details"
+                            onClick={() => openDetail(r)}
                           >
                             <Eye className="h-4 w-4" />
                           </Button>

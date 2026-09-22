@@ -8,9 +8,9 @@
 
 ## Batch B — Settings & User Management
 - [x] Route /settings to the real Settings page (remove Coming Soon)
-- [ ] Audit Trail wired to GET /settings/audit-logs, gated to HR/IT/Executive
-- [ ] Security → User Management: load GET /users (no dummy data)
-- [ ] Delete via DELETE /users/{id}, deactivate via POST /users/{id}/deactivate, refetch after
+- [x] Audit Trail wired to GET /settings/audit-logs, gated to HR/IT/Executive
+- [x] Security → User Management: load GET /users (no dummy data)
+- [x] Delete via DELETE /users/{id}, deactivate via POST /users/{id}/deactivate, refetch after
 
 ## Batch C — Performance review workflow
 - [x] Route /performance/:id loading GET /performance/{id}

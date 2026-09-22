@@ -26,6 +26,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Download, Eye, Flag, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
@@ -87,6 +94,27 @@ export default function OrgAttendanceDashboard() {
   const [status, setStatus] = useState("All");
   const [chip, setChip] = useState<ChipKey>("total");
   const [flagged, setFlagged] = useState<Record<string, boolean>>({});
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState<string | null>(null);
+  const [detail, setDetail] = useState<any>(null);
+
+  const openDetail = async (row: any) => {
+    setDetailOpen(true);
+    setDetail(row);
+    setDetailError(null);
+    const id = row?.attendance_id ?? row?.id;
+    if (!id) return;
+    setDetailLoading(true);
+    try {
+      const full = await apiService.getAttendanceDetail(id);
+      setDetail({ ...row, ...(full || {}) });
+    } catch (e: any) {
+      setDetailError(e?.data?.message || e?.message || "We couldn't load the full record.");
+    } finally {
+      setDetailLoading(false);
+    }
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -424,18 +452,9 @@ export default function OrgAttendanceDashboard() {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() =>
-                              toast({
-                                title:
-                                  r.employee_name ||
-                                  `Employee #${r.employee_id}` ,
-                                description: `${r.attendance_status || "Absent"} · ${
-                                  r.actual_mode || r.work_mode || "No mode"
-                                } · In ${formatTimeWithZone(r.clock_in) || "—"} · Out ${
-                                  formatTimeWithZone(r.clock_out) || "—"
-                                }`,
-                              })
-                            }
+                            title="View details"
+                            aria-label="View attendance details"
+                            onClick={() => openDetail(r)}
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
@@ -474,6 +493,53 @@ export default function OrgAttendanceDashboard() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              {detail?.employee_name ||
+                [detail?.first_name, detail?.last_name].filter(Boolean).join(" ") ||
+                `Employee #${detail?.employee_id ?? ""}`}
+            </DialogTitle>
+            <DialogDescription>
+              {detail?.date || detail?.attendance_date || date}
+            </DialogDescription>
+          </DialogHeader>
+
+          {detailLoading ? (
+            <p className="py-6 text-center text-sm text-muted-foreground">Loading details…</p>
+          ) : (
+            <div className="space-y-3">
+              {detailError && <p className="text-sm text-muted-foreground">{detailError}</p>}
+              <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+                {[
+                  ["Employee ID", detail?.employee_code || detail?.employee_display || detail?.employee_id],
+                  ["Department", detail?.department],
+                  ["Assigned location", detail?.assigned_location],
+                  ["Work arrangement", detail?.work_arrangement || detail?.employee?.work_arrangement],
+                  ["Expected mode", detail?.expected_mode],
+                  ["Actual mode", detail?.actual_mode || detail?.work_mode],
+                  ["Clock in", formatTimeWithZone(detail?.clock_in)],
+                  ["Clock out", formatTimeWithZone(detail?.clock_out)],
+                  ["Lunch start", formatTimeWithZone(detail?.lunch_start)],
+                  ["Lunch end", formatTimeWithZone(detail?.lunch_end)],
+                  ["Hours worked", detail?.hours_worked ?? detail?.total_hours],
+                  ["Location status", locationStatusLabel(detail?.location_status)],
+                  ["Status", detail?.attendance_status],
+                  ["Exception", detail?.exception?.exception_type || detail?.exception_type],
+                  ["Reason", detail?.exception?.reason || detail?.reason || detail?.notes],
+                ].map(([label, value]) => (
+                  <div key={String(label)}>
+                    <dt className="text-xs uppercase tracking-wide text-muted-foreground">{label}</dt>
+                    <dd>{value ? String(value) : "—"}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -491,7 +491,28 @@ class ApiService {
     remaining: number;
     year: number;
   }> {
-    return this.request(`/leave/balance/${employeeId}`);
+    const raw: any = await this.request<any>(`/leave/balance/${employeeId}?_=${Date.now()}`, {
+      cache: 'no-store',
+    });
+    const b: any = raw?.data ?? raw?.balance ?? raw ?? {};
+    const s: any = b?.summary ?? {};
+    const num = (...vals: any[]) => {
+      for (const v of vals) {
+        const n = Number(v);
+        if (v !== null && v !== undefined && v !== '' && Number.isFinite(n)) return n;
+      }
+      return undefined;
+    };
+    const limit = num(b.total, b.limit, b.entitlement, b.total_days, b.allocated, s.vacation_days_total);
+    const used = num(b.used, b.used_days, b.taken, s.vacation_days_used);
+    const remaining = num(b.remaining, b.remaining_days, b.balance, s.vacation_days_remaining);
+    const resolvedLimit = limit ?? ((used ?? 0) + (remaining ?? 0));
+    return {
+      used: used ?? Math.max(0, resolvedLimit - (remaining ?? 0)),
+      limit: resolvedLimit,
+      remaining: remaining ?? Math.max(0, resolvedLimit - (used ?? 0)),
+      year: Number(b.year) || new Date().getFullYear(),
+    };
   }
 
   // Detailed payslip (Requirement 4)
@@ -583,6 +604,11 @@ class ApiService {
   }
 
   // ===== Attendance system v2 =====
+
+  async getAttendanceDetail(id: number | string): Promise<any> {
+    const res: any = await this.request<any>(`/attendance/${id}`, { cache: 'no-store' });
+    return res?.data ?? res;
+  }
 
   async getAttendanceToday(employeeId?: number | string | null): Promise<any> {
     const qp = new URLSearchParams();
@@ -1425,6 +1451,28 @@ class ApiService {
 
   async getAuditLog(id: number | string): Promise<any> {
     return this.request<any>(`/settings/audit-logs/${id}`);
+  }
+
+  // System users (Security & Administration)
+  async getSystemUsers(params?: { page?: number; per_page?: number; search?: string }): Promise<any> {
+    const qp = new URLSearchParams();
+    Object.entries(params ?? {}).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '') qp.append(k, String(v));
+    });
+    qp.append('_', String(Date.now()));
+    return this.request<any>(`/users?${qp.toString()}`, { cache: 'no-store' });
+  }
+
+  async deleteSystemUser(id: number | string): Promise<any> {
+    return this.request<any>(`/users/${id}`, { method: 'DELETE' });
+  }
+
+  async deactivateSystemUser(id: number | string): Promise<any> {
+    return this.request<any>(`/users/${id}/deactivate`, { method: 'POST' });
+  }
+
+  async getTrainingEligibleEmployees(): Promise<any> {
+    return this.request<any>(`/training/eligible-employees`, { cache: 'no-store' });
   }
 
   // Policies

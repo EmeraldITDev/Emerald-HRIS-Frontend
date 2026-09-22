@@ -17,6 +17,7 @@ import RoleBasedComponent from '@/components/RoleBasedComponent'
 import { formatNaira } from "@/lib/currency"
 import { NairaIcon } from "@/components/icons/NairaIcon"
 import { SearchableSelect } from "@/components/ui/searchable-select"
+import EmployeeMultiSelect from "@/components/EmployeeMultiSelect"
 
 const BENEFIT_TYPE_STYLES: Record<string, { label: string; icon: any; color: string; bar: string; text: string }> = {
   health:     { label: 'Health / HMO',      icon: Heart,         color: 'text-red-500',     bar: 'bg-red-500',     text: 'text-red-600' },
@@ -1341,78 +1342,13 @@ export default function Benefits() {
           
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label>Select Employees *</Label>
-                {employees.length > 0 && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      const allIds = employees.map(e => e.id!).filter(Boolean)
-                      const allSelected = allIds.length > 0 && allIds.every(id => assignBenefitForm.employee_ids.includes(id))
-                      setAssignBenefitForm({
-                        ...assignBenefitForm,
-                        employee_ids: allSelected ? [] : allIds,
-                      })
-                    }}
-                  >
-                    {employees.length > 0 && employees.every(e => assignBenefitForm.employee_ids.includes(e.id!)) ? 'Clear All' : 'Select All'}
-                  </Button>
-                )}
-              </div>
-              <div className="border rounded-md p-3 max-h-48 overflow-y-auto">
-                {isLoadingEmployees ? (
-                  <div className="text-sm text-muted-foreground text-center py-4">Loading employees...</div>
-                ) : employees.length === 0 ? (
-                  <div className="text-sm text-muted-foreground text-center py-4">No employees available</div>
-                ) : (
-                  employees
-                    .filter(emp => emp.id !== undefined && emp.id !== null)
-                    .map((employee) => {
-                      const employeeId = employee.id!
-                      const isChecked = assignBenefitForm.employee_ids.includes(employeeId)
-                      return (
-                        <div key={employeeId} className="flex items-center space-x-2 py-2 hover:bg-muted/50 rounded px-2">
-                          <Checkbox
-                            id={`emp-${employeeId}`}
-                            checked={isChecked}
-                            onCheckedChange={(checked) => {
-                              if (checked) {
-                                setAssignBenefitForm({
-                                  ...assignBenefitForm,
-                                  employee_ids: [...assignBenefitForm.employee_ids, employeeId]
-                                })
-                              } else {
-                                setAssignBenefitForm({
-                                  ...assignBenefitForm,
-                                  employee_ids: assignBenefitForm.employee_ids.filter(id => id !== employeeId)
-                                })
-                              }
-                            }}
-                          />
-                          <label 
-                            htmlFor={`emp-${employeeId}`} 
-                            className="text-sm cursor-pointer flex-1"
-                            onClick={() => {
-                              setAssignBenefitForm({
-                                ...assignBenefitForm,
-                                employee_ids: isChecked
-                                  ? assignBenefitForm.employee_ids.filter(id => id !== employeeId)
-                                  : [...assignBenefitForm.employee_ids, employeeId]
-                              })
-                            }}
-                          >
-                            {employee.first_name} {employee.last_name} {employee.department ? `- ${employee.department}` : ''}
-                          </label>
-                        </div>
-                      )
-                    })
-                )}
-              </div>
-              <div className="text-xs text-muted-foreground">
-                {assignBenefitForm.employee_ids.length} employee(s) selected
-              </div>
+              <Label>Select Employees *</Label>
+              <EmployeeMultiSelect
+                employees={employees as any}
+                selectedIds={assignBenefitForm.employee_ids}
+                loading={isLoadingEmployees}
+                onChange={(ids) => setAssignBenefitForm({ ...assignBenefitForm, employee_ids: ids as number[] })}
+              />
             </div>
 
             <div className="space-y-2">

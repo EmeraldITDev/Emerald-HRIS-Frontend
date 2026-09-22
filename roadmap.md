@@ -8,9 +8,9 @@
 
 ## Batch B — Settings & User Management
 - [x] Route /settings to the real Settings page (remove Coming Soon)
-- [ ] Audit Trail wired to GET /settings/audit-logs, gated to HR/IT/Executive
-- [ ] Security → User Management: load GET /users (no dummy data)
-- [ ] Delete via DELETE /users/{id}, deactivate via POST /users/{id}/deactivate, refetch after
+- [x] Audit Trail wired to GET /settings/audit-logs, gated to HR/IT/Executive
+- [x] Security → User Management: load GET /users (no dummy data)
+- [x] Delete via DELETE /users/{id}, deactivate via POST /users/{id}/deactivate, refetch after
 
 ## Batch C — Performance review workflow
 - [x] Route /performance/:id loading GET /performance/{id}
@@ -20,10 +20,10 @@
 
 ## Batch D — Attendance, leave balances, training selection
 - [ ] Attendance & Leave page redesign (remove duplicated birthdays/anniversaries)
-- [ ] Org attendance: details modal via GET /attendance/{id} instead of toast
-- [ ] Leave balances bound to total/used/remaining (no annual_cap fallback)
-- [ ] Training: GET /training/eligible-employees for the picker
-- [ ] Searchable multi-employee selector used everywhere "Select Employees" appears
+- [x] Org attendance: details modal via GET /attendance/{id} instead of toast
+- [x] Leave balances bound to total/used/remaining (no annual_cap fallback)
+- [x] Training: GET /training/eligible-employees for the picker
+- [x] Searchable multi-employee selector used everywhere "Select Employees" appears
 
 ## Blocked / pending
 - Work Exception submit: backend fix deployed by user; verify after redeploy

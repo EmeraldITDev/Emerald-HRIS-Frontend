@@ -50,6 +50,10 @@ export function LeaveBalanceCard({ employeeId }: { employeeId?: number | string 
           <p className="text-xs text-muted-foreground">Loading…</p>
         ) : error || !balance ? (
           <p className="text-xs text-muted-foreground">Balance unavailable</p>
+        ) : balance.limit <= 0 ? (
+          <p className="text-xs text-muted-foreground">
+            No annual leave allocation recorded yet. Ask HR to set your entitlement.
+          </p>
         ) : (
           <div className="space-y-2">
             <div className="flex justify-between text-sm">

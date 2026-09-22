@@ -7,7 +7,7 @@ import { Search } from "lucide-react";
 import apiService from "@/lib/api";
 
 interface EmployeeLike {
-  id: number | string;
+  id?: number | string;
   first_name?: string;
   last_name?: string;
   employee_code?: string;

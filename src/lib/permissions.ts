@@ -93,6 +93,9 @@ export function canViewExecutiveView(
   user: (User & Record<string, any>) | null | undefined,
 ): boolean {
   if (!user) return false;
+  // Backend exposes can_view_chairman_dashboard on login/me — trust it so
+  // FE access stays in sync with backend data access.
+  if ((user as any).can_view_chairman_dashboard || user.canViewChairmanDashboard) return true;
   // The backend serves /analytics/chairman-dashboard to executives; HR Managers
   // are granted view access to the Chairman's View per product decision.
   return user.role === "executive" || user.role === "hr_manager";

@@ -29,6 +29,7 @@ export interface User {
   employee_id?: number;
   mustChangePassword?: boolean;
   grossSalaryImportEnabled?: boolean;
+  canViewChairmanDashboard?: boolean;
 }
 
 interface AuthContextType {
@@ -213,6 +214,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           employee_id: (response as any).user.employee_id,
           mustChangePassword: (response as any).user.must_change_password,
           grossSalaryImportEnabled: !!(response as any).user.gross_salary_import_enabled,
+          canViewChairmanDashboard: !!(response as any).user.can_view_chairman_dashboard,
         };
         
         setUser(user);
@@ -241,6 +243,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           employee_id: (resp as any).user.employee_id,
           mustChangePassword: (resp as any).user.must_change_password,
           grossSalaryImportEnabled: !!(resp as any).user.gross_salary_import_enabled,
+          canViewChairmanDashboard: !!(resp as any).user.can_view_chairman_dashboard,
         };
         setUser(user);
         localStorage.setItem('hris_user', JSON.stringify(user));
@@ -281,6 +284,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           employee_id: response.user.employee_id,
           mustChangePassword: response.user.must_change_password,
           grossSalaryImportEnabled: !!(response.user as any).gross_salary_import_enabled,
+          canViewChairmanDashboard: !!(response.user as any).can_view_chairman_dashboard,
         };
         
         setUser(updatedUser);

@@ -63,6 +63,11 @@ export default function Performance() {
   const [viewDialogOpen, setViewDialogOpen] = useState(false)
   const [commentDialogOpen, setCommentDialogOpen] = useState(false)
   const [selfAssessmentOpen, setSelfAssessmentOpen] = useState(false)
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  useEffect(() => {
+    if (searchParams.get('selfAssessment')) setSelfAssessmentOpen(true)
+  }, [searchParams])
   const [manageReviewDialogOpen, setManageReviewDialogOpen] = useState(false)
   const [hrReviewDialogOpen, setHrReviewDialogOpen] = useState(false)
   const [selectedReview, setSelectedReview] = useState<Review | null>(null)

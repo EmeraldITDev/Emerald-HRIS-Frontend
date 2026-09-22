@@ -229,6 +229,19 @@ export default function Performance() {
   // Check if any filters are active
   const hasActiveFilters = searchTerm || statusFilter || periodFilter || departmentFilter
   
+  const currentPeriod = `Q${Math.floor(new Date().getMonth() / 3) + 1} ${new Date().getFullYear()}`
+
+  // Quarter options: two quarters back through three forward.
+  const periodOptions = (() => {
+    const now = new Date()
+    const options: string[] = []
+    for (let offset = -2; offset <= 3; offset++) {
+      const d = new Date(now.getFullYear(), now.getMonth() + offset * 3, 1)
+      options.push(`Q${Math.floor(d.getMonth() / 3) + 1} ${d.getFullYear()}`)
+    }
+    return options
+  })()
+
   const handleCreateNewReview = async () => {
     if (!newReview.employeeId) {
       toast({
@@ -238,12 +251,19 @@ export default function Performance() {
       })
       return
     }
+    if (!newReview.reviewPeriod) {
+      toast({
+        title: "Missing information",
+        description: "Please select a review period.",
+        variant: "destructive"
+      })
+      return
+    }
 
     const employee = employees.find(emp => emp.id?.toString() === newReview.employeeId)
     if (!employee) return
 
-    const now = new Date()
-    const period = `Q${Math.floor(now.getMonth() / 3) + 1} ${now.getFullYear()}`
+    const period = newReview.reviewPeriod
 
     try {
       // HR opens the cycle on the backend; the employee always gets a
@@ -493,7 +513,12 @@ export default function Performance() {
           )}
           
           {canCreateReviews && (
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <Dialog open={isDialogOpen} onOpenChange={(open) => {
+              if (open && !newReview.reviewPeriod) {
+                setNewReview({ ...newReview, reviewPeriod: currentPeriod })
+              }
+              setIsDialogOpen(open)
+            }}>
               <DialogTrigger asChild>
                 <Button className="bg-emerald-600 hover:bg-emerald-700 text-white w-full sm:w-auto">
                   <Plus className="mr-2 h-4 w-4" />
@@ -523,7 +548,26 @@ export default function Performance() {
                     }))}
                   />
                 </div>
-                
+
+                <div className="space-y-2">
+                  <Label htmlFor="review-period">Review Period *</Label>
+                  <Select
+                    value={newReview.reviewPeriod}
+                    onValueChange={(value) => setNewReview({ ...newReview, reviewPeriod: value })}
+                  >
+                    <SelectTrigger id="review-period">
+                      <SelectValue placeholder="Select quarter" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {periodOptions.map((option) => (
+                        <SelectItem key={option} value={option}>
+                          {option}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 <p className="text-xs text-muted-foreground">
                   The employee will be asked to complete a self-assessment.
                 </p>

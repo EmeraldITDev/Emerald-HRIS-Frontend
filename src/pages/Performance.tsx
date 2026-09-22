@@ -513,7 +513,12 @@ export default function Performance() {
           )}
           
           {canCreateReviews && (
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <Dialog open={isDialogOpen} onOpenChange={(open) => {
+              if (open && !newReview.reviewPeriod) {
+                setNewReview({ ...newReview, reviewPeriod: currentPeriod })
+              }
+              setIsDialogOpen(open)
+            }}>
               <DialogTrigger asChild>
                 <Button className="bg-emerald-600 hover:bg-emerald-700 text-white w-full sm:w-auto">
                   <Plus className="mr-2 h-4 w-4" />

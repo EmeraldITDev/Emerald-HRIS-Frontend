@@ -96,7 +96,7 @@ export default function Layout({ children }: LayoutProps) {
                 <span className="text-sm text-muted-foreground">Welcome,</span>
                 <span className="text-sm font-medium">{user?.firstName}</span>
                 <Badge variant={getRoleBadgeVariant(user?.role || '')}>
-                  {getRoleDisplayName(user?.role || '')}
+                  {roleTitle}
                 </Badge>
               </div>
               
@@ -118,7 +118,7 @@ export default function Layout({ children }: LayoutProps) {
                     </div>
                     <div className="text-xs text-muted-foreground">{user?.email}</div>
                     <div className="text-xs text-muted-foreground mt-1">
-                      Role: {getRoleDisplayName(user?.role || '')}
+                      Role: {roleTitle}
                     </div>
                     {user?.department && (
                       <div className="text-xs text-muted-foreground">

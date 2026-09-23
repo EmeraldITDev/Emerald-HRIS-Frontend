@@ -49,6 +49,10 @@ export default function Layout({ children }: LayoutProps) {
     return roleNames[role] || role;
   };
 
+  // Display title comes from the backend's role_label when present, otherwise
+  // from users.role. Never from access-level flags (role_group / is_hr_admin).
+  const roleTitle = user?.roleLabel || getRoleDisplayName(user?.role || '');
+
   const getRoleBadgeVariant = (role: string) => {
     if (['executive', 'hr_manager'].includes(role)) return 'default';
     if (['corporate_hr', 'line_manager', 'finance'].includes(role)) return 'secondary';

@@ -83,6 +83,9 @@ class AttendanceController extends Controller
 
         $validator = Validator::make($request->all(), [
             'employee_id' => 'required|exists:employees,id',
+            'work_mode' => 'required|string|in:Physical,WFH',
+            'location_lat' => 'required_if:work_mode,Physical|numeric|between:-90,90',
+            'location_lng' => 'required_if:work_mode,Physical|numeric|between:-180,180',
             'location' => 'nullable|string|max:100',
             'notes' => 'nullable|string|max:500',
             'approval_reason' => 'nullable|string|max:500',
@@ -149,7 +152,9 @@ class AttendanceController extends Controller
         if (!$existingRecord) {
             // First clock in of the day - create new record
             // Determine work mode and location verification
-            $workMode     = $request->input('work_mode', $schedule['expected_mode'] ?? 'Physical');
+            // Work mode is authoritative for location policy. Never accept client
+            // location_required/location_verified flags as a way to bypass GPS.
+            $workMode     = $request->input('work_mode');
             $expectedMode = $schedule['expected_mode'] ?? 'Physical';
             $locationLat  = $request->input('location_lat');
             $locationLng  = $request->input('location_lng');
@@ -157,7 +162,7 @@ class AttendanceController extends Controller
             $locationVerified = false;
             $locationStatus   = 'Not Required';
 
-            if ($workMode === 'Physical' && $locationLat && $locationLng) {
+            if ($workMode === 'Physical') {
                 $empLocation = \App\Models\Employee::normalizeLocation($employee->assigned_location ?? $employee->work_location ?? 'Lagos');
                 $geoResult   = Attendance::checkGeofence($empLocation, (float)$locationLat, (float)$locationLng);
                 $locationVerified = $geoResult['verified'];

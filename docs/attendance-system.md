@@ -90,15 +90,17 @@ getOrgAttendanceDashboard({ date, location, department, mode, status })
 submitMissingClockoutRequest({ employee_id, date, clock_out_time, reason })
 ```
 
-`createAttendance` and `clockOut` accept flexible payloads including
-`work_mode`, `location_lat`, `location_lng` and `location_status`. The
-hardcoded `location: 'office'` value is gone.
+`createAttendance` sends `work_mode` for every clock-in. Physical clock-ins
+also include `location_lat` and `location_lng`; WFH clock-ins deliberately do
+not send coordinates or client-authored exemption/verification flags. The
+backend derives `location_status: Exempt` for WFH and requires coordinates
+only when `work_mode` is `Physical`.
 
 ### Integration notes
 
-- GPS is requested only when the expected mode for the day is `Physical`. If
-  the browser denies permission the clock-in still posts and the card explains
-  that presence could not be verified.
+- GPS is requested only for a selected `Physical` clock-in. If the browser
+  denies permission, the office clock-in is stopped and the card explains how
+  to enable location. WFH never requests GPS.
 - The org dashboard lists every employee for the selected date (including
   absentees), auto-refreshes every five minutes, and its summary chips filter
   the table client-side over the backend result set.

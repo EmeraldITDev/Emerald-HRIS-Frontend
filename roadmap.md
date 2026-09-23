@@ -27,3 +27,4 @@
 
 ## Blocked / pending
 - Work Exception submit: backend fix deployed by user; verify after redeploy
+- [x] WFH clock-in contract: minimal frontend payload; backend derives exemption and only requires GPS for Physical mode

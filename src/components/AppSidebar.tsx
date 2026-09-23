@@ -113,7 +113,16 @@ const navigationItems: NavItem[] = [
     url: "/payroll/my-payslips",
     icon: Receipt,
     permission: "*",
-    roles: ['general_employee', 'contract_employee', 'line_manager', 'finance', 'it_power_user']
+    roles: [
+      'general_employee',
+      'contract_employee',
+      'line_manager',
+      'finance',
+      'it_power_user',
+      'corporate_hr',
+      'hr_manager',
+      'executive',
+    ]
   },
   {
     title: "Leave Approvals",

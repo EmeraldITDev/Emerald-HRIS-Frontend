@@ -347,20 +347,31 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
         }
         setLocationAttempt(nextAttempt);
         setLocationIssue(currentLocationIssue);
+      } else {
+        // Working from home: no location is requested or required.
+        setLocationIssue(null);
+        resetLocationAttempt();
       }
       const payload: Record<string, any> = {
         employee_id: employeeId,
         date: todayWAT(),
         work_mode: mode,
       };
+      if (mode === "WFH") {
+        payload.location_status = "Exempt";
+        payload.location_verified = true;
+        payload.location_required = false;
+      }
       if (coords) {
         payload.location_lat = coords.lat;
         payload.location_lng = coords.lng;
         if (coords.accuracy != null) payload.location_accuracy = Math.round(coords.accuracy);
-        payload.location_attempt = Math.max(1, locationAttempt + 1);
-        if (currentLocationIssue) {
-          payload.force_location_review = true;
-          payload.location_review_reason = "Location remained outside the accuracy-aware office boundary after three attempts.";
+        if (mode === "Physical") {
+          payload.location_attempt = Math.max(1, locationAttempt + 1);
+          if (currentLocationIssue) {
+            payload.force_location_review = true;
+            payload.location_review_reason = "Location remained outside the accuracy-aware office boundary after three attempts.";
+          }
         }
       }
 

@@ -357,11 +357,6 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
         date: todayWAT(),
         work_mode: mode,
       };
-      if (mode === "WFH") {
-        payload.location_status = "Exempt";
-        payload.location_verified = true;
-        payload.location_required = false;
-      }
       if (coords) {
         payload.location_lat = coords.lat;
         payload.location_lng = coords.lng;

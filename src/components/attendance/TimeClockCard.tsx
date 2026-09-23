@@ -348,10 +348,9 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
         setLocationAttempt(nextAttempt);
         setLocationIssue(currentLocationIssue);
       } else {
-        // Working from home: location is not required. We still attach a reading
-        // if the browser happens to give one, but never block the clock-in.
-        const gps = await captureGps();
-        coords = gps.coords;
+        // Working from home: no location is requested or required.
+        setLocationIssue(null);
+        resetLocationAttempt();
       }
       const payload: Record<string, any> = {
         employee_id: employeeId,

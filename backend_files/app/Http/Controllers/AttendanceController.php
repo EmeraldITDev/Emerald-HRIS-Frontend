@@ -84,8 +84,8 @@ class AttendanceController extends Controller
         $validator = Validator::make($request->all(), [
             'employee_id' => 'required|exists:employees,id',
             'work_mode' => 'required|string|in:Physical,WFH',
-            'location_lat' => 'nullable|required_if:work_mode,Physical|numeric|between:-90,90',
-            'location_lng' => 'nullable|required_if:work_mode,Physical|numeric|between:-180,180',
+            'location_lat' => 'required_if:work_mode,Physical|numeric|between:-90,90',
+            'location_lng' => 'required_if:work_mode,Physical|numeric|between:-180,180',
             'location' => 'nullable|string|max:100',
             'notes' => 'nullable|string|max:500',
             'approval_reason' => 'nullable|string|max:500',

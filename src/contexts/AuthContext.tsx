@@ -25,12 +25,31 @@ export interface User {
   lastName: string;
   email: string;
   role: UserRole;
+  /** Human-readable label from API (e.g. "Corporate HR") — prefer for badges */
   roleLabel?: string;
   department: string;
   employee_id?: number;
   mustChangePassword?: boolean;
   grossSalaryImportEnabled?: boolean;
   canViewChairmanDashboard?: boolean;
+}
+
+function mapApiUser(apiUser: any): User {
+  const name = String(apiUser?.name ?? '');
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  return {
+    id: String(apiUser.id),
+    firstName: parts[0] || '',
+    lastName: parts.slice(1).join(' '),
+    email: apiUser.email,
+    role: apiUser.role as UserRole,
+    roleLabel: typeof apiUser.role_label === 'string' ? apiUser.role_label : undefined,
+    department: apiUser.department || 'General',
+    employee_id: apiUser.employee_id,
+    mustChangePassword: apiUser.must_change_password,
+    grossSalaryImportEnabled: !!apiUser.gross_salary_import_enabled,
+    canViewChairmanDashboard: !!apiUser.can_view_chairman_dashboard,
+  };
 }
 
 interface AuthContextType {
@@ -134,6 +153,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastActivityRef = useRef<number>(Date.now());
 
+  // Always re-fetch /me when a token exists so role badges aren't stuck on stale localStorage
+  useEffect(() => {
+    const token = localStorage.getItem('auth_token');
+    if (!token) return;
+    void (async () => {
+      try {
+        const response = await apiService.getCurrentUser();
+        if (response?.user) {
+          const updatedUser = mapApiUser(response.user);
+          setUser(updatedUser);
+          localStorage.setItem('hris_user', JSON.stringify(updatedUser));
+        }
+      } catch (error) {
+        console.error('Failed to hydrate user from /me:', error);
+      }
+    })();
+  }, []);
+
   const resetInactivityTimer = useCallback(() => {
     lastActivityRef.current = Date.now();
     localStorage.setItem('last_activity', Date.now().toString());
@@ -205,20 +242,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
 
       if ((response as any).user && (response as any).token) {
-        const user: User = {
-          id: (response as any).user.id.toString(),
-          firstName: (response as any).user.name.split(' ')[0],
-          lastName: (response as any).user.name.split(' ').slice(1).join(' '),
-          email: (response as any).user.email,
-          role: (response as any).user.role as UserRole,
-          roleLabel: (response as any).user.role_label,
-          department: (response as any).user.department || 'General',
-          employee_id: (response as any).user.employee_id,
-          mustChangePassword: (response as any).user.must_change_password,
-          grossSalaryImportEnabled: !!(response as any).user.gross_salary_import_enabled,
-          canViewChairmanDashboard: !!(response as any).user.can_view_chairman_dashboard,
-        };
-        
+        const user = mapApiUser((response as any).user);
         setUser(user);
         localStorage.setItem('hris_user', JSON.stringify(user));
         localStorage.setItem('auth_token', (response as any).token);
@@ -235,19 +259,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       const resp = await apiService.verifyOtp(tempToken, code);
       if ((resp as any).user && (resp as any).token) {
-        const user: User = {
-          id: (resp as any).user.id.toString(),
-          firstName: (resp as any).user.name.split(' ')[0],
-          lastName: (resp as any).user.name.split(' ').slice(1).join(' '),
-          email: (resp as any).user.email,
-          role: (resp as any).user.role as UserRole,
-          roleLabel: (resp as any).user.role_label,
-          department: (resp as any).user.department || 'General',
-          employee_id: (resp as any).user.employee_id,
-          mustChangePassword: (resp as any).user.must_change_password,
-          grossSalaryImportEnabled: !!(resp as any).user.gross_salary_import_enabled,
-          canViewChairmanDashboard: !!(resp as any).user.can_view_chairman_dashboard,
-        };
+        const user = mapApiUser((resp as any).user);
         setUser(user);
         localStorage.setItem('hris_user', JSON.stringify(user));
         localStorage.setItem('auth_token', (resp as any).token);
@@ -277,20 +289,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       const response = await apiService.getCurrentUser();
       if (response.user) {
-        const updatedUser: User = {
-          id: response.user.id.toString(),
-          firstName: response.user.name.split(' ')[0],
-          lastName: response.user.name.split(' ').slice(1).join(' '),
-          email: response.user.email,
-          role: response.user.role as UserRole,
-          roleLabel: (response.user as any).role_label,
-          department: response.user.department || 'General',
-          employee_id: response.user.employee_id,
-          mustChangePassword: response.user.must_change_password,
-          grossSalaryImportEnabled: !!(response.user as any).gross_salary_import_enabled,
-          canViewChairmanDashboard: !!(response.user as any).can_view_chairman_dashboard,
-        };
-        
+        const updatedUser = mapApiUser(response.user);
         setUser(updatedUser);
         localStorage.setItem('hris_user', JSON.stringify(updatedUser));
       }

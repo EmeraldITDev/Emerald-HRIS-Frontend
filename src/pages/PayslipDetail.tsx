@@ -11,6 +11,7 @@ import { toast } from "@/hooks/use-toast";
 import { generatePayslipPdf, toPayslipLike } from "@/utils/payslipPdf";
 import { normalizePayslipDetail } from "@/lib/payrollCalc";
 import { formatPayDate } from "@/lib/formatPayDate";
+import { formatNaira } from "@/lib/currency";
 
 function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
@@ -18,7 +19,8 @@ function downloadBlob(blob: Blob, filename: string) {
   a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
   URL.revokeObjectURL(url);
 }
-const ngn = (v: any) => v == null ? "—" : new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", maximumFractionDigits: 0 }).format(Number(v) || 0);
+/** Salary lines always show kobo (2 d.p.) — never round to whole naira. */
+const ngn = (v: any) => (v == null || v === "" ? "—" : formatNaira(v, { decimals: 2 }));
 
 export default function PayslipDetail() {
   const { period } = useParams();

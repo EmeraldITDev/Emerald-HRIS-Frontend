@@ -83,40 +83,49 @@ export const employeesMissingAnnualGross = (
 
 export const roundMoney = (value: number): number => Math.round(value * 100) / 100
 
+/**
+ * PAYE from IT BREAKDOWN PAYROLL.xlsx (no CRA).
+ * chargeable = totalYearlyIncome − (rentRelief + pension + NHF)
+ * bands: 0% to ₦800k, then 15 / 18 / 21 / 23 / 25%
+ */
 export const calculateAnnualPaye = (
   annualGross: number,
   annualPension: number,
   annualNhf: number,
   annualRentRelief: number = 0,
+  annualBonus: number = 0,
 ) => {
-  const grossForCra = Math.max(annualGross - annualPension - annualNhf, 0)
-  const cra = grossForCra * 0.2 + Math.max(grossForCra * 0.01, 200000)
-  const taxableIncome = Math.max(
-    annualGross - cra - annualPension - annualNhf - annualRentRelief,
-    0,
-  )
-  const bands = [
-    [300000, 0.07],
-    [300000, 0.11],
-    [500000, 0.15],
-    [500000, 0.19],
-    [1600000, 0.21],
-    [Infinity, 0.24],
-  ] as const
-  let remaining = taxableIncome
+  const totalYearlyIncome = Math.max(annualGross, 0) + Math.max(annualBonus, 0)
+  const taxExempt =
+    Math.max(annualRentRelief, 0) + Math.max(annualPension, 0) + Math.max(annualNhf, 0)
+  const chargeableIncome = Math.max(totalYearlyIncome - taxExempt, 0)
+
   let annualTax = 0
-  for (const [band, rate] of bands) {
-    if (remaining <= 0) break
-    const taxableAtRate = Math.min(remaining, band)
-    annualTax += taxableAtRate * rate
-    remaining -= taxableAtRate
+  const q = chargeableIncome
+  if (q > 800000) {
+    const first15 = (3000000 - 800000) * 0.15
+    const next18 = (12000000 - 3000000) * 0.18
+    const next21 = (25000000 - 12000000) * 0.21
+    const next23 = (50000000 - 25000000) * 0.23
+    if (q <= 3000000) {
+      annualTax = (q - 800000) * 0.15
+    } else if (q <= 12000000) {
+      annualTax = first15 + (q - 3000000) * 0.18
+    } else if (q <= 25000000) {
+      annualTax = first15 + next18 + (q - 12000000) * 0.21
+    } else if (q <= 50000000) {
+      annualTax = first15 + next18 + next21 + (q - 25000000) * 0.23
+    } else {
+      annualTax = first15 + next18 + next21 + next23 + (q - 50000000) * 0.25
+    }
   }
-  return { annualTax, taxableIncome }
+
+  return { annualTax, taxableIncome: chargeableIncome }
 }
 
 export const getEmployeePayrollPackage = (
   employee?: Partial<Employee> | null,
-  opts?: { annualRentRelief?: number },
+  opts?: { annualRentRelief?: number; annualBonus?: number },
 ) => {
   const employmentType = (employee?.employment_type || "").toLowerCase()
   const isContract = employmentType === "contract"
@@ -135,10 +144,7 @@ export const getEmployeePayrollPackage = (
       annualBasic = annualGrossFromProfile
       annualHousing = annualTransport = annualMeal = annualOther = 0
     } else {
-      // Authoritative split — mirrors the backend payslip generator
-      // (docs/backend-payslip-calculation-brief.md). Always derive all four
-      // lines from gross_salary so the frontend view matches the server PDF
-      // and the printed (40/20/9/31) labels reflect the actual ratios.
+      // Authoritative split — mirrors IT BREAKDOWN PAYROLL.xlsx / backend
       annualBasic = annualGrossFromProfile * 0.4
       annualHousing = annualGrossFromProfile * 0.2
       annualTransport = annualGrossFromProfile * 0.09
@@ -149,25 +155,38 @@ export const getEmployeePayrollPackage = (
 
   const annualAllowances = annualHousing + annualTransport + annualMeal + annualOther
   const annualGross = annualGrossFromProfile || annualBasic + annualAllowances
-  const annualPension = isContract ? 0 : (annualBasic + annualHousing + annualTransport) * 0.08
-  const annualNhf = isContract ? 0 : annualBasic * 0.025
+  const annualBonus = isContract ? 0 : Math.max(opts?.annualBonus || 0, 0)
+  // Excel: pension = 8% × 69% × K (year gross + yearly bonus); NHF = 2.5% × 40% × H (gross only)
+  const annualPension = isContract ? 0 : 0.08 * 0.69 * (annualGross + annualBonus)
+  const annualNhf = isContract ? 0 : annualGross * 0.4 * 0.025
+  const annualPensionEmployer = isContract ? 0 : 0.1 * 0.69 * annualGross
   const annualRentRelief = isContract ? 0 : Math.max(opts?.annualRentRelief || 0, 0)
   const baseline = isContract
     ? { annualTax: annualGross * 0.05, taxableIncome: annualGross }
-    : calculateAnnualPaye(annualGross, annualPension, annualNhf, 0)
+    : calculateAnnualPaye(annualGross, annualPension, annualNhf, 0, annualBonus)
   const { annualTax, taxableIncome } = isContract
     ? baseline
-    : calculateAnnualPaye(annualGross, annualPension, annualNhf, annualRentRelief)
+    : calculateAnnualPaye(annualGross, annualPension, annualNhf, annualRentRelief, annualBonus)
   const annualRentReliefSaving = Math.max(baseline.annualTax - annualTax, 0)
+
+  // Round each statutory line to kobo first so PAYE+Pension+NHF = Total and Net adds up.
+  const monthlyGrossRounded = roundMoney(annualGross / 12)
+  const monthlyPaye = roundMoney(annualTax / 12)
+  const monthlyPension = roundMoney(annualPension / 12)
+  const monthlyNhf = roundMoney(annualNhf / 12)
+  const monthlyStatutory = roundMoney(monthlyPaye + monthlyPension + monthlyNhf)
+  const monthlyNet = roundMoney(monthlyGrossRounded - monthlyStatutory)
 
   return {
     annualGross: roundMoney(annualGross),
+    annualBonus: roundMoney(annualBonus),
     annualBasic: roundMoney(annualBasic),
     annualHousing: roundMoney(annualHousing),
     annualTransport: roundMoney(annualTransport),
     annualMeal: roundMoney(annualMeal),
     annualOther: roundMoney(annualOther),
     annualPension: roundMoney(annualPension),
+    annualPensionEmployer: roundMoney(annualPensionEmployer),
     annualNhf: roundMoney(annualNhf),
     annualTax: roundMoney(annualTax),
     annualTaxableIncome: roundMoney(taxableIncome),
@@ -176,10 +195,13 @@ export const getEmployeePayrollPackage = (
     monthlyTransport: roundMoney(annualTransport / 12),
     monthlyMeal: roundMoney(annualMeal / 12),
     monthlyOther: roundMoney(annualOther / 12),
-    monthlyGross: roundMoney(annualGross / 12),
-    monthlyPension: roundMoney(annualPension / 12),
-    monthlyNhf: roundMoney(annualNhf / 12),
-    monthlyPaye: roundMoney(annualTax / 12),
+    monthlyGross: monthlyGrossRounded,
+    monthlyPension,
+    monthlyNhf,
+    monthlyPaye,
+    monthlyPensionEmployer: roundMoney(annualPensionEmployer / 12),
+    monthlyStatutory,
+    monthlyNet,
     annualRentRelief: roundMoney(annualRentRelief),
     monthlyRentRelief: roundMoney(annualRentRelief / 12),
     annualRentReliefSaving: roundMoney(annualRentReliefSaving),
@@ -203,10 +225,6 @@ export const normalizePayrollRecord = (
     (employee as any)?.employee_code,
   ]
   const period = (record as any).pay_period ?? (record as any).payPeriod ?? (record as any).period
-  const annualRentRelief = getAnnualRentRelief(empIds, period)
-  const pkg = getEmployeePayrollPackage(employee || (record as any).employee, { annualRentRelief })
-  if (pkg.annualGross === 0) return record
-
   const overtime = toMoneyNumber((record as any).overtime)
   const bonus = toMoneyNumber((record as any).bonus)
   const commission = toMoneyNumber((record as any).commission)
@@ -215,6 +233,13 @@ export const normalizePayrollRecord = (
   // treated as the source of truth, so ignore record-level other_deductions
   // here to keep the My Payslips list net pay in sync with the detail view.
   const otherDeductions = 0
+  const annualRentRelief = getAnnualRentRelief(empIds, period)
+  const pkg = getEmployeePayrollPackage(employee || (record as any).employee, {
+    annualRentRelief,
+    annualBonus: bonus * 12,
+  })
+  if (pkg.annualGross === 0) return record
+
   const recordNhfRaw = (record as any).nhf
   const optedOut = isNhfOptedOut(empIds, period)
   const nhf = optedOut
@@ -222,9 +247,11 @@ export const normalizePayrollRecord = (
     : recordNhfRaw !== undefined && recordNhfRaw !== null
       ? toMoneyNumber(recordNhfRaw)
       : pkg.monthlyNhf
-  const grossPay = pkg.monthlyGross + overtime + bonus + commission
+  const grossPay = roundMoney(pkg.monthlyGross + overtime + bonus + commission)
   const totalAllowances = pkg.monthlyHousing + pkg.monthlyTransport + pkg.monthlyMeal + pkg.monthlyOther
-  const totalDeductions = pkg.monthlyPaye + pkg.monthlyPension + nhf + otherDeductions
+  // Prefer Excel-style statutory total, then add other deductions
+  const statutory = roundMoney(pkg.monthlyPaye + pkg.monthlyPension + nhf)
+  const totalDeductions = roundMoney(statutory + otherDeductions)
 
   return {
     ...record,
@@ -240,8 +267,8 @@ export const normalizePayrollRecord = (
     rent_relief_saving: pkg.monthlyRentReliefSaving,
     pension_employee: pkg.monthlyPension,
     nhf,
-    gross_pay: roundMoney(grossPay),
-    total_deductions: roundMoney(totalDeductions),
+    gross_pay: grossPay,
+    total_deductions: totalDeductions,
     net_pay: roundMoney(grossPay - totalDeductions),
   } as PayrollRecord
 }
@@ -266,20 +293,20 @@ export const normalizePayslipDetail = (detail: any, employee?: Partial<Employee>
   ]
   const detailPeriods = [detail?.pay_period, detail?.payPeriod, detail?.period]
   const annualRentRelief = getAnnualRentRelief(detailEmpIds, detailPeriods)
-  const pkg = getEmployeePayrollPackage(employee, { annualRentRelief })
-  if (pkg.annualGross === 0) return detail
-
   const overtime = toMoneyNumber(detail?.earnings?.overtime)
   const bonus = toMoneyNumber(detail?.earnings?.bonus)
   const commission = toMoneyNumber(detail?.earnings?.commission)
+  const pkg = getEmployeePayrollPackage(employee, {
+    annualRentRelief,
+    annualBonus: bonus * 12,
+  })
+  if (pkg.annualGross === 0) return detail
+
   const otherDeductions = toMoneyNumber(detail?.deductions?.otherDeductions)
   const detailNhfRaw = detail?.deductions?.nhf
   const optedOut = isNhfOptedOut(detailEmpIds, detailPeriods)
-  const nhf = optedOut
-    ? 0
-    : detailNhfRaw !== undefined && detailNhfRaw !== null
-      ? toMoneyNumber(detailNhfRaw)
-      : pkg.monthlyNhf
+  // Always use package NHF/PAYE/pension so Excel formula wins over stale stored rows
+  const nhf = optedOut ? 0 : pkg.monthlyNhf
   const grossSalary = roundMoney(pkg.monthlyGross + overtime + bonus + commission)
   const totalDeductions = roundMoney(pkg.monthlyPaye + pkg.monthlyPension + nhf + otherDeductions)
   const netSalary = roundMoney(grossSalary - totalDeductions)

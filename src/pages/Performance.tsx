@@ -18,6 +18,13 @@ import { apiService, Employee, PerformanceReview } from '@/lib/api'
 import { SearchableSelect } from '@/components/ui/searchable-select'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { generatePerformanceReviewPdf } from '@/utils/performanceReviewPdf'
+import {
+  EMPTY_SELF_ASSESSMENT,
+  SELF_ASSESSMENT_FIELDS,
+  SELF_ASSESSMENT_REQUIRED_KEYS,
+  hydrateSelfAssessment,
+  type SelfAssessmentDraft,
+} from '@/lib/performanceFormSchema'
 
 interface Review {
   id: string
@@ -66,14 +73,13 @@ export default function Performance() {
   const [selfAssessmentOpen, setSelfAssessmentOpen] = useState(false)
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  useEffect(() => {
-    if (searchParams.get('selfAssessment')) setSelfAssessmentOpen(true)
-  }, [searchParams])
   const [manageReviewDialogOpen, setManageReviewDialogOpen] = useState(false)
   const [hrReviewDialogOpen, setHrReviewDialogOpen] = useState(false)
   const [selectedReview, setSelectedReview] = useState<Review | null>(null)
   const [employeeComment, setEmployeeComment] = useState("")
   const [selfAssessmentPeriod, setSelfAssessmentPeriod] = useState("")
+  const [selfAssessmentReviewId, setSelfAssessmentReviewId] = useState<number | null>(null)
+  const [selfAssessmentSaving, setSelfAssessmentSaving] = useState(false)
   
   // Filter states
   const [searchTerm, setSearchTerm] = useState("")
@@ -82,23 +88,8 @@ export default function Performance() {
   const [departmentFilter, setDepartmentFilter] = useState("")
   const [showFilters, setShowFilters] = useState(false)
   
-  const [selfAssessmentData, setSelfAssessmentData] = useState({
-    mainResponsibilities: "",
-    achievements: "",
-    completedGoals: "",
-    unachievedGoals: "",
-    workQualityRating: "3",
-    timeManagement: "",
-    teamCommunication: "",
-    feedbackResponse: "",
-    professionalism: "",
-    challenges: "",
-    resourcesNeeded: "",
-    skillsToLearn: "",
-    futureGoals: "",
-    teamContribution: "",
-    suggestions: "",
-    overallRating: "3"
+  const [selfAssessmentData, setSelfAssessmentData] = useState<SelfAssessmentDraft>({
+    ...EMPTY_SELF_ASSESSMENT,
   })
   const [managerNotes, setManagerNotes] = useState("")
   const [managerRating, setManagerRating] = useState("3")
@@ -342,51 +333,100 @@ export default function Performance() {
     }
   }
   
+  const openSelfAssessment = async (review: Review) => {
+    setSelfAssessmentPeriod(review.reviewPeriod)
+    setSelfAssessmentReviewId(Number(review.id))
+    setSelfAssessmentData({ ...EMPTY_SELF_ASSESSMENT })
+    setSelfAssessmentOpen(true)
+    try {
+      const full = await apiService.getPerformanceReview(review.id)
+      setSelfAssessmentData(hydrateSelfAssessment(full?.self_assessment))
+      if (full?.period) setSelfAssessmentPeriod(full.period)
+      if (full?.id) setSelfAssessmentReviewId(Number(full.id))
+    } catch (e) {
+      console.error('Failed to load self-assessment draft', e)
+    }
+  }
+
+  const handleSaveSelfAssessmentDraft = async () => {
+    if (!selfAssessmentReviewId) {
+      toast({
+        title: "No review available",
+        description: "HR must request a self-assessment before you can save a draft.",
+        variant: "destructive",
+      })
+      return
+    }
+    setSelfAssessmentSaving(true)
+    try {
+      await apiService.submitSelfAssessment(selfAssessmentReviewId, {
+        draft: true,
+        self_assessment: selfAssessmentData,
+      })
+      await fetchReviews()
+      toast({ title: "Draft saved", description: "You can return later to continue." })
+    } catch (e: any) {
+      toast({
+        title: "Draft not saved",
+        description: e?.message || "Please try again. Your changes may not be on the server.",
+        variant: "destructive",
+      })
+    } finally {
+      setSelfAssessmentSaving(false)
+    }
+  }
+
   const handleSubmitSelfAssessment = async () => {
-    // Validate required fields
-    if (!selfAssessmentPeriod || !selfAssessmentData.mainResponsibilities || !selfAssessmentData.achievements) {
+    if (!selfAssessmentPeriod || !selfAssessmentReviewId) {
       toast({
         title: "Required fields missing",
-        description: "Please enter period and required fields before submitting.",
-        variant: "destructive"
+        description: "A review period and an HR-requested review are required.",
+        variant: "destructive",
       })
       return
     }
 
-    try {
-      const saved = await apiService.createSelfAssessment({ period: selfAssessmentPeriod, self_assessment: selfAssessmentData })
-      if (saved?.id) {
-        await apiService.submitSelfAssessment(saved.id)
-      }
-      await fetchReviews()
-      toast({ title: "Self-Assessment Submitted", description: "Sent to your manager." })
-    } catch (e) {
-      toast({ title: "Submit failed", description: "Please try again.", variant: 'destructive' })
+    const missing = SELF_ASSESSMENT_REQUIRED_KEYS.filter(
+      (k) => !String(selfAssessmentData[k] || "").trim(),
+    )
+    if (missing.length) {
+      toast({
+        title: "Required fields missing",
+        description: "Please complete every self-assessment question before submitting.",
+        variant: "destructive",
+      })
       return
     }
 
-    // Reset form
-    setSelfAssessmentData({
-      mainResponsibilities: "",
-      achievements: "",
-      completedGoals: "",
-      unachievedGoals: "",
-      workQualityRating: "3",
-      timeManagement: "",
-      teamCommunication: "",
-      feedbackResponse: "",
-      professionalism: "",
-      challenges: "",
-      resourcesNeeded: "",
-      skillsToLearn: "",
-      futureGoals: "",
-      teamContribution: "",
-      suggestions: "",
-      overallRating: "3"
-    })
-    setSelfAssessmentPeriod("")
-    setSelfAssessmentOpen(false)
+    setSelfAssessmentSaving(true)
+    try {
+      await apiService.submitSelfAssessment(selfAssessmentReviewId, {
+        self_assessment: selfAssessmentData,
+      })
+      await fetchReviews()
+      toast({ title: "Self-Assessment Submitted", description: "Sent to your manager." })
+      setSelfAssessmentData({ ...EMPTY_SELF_ASSESSMENT })
+      setSelfAssessmentPeriod("")
+      setSelfAssessmentReviewId(null)
+      setSelfAssessmentOpen(false)
+    } catch (e: any) {
+      toast({
+        title: "Submit failed",
+        description: e?.message || "Please complete required fields and try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setSelfAssessmentSaving(false)
+    }
   }
+
+  useEffect(() => {
+    if (!searchParams.get('selfAssessment')) return
+    if (selfAssessmentRequest) {
+      void openSelfAssessment(selfAssessmentRequest)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, selfAssessmentRequest?.id])
 
   const handleManagerReview = async () => {
     if (!selectedReview || !managerNotes.trim() || !meetingDate) {
@@ -597,10 +637,8 @@ export default function Performance() {
           {selfAssessmentRequest && (
             <Button 
               className="bg-blue-600 hover:bg-blue-700 text-white w-full sm:w-auto"
-              onClick={() => {
-                setSelfAssessmentPeriod(selfAssessmentRequest.reviewPeriod)
-                setSelfAssessmentOpen(true)
-              }}
+              onClick={() => openSelfAssessment(selfAssessmentRequest)}
+              data-testid="open-self-assessment"
             >
               <FileText className="mr-2 h-4 w-4" />
               <span className="text-sm md:text-base">Self-Assessment</span>
@@ -1129,249 +1167,68 @@ export default function Performance() {
         </DialogContent>
       </Dialog>
 
-      {/* Self-Assessment Form Dialog */}
+      {/* Self-Assessment Form Dialog — Guide §5 */}
       <Dialog open={selfAssessmentOpen} onOpenChange={setSelfAssessmentOpen}>
-        <DialogContent className="max-w-[800px] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-[800px] max-h-[90vh] overflow-y-auto" data-testid="self-assessment-dialog">
           <DialogHeader>
-            <DialogTitle>Self-Assessment Form</DialogTitle>
+            <DialogTitle>Employee self-assessment</DialogTitle>
             <DialogDescription>
-              Complete your self-evaluation for this review period
+              Answer each question for this review period. You can save a draft and return later.
+              Structured objectives administration arrives in a later batch — summarise results against
+              agreed objectives in the narrative fields for now.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-6 py-4">
             <div className="space-y-2">
-              <Label htmlFor="sa-period">Review Period *</Label>
+              <Label htmlFor="sa-period">Review Period</Label>
               <Input
                 id="sa-period"
-                placeholder="e.g., Q4 2025 or 2025-10"
                 value={selfAssessmentPeriod}
-                onChange={(e) => setSelfAssessmentPeriod(e.target.value)}
+                readOnly
+                className="bg-muted"
               />
             </div>
-            {/* Section A: Job Performance */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-foreground border-b pb-2">Section A: Job Performance</h3>
-              
-              <div className="space-y-2">
-                <Label htmlFor="mainResponsibilities">1. What are your main responsibilities in your current position? *</Label>
+
+            {SELF_ASSESSMENT_FIELDS.map((field, index) => (
+              <div key={field.key} className="space-y-2">
+                <Label htmlFor={field.key}>
+                  {index + 1}. {field.label}
+                </Label>
                 <Textarea
-                  id="mainResponsibilities"
-                  value={selfAssessmentData.mainResponsibilities}
-                  onChange={(e) => setSelfAssessmentData({...selfAssessmentData, mainResponsibilities: e.target.value})}
-                  placeholder="Describe your main responsibilities..."
+                  id={field.key}
+                  data-testid={`self-${field.key}`}
+                  value={selfAssessmentData[field.key] || ""}
+                  onChange={(e) =>
+                    setSelfAssessmentData({
+                      ...selfAssessmentData,
+                      [field.key]: e.target.value,
+                    })
+                  }
                   className="min-h-[80px]"
                 />
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="achievements">2. What achievements are you most proud of during this review period? *</Label>
-                <Textarea
-                  id="achievements"
-                  value={selfAssessmentData.achievements}
-                  onChange={(e) => setSelfAssessmentData({...selfAssessmentData, achievements: e.target.value})}
-                  placeholder="Describe your key achievements..."
-                  className="min-h-[80px]"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="completedGoals">3. Which KPIs or tasks did you complete successfully?</Label>
-                <Textarea
-                  id="completedGoals"
-                  value={selfAssessmentData.completedGoals}
-                  onChange={(e) => setSelfAssessmentData({...selfAssessmentData, completedGoals: e.target.value})}
-                  placeholder="List completed KPIs..."
-                  className="min-h-[80px]"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="unachievedGoals">4. Were there any KPIs you did not achieve? If yes, please explain.</Label>
-                <Textarea
-                  id="unachievedGoals"
-                  value={selfAssessmentData.unachievedGoals}
-                  onChange={(e) => setSelfAssessmentData({...selfAssessmentData, unachievedGoals: e.target.value})}
-                  placeholder="Explain any unachieved KPIs..."
-                  className="min-h-[80px]"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="workQualityRating">5. How would you rate the quality and accuracy of your work?</Label>
-                <Select 
-                  value={selfAssessmentData.workQualityRating} 
-                  onValueChange={(value) => setSelfAssessmentData({...selfAssessmentData, workQualityRating: value})}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="1">1 - Poor</SelectItem>
-                    <SelectItem value="2">2 - Fair</SelectItem>
-                    <SelectItem value="3">3 - Good</SelectItem>
-                    <SelectItem value="4">4 - Very Good</SelectItem>
-                    <SelectItem value="5">5 - Excellent</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* Section B: Work Attitude & Behavior */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-foreground border-b pb-2">Section B: Work Attitude & Behavior</h3>
-              
-              <div className="space-y-2">
-                <Label htmlFor="timeManagement">6. How do you manage your time and meet deadlines?</Label>
-                <Textarea
-                  id="timeManagement"
-                  value={selfAssessmentData.timeManagement}
-                  onChange={(e) => setSelfAssessmentData({...selfAssessmentData, timeManagement: e.target.value})}
-                  placeholder="Describe your time management approach..."
-                  className="min-h-[80px]"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="teamCommunication">7. How well do you work and communicate with your team and supervisor?</Label>
-                <Textarea
-                  id="teamCommunication"
-                  value={selfAssessmentData.teamCommunication}
-                  onChange={(e) => setSelfAssessmentData({...selfAssessmentData, teamCommunication: e.target.value})}
-                  placeholder="Describe your teamwork and communication..."
-                  className="min-h-[80px]"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="feedbackResponse">8. How do you respond to feedback or constructive criticism?</Label>
-                <Textarea
-                  id="feedbackResponse"
-                  value={selfAssessmentData.feedbackResponse}
-                  onChange={(e) => setSelfAssessmentData({...selfAssessmentData, feedbackResponse: e.target.value})}
-                  placeholder="Describe how you handle feedback..."
-                  className="min-h-[80px]"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="professionalism">9. How do you demonstrate professionalism and a positive attitude at work?</Label>
-                <Textarea
-                  id="professionalism"
-                  value={selfAssessmentData.professionalism}
-                  onChange={(e) => setSelfAssessmentData({...selfAssessmentData, professionalism: e.target.value})}
-                  placeholder="Describe your professionalism..."
-                  className="min-h-[80px]"
-                />
-              </div>
-            </div>
-
-            {/* Section C: Development & Improvement */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-foreground border-b pb-2">Section C: Development & Improvement</h3>
-              
-              <div className="space-y-2">
-                <Label htmlFor="challenges">10. What challenges affected your performance during this period?</Label>
-                <Textarea
-                  id="challenges"
-                  value={selfAssessmentData.challenges}
-                  onChange={(e) => setSelfAssessmentData({...selfAssessmentData, challenges: e.target.value})}
-                  placeholder="Describe any challenges you faced..."
-                  className="min-h-[80px]"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="resourcesNeeded">11. What resources or support do you need to do your job better?</Label>
-                <Textarea
-                  id="resourcesNeeded"
-                  value={selfAssessmentData.resourcesNeeded}
-                  onChange={(e) => setSelfAssessmentData({...selfAssessmentData, resourcesNeeded: e.target.value})}
-                  placeholder="List resources or support needed..."
-                  className="min-h-[80px]"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="skillsToLearn">12. What new skills would you like to learn or improve on?</Label>
-                <Textarea
-                  id="skillsToLearn"
-                  value={selfAssessmentData.skillsToLearn}
-                  onChange={(e) => setSelfAssessmentData({...selfAssessmentData, skillsToLearn: e.target.value})}
-                  placeholder="List skills you want to develop..."
-                  className="min-h-[80px]"
-                />
-              </div>
-            </div>
-
-            {/* Section D: Future KPIs */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-foreground border-b pb-2">Section D: Future KPIs</h3>
-              
-              <div className="space-y-2">
-                <Label htmlFor="futureGoals">13. What are your key KPIs for the next review period?</Label>
-                <Textarea
-                  id="futureGoals"
-                  value={selfAssessmentData.futureGoals}
-                  onChange={(e) => setSelfAssessmentData({...selfAssessmentData, futureGoals: e.target.value})}
-                  placeholder="Describe your future KPIs..."
-                  className="min-h-[80px]"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="teamContribution">14. How do you plan to contribute to your team or department&apos;s success?</Label>
-                <Textarea
-                  id="teamContribution"
-                  value={selfAssessmentData.teamContribution}
-                  onChange={(e) => setSelfAssessmentData({...selfAssessmentData, teamContribution: e.target.value})}
-                  placeholder="Describe your planned contributions..."
-                  className="min-h-[80px]"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="suggestions">15. Do you have any suggestions for improving workplace processes or communication?</Label>
-                <Textarea
-                  id="suggestions"
-                  value={selfAssessmentData.suggestions}
-                  onChange={(e) => setSelfAssessmentData({...selfAssessmentData, suggestions: e.target.value})}
-                  placeholder="Share your suggestions..."
-                  className="min-h-[80px]"
-                />
-              </div>
-            </div>
-
-            {/* Section E: Self-Rating */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-foreground border-b pb-2">Section E: Self-Rating</h3>
-              
-              <div className="space-y-2">
-                <Label htmlFor="overallRating">16. How would you rate your overall performance on a scale of 1–5?</Label>
-                <Select 
-                  value={selfAssessmentData.overallRating} 
-                  onValueChange={(value) => setSelfAssessmentData({...selfAssessmentData, overallRating: value})}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="1">1 - Poor</SelectItem>
-                    <SelectItem value="2">2 - Fair</SelectItem>
-                    <SelectItem value="3">3 - Good</SelectItem>
-                    <SelectItem value="4">4 - Very Good</SelectItem>
-                    <SelectItem value="5">5 - Excellent</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+            ))}
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="gap-2 sm:gap-0">
             <Button variant="outline" onClick={() => setSelfAssessmentOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSubmitSelfAssessment} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+            <Button
+              variant="secondary"
+              disabled={selfAssessmentSaving}
+              onClick={handleSaveSelfAssessmentDraft}
+              data-testid="save-self-draft"
+            >
+              Save draft
+            </Button>
+            <Button
+              onClick={handleSubmitSelfAssessment}
+              disabled={selfAssessmentSaving}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+              data-testid="submit-self-assessment"
+            >
               Submit to Manager
             </Button>
           </DialogFooter>

@@ -6,6 +6,7 @@ import {
   loadManifest,
   loginApi,
   loginUi,
+  validManagerReview,
 } from "./helpers/batch1";
 
 /**
@@ -215,15 +216,12 @@ test.describe("Batch 1 performance review independence", () => {
     const fail = await request.put(`${apiRoots()[1]}/${manifest.na_review_id}/manager-review`, {
       headers: authHeaders(managerToken),
       data: {
-        manager_review: {
+        manager_review: validManagerReview({
           ratings: "N/A",
-          performance_assessment: "",
           comments: "",
-          observations: "",
-          strengths: "x",
-          areas_for_improvement: "y",
-          recommendations: "z",
-        },
+          performance_assessment: "",
+          objective_assessments_narrative: "Narrative present but overall N/A unexplained.",
+        }),
       },
     });
     expect(fail.status()).toBe(422);
@@ -231,14 +229,12 @@ test.describe("Batch 1 performance review independence", () => {
     const ok = await request.put(`${apiRoots()[1]}/${manifest.na_review_id}/manager-review`, {
       headers: authHeaders(managerToken),
       data: {
-        manager_review: {
+        manager_review: validManagerReview({
           ratings: "N/A",
           performance_assessment: "Not applicable this cycle.",
+          objective_assessments_narrative: "Not applicable this cycle.",
           comments: "Explanation for N/A",
-          strengths: "x",
-          areas_for_improvement: "y",
-          recommendations: "z",
-        },
+        }),
       },
     });
     expect(ok.status(), await ok.text()).toBe(200);
@@ -257,14 +253,7 @@ test.describe("Batch 1 performance review independence", () => {
       {
         headers: authHeaders(managerToken),
         data: {
-          manager_review: {
-            performance_assessment: "Independent manager assessment evidence.",
-            strengths: "Delivery",
-            areas_for_improvement: "Documentation",
-            recommendations: "Coaching — manager — 2026-12-01",
-            ratings: "3",
-            comments: "MANAGER_ONLY_RATIONALE",
-          },
+          manager_review: validManagerReview(),
         },
       },
     );

@@ -1588,8 +1588,14 @@ class ApiService {
     });
   }
 
-  async submitSelfAssessment(id: number): Promise<PerformanceReview> {
-    return this.request<PerformanceReview>(`/performance/${id}/submit-self`, { method: 'PUT' });
+  async submitSelfAssessment(
+    id: number,
+    payload?: { self_assessment?: any; kpis?: any; draft?: boolean },
+  ): Promise<PerformanceReview> {
+    return this.request<PerformanceReview>(`/performance/${id}/submit-self`, {
+      method: 'PUT',
+      body: JSON.stringify(payload ?? {}),
+    });
   }
 
   async addEmployeePerformanceComment(id: number, comment: string): Promise<PerformanceReview> {
@@ -1599,10 +1605,17 @@ class ApiService {
     });
   }
 
-  async managerReview(id: number, manager_review: any): Promise<PerformanceReview> {
+  async managerReview(
+    id: number,
+    manager_review: any,
+    options?: { draft?: boolean },
+  ): Promise<PerformanceReview> {
     return this.request<PerformanceReview>(`/performance/${id}/manager-review`, {
       method: 'PUT',
-      body: JSON.stringify({ manager_review }),
+      body: JSON.stringify({
+        manager_review,
+        draft: options?.draft === true,
+      }),
     });
   }
 

@@ -18,6 +18,14 @@ import { ArrowLeft, ArrowRight, CheckCircle2, Circle, Loader2, Lock } from "luci
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import apiService from "@/lib/api";
+import { PERFORMANCE_RATING_OPTIONS, isNaRating } from "@/lib/performanceRatings";
+import {
+  EMPTY_MANAGER_ASSESSMENT,
+  MANAGER_SUBMIT_REQUIRED_KEYS,
+  hydrateManagerAssessment,
+  toManagerReviewPayload,
+} from "@/lib/performanceFormSchema";
+import { Input } from "@/components/ui/input";
 
 const ACK_STATEMENT =
   "I confirm that I have received/discussed this review. This does not necessarily mean that I agree with every assessment or rating.";
@@ -40,13 +48,12 @@ const LEGACY: Record<string, string> = {
 };
 
 /** Guide §7 rating scale — shared labels for manager/HR selects. */
-const RATING_OPTIONS: Array<{ value: string; label: string }> = [
-  { value: "5", label: "5 – Exceptional" },
-  { value: "4", label: "4 – Exceeds Expectations" },
-  { value: "3", label: "3 – Meets Expectations" },
-  { value: "2", label: "2 – Partially Meets Expectations" },
-  { value: "1", label: "1 – Does Not Meet Expectations" },
-  { value: "N/A", label: "N/A – Not Applicable" },
+const RATING_OPTIONS = PERFORMANCE_RATING_OPTIONS;
+
+const YES_NO_NA = [
+  { value: "Yes", label: "Yes" },
+  { value: "No", label: "No" },
+  { value: "Not Applicable", label: "Not Applicable" },
 ];
 
 /**
@@ -54,18 +61,153 @@ const RATING_OPTIONS: Array<{ value: string; label: string }> = [
  * Does not ask about the employee's self-assessment while that record is sealed.
  * `aliases` cover values saved by earlier versions so older reviews still display.
  */
-const MANAGER_FIELDS: Array<{ key: string; label: string; type?: "text" | "rating"; aliases?: string[] }> = [
-  { key: "performance_assessment", label: "Based on agreed objectives and observed performance, what is your assessment of the employee?", aliases: ["observations"] },
-  { key: "strengths", label: "Key strengths and most valuable contributions", aliases: ["key_strengths"] },
-  { key: "areas_for_improvement", label: "Most important performance gaps or improvement areas" },
-  { key: "recommendations", label: "Development action recommended (action, owner, target date)", aliases: ["development_actions"] },
-  { key: "ratings", label: "Overall manager rating", type: "rating", aliases: ["overall_rating", "rating"] },
-  { key: "comments", label: "Overall rating rationale and supporting evidence", aliases: ["overall_comments", "observations"] },
+type ManagerField = {
+  key: string;
+  label: string;
+  type?: "text" | "rating" | "yes_no_na" | "yes_no" | "date";
+  aliases?: string[];
+  section?: string;
+};
+
+const MANAGER_FIELDS: ManagerField[] = [
+  {
+    key: "objectives_clear",
+    label: "Are objectives clear, relevant to the role, and linked to team/business priorities?",
+    type: "yes_no_na",
+    section: "A. Objective agreement",
+  },
+  {
+    key: "measures_clear",
+    label: "Are measures, targets and due dates clear?",
+    type: "yes_no_na",
+    section: "A. Objective agreement",
+  },
+  {
+    key: "material_changes_recorded",
+    label: "Were material changes to objectives or dependencies recorded (or Not Applicable)?",
+    type: "yes_no_na",
+    section: "A. Objective agreement",
+  },
+  {
+    key: "objective_assessments_narrative",
+    label:
+      "For each agreed objective: description, target/measure, actual result and evidence, rating (1–5 or N/A), what went well, reasons if not fully achieved, dependency/priority changes, and continue/stop/do differently. (Structured objectives arrive in Batch 4 — capture as narrative for now.)",
+    aliases: ["performance_assessment", "observations"],
+    section: "B. Assessment of each objective",
+  },
+  {
+    key: "behaviour_skills_rating",
+    label: "Application of the skills and knowledge required for the role",
+    type: "rating",
+    section: "C. Role effectiveness and behaviours",
+  },
+  {
+    key: "behaviour_skills_example",
+    label: "Supporting example — skills and knowledge",
+    section: "C. Role effectiveness and behaviours",
+  },
+  {
+    key: "behaviour_collaboration_rating",
+    label: "Collaboration and contribution to team outcomes",
+    type: "rating",
+    section: "C. Role effectiveness and behaviours",
+  },
+  {
+    key: "behaviour_collaboration_example",
+    label: "Supporting example — collaboration",
+    section: "C. Role effectiveness and behaviours",
+  },
+  {
+    key: "behaviour_ownership_rating",
+    label: "Ownership, professionalism, integrity and compliance",
+    type: "rating",
+    section: "C. Role effectiveness and behaviours",
+  },
+  {
+    key: "behaviour_ownership_example",
+    label: "Supporting example — ownership and professionalism",
+    section: "C. Role effectiveness and behaviours",
+  },
+  {
+    key: "behaviour_learning_rating",
+    label: "Response to feedback, learning and development",
+    type: "rating",
+    section: "C. Role effectiveness and behaviours",
+  },
+  {
+    key: "behaviour_learning_example",
+    label: "Supporting example — learning and development",
+    section: "C. Role effectiveness and behaviours",
+  },
+  {
+    key: "strengths",
+    label: "Key strengths and valuable contributions",
+    aliases: ["key_strengths"],
+    section: "D. Overall review and next steps",
+  },
+  {
+    key: "areas_for_improvement",
+    label: "Important performance gaps or improvement areas",
+    section: "D. Overall review and next steps",
+  },
+  {
+    key: "ratings",
+    label: "Overall manager rating (1–5; N/A only with explanation)",
+    type: "rating",
+    aliases: ["overall_rating", "rating"],
+    section: "D. Overall review and next steps",
+  },
+  {
+    key: "comments",
+    label: "Overall rating rationale and supporting evidence",
+    aliases: ["overall_comments", "observations"],
+    section: "D. Overall review and next steps",
+  },
+  {
+    key: "next_priorities",
+    label: "Priorities for the next six months",
+    section: "D. Overall review and next steps",
+  },
+  {
+    key: "development_action",
+    label: "Recommended development action",
+    aliases: ["recommendations", "development_actions"],
+    section: "D. Overall review and next steps",
+  },
+  {
+    key: "development_owner",
+    label: "Development action owner",
+    section: "D. Overall review and next steps",
+  },
+  {
+    key: "development_target_date",
+    label: "Development action target date",
+    type: "date",
+    section: "D. Overall review and next steps",
+  },
+  {
+    key: "manager_support",
+    label: "Support or action the manager will provide",
+    section: "D. Overall review and next steps",
+  },
+  {
+    key: "pip_recommended",
+    label: "Recommend a formal performance improvement plan?",
+    type: "yes_no",
+    section: "D. Overall review and next steps",
+  },
+  {
+    key: "pip_reason",
+    label: "Reason for PIP recommendation (required if Yes)",
+    section: "D. Overall review and next steps",
+  },
 ];
 
 /** Read-only display may still show legacy self_assessment_accuracy on older records. */
-const MANAGER_DISPLAY_FIELDS: Array<{ key: string; label: string; aliases?: string[] }> = [
+const MANAGER_DISPLAY_FIELDS: ManagerField[] = [
   ...MANAGER_FIELDS,
+  { key: "performance_assessment", label: "Performance assessment (legacy)", aliases: ["observations"] },
+  { key: "recommendations", label: "Recommendations (legacy)", aliases: ["development_actions"] },
   { key: "self_assessment_accuracy", label: "Self-assessment accuracy (legacy)", aliases: ["self_rating_accuracy"] },
 ];
 
@@ -154,38 +296,79 @@ function StructuredForm({
   values,
   onChange,
 }: {
-  fields: typeof MANAGER_FIELDS;
+  fields: ManagerField[];
   values: Record<string, string>;
   onChange: (key: string, value: string) => void;
 }) {
+  let lastSection = "";
   return (
     <div className="space-y-5">
-      {fields.map((f) => (
-        <div key={f.key} className="space-y-2">
-          <Label htmlFor={f.key}>{f.label}</Label>
-          {f.type === "rating" ? (
-            <Select value={values[f.key] || ""} onValueChange={(v) => onChange(f.key, v)}>
-              <SelectTrigger id={f.key} className="max-w-xs">
-                <SelectValue placeholder="Select a rating" />
-              </SelectTrigger>
-              <SelectContent>
-                {RATING_OPTIONS.map((r) => (
-                  <SelectItem key={r.value} value={r.value}>
-                    {r.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          ) : (
-            <Textarea
-              id={f.key}
-              rows={3}
-              value={values[f.key] || ""}
-              onChange={(e) => onChange(f.key, e.target.value)}
-            />
-          )}
-        </div>
-      ))}
+      {fields.map((f) => {
+        const showSection = f.section && f.section !== lastSection;
+        if (f.section) lastSection = f.section;
+        return (
+          <div key={f.key} className="space-y-2">
+            {showSection && (
+              <h3 className="text-sm font-semibold text-foreground border-b pb-1 pt-2">{f.section}</h3>
+            )}
+            <Label htmlFor={f.key}>{f.label}</Label>
+            {f.type === "rating" ? (
+              <Select value={values[f.key] || ""} onValueChange={(v) => onChange(f.key, v)}>
+                <SelectTrigger id={f.key} className="max-w-md" data-testid={`mgr-${f.key}`}>
+                  <SelectValue placeholder="Select a rating" />
+                </SelectTrigger>
+                <SelectContent>
+                  {RATING_OPTIONS.map((r) => (
+                    <SelectItem key={r.value} value={r.value}>
+                      {r.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : f.type === "yes_no_na" ? (
+              <Select value={values[f.key] || ""} onValueChange={(v) => onChange(f.key, v)}>
+                <SelectTrigger id={f.key} className="max-w-xs" data-testid={`mgr-${f.key}`}>
+                  <SelectValue placeholder="Select" />
+                </SelectTrigger>
+                <SelectContent>
+                  {YES_NO_NA.map((r) => (
+                    <SelectItem key={r.value} value={r.value}>
+                      {r.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : f.type === "yes_no" ? (
+              <Select value={values[f.key] || ""} onValueChange={(v) => onChange(f.key, v)}>
+                <SelectTrigger id={f.key} className="max-w-xs" data-testid={`mgr-${f.key}`}>
+                  <SelectValue placeholder="Select" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Yes">Yes</SelectItem>
+                  <SelectItem value="No">No</SelectItem>
+                </SelectContent>
+              </Select>
+            ) : f.type === "date" ? (
+              <Input
+                id={f.key}
+                type="date"
+                className="max-w-xs"
+                data-testid={`mgr-${f.key}`}
+                value={values[f.key] || ""}
+                onChange={(e) => onChange(f.key, e.target.value)}
+              />
+            ) : (
+              <Textarea
+                id={f.key}
+                rows={3}
+                data-testid={`mgr-${f.key}`}
+                value={values[f.key] || ""}
+                onChange={(e) => onChange(f.key, e.target.value)}
+              />
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -258,10 +441,8 @@ export default function PerformanceReviewDetail() {
   const selfSealed = !!review?.self_assessment_sealed;
   const managerSealed = !!review?.manager_review_sealed;
   const hrSealed = !!review?.hr_review_sealed;
-  const managerDone =
-    status === "hr_review" ||
-    status === "completed" ||
-    (!!review?.manager_review && !managerSealed);
+  // Draft manager_review JSON must not lock the form — only HR-stage submission does.
+  const managerDone = status === "hr_review" || status === "completed";
   const hrDone = status === "completed";
 
   const discussionRecorded = !!review?.discussion_completed_at;
@@ -303,18 +484,12 @@ export default function PerformanceReviewDetail() {
   // Prefill any answers already saved, so reopening the review keeps them.
   useEffect(() => {
     if (!review) return;
-    const mr = typeof review.manager_review === "object" ? review.manager_review : review;
+    const mr =
+      typeof review.manager_review === "object" && review.manager_review
+        ? review.manager_review
+        : {};
     const hr = typeof review.hr_review === "object" && review.hr_review ? review.hr_review : review;
-    setManagerValues((prev) => {
-      const next = { ...prev };
-      MANAGER_FIELDS.forEach((f) => {
-        if (!next[f.key]) {
-          const v = pickAnswer(mr, f);
-          if (v) next[f.key] = v;
-        }
-      });
-      return next;
-    });
+    setManagerValues(hydrateManagerAssessment(mr));
     setHrValues((prev) => {
       const next = { ...prev };
       HR_FIELDS.forEach((f) => {
@@ -341,19 +516,33 @@ export default function PerformanceReviewDetail() {
     }
   };
 
+  const saveManagerDraft = () => {
+    const payload = toManagerReviewPayload({
+      ...EMPTY_MANAGER_ASSESSMENT,
+      ...managerValues,
+    });
+    act(
+      () => apiService.managerReview(review.id, payload, { draft: true }),
+      "Manager assessment draft saved",
+    );
+  };
+
   const submitManager = () => {
-    const missing = MANAGER_FIELDS.filter((f) => !String(managerValues[f.key] || "").trim());
+    const missing = MANAGER_SUBMIT_REQUIRED_KEYS.filter(
+      (k) => !String(managerValues[k] || "").trim(),
+    );
     if (missing.length) {
       toast({
         title: "Please complete every question",
-        description: `Still to answer: ${missing.map((m) => m.label).join(", ")}`,
+        description: `Still to answer: ${missing.length} required field(s).`,
         variant: "destructive",
       });
       return;
     }
-    const rating = String(managerValues.ratings || "").trim().toUpperCase();
-    if (rating === "N/A" || rating === "NA") {
-      const explanation = String(managerValues.comments || managerValues.performance_assessment || "").trim();
+    if (isNaRating(managerValues.ratings)) {
+      const explanation = String(
+        managerValues.comments || managerValues.objective_assessments_narrative || "",
+      ).trim();
       if (!explanation) {
         toast({
           title: "N/A requires an explanation",
@@ -363,7 +552,37 @@ export default function PerformanceReviewDetail() {
         return;
       }
     }
-    act(() => apiService.managerReview(review.id, managerValues), "Sent to HR for final review");
+    for (const [ratingKey, exampleKey] of [
+      ["behaviour_skills_rating", "behaviour_skills_example"],
+      ["behaviour_collaboration_rating", "behaviour_collaboration_example"],
+      ["behaviour_ownership_rating", "behaviour_ownership_example"],
+      ["behaviour_learning_rating", "behaviour_learning_example"],
+    ] as const) {
+      if (isNaRating(managerValues[ratingKey]) && !String(managerValues[exampleKey] || "").trim()) {
+        toast({
+          title: "N/A requires an explanation",
+          description: "Provide a supporting example when a behaviour rating is N/A.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+    if (
+      String(managerValues.pip_recommended || "").toLowerCase() === "yes" &&
+      !String(managerValues.pip_reason || "").trim()
+    ) {
+      toast({
+        title: "PIP reason required",
+        description: "Explain why a formal performance improvement plan is recommended.",
+        variant: "destructive",
+      });
+      return;
+    }
+    const payload = toManagerReviewPayload({
+      ...EMPTY_MANAGER_ASSESSMENT,
+      ...managerValues,
+    });
+    act(() => apiService.managerReview(review.id, payload), "Sent to HR for final review");
   };
 
   const submitHr = () => {
@@ -587,9 +806,19 @@ export default function PerformanceReviewDetail() {
                       values={managerValues}
                       onChange={(k, v) => setManagerValues((p) => ({ ...p, [k]: v }))}
                     />
-                    <Button disabled={saving} onClick={submitManager}>
-                      {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Submit assessment to HR
-                    </Button>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        variant="secondary"
+                        disabled={saving}
+                        onClick={saveManagerDraft}
+                        data-testid="save-manager-draft"
+                      >
+                        {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Save draft
+                      </Button>
+                      <Button disabled={saving} onClick={submitManager} data-testid="submit-manager-assessment">
+                        {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Submit assessment to HR
+                      </Button>
+                    </div>
                   </>
                 ) : managerSealed ? (
                   <p className="text-sm text-muted-foreground rounded-md border border-dashed p-4">

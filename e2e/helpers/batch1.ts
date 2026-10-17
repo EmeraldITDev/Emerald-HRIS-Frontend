@@ -14,6 +14,9 @@ export type Batch1Manifest = {
   review_id: number;
   na_review_id: number;
   discussion_review_id?: number;
+  draft_self_review_id?: number;
+  draft_manager_review_id?: number;
+  historical_review_id?: number;
   users: {
     employee: { email: string; id: number };
     manager: { email: string; id: number };
@@ -22,6 +25,53 @@ export type Batch1Manifest = {
     hr: { email: string; id: number };
   };
 };
+
+/** Full guide §6 manager payload for Batch 3 validation (also used by Batch 1 submit). */
+export function validManagerReview(overrides: Record<string, string> = {}) {
+  return {
+    objectives_clear: "Yes",
+    measures_clear: "Yes",
+    material_changes_recorded: "Not Applicable",
+    objective_assessments_narrative: "Objective delivery met agreed targets with evidence.",
+    performance_assessment: "Independent manager assessment evidence.",
+    behaviour_skills_rating: "3",
+    behaviour_skills_example: "Applied core skills on assigned work.",
+    behaviour_collaboration_rating: "3",
+    behaviour_collaboration_example: "Collaborated with the team on delivery.",
+    behaviour_ownership_rating: "3",
+    behaviour_ownership_example: "Owned assigned work through to completion.",
+    behaviour_learning_rating: "3",
+    behaviour_learning_example: "Acted on prior feedback.",
+    strengths: "Delivery",
+    areas_for_improvement: "Documentation",
+    recommendations: "Coaching — manager — 2026-12-01",
+    ratings: "3",
+    comments: "MANAGER_ONLY_RATIONALE",
+    next_priorities: "H2 priorities",
+    development_action: "Coaching",
+    development_owner: "Manager",
+    development_target_date: "2026-12-01",
+    manager_support: "Weekly check-ins",
+    pip_recommended: "No",
+    ...overrides,
+  };
+}
+
+export function completeSelfAssessment(overrides: Record<string, string> = {}) {
+  return {
+    achievements_impact: "Shipped reporting dashboard; reduced manual effort.",
+    objective_results: "Obj1 target 100% — achieved 110% with evidence.",
+    not_fully_achieved: "Obj2 delayed due to vendor lead time.",
+    control_vs_external: "Vendor delay external; documentation gaps within control.",
+    collaboration_example: "Paired with Finance to reconcile monthly packs.",
+    ownership_professionalism: "Owned incidents; followed policies.",
+    skills_applied: "SQL and stakeholder facilitation.",
+    improvement_one_thing: "Earlier escalation of vendor risks.",
+    support_needed: "BI training and clearer priority decisions.",
+    next_priorities: "Stabilise reporting; mentor junior analyst.",
+    ...overrides,
+  };
+}
 
 export function loadManifest(): Batch1Manifest {
   const manifestPath = path.join(backendRoot, "database/e2e_batch1_manifest.json");

@@ -11,6 +11,8 @@
     "preview": "vite preview",
     "test:e2e": "playwright test",
     "test:e2e:batch1": "playwright test e2e/batch1-independence.spec.ts",
+    "test:e2e:batch2": "playwright test e2e/batch2-discussion-acknowledgement.spec.ts",
+    "test:e2e:performance": "playwright test e2e/batch1-independence.spec.ts e2e/batch2-discussion-acknowledgement.spec.ts",
     "test:e2e:report": "playwright show-report"
   },
   "dependencies": {

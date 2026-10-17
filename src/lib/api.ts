@@ -1571,7 +1571,14 @@ class ApiService {
   /** Single review with workflow + form schema metadata. */
   async getPerformanceReview(id: number | string): Promise<any> {
     const res: any = await this.request<any>(`/performance/${id}`);
-    return res?.data ?? res;
+    if (res?.data && typeof res.data === "object") {
+      return {
+        ...res.data,
+        workflow: res.workflow,
+        form_schema: res.form_schema,
+      };
+    }
+    return res;
   }
 
   async createSelfAssessment(data: { period: string; self_assessment: any }): Promise<PerformanceReview> {
@@ -1606,17 +1613,35 @@ class ApiService {
     });
   }
 
-  async markPerformanceDiscussed(id: number, meeting_notes?: string): Promise<PerformanceReview> {
+  async markPerformanceDiscussed(
+    id: number,
+    payload: {
+      discussion_held: boolean;
+      discussion_summary?: string;
+      agreed_actions?: string;
+      meeting_notes?: string;
+      meeting_at?: string;
+    },
+  ): Promise<PerformanceReview> {
     return this.request<PerformanceReview>(`/performance/${id}/discussed`, {
       method: 'PUT',
-      body: JSON.stringify({ meeting_notes }),
+      body: JSON.stringify(payload),
     });
   }
 
-  async signPerformance(id: number, actor: 'employee' | 'manager'): Promise<PerformanceReview> {
+  async signPerformance(
+    id: number,
+    actor: 'employee' | 'manager',
+    acknowledgement?: {
+      acknowledged?: boolean;
+      comments?: string;
+      disagrees?: boolean;
+      disagreement_explanation?: string;
+    },
+  ): Promise<PerformanceReview> {
     return this.request<PerformanceReview>(`/performance/${id}/sign`, {
       method: 'PUT',
-      body: JSON.stringify({ actor }),
+      body: JSON.stringify({ actor, ...(acknowledgement || {}) }),
     });
   }
 

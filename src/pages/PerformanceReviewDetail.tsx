@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -17,6 +18,9 @@ import { ArrowLeft, ArrowRight, CheckCircle2, Circle, Loader2, Lock } from "luci
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import apiService from "@/lib/api";
+
+const ACK_STATEMENT =
+  "I confirm that I have received/discussed this review. This does not necessarily mean that I agree with every assessment or rating.";
 
 const STAGES: Array<{ key: string; label: string }> = [
   { key: "draft", label: "Created" },
@@ -199,6 +203,13 @@ export default function PerformanceReviewDetail() {
   const [step, setStep] = useState(0);
   const [managerValues, setManagerValues] = useState<Record<string, string>>({});
   const [hrValues, setHrValues] = useState<Record<string, string>>({});
+  const [discussionHeld, setDiscussionHeld] = useState(false);
+  const [discussionSummary, setDiscussionSummary] = useState("");
+  const [agreedActions, setAgreedActions] = useState("");
+  const [ackChecked, setAckChecked] = useState(false);
+  const [ackComments, setAckComments] = useState("");
+  const [disagrees, setDisagrees] = useState<"yes" | "no" | "">("");
+  const [disagreementExplanation, setDisagreementExplanation] = useState("");
 
   const load = async () => {
     if (!id) return;
@@ -207,6 +218,20 @@ export default function PerformanceReviewDetail() {
     try {
       const data = await apiService.getPerformanceReview(id);
       setReview(data);
+      if (data?.discussion_completed_at) {
+        setDiscussionHeld(true);
+        const notes = String(data.meeting_notes || "");
+        const parts = notes.split(/\n\nAgreed actions:\n/);
+        setDiscussionSummary(parts[0] || "");
+        setAgreedActions(parts[1] || "");
+      }
+      const ack = data?.employee_acknowledgement;
+      if (ack && typeof ack === "object") {
+        setAckChecked(!!ack.acknowledged);
+        setAckComments(String(ack.comments || ""));
+        setDisagrees(ack.disagrees ? "yes" : "no");
+        setDisagreementExplanation(String(ack.disagreement_explanation || ""));
+      }
     } catch (e: any) {
       setReview(null);
       setLoadError(e?.message || "We couldn't reach the server.");
@@ -239,17 +264,26 @@ export default function PerformanceReviewDetail() {
     (!!review?.manager_review && !managerSealed);
   const hrDone = status === "completed";
 
+  const discussionRecorded = !!review?.discussion_completed_at;
   const canEditManager =
     (isManager || isHr) &&
     !managerDone &&
     (status === "self_assessment_submitted" || status === "manager_review");
-  const canEditHr = isHr && !hrDone && (managerDone || status === "manager_review" || status === "hr_review");
+  const canRecordDiscussion =
+    !!review?.workflow?.can_record_discussion ||
+    ((isManager || isHr) && (status === "hr_review" || status === "completed") && !discussionRecorded);
+  const canEditHr = isHr && !hrDone && status === "hr_review";
+  const canAcknowledge =
+    !!review?.workflow?.can_acknowledge ||
+    (hrDone && isOwner && discussionRecorded && !review?.employee_acknowledgement?.acknowledged);
 
   const steps = useMemo(
     () => [
       { key: "self", label: "Employee self-assessment" },
       { key: "manager", label: "Line manager assessment" },
+      { key: "discussion", label: "Discussion" },
       { key: "hr", label: "HR final review" },
+      { key: "ack", label: "Acknowledgement" },
     ],
     [],
   );
@@ -258,10 +292,13 @@ export default function PerformanceReviewDetail() {
   useEffect(() => {
     if (!review) return;
     if (canEditManager) setStep(1);
-    else if (canEditHr) setStep(2);
+    else if (canRecordDiscussion && !discussionRecorded) setStep(2);
+    else if (canEditHr) setStep(3);
+    else if (canAcknowledge) setStep(4);
+    else if (hrDone) setStep(4);
     else setStep(0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [review?.id, status]);
+  }, [review?.id, status, discussionRecorded]);
 
   // Prefill any answers already saved, so reopening the review keeps them.
   useEffect(() => {
@@ -330,6 +367,15 @@ export default function PerformanceReviewDetail() {
   };
 
   const submitHr = () => {
+    if (!discussionRecorded) {
+      toast({
+        title: "Discussion required",
+        description: "Record the performance discussion before HR finalisation.",
+        variant: "destructive",
+      });
+      setStep(2);
+      return;
+    }
     const missing = HR_FIELDS.filter((f) => !String(hrValues[f.key] || "").trim());
     if (missing.length) {
       toast({
@@ -340,6 +386,64 @@ export default function PerformanceReviewDetail() {
       return;
     }
     act(() => apiService.completePerformanceReview(review.id, hrValues), "Review completed");
+  };
+
+  const submitDiscussion = () => {
+    if (!discussionHeld) {
+      toast({
+        title: "Confirm discussion",
+        description: "Mark that the performance discussion has taken place.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!discussionSummary.trim()) {
+      toast({
+        title: "Summary required",
+        description: "Provide a summary of the discussion and agreed actions.",
+        variant: "destructive",
+      });
+      return;
+    }
+    act(
+      () =>
+        apiService.markPerformanceDiscussed(review.id, {
+          discussion_held: true,
+          discussion_summary: discussionSummary.trim(),
+          agreed_actions: agreedActions.trim() || undefined,
+        }),
+      "Discussion recorded",
+    );
+  };
+
+  const submitAcknowledgement = () => {
+    if (!ackChecked) {
+      toast({
+        title: "Acknowledgement required",
+        description: "Confirm that you have received/discussed this review.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!disagrees) {
+      toast({
+        title: "Disagreement choice required",
+        description: "Select Yes or No for recording a disagreement.",
+        variant: "destructive",
+      });
+      return;
+    }
+    act(
+      () =>
+        apiService.signPerformance(review.id, "employee", {
+          acknowledged: true,
+          comments: ackComments.trim() || undefined,
+          disagrees: disagrees === "yes",
+          disagreement_explanation:
+            disagrees === "yes" ? disagreementExplanation.trim() || undefined : undefined,
+        }),
+      "Acknowledgement saved",
+    );
   };
 
   return (
@@ -507,7 +611,7 @@ export default function PerformanceReviewDetail() {
                     Back
                   </Button>
                   <Button variant="outline" size="sm" className="gap-2" onClick={() => setStep(2)}>
-                    Next: HR review <ArrowRight className="h-4 w-4" />
+                    Next: discussion <ArrowRight className="h-4 w-4" />
                   </Button>
                 </div>
               </CardContent>
@@ -517,17 +621,99 @@ export default function PerformanceReviewDetail() {
           {step === 2 && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">HR final review</CardTitle>
+                <CardTitle className="text-base">Review discussion</CardTitle>
                 <CardDescription>
-                  {canEditHr
-                    ? "Complete the final assessment and close the review."
-                    : hrDone
-                      ? "HR's final assessment."
-                      : "Available once the line manager has submitted."}
+                  {canRecordDiscussion && !discussionRecorded
+                    ? "Record whether the performance discussion has taken place and summarise agreed actions."
+                    : discussionRecorded
+                      ? "Discussion record saved."
+                      : "Available after both assessments have been submitted."}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-5">
-                {canEditHr ? (
+                {canRecordDiscussion && !discussionRecorded ? (
+                  <>
+                    <div className="flex items-start gap-3">
+                      <Checkbox
+                        id="discussion-held"
+                        checked={discussionHeld}
+                        onCheckedChange={(v) => setDiscussionHeld(v === true)}
+                      />
+                      <Label htmlFor="discussion-held" className="leading-snug">
+                        Has the performance discussion taken place? (Yes)
+                      </Label>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="discussion-summary">Manager summary of the discussion</Label>
+                      <Textarea
+                        id="discussion-summary"
+                        rows={4}
+                        value={discussionSummary}
+                        onChange={(e) => setDiscussionSummary(e.target.value)}
+                        placeholder="Summarise the discussion outcomes…"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="agreed-actions">Agreed next steps / actions</Label>
+                      <Textarea
+                        id="agreed-actions"
+                        rows={3}
+                        value={agreedActions}
+                        onChange={(e) => setAgreedActions(e.target.value)}
+                        placeholder="Agreed actions, owners, dates…"
+                      />
+                    </div>
+                    <Button disabled={saving} onClick={submitDiscussion}>
+                      {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Save discussion record
+                    </Button>
+                  </>
+                ) : discussionRecorded ? (
+                  <div className="space-y-3">
+                    <p className="text-sm whitespace-pre-wrap">{review.meeting_notes || "Discussion recorded."}</p>
+                    {review.discussion_completed_at && (
+                      <p className="text-xs text-muted-foreground">
+                        Recorded {String(review.discussion_completed_at).slice(0, 19).replace("T", " ")}
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground rounded-md border border-dashed p-4">
+                    Both assessments must be submitted before the discussion can be recorded.
+                  </p>
+                )}
+                <div className="flex justify-between">
+                  <Button variant="outline" size="sm" onClick={() => setStep(1)}>
+                    Back
+                  </Button>
+                  <Button variant="outline" size="sm" className="gap-2" onClick={() => setStep(3)}>
+                    Next: HR review <ArrowRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {step === 3 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">HR final review</CardTitle>
+                <CardDescription>
+                  {canEditHr
+                    ? discussionRecorded
+                      ? "Complete the final assessment and close the review."
+                      : "Record the discussion first, then complete the HR review."
+                    : hrDone
+                      ? "HR's final assessment."
+                      : "Available once the line manager has submitted and the discussion is recorded."}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                {!discussionRecorded && status === "hr_review" && (
+                  <p className="text-sm text-amber-700 dark:text-amber-400 rounded-md border border-dashed p-3">
+                    Discussion must be recorded before HR can finalise this review.
+                  </p>
+                )}
+                {canEditHr && discussionRecorded ? (
                   <>
                     <StructuredForm
                       fields={HR_FIELDS}
@@ -554,20 +740,118 @@ export default function PerformanceReviewDetail() {
                   />
                 )}
 
-                {hrDone && isOwner && !review.employee_signed_at && (
-                  <Button
-                    disabled={saving}
-                    onClick={() => act(() => apiService.signPerformance(review.id, "employee"), "Signed off")}
-                  >
-                    {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Sign off on my review
+                <div className="flex justify-between">
+                  <Button variant="outline" size="sm" onClick={() => setStep(2)}>
+                    Back
                   </Button>
-                )}
-                {hrDone && review.employee_signed_at && (
-                  <p className="text-sm text-muted-foreground">This review is complete and signed off.</p>
-                )}
+                  <Button variant="outline" size="sm" className="gap-2" onClick={() => setStep(4)}>
+                    Next: acknowledgement <ArrowRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
+          {step === 4 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Employee acknowledgement</CardTitle>
+                <CardDescription>
+                  Acknowledgement confirms receipt or discussion of the review — not agreement with every rating.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                {canAcknowledge ? (
+                  <>
+                    <div className="flex items-start gap-3 rounded-md border p-3">
+                      <Checkbox
+                        id="ack-check"
+                        checked={ackChecked}
+                        onCheckedChange={(v) => setAckChecked(v === true)}
+                      />
+                      <Label htmlFor="ack-check" className="leading-snug font-normal">
+                        {review.workflow?.acknowledgement_statement || ACK_STATEMENT}
+                      </Label>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="ack-comments">Employee comments or clarification (optional)</Label>
+                      <Textarea
+                        id="ack-comments"
+                        rows={3}
+                        value={ackComments}
+                        onChange={(e) => setAckComments(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Do you wish to record a disagreement with any part of the assessment?</Label>
+                      <Select
+                        value={disagrees}
+                        onValueChange={(v) => setDisagrees(v as "yes" | "no")}
+                      >
+                        <SelectTrigger className="max-w-xs">
+                          <SelectValue placeholder="Select Yes or No" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="no">No</SelectItem>
+                          <SelectItem value="yes">Yes</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {disagrees === "yes" && (
+                      <div className="space-y-2">
+                        <Label htmlFor="disagreement-explanation">
+                          Explain the disagreement (optional)
+                        </Label>
+                        <Textarea
+                          id="disagreement-explanation"
+                          rows={3}
+                          value={disagreementExplanation}
+                          onChange={(e) => setDisagreementExplanation(e.target.value)}
+                        />
+                      </div>
+                    )}
+                    <Button disabled={saving} onClick={submitAcknowledgement}>
+                      {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Submit acknowledgement
+                    </Button>
+                  </>
+                ) : review.employee_acknowledgement?.acknowledged ? (
+                  <div className="space-y-3">
+                    <p className="text-sm">{ACK_STATEMENT}</p>
+                    <p className="text-sm text-muted-foreground">
+                      Acknowledged
+                      {review.employee_signed_at
+                        ? ` ${String(review.employee_signed_at).slice(0, 19).replace("T", " ")}`
+                        : ""}
+                      . This is not agreement with the rating.
+                    </p>
+                    {review.employee_acknowledgement.comments && (
+                      <div>
+                        <p className="text-xs uppercase tracking-wide text-muted-foreground">Comments</p>
+                        <p className="text-sm whitespace-pre-wrap">
+                          {review.employee_acknowledgement.comments}
+                        </p>
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">Disagreement</p>
+                      <p className="text-sm">
+                        {review.employee_acknowledgement.disagrees ? "Yes" : "No"}
+                      </p>
+                      {review.employee_acknowledgement.disagrees &&
+                        review.employee_acknowledgement.disagreement_explanation && (
+                          <p className="text-sm whitespace-pre-wrap mt-1">
+                            {review.employee_acknowledgement.disagreement_explanation}
+                          </p>
+                        )}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground rounded-md border border-dashed p-4">
+                    Acknowledgement opens after HR finalises the review and the discussion has been recorded.
+                  </p>
+                )}
                 <div className="flex justify-start">
-                  <Button variant="outline" size="sm" onClick={() => setStep(1)}>
+                  <Button variant="outline" size="sm" onClick={() => setStep(3)}>
                     Back
                   </Button>
                 </div>

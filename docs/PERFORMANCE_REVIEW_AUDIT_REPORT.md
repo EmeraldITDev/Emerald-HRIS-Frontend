@@ -313,6 +313,16 @@ Transitions are **partially enforced** in the controller (status checks on each 
 
 ---
 
+### Batch 2 — Discussion, acknowledgement, disagreement (verified)
+
+**Problem:** `/discussed` and `/sign` returned hard-coded 422; FE sign-off failed; no disagreement/receipt semantics.
+
+**Correction:** Restored discussion + employee acknowledgement endpoints; added `discussion_completed_at` / `employee_acknowledgement`; gated HR finalise on discussion; guide acknowledgement wording; AuditLogger hooks.
+
+**Verification:** PHPUnit 17/17 (Batch 1+2); Playwright 15/15. See `docs/BATCH2_VERIFICATION_EVIDENCE.md`.
+
+---
+
 ## 12. Next step
 
-Continue Batch 2 (discussion / acknowledgement / disagreement) after Batch 1 verification is unblocked, or install PHP/Playwright to close Batch 1 verification first.
+Proceed to Batch 3+ only when requested (forms/rating alignment, cycle admin, objectives, HOD, etc.).

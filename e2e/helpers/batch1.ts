@@ -13,6 +13,7 @@ export type Batch1Manifest = {
   secret_token: string;
   review_id: number;
   na_review_id: number;
+  discussion_review_id?: number;
   users: {
     employee: { email: string; id: number };
     manager: { email: string; id: number };

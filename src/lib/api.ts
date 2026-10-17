@@ -4,10 +4,13 @@ const API = import.meta.env.VITE_API_URL;
 // Ensure the base URL always ends with /api (backend mounts all routes under /api).
 const withApiSuffix = (url: string) => (url.replace(/\/+$/, '').endsWith('/api') ? url.replace(/\/+$/, '') : `${url.replace(/\/+$/, '')}/api`);
 
-const API_BASE_URL =
-  (typeof window !== 'undefined' && window.location.hostname === 'localhost')
-    ? 'http://localhost:8000/api' // Local backend
-    : withApiSuffix(API || 'https://hris-backend-to3i.onrender.com/api'); // Fallback to Render if no env var found
+// Prefer explicit VITE_API_URL (Playwright / deployed envs). Fall back to local
+ // artisan default only when the env var is unset and the page is on localhost.
+const API_BASE_URL = API
+  ? withApiSuffix(API)
+  : (typeof window !== 'undefined' && window.location.hostname === 'localhost')
+    ? 'http://localhost:8000/api'
+    : withApiSuffix('https://hris-backend-to3i.onrender.com/api');
 
 export { API_BASE_URL };
     

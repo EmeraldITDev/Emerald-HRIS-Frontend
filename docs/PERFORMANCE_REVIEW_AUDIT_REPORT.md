@@ -302,14 +302,14 @@ Transitions are **partially enforced** in the controller (status checks on each 
 | Detail UI sealed messaging + guide rating labels + independent manager questions | `emerald-people-flow-nigeria/src/pages/PerformanceReviewDetail.tsx` |
 | Feature tests added | `hris-backend/tests/Feature/PerformanceReviewIndependenceTest.php` |
 
-**Verification criteria:**
-1. Manager `GET /performance/{id}` while status=`self_assessment_submitted` → `self_assessment` null + `self_assessment_sealed` true (no secret strings in body).
-2. After manager submit → self-assessment visible to manager; employee sees manager assessment; employee does not see `hr_review` until `completed`.
-3. Non-assigned same-department line manager → 403.
-4. PHPUnit `PerformanceReviewIndependenceTest` green.
-5. Playwright D/H (not yet present in repo).
+**Verification criteria (executed 2026-10-17):**
+1. Manager `GET /performance/{id}` while status=`self_assessment_submitted` → `self_assessment` null + `self_assessment_sealed` true (no secret strings in body). **PASS** (PHPUnit + Playwright API/UI).
+2. After manager submit → self-assessment visible to manager; employee sees manager assessment; employee does not see `hr_review` until `completed`. **PASS** (PHPUnit; Playwright after-submit case).
+3. Non-assigned same-department line manager → 403. **PASS** (PHPUnit + Playwright API + UI direct navigation).
+4. PHPUnit `PerformanceReviewIndependenceTest`: **9/9 passed** (80 assertions).
+5. Playwright `e2e/batch1-independence.spec.ts`: **9/9 passed**.
 
-**Blocker:** Local environment has no `php` binary; PHPUnit not executed in this session. Playwright not yet installed in frontend.
+**Verdict: Batch 1 verified** (backend feature tests + browser/API Playwright against isolated SQLite). See `docs/BATCH1_VERIFICATION_EVIDENCE.md`.
 
 ---
 

@@ -15,6 +15,7 @@ import Recruitment from "./pages/Recruitment";
 import ComingSoon from "./pages/ComingSoon";
 import NotFound from "./pages/NotFound";
 import Performance from "./pages/Performance";
+import PerformanceCycles from "./pages/PerformanceCycles";
 import PerformanceReviewDetail from "./pages/PerformanceReviewDetail";
 import Settings from "./pages/Settings";
 import Training from "./pages/Training";
@@ -90,6 +91,7 @@ const AppContent = () => {
                   <Route path="/recruitment" element={<Recruitment />} />
                   <Route path="/payroll" element={<Payroll />} />
                   <Route path="/performance" element={<Performance />} />
+                  <Route path="/performance/cycles" element={<PerformanceCycles />} />
                   <Route path="/performance/:id" element={<PerformanceReviewDetail />} />
                   <Route path="/training" element={<Training />} />
                   <Route path="/benefits" element={<Benefits />} />

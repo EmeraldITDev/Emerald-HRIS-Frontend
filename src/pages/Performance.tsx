@@ -91,6 +91,7 @@ export default function Performance() {
   const [selfAssessmentData, setSelfAssessmentData] = useState<SelfAssessmentDraft>({
     ...EMPTY_SELF_ASSESSMENT,
   })
+  const [selfAssessmentObjectives, setSelfAssessmentObjectives] = useState<any[]>([])
   const [managerNotes, setManagerNotes] = useState("")
   const [managerRating, setManagerRating] = useState("3")
   const [managerStrengths, setManagerStrengths] = useState("")
@@ -337,10 +338,12 @@ export default function Performance() {
     setSelfAssessmentPeriod(review.reviewPeriod)
     setSelfAssessmentReviewId(Number(review.id))
     setSelfAssessmentData({ ...EMPTY_SELF_ASSESSMENT })
+    setSelfAssessmentObjectives([])
     setSelfAssessmentOpen(true)
     try {
       const full = await apiService.getPerformanceReview(review.id)
       setSelfAssessmentData(hydrateSelfAssessment(full?.self_assessment))
+      setSelfAssessmentObjectives(Array.isArray(full?.objectives) ? full.objectives : [])
       if (full?.period) setSelfAssessmentPeriod(full.period)
       if (full?.id) setSelfAssessmentReviewId(Number(full.id))
     } catch (e) {
@@ -633,6 +636,16 @@ export default function Performance() {
         </div>
         
         <div className="flex gap-2 w-full sm:w-auto">
+          {canCreateReviews && (
+            <Button
+              variant="outline"
+              className="w-full sm:w-auto"
+              onClick={() => navigate("/performance/cycles")}
+              data-testid="open-cycle-admin"
+            >
+              <span className="text-sm md:text-base">Review cycles</span>
+            </Button>
+          )}
           {/* Self-assessment is only available once HR has requested one */}
           {selfAssessmentRequest && (
             <Button 
@@ -1189,6 +1202,25 @@ export default function Performance() {
                 className="bg-muted"
               />
             </div>
+
+            {selfAssessmentObjectives.length > 0 && (
+              <div className="space-y-2 rounded-md border p-3" data-testid="self-objectives-list">
+                <p className="text-sm font-medium">Agreed / proposed objectives for this review</p>
+                <p className="text-xs text-muted-foreground">
+                  Refer to these when answering results against objectives. Structured objective
+                  rows are maintained on the review detail page.
+                </p>
+                <ul className="text-sm space-y-2">
+                  {selfAssessmentObjectives.map((o: any) => (
+                    <li key={o.id}>
+                      <span className="font-medium">{o.title}</span>
+                      {o.target ? ` — target: ${o.target}` : ""}
+                      {o.is_agreed ? " (agreed)" : " (proposed)"}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             {SELF_ASSESSMENT_FIELDS.map((field, index) => (
               <div key={field.key} className="space-y-2">

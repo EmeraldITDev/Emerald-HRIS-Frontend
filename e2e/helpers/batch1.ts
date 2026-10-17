@@ -17,6 +17,9 @@ export type Batch1Manifest = {
   draft_self_review_id?: number;
   draft_manager_review_id?: number;
   historical_review_id?: number;
+  objectives_review_id?: number;
+  employee_record_id?: number;
+  manager_user_id?: number;
   users: {
     employee: { email: string; id: number };
     manager: { email: string; id: number };

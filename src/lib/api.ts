@@ -1680,6 +1680,96 @@ class ApiService {
     });
   }
 
+  // Batch 4: review cycle administration
+  async getPerformanceCycles(): Promise<any> {
+    return this.request<any>('/performance/cycles');
+  }
+
+  async getPerformanceCycle(id: number | string): Promise<any> {
+    return this.request<any>(`/performance/cycles/${id}`);
+  }
+
+  async createPerformanceCycle(data: Record<string, any>): Promise<any> {
+    return this.request<any>('/performance/cycles', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updatePerformanceCycle(id: number | string, data: Record<string, any>): Promise<any> {
+    return this.request<any>(`/performance/cycles/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async previewPerformanceCycle(id: number | string): Promise<any> {
+    return this.request<any>(`/performance/cycles/${id}/preview`, { method: 'POST', body: '{}' });
+  }
+
+  async setPerformanceCycleRosterManager(
+    cycleId: number | string,
+    employeeId: number | string,
+    managerUserId: number,
+  ): Promise<any> {
+    return this.request<any>(`/performance/cycles/${cycleId}/employees/${employeeId}/manager`, {
+      method: 'PUT',
+      body: JSON.stringify({ manager_user_id: managerUserId }),
+    });
+  }
+
+  async openPerformanceCycle(id: number | string): Promise<any> {
+    return this.request<any>(`/performance/cycles/${id}/open`, { method: 'POST', body: '{}' });
+  }
+
+  // Batch 4: structured objectives
+  async getPerformanceObjectives(reviewId: number | string): Promise<any> {
+    return this.request<any>(`/performance/${reviewId}/objectives`);
+  }
+
+  async createPerformanceObjective(reviewId: number | string, data: Record<string, any>): Promise<any> {
+    return this.request<any>(`/performance/${reviewId}/objectives`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updatePerformanceObjective(
+    reviewId: number | string,
+    objectiveId: number | string,
+    data: Record<string, any>,
+  ): Promise<any> {
+    return this.request<any>(`/performance/${reviewId}/objectives/${objectiveId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async agreePerformanceObjective(reviewId: number | string, objectiveId: number | string): Promise<any> {
+    return this.request<any>(`/performance/${reviewId}/objectives/${objectiveId}/agree`, {
+      method: 'POST',
+      body: '{}',
+    });
+  }
+
+  async amendPerformanceObjective(
+    reviewId: number | string,
+    objectiveId: number | string,
+    data: Record<string, any>,
+  ): Promise<any> {
+    return this.request<any>(`/performance/${reviewId}/objectives/${objectiveId}/amend`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getPerformanceObjectiveHistory(
+    reviewId: number | string,
+    objectiveId: number | string,
+  ): Promise<any> {
+    return this.request<any>(`/performance/${reviewId}/objectives/${objectiveId}/history`);
+  }
+
   // HR final screen — closes out the review
   async completePerformanceReview(id: number, data?: any): Promise<PerformanceReview> {
     return this.request<PerformanceReview>(`/performance/${id}/complete`, {

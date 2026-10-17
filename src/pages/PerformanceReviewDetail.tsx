@@ -91,7 +91,7 @@ const MANAGER_FIELDS: ManagerField[] = [
   {
     key: "objective_assessments_narrative",
     label:
-      "For each agreed objective: description, target/measure, actual result and evidence, rating (1–5 or N/A), what went well, reasons if not fully achieved, dependency/priority changes, and continue/stop/do differently. (Structured objectives arrive in Batch 4 — capture as narrative for now.)",
+      "Overall narrative across objectives (legacy / summary). Use the structured objective assessment fields below when objectives exist.",
     aliases: ["performance_assessment", "observations"],
     section: "B. Assessment of each objective",
   },
@@ -386,6 +386,15 @@ export default function PerformanceReviewDetail() {
   const [step, setStep] = useState(0);
   const [managerValues, setManagerValues] = useState<Record<string, string>>({});
   const [hrValues, setHrValues] = useState<Record<string, string>>({});
+  const [objAssessments, setObjAssessments] = useState<Record<number, Record<string, string>>>({});
+  const [newObjective, setNewObjective] = useState({
+    title: "",
+    success_measure: "",
+    target: "",
+    due_date: "",
+    support_requirements: "",
+  });
+  const [amendDraft, setAmendDraft] = useState<Record<number, { title: string; change_reason: string }>>({});
   const [discussionHeld, setDiscussionHeld] = useState(false);
   const [discussionSummary, setDiscussionSummary] = useState("");
   const [agreedActions, setAgreedActions] = useState("");
@@ -490,6 +499,23 @@ export default function PerformanceReviewDetail() {
         : {};
     const hr = typeof review.hr_review === "object" && review.hr_review ? review.hr_review : review;
     setManagerValues(hydrateManagerAssessment(mr));
+    const rows = Array.isArray(mr.objective_assessments) ? mr.objective_assessments : [];
+    const mapped: Record<number, Record<string, string>> = {};
+    rows.forEach((r: any) => {
+      if (r?.objective_id) {
+        mapped[Number(r.objective_id)] = {
+          rating: String(r.rating || ""),
+          rating_explanation: String(r.rating_explanation || ""),
+          actual_result: String(r.actual_result || ""),
+          evidence: String(r.evidence || ""),
+          went_well: String(r.went_well || ""),
+          not_met_reason: String(r.not_met_reason || ""),
+          dependency_changes: String(r.dependency_changes || ""),
+          continue_stop_differently: String(r.continue_stop_differently || ""),
+        };
+      }
+    });
+    setObjAssessments(mapped);
     setHrValues((prev) => {
       const next = { ...prev };
       HR_FIELDS.forEach((f) => {
@@ -517,10 +543,17 @@ export default function PerformanceReviewDetail() {
   };
 
   const saveManagerDraft = () => {
-    const payload = toManagerReviewPayload({
-      ...EMPTY_MANAGER_ASSESSMENT,
-      ...managerValues,
-    });
+    const objective_assessments = (review.objectives || []).map((o: any) => ({
+      objective_id: o.id,
+      ...(objAssessments[o.id] || {}),
+    }));
+    const payload = {
+      ...toManagerReviewPayload({
+        ...EMPTY_MANAGER_ASSESSMENT,
+        ...managerValues,
+      }),
+      objective_assessments,
+    };
     act(
       () => apiService.managerReview(review.id, payload, { draft: true }),
       "Manager assessment draft saved",
@@ -578,11 +611,77 @@ export default function PerformanceReviewDetail() {
       });
       return;
     }
-    const payload = toManagerReviewPayload({
-      ...EMPTY_MANAGER_ASSESSMENT,
-      ...managerValues,
-    });
+    const objective_assessments = (review.objectives || []).map((o: any) => ({
+      objective_id: o.id,
+      ...(objAssessments[o.id] || {}),
+    }));
+    for (const row of objective_assessments) {
+      if (isNaRating(row.rating) && !String(row.rating_explanation || row.evidence || row.actual_result || "").trim()) {
+        toast({
+          title: "N/A requires an explanation",
+          description: "Provide evidence or an explanation for N/A objective ratings.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+    const payload = {
+      ...toManagerReviewPayload({
+        ...EMPTY_MANAGER_ASSESSMENT,
+        ...managerValues,
+      }),
+      objective_assessments,
+    };
     act(() => apiService.managerReview(review.id, payload), "Sent to HR for final review");
+  };
+
+  const canManageObjectives =
+    !!review?.workflow?.can_manage_objectives ||
+    ((isManager || isHr) && status !== "completed");
+
+  const createObjective = async () => {
+    if (!newObjective.title.trim()) {
+      toast({ title: "Title required", variant: "destructive" });
+      return;
+    }
+    setSaving(true);
+    try {
+      await apiService.createPerformanceObjective(review.id, newObjective);
+      setNewObjective({
+        title: "",
+        success_measure: "",
+        target: "",
+        due_date: "",
+        support_requirements: "",
+      });
+      toast({ title: "Objective created" });
+      await load();
+    } catch (e: any) {
+      toast({ title: "Action failed", description: e?.message, variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const agreeObjective = (objectiveId: number) => {
+    act(() => apiService.agreePerformanceObjective(review.id, objectiveId), "Agreement recorded");
+  };
+
+  const amendObjective = (objectiveId: number) => {
+    const draft = amendDraft[objectiveId];
+    if (!draft?.change_reason?.trim()) {
+      toast({ title: "Change reason required", variant: "destructive" });
+      return;
+    }
+    act(
+      () =>
+        apiService.amendPerformanceObjective(review.id, objectiveId, {
+          title: draft.title || undefined,
+          change_reason: draft.change_reason,
+          change_agreed: true,
+        }),
+      "Objective amended — history retained",
+    );
   };
 
   const submitHr = () => {
@@ -732,6 +831,145 @@ export default function PerformanceReviewDetail() {
             </CardContent>
           </Card>
 
+          {/* Structured objectives — shared planning (not sealed assessments) */}
+          <Card data-testid="objectives-panel">
+            <CardHeader>
+              <CardTitle className="text-base">Structured objectives</CardTitle>
+              <CardDescription>
+                Agreed objectives for this review. Visible to authorised parties without revealing
+                sealed assessment answers. Agreement requires both employee and manager confirmation.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {(review.objectives || []).length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  {review.cycle_id
+                    ? "No objectives yet."
+                    : "Legacy review without structured objectives — narrative assessments still apply."}
+                </p>
+              ) : (
+                (review.objectives || []).map((o: any) => (
+                  <div key={o.id} className="border rounded-md p-3 space-y-2" data-testid={`objective-${o.id}`}>
+                    <div className="flex flex-wrap justify-between gap-2">
+                      <p className="font-medium text-sm">{o.title}</p>
+                      <Badge variant={o.is_agreed ? "secondary" : "outline"}>
+                        {o.is_agreed ? "Agreed" : o.status}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground whitespace-pre-wrap">
+                      {[
+                        o.success_measure && `Measure: ${o.success_measure}`,
+                        o.target && `Target: ${o.target}`,
+                        o.due_date && `Due: ${String(o.due_date).slice(0, 10)}`,
+                        o.support_requirements && `Support: ${o.support_requirements}`,
+                      ]
+                        .filter(Boolean)
+                        .join("\n")}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {(isOwner || ((isManager || isHr) && String(review.manager_id) === String(user?.id)) || isHr) &&
+                        !o.is_agreed && (
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            disabled={saving}
+                            data-testid={`agree-objective-${o.id}`}
+                            onClick={() => agreeObjective(o.id)}
+                          >
+                            Record my agreement
+                          </Button>
+                        )}
+                      {canManageObjectives && o.is_agreed && (
+                        <div className="w-full space-y-2 pt-2 border-t">
+                          <Label className="text-xs">Material amendment</Label>
+                          <Input
+                            placeholder="Updated title (optional)"
+                            value={amendDraft[o.id]?.title ?? o.title}
+                            onChange={(e) =>
+                              setAmendDraft((p) => ({
+                                ...p,
+                                [o.id]: { ...(p[o.id] || { change_reason: "" }), title: e.target.value },
+                              }))
+                            }
+                          />
+                          <Textarea
+                            placeholder="Why this change? (required)"
+                            rows={2}
+                            data-testid={`amend-reason-${o.id}`}
+                            value={amendDraft[o.id]?.change_reason || ""}
+                            onChange={(e) =>
+                              setAmendDraft((p) => ({
+                                ...p,
+                                [o.id]: {
+                                  title: p[o.id]?.title ?? o.title,
+                                  change_reason: e.target.value,
+                                },
+                              }))
+                            }
+                          />
+                          <Button
+                            size="sm"
+                            disabled={saving}
+                            data-testid={`amend-objective-${o.id}`}
+                            onClick={() => amendObjective(o.id)}
+                          >
+                            Save amendment with history
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+
+              {canManageObjectives && (
+                <div className="space-y-2 border-t pt-4">
+                  <p className="text-sm font-medium">Propose objective</p>
+                  <Input
+                    data-testid="new-objective-title"
+                    placeholder="Objective / key deliverable"
+                    value={newObjective.title}
+                    onChange={(e) => setNewObjective({ ...newObjective, title: e.target.value })}
+                  />
+                  <Textarea
+                    data-testid="new-objective-measure"
+                    placeholder="Success measure / evidence"
+                    rows={2}
+                    value={newObjective.success_measure}
+                    onChange={(e) =>
+                      setNewObjective({ ...newObjective, success_measure: e.target.value })
+                    }
+                  />
+                  <div className="grid sm:grid-cols-2 gap-2">
+                    <Input
+                      data-testid="new-objective-target"
+                      placeholder="Target"
+                      value={newObjective.target}
+                      onChange={(e) => setNewObjective({ ...newObjective, target: e.target.value })}
+                    />
+                    <Input
+                      type="date"
+                      data-testid="new-objective-due"
+                      value={newObjective.due_date}
+                      onChange={(e) => setNewObjective({ ...newObjective, due_date: e.target.value })}
+                    />
+                  </div>
+                  <Textarea
+                    placeholder="Support, resources or dependencies (optional)"
+                    rows={2}
+                    value={newObjective.support_requirements}
+                    onChange={(e) =>
+                      setNewObjective({ ...newObjective, support_requirements: e.target.value })
+                    }
+                  />
+                  <Button disabled={saving} onClick={createObjective} data-testid="create-objective">
+                    Add objective
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           {/* Step switcher */}
           <div className="flex flex-wrap gap-2">
             {steps.map((s, i) => (
@@ -806,6 +1044,66 @@ export default function PerformanceReviewDetail() {
                       values={managerValues}
                       onChange={(k, v) => setManagerValues((p) => ({ ...p, [k]: v }))}
                     />
+                    {(review.objectives || []).length > 0 && (
+                      <div className="space-y-4 border-t pt-4" data-testid="manager-objective-assessments">
+                        <h3 className="text-sm font-semibold">Per-objective assessment</h3>
+                        {(review.objectives || []).map((o: any) => (
+                          <div key={o.id} className="space-y-2 rounded-md border p-3">
+                            <p className="text-sm font-medium">{o.title}</p>
+                            <p className="text-xs text-muted-foreground">
+                              Target: {o.target || "—"} · Measure: {o.success_measure || "—"}
+                            </p>
+                            <Label>Rating (1–5 or N/A)</Label>
+                            <Select
+                              value={objAssessments[o.id]?.rating || ""}
+                              onValueChange={(v) =>
+                                setObjAssessments((p) => ({
+                                  ...p,
+                                  [o.id]: { ...(p[o.id] || {}), rating: v },
+                                }))
+                              }
+                            >
+                              <SelectTrigger data-testid={`obj-rating-${o.id}`}>
+                                <SelectValue placeholder="Select rating" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {RATING_OPTIONS.map((r) => (
+                                  <SelectItem key={r.value} value={r.value}>
+                                    {r.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            {(
+                              [
+                                ["actual_result", "Actual result"],
+                                ["evidence", "Supporting evidence"],
+                                ["rating_explanation", "N/A / rating explanation"],
+                                ["went_well", "What went well and impact"],
+                                ["not_met_reason", "Reasons target not fully met"],
+                                ["dependency_changes", "Priority / resource / dependency changes"],
+                                ["continue_stop_differently", "Continue / stop / do differently"],
+                              ] as const
+                            ).map(([key, label]) => (
+                              <div key={key} className="space-y-1">
+                                <Label className="text-xs">{label}</Label>
+                                <Textarea
+                                  rows={2}
+                                  data-testid={`obj-${key}-${o.id}`}
+                                  value={objAssessments[o.id]?.[key] || ""}
+                                  onChange={(e) =>
+                                    setObjAssessments((p) => ({
+                                      ...p,
+                                      [o.id]: { ...(p[o.id] || {}), [key]: e.target.value },
+                                    }))
+                                  }
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                     <div className="flex flex-wrap gap-2">
                       <Button
                         variant="secondary"

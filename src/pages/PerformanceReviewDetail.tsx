@@ -35,6 +35,7 @@ const STAGES: Array<{ key: string; label: string }> = [
   { key: "self_assessment_requested", label: "Self-Assessment" },
   { key: "self_assessment_submitted", label: "Submitted" },
   { key: "manager_review", label: "Line Manager" },
+  { key: "hod_review", label: "HOD Approval" },
   { key: "hr_review", label: "HR Review" },
   { key: "completed", label: "Completed" },
 ];
@@ -402,6 +403,12 @@ export default function PerformanceReviewDetail() {
   const [ackComments, setAckComments] = useState("");
   const [disagrees, setDisagrees] = useState<"yes" | "no" | "">("");
   const [disagreementExplanation, setDisagreementExplanation] = useState("");
+  const [checklist, setChecklist] = useState<any>(null);
+  const [hodNotes, setHodNotes] = useState("");
+  const [hodNewRating, setHodNewRating] = useState("");
+  const [hodRatingReason, setHodRatingReason] = useState("");
+  const [reopenReason, setReopenReason] = useState("");
+  const [reopenTarget, setReopenTarget] = useState("manager_review");
 
   const load = async () => {
     if (!id) return;
@@ -450,8 +457,9 @@ export default function PerformanceReviewDetail() {
   const selfSealed = !!review?.self_assessment_sealed;
   const managerSealed = !!review?.manager_review_sealed;
   const hrSealed = !!review?.hr_review_sealed;
-  // Draft manager_review JSON must not lock the form — only HR-stage submission does.
-  const managerDone = status === "hr_review" || status === "completed";
+  // Draft manager_review JSON must not lock the form — only post-submit stages do.
+  const managerDone =
+    status === "hod_review" || status === "hr_review" || status === "completed";
   const hrDone = status === "completed";
 
   const discussionRecorded = !!review?.discussion_completed_at;
@@ -465,30 +473,36 @@ export default function PerformanceReviewDetail() {
   const canEditHr = isHr && !hrDone && status === "hr_review";
   const canAcknowledge =
     !!review?.workflow?.can_acknowledge ||
-    (hrDone && isOwner && discussionRecorded && !review?.employee_acknowledgement?.acknowledged);
+    (isOwner &&
+      discussionRecorded &&
+      (status === "hr_review" || status === "completed") &&
+      !review?.employee_acknowledgement?.acknowledged);
+  const canHodDecide = !!review?.workflow?.can_hod_decide && status === "hod_review";
 
   const steps = useMemo(
     () => [
       { key: "self", label: "Employee self-assessment" },
       { key: "manager", label: "Line manager assessment" },
       { key: "discussion", label: "Discussion" },
-      { key: "hr", label: "HR final review" },
       { key: "ack", label: "Acknowledgement" },
+      { key: "hr", label: "HR quality & finalise" },
     ],
     [],
   );
 
   // Land on the step the current user needs to act on.
+  // Order: self → manager → discussion → acknowledgement → HR finalise.
   useEffect(() => {
     if (!review) return;
     if (canEditManager) setStep(1);
     else if (canRecordDiscussion && !discussionRecorded) setStep(2);
-    else if (canEditHr) setStep(3);
-    else if (canAcknowledge) setStep(4);
+    else if (canAcknowledge) setStep(3);
+    else if (canEditHr) setStep(4);
     else if (hrDone) setStep(4);
+    else if (status === "hod_review") setStep(1);
     else setStep(0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [review?.id, status, discussionRecorded]);
+  }, [review?.id, status, discussionRecorded, canAcknowledge]);
 
   // Prefill any answers already saved, so reopening the review keeps them.
   useEffect(() => {
@@ -684,6 +698,23 @@ export default function PerformanceReviewDetail() {
     );
   };
 
+  const loadChecklist = async () => {
+    if (!isHr || !review?.id) return;
+    try {
+      const res = await apiService.getPerformanceQualityChecklist(review.id);
+      setChecklist(res?.data ?? res);
+    } catch {
+      setChecklist(null);
+    }
+  };
+
+  useEffect(() => {
+    if (canEditHr || (isHr && status === "hr_review")) {
+      void loadChecklist();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [review?.id, status, review?.employee_acknowledgement, review?.discussion_completed_at]);
+
   const submitHr = () => {
     if (!discussionRecorded) {
       toast({
@@ -692,6 +723,15 @@ export default function PerformanceReviewDetail() {
         variant: "destructive",
       });
       setStep(2);
+      return;
+    }
+    if (!review?.employee_acknowledgement?.acknowledged) {
+      toast({
+        title: "Acknowledgement required",
+        description: "The employee must acknowledge the review before finalisation.",
+        variant: "destructive",
+      });
+      setStep(3);
       return;
     }
     const missing = HR_FIELDS.filter((f) => !String(hrValues[f.key] || "").trim());
@@ -703,7 +743,55 @@ export default function PerformanceReviewDetail() {
       });
       return;
     }
-    act(() => apiService.completePerformanceReview(review.id, hrValues), "Review completed");
+    act(async () => {
+      await apiService.savePerformanceQualityChecklist(review.id, { checklist_reviewed: true });
+      try {
+        await apiService.completePerformanceReview(review.id, hrValues);
+      } catch (e: any) {
+        await loadChecklist();
+        throw e;
+      }
+    }, "Review finalised");
+  };
+
+  const submitHodDecision = (decision: "approved" | "returned") => {
+    if (hodNewRating && hodNewRating !== String(review?.manager_review?.ratings || "") && !hodRatingReason.trim()) {
+      toast({
+        title: "Reason required",
+        description: "Provide a reason when changing the rating during calibration.",
+        variant: "destructive",
+      });
+      return;
+    }
+    act(
+      () =>
+        apiService.hodDecidePerformance(review.id, {
+          decision,
+          notes: hodNotes || undefined,
+          new_rating: hodNewRating || undefined,
+          rating_change_reason: hodRatingReason || undefined,
+        }),
+      decision === "approved" ? "HOD approval recorded" : "Review returned to manager",
+    );
+  };
+
+  const submitReopen = () => {
+    if (!reopenReason.trim() || reopenReason.trim().length < 5) {
+      toast({
+        title: "Reason required",
+        description: "Provide a meaningful reopening reason (at least 5 characters).",
+        variant: "destructive",
+      });
+      return;
+    }
+    act(
+      () =>
+        apiService.reopenPerformanceReview(review.id, {
+          reason: reopenReason.trim(),
+          return_to_status: reopenTarget,
+        }),
+      "Review reopened for correction",
+    );
   };
 
   const submitDiscussion = () => {
@@ -1213,65 +1301,6 @@ export default function PerformanceReviewDetail() {
                     Back
                   </Button>
                   <Button variant="outline" size="sm" className="gap-2" onClick={() => setStep(3)}>
-                    Next: HR review <ArrowRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {step === 3 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">HR final review</CardTitle>
-                <CardDescription>
-                  {canEditHr
-                    ? discussionRecorded
-                      ? "Complete the final assessment and close the review."
-                      : "Record the discussion first, then complete the HR review."
-                    : hrDone
-                      ? "HR's final assessment."
-                      : "Available once the line manager has submitted and the discussion is recorded."}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-5">
-                {!discussionRecorded && status === "hr_review" && (
-                  <p className="text-sm text-amber-700 dark:text-amber-400 rounded-md border border-dashed p-3">
-                    Discussion must be recorded before HR can finalise this review.
-                  </p>
-                )}
-                {canEditHr && discussionRecorded ? (
-                  <>
-                    <StructuredForm
-                      fields={HR_FIELDS}
-                      values={hrValues}
-                      onChange={(k, v) => setHrValues((p) => ({ ...p, [k]: v }))}
-                    />
-                    <Button disabled={saving} onClick={submitHr}>
-                      {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Complete review
-                    </Button>
-                  </>
-                ) : hrSealed ? (
-                  <p className="text-sm text-muted-foreground rounded-md border border-dashed p-4">
-                    The final HR review is available after HR completes and finalises the review.
-                  </p>
-                ) : (
-                  <AnswerList
-                    fields={HR_FIELDS}
-                    source={
-                      typeof review.hr_review === "object" && review.hr_review
-                        ? review.hr_review
-                        : review
-                    }
-                    emptyText="Not completed yet."
-                  />
-                )}
-
-                <div className="flex justify-between">
-                  <Button variant="outline" size="sm" onClick={() => setStep(2)}>
-                    Back
-                  </Button>
-                  <Button variant="outline" size="sm" className="gap-2" onClick={() => setStep(4)}>
                     Next: acknowledgement <ArrowRight className="h-4 w-4" />
                   </Button>
                 </div>
@@ -1279,7 +1308,7 @@ export default function PerformanceReviewDetail() {
             </Card>
           )}
 
-          {step === 4 && (
+          {step === 3 && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">Employee acknowledgement</CardTitle>
@@ -1374,16 +1403,186 @@ export default function PerformanceReviewDetail() {
                   </div>
                 ) : (
                   <p className="text-sm text-muted-foreground rounded-md border border-dashed p-4">
-                    Acknowledgement opens after HR finalises the review and the discussion has been recorded.
+                    Acknowledgement opens after the discussion has been recorded, and before HR finalises the review.
                   </p>
                 )}
-                <div className="flex justify-start">
+                <div className="flex justify-between">
+                  <Button variant="outline" size="sm" onClick={() => setStep(2)}>
+                    Back
+                  </Button>
+                  <Button variant="outline" size="sm" className="gap-2" onClick={() => setStep(4)}>
+                    Next: HR quality &amp; finalise <ArrowRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {step === 4 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">HR quality check &amp; finalisation</CardTitle>
+                <CardDescription>
+                  {canEditHr
+                    ? "Confirm derived quality checks, complete the HR assessment, then finalise."
+                    : hrDone
+                      ? "HR's final assessment."
+                      : "Available once discussion and acknowledgement are complete."}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                {status === "hod_review" && (
+                  <p className="text-sm text-amber-700 dark:text-amber-400 rounded-md border border-dashed p-3">
+                    HOD approval is outstanding
+                    {review.hod_status === "blocked_pending_policy"
+                      ? " (pathway blocked until HR authorises confidential-access policy)."
+                      : "."}
+                  </p>
+                )}
+                {!discussionRecorded && status === "hr_review" && (
+                  <p className="text-sm text-amber-700 dark:text-amber-400 rounded-md border border-dashed p-3">
+                    Discussion must be recorded before HR can finalise this review.
+                  </p>
+                )}
+                {isHr && checklist?.items && (
+                  <div className="space-y-2 rounded-md border p-3">
+                    <p className="text-sm font-medium">Quality checklist (derived from records)</p>
+                    <ul className="space-y-1 text-sm">
+                      {Object.entries(checklist.items as Record<string, any>).map(([key, item]) => (
+                        <li key={key} className="flex gap-2">
+                          <span className="uppercase text-xs tracking-wide text-muted-foreground w-24 shrink-0">
+                            {String(item.status)}
+                          </span>
+                          <span>
+                            <span className="font-medium">{key.replace(/_/g, " ")}</span>
+                            {item.detail ? ` — ${item.detail}` : ""}
+                            {item.source === "manual" ? " (manual confirmation)" : ""}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                    {Array.isArray(checklist.blocking) && checklist.blocking.length > 0 && (
+                      <p className="text-xs text-amber-700 dark:text-amber-400">
+                        Blocking: {checklist.blocking.join("; ")}
+                      </p>
+                    )}
+                  </div>
+                )}
+                {canEditHr && discussionRecorded ? (
+                  <>
+                    <StructuredForm
+                      fields={HR_FIELDS}
+                      values={hrValues}
+                      onChange={(k, v) => setHrValues((p) => ({ ...p, [k]: v }))}
+                    />
+                    <Button disabled={saving} onClick={submitHr}>
+                      {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Confirm checklist &amp; finalise
+                    </Button>
+                  </>
+                ) : hrSealed ? (
+                  <p className="text-sm text-muted-foreground rounded-md border border-dashed p-4">
+                    The final HR review is available after HR completes and finalises the review.
+                  </p>
+                ) : (
+                  <AnswerList
+                    fields={HR_FIELDS}
+                    source={
+                      typeof review.hr_review === "object" && review.hr_review
+                        ? review.hr_review
+                        : review
+                    }
+                    emptyText="Not completed yet."
+                  />
+                )}
+
+                {isHr && (status === "completed" || status === "hr_review") && (
+                  <div className="space-y-3 rounded-md border border-dashed p-3">
+                    <p className="text-sm font-medium">HR-only reopen</p>
+                    <Textarea
+                      rows={2}
+                      value={reopenReason}
+                      onChange={(e) => setReopenReason(e.target.value)}
+                      placeholder="Mandatory reason for reopening…"
+                    />
+                    <Select value={reopenTarget} onValueChange={setReopenTarget}>
+                      <SelectTrigger className="max-w-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="self_assessment_requested">Return to employee self-assessment</SelectItem>
+                        <SelectItem value="self_assessment_submitted">Return after self-assessment</SelectItem>
+                        <SelectItem value="manager_review">Return to manager assessment</SelectItem>
+                        <SelectItem value="hr_review">Return to HR review</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button variant="outline" disabled={saving} onClick={submitReopen}>
+                      Reopen for correction
+                    </Button>
+                  </div>
+                )}
+
+                <div className="flex justify-between">
                   <Button variant="outline" size="sm" onClick={() => setStep(3)}>
                     Back
                   </Button>
                 </div>
               </CardContent>
             </Card>
+          )}
+
+          {canHodDecide && (
+            <Card className="border-dashed">
+              <CardHeader>
+                <CardTitle className="text-base">HOD approval / calibration</CardTitle>
+                <CardDescription>
+                  Self-assessment remains sealed. Approve or return the manager assessment. Rating changes require a reason.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  Current manager rating: {String(review?.manager_review?.ratings ?? "—")}
+                </p>
+                <div className="space-y-2">
+                  <Label>New rating (optional calibration)</Label>
+                  <Select value={hodNewRating || "__keep"} onValueChange={(v) => setHodNewRating(v === "__keep" ? "" : v)}>
+                    <SelectTrigger className="max-w-xs">
+                      <SelectValue placeholder="Keep current" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__keep">Keep current</SelectItem>
+                      {RATING_OPTIONS.map((o) => (
+                        <SelectItem key={o.value} value={o.value}>
+                          {o.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Rating change reason</Label>
+                  <Textarea rows={2} value={hodRatingReason} onChange={(e) => setHodRatingReason(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Notes</Label>
+                  <Textarea rows={2} value={hodNotes} onChange={(e) => setHodNotes(e.target.value)} />
+                </div>
+                <div className="flex gap-2">
+                  <Button disabled={saving} onClick={() => submitHodDecision("approved")}>
+                    Approve
+                  </Button>
+                  <Button variant="outline" disabled={saving} onClick={() => submitHodDecision("returned")}>
+                    Return to manager
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {status === "hod_review" && review.hod_status === "blocked_pending_policy" && isHr && (
+            <p className="text-sm text-amber-700 dark:text-amber-400">
+              HOD pathway blocked: set <code>hod_confidential_access_authorised</code> on the cycle only after HR
+              confirms whether HODs may see manager assessments without self-assessment contents (current least-privilege).
+            </p>
           )}
         </>
       )}

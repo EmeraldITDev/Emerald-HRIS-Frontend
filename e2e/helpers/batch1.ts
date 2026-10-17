@@ -18,14 +18,21 @@ export type Batch1Manifest = {
   draft_manager_review_id?: number;
   historical_review_id?: number;
   objectives_review_id?: number;
+  hod_blocked_review_id?: number;
+  hod_blocked_cycle_id?: number;
+  hod_ready_review_id?: number;
+  hod_ready_cycle_id?: number;
+  governance_review_id?: number;
   employee_record_id?: number;
   manager_user_id?: number;
+  hod_user_id?: number;
   users: {
     employee: { email: string; id: number };
     manager: { email: string; id: number };
     other_manager: { email: string; id: number };
     peer: { email: string; id: number };
     hr: { email: string; id: number };
+    hod?: { email: string; id: number };
   };
 };
 

@@ -10,6 +10,7 @@ import {
 
 /**
  * Batch 2: discussion record, employee acknowledgement (receipt ≠ agreement), disagreement.
+ * Batch 5 sequence: acknowledgement after discussion, before HR finalisation + quality checklist.
  * Uses discussion_review_id from the shared E2E SQLite prepare script.
  */
 test.describe.configure({ mode: "serial" });
@@ -85,19 +86,65 @@ test.describe("Batch 2 discussion and acknowledgement", () => {
     ).toBe(403);
   });
 
-  test("employee cannot acknowledge before HR finalises", async ({ request }) => {
+  test("employee can acknowledge after discussion before finalisation", async ({ request }) => {
     const token = await loginApi(request, manifest.users.employee.email, manifest.password);
     const res = await request.put(`${apiRoots()[0]}/${reviewId}/sign`, {
       headers: authHeaders(token),
-      data: { actor: "employee", acknowledged: true, disagrees: false },
+      data: {
+        actor: "employee",
+        acknowledged: true,
+        comments: "I received the review and discussed it.",
+        disagrees: true,
+        disagreement_explanation: "E2E_DISAGREE_REASON",
+      },
     });
-    expect(res.status()).toBe(422);
+    expect(res.status(), await res.text()).toBe(200);
+    const body = await res.json();
+    expect(body.employee_acknowledgement?.acknowledged).toBe(true);
+    expect(body.employee_acknowledgement?.means_agreement).toBe(false);
+    expect(body.employee_acknowledgement?.disagrees).toBe(true);
+    expect(body.employee_acknowledgement?.disagreement_explanation).toBe("E2E_DISAGREE_REASON");
+    expect(body.manager_review?.ratings).toBe("3");
+    expect(body.self_assessment?.achievements).toBe(manifest.secret_token);
   });
 
-  test("HR finalises after discussion; employee acknowledges with disagreement", async ({
-    request,
-  }) => {
+  test("repeat acknowledgement rejected; HR quality-check then finalise", async ({ request }) => {
+    const employee = await loginApi(
+      request,
+      manifest.users.employee.email,
+      manifest.password,
+    );
+    const again = await request.put(`${apiRoots()[1]}/${reviewId}/sign`, {
+      headers: authHeaders(employee),
+      data: {
+        actor: "employee",
+        acknowledged: true,
+        comments: "Follow-up note",
+      },
+    });
+    expect(again.status()).toBe(422);
+
     const hr = await loginApi(request, manifest.users.hr.email, manifest.password);
+    const blocked = await request.put(`${apiRoots()[1]}/${reviewId}/complete`, {
+      headers: authHeaders(hr),
+      data: {
+        hr_review: {
+          overall_assessment: "E2E_HR_FINAL",
+          review_adequacy: "Adequate",
+          development_recommendations: "Mentoring",
+          final_comments: "Closed for E2E",
+          final_rating: "3",
+        },
+      },
+    });
+    expect(blocked.status()).toBe(422);
+
+    const qc = await request.put(`${apiRoots()[1]}/${reviewId}/quality-checklist`, {
+      headers: authHeaders(hr),
+      data: { manual_confirmations: { checklist_reviewed: true } },
+    });
+    expect(qc.status(), await qc.text()).toBe(200);
+
     const complete = await request.put(`${apiRoots()[1]}/${reviewId}/complete`, {
       headers: authHeaders(hr),
       data: {
@@ -112,49 +159,18 @@ test.describe("Batch 2 discussion and acknowledgement", () => {
     });
     expect(complete.status(), await complete.text()).toBe(200);
 
-    const employee = await loginApi(
-      request,
-      manifest.users.employee.email,
-      manifest.password,
-    );
-    const ack = await request.put(`${apiRoots()[1]}/${reviewId}/sign`, {
+    const reload = await request.get(`${apiRoots()[1]}/${reviewId}`, {
       headers: authHeaders(employee),
-      data: {
-        actor: "employee",
-        acknowledged: true,
-        comments: "I received the review and discussed it.",
-        disagrees: true,
-        disagreement_explanation: "E2E_DISAGREE_REASON",
-      },
     });
-    expect(ack.status(), await ack.text()).toBe(200);
-    const body = await ack.json();
-    expect(body.employee_acknowledgement?.acknowledged).toBe(true);
-    expect(body.employee_acknowledgement?.means_agreement).toBe(false);
-    expect(body.employee_acknowledgement?.disagrees).toBe(true);
-    expect(body.employee_acknowledgement?.disagreement_explanation).toBe("E2E_DISAGREE_REASON");
-    expect(body.manager_review?.ratings).toBe("3");
-    expect(body.self_assessment?.achievements).toBe(manifest.secret_token);
-
-    const again = await request.put(`${apiRoots()[1]}/${reviewId}/sign`, {
-      headers: authHeaders(employee),
-      data: {
-        actor: "employee",
-        acknowledged: true,
-        comments: "Follow-up note",
-      },
-    });
-    expect(again.status()).toBe(200);
-    const againBody = await again.json();
-    expect(againBody.employee_acknowledgement?.disagrees).toBe(true);
-    expect(againBody.employee_acknowledgement?.disagreement_explanation).toBe(
-      "E2E_DISAGREE_REASON",
-    );
-    expect(againBody.manager_review?.ratings).toBe("3");
+    expect(reload.status()).toBe(200);
+    const data = (await reload.json()).data ?? (await reload.json());
+    expect(data.status).toBe("completed");
+    expect(data.employee_acknowledgement?.disagrees).toBe(true);
+    expect(data.employee_acknowledgement?.disagreement_explanation).toBe("E2E_DISAGREE_REASON");
+    expect(data.manager_review?.ratings).toBe("3");
   });
 
   test("UI: manager discussion form persists after reload", async ({ page }) => {
-    // API tests already recorded discussion on discussion_review_id — verify UI persistence.
     await loginUi(page, manifest.users.manager.email, manifest.password);
     await page.goto(`/performance/${reviewId}`);
     await expect(page.getByRole("button", { name: /discussion/i }).first()).toBeVisible({
@@ -180,6 +196,6 @@ test.describe("Batch 2 discussion and acknowledgement", () => {
       page.getByText(/does not necessarily mean that I agree/i).first(),
     ).toBeVisible({ timeout: 20_000 });
     await expect(page.getByText(/E2E_DISAGREE_REASON|Yes/i).first()).toBeVisible();
-    await expect(page.getByText(manifest.secret_token)).toHaveCount(0); // not required on ack step
+    await expect(page.getByText(manifest.secret_token)).toHaveCount(0);
   });
 });

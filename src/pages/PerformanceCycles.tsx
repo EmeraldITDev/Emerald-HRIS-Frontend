@@ -272,7 +272,7 @@ export default function PerformanceCycles() {
                 onCheckedChange={(v) => setForm({ ...form, hod_approval_required: v === true })}
               />
               <Label htmlFor="hod-flag" className="text-sm font-normal leading-snug">
-                HOD approval required for this cycle (flag only — workflow not active yet)
+                HOD approval required for this cycle (operational only after confidential-access policy is authorised)
               </Label>
             </div>
             <div className="space-y-1">
@@ -348,8 +348,45 @@ export default function PerformanceCycles() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-xs text-muted-foreground">
-              Reminder execution is not claimed in Batch 4. Correct missing managers before opening.
+              Reminder execution is not claimed. Correct missing managers before opening. HOD self-assessment
+              access remains denied until HR documents a confidential-review policy decision.
             </p>
+            {cycle.hod_approval_required && (
+              <div className="flex flex-wrap items-center gap-3 rounded-md border border-dashed p-3">
+                <div className="flex items-start gap-2">
+                  <Checkbox
+                    id="hod-policy"
+                    checked={!!cycle.hod_confidential_access_authorised}
+                    onCheckedChange={async (v) => {
+                      try {
+                        setSaving(true);
+                        await apiService.updatePerformanceCycle(cycle.id, {
+                          hod_confidential_access_authorised: v === true,
+                        });
+                        toast({
+                          title: v === true ? "HOD pathway authorised" : "HOD pathway locked",
+                        });
+                        await loadCycle(cycle.id);
+                      } catch (e: any) {
+                        toast({
+                          title: "Policy update failed",
+                          description: e?.message,
+                          variant: "destructive",
+                        });
+                      } finally {
+                        setSaving(false);
+                      }
+                    }}
+                  />
+                  <Label htmlFor="hod-policy" className="text-sm font-normal leading-snug">
+                    Authorise HOD confidential pathway (manager assessment only — self-assessment stays sealed)
+                  </Label>
+                </div>
+                <Badge variant={cycle.hod_confidential_access_authorised ? "secondary" : "destructive"}>
+                  {cycle.hod_confidential_access_authorised ? "Authorised" : "Blocked pending policy"}
+                </Badge>
+              </div>
+            )}
             <div className="overflow-x-auto">
               <table className="w-full text-sm" data-testid="cycle-roster">
                 <thead>

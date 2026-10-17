@@ -258,10 +258,9 @@ test.describe("Batch 3 forms, ratings and draft persistence", () => {
     // Rating scale present on editable HR form or manager form elsewhere:
     await loginUi(page, manifest.users.hr.email, manifest.password);
     await page.goto(`/performance/${manifest.discussion_review_id}`);
-    await page.getByRole("button", { name: /HR final review/i }).click();
-    // May need discussion first — already recorded in prepare? discussion review has no discussion yet.
-    // Just verify page loads without error.
-    await expect(page.getByText(/performance|review/i).first()).toBeVisible();
+    await page.getByRole("button", { name: /HR quality|HR final review/i }).click();
+    // Discussion review may already be completed by Batch 2 — verify page loads without error.
+    await expect(page.getByText(/performance|review|quality|finalis/i).first()).toBeVisible();
 
     // API assertion that employee UI path would use (draft already submitted — verify locked).
     const empToken = await loginApi(request, manifest.users.employee.email, manifest.password);

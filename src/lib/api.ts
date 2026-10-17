@@ -1778,6 +1778,50 @@ class ApiService {
     });
   }
 
+  // Batch 5: quality checklist, HOD decision, reopen, revisions
+  async getPerformanceQualityChecklist(id: number | string): Promise<any> {
+    return this.request<any>(`/performance/${id}/quality-checklist`);
+  }
+
+  async savePerformanceQualityChecklist(
+    id: number | string,
+    manual_confirmations: { checklist_reviewed: boolean },
+  ): Promise<any> {
+    return this.request<any>(`/performance/${id}/quality-checklist`, {
+      method: 'PUT',
+      body: JSON.stringify({ manual_confirmations }),
+    });
+  }
+
+  async hodDecidePerformance(
+    id: number | string,
+    data: {
+      decision: 'approved' | 'returned';
+      notes?: string;
+      new_rating?: string;
+      rating_change_reason?: string;
+    },
+  ): Promise<any> {
+    return this.request<any>(`/performance/${id}/hod-decide`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async reopenPerformanceReview(
+    id: number | string,
+    data: { reason: string; return_to_status: string },
+  ): Promise<any> {
+    return this.request<any>(`/performance/${id}/reopen`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getPerformanceRevisions(id: number | string): Promise<any> {
+    return this.request<any>(`/performance/${id}/revisions`);
+  }
+
   // Training Assignments
   async getTrainingAssignments(): Promise<any[]> {
     return this.request<any[]>('/training/assignments');

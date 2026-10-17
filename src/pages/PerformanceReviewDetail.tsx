@@ -35,19 +35,34 @@ const LEGACY: Record<string, string> = {
   closed: "completed",
 };
 
+/** Guide §7 rating scale — shared labels for manager/HR selects. */
+const RATING_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: "5", label: "5 – Exceptional" },
+  { value: "4", label: "4 – Exceeds Expectations" },
+  { value: "3", label: "3 – Meets Expectations" },
+  { value: "2", label: "2 – Partially Meets Expectations" },
+  { value: "1", label: "1 – Does Not Meet Expectations" },
+  { value: "N/A", label: "N/A – Not Applicable" },
+];
+
 /**
- * Structured line-manager questions. Keys match the fields the backend stores
- * on manager_review; `aliases` cover values saved by earlier versions so older
- * reviews still display.
+ * Structured line-manager questions for independent assessment (guide §6).
+ * Does not ask about the employee's self-assessment while that record is sealed.
+ * `aliases` cover values saved by earlier versions so older reviews still display.
  */
 const MANAGER_FIELDS: Array<{ key: string; label: string; type?: "text" | "rating"; aliases?: string[] }> = [
-  { key: "performance_assessment", label: "Your assessment of the employee's reported performance", aliases: ["observations"] },
-  { key: "self_assessment_accuracy", label: "Is the employee's self-rating accurate against observed performance and KPIs?", aliases: ["self_rating_accuracy"] },
-  { key: "strengths", label: "Key strengths", aliases: ["key_strengths"] },
-  { key: "areas_for_improvement", label: "Areas requiring improvement" },
-  { key: "recommendations", label: "Development actions or recommendations", aliases: ["development_actions"] },
-  { key: "ratings", label: "Overall manager rating (1-5)", type: "rating", aliases: ["overall_rating", "rating"] },
-  { key: "comments", label: "Overall manager comments", aliases: ["overall_comments", "observations"] },
+  { key: "performance_assessment", label: "Based on agreed objectives and observed performance, what is your assessment of the employee?", aliases: ["observations"] },
+  { key: "strengths", label: "Key strengths and most valuable contributions", aliases: ["key_strengths"] },
+  { key: "areas_for_improvement", label: "Most important performance gaps or improvement areas" },
+  { key: "recommendations", label: "Development action recommended (action, owner, target date)", aliases: ["development_actions"] },
+  { key: "ratings", label: "Overall manager rating", type: "rating", aliases: ["overall_rating", "rating"] },
+  { key: "comments", label: "Overall rating rationale and supporting evidence", aliases: ["overall_comments", "observations"] },
+];
+
+/** Read-only display may still show legacy self_assessment_accuracy on older records. */
+const MANAGER_DISPLAY_FIELDS: Array<{ key: string; label: string; aliases?: string[] }> = [
+  ...MANAGER_FIELDS,
+  { key: "self_assessment_accuracy", label: "Self-assessment accuracy (legacy)", aliases: ["self_rating_accuracy"] },
 ];
 
 /** Read a manager/HR answer, tolerating older field names. */
@@ -150,9 +165,9 @@ function StructuredForm({
                 <SelectValue placeholder="Select a rating" />
               </SelectTrigger>
               <SelectContent>
-                {["1", "2", "3", "4", "5"].map((r) => (
-                  <SelectItem key={r} value={r}>
-                    {r}
+                {RATING_OPTIONS.map((r) => (
+                  <SelectItem key={r.value} value={r.value}>
+                    {r.label}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -215,10 +230,19 @@ export default function PerformanceReviewDetail() {
     (String(review.employee_id) === String((user as any)?.employee_id) ||
       String(review.employee?.id) === String((user as any)?.employee_id));
 
-  const managerDone = !!review?.manager_review;
+  const selfSealed = !!review?.self_assessment_sealed;
+  const managerSealed = !!review?.manager_review_sealed;
+  const hrSealed = !!review?.hr_review_sealed;
+  const managerDone =
+    status === "hr_review" ||
+    status === "completed" ||
+    (!!review?.manager_review && !managerSealed);
   const hrDone = status === "completed";
 
-  const canEditManager = (isManager || isHr) && !managerDone && status === "self_assessment_submitted";
+  const canEditManager =
+    (isManager || isHr) &&
+    !managerDone &&
+    (status === "self_assessment_submitted" || status === "manager_review");
   const canEditHr = isHr && !hrDone && (managerDone || status === "manager_review" || status === "hr_review");
 
   const steps = useMemo(
@@ -289,6 +313,18 @@ export default function PerformanceReviewDetail() {
         variant: "destructive",
       });
       return;
+    }
+    const rating = String(managerValues.ratings || "").trim().toUpperCase();
+    if (rating === "N/A" || rating === "NA") {
+      const explanation = String(managerValues.comments || managerValues.performance_assessment || "").trim();
+      if (!explanation) {
+        toast({
+          title: "N/A requires an explanation",
+          description: "Provide a short rationale when a rating does not apply.",
+          variant: "destructive",
+        });
+        return;
+      }
     }
     act(() => apiService.managerReview(review.id, managerValues), "Sent to HR for final review");
   };
@@ -392,16 +428,25 @@ export default function PerformanceReviewDetail() {
               <CardHeader>
                 <CardTitle className="text-base flex items-center gap-2">
                   Employee self-assessment
-                  {!isOwner && <Lock className="h-4 w-4 text-muted-foreground" />}
+                  {(selfSealed || !isOwner) && <Lock className="h-4 w-4 text-muted-foreground" />}
                 </CardTitle>
                 <CardDescription>
                   {isOwner
                     ? "Your own responses."
-                    : "The employee's own responses. View only — they cannot be edited here."}
+                    : selfSealed
+                      ? "Sealed until you submit your independent manager assessment. This protects assessment independence."
+                      : "The employee's own responses. View only — they cannot be edited here."}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <ReadOnlyBlock value={review.self_assessment} emptyText="Not submitted yet." />
+                {selfSealed ? (
+                  <p className="text-sm text-muted-foreground rounded-md border border-dashed p-4">
+                    Employee ratings and comments are hidden until your manager assessment is submitted.
+                    Complete your assessment on the next step without referring to the self-assessment.
+                  </p>
+                ) : (
+                  <ReadOnlyBlock value={review.self_assessment} emptyText="Not submitted yet." />
+                )}
                 {status === "self_assessment_requested" && isOwner && (
                   <Button onClick={() => navigate("/performance?selfAssessment=1")}>
                     Complete my self-assessment
@@ -422,8 +467,12 @@ export default function PerformanceReviewDetail() {
                 <CardTitle className="text-base">Line manager assessment</CardTitle>
                 <CardDescription>
                   {canEditManager
-                    ? "Answer each question, then send the review to HR."
-                    : "Submitted by the line manager. View only."}
+                    ? selfSealed
+                      ? "Complete your independent assessment. The employee self-assessment stays sealed until you submit."
+                      : "Answer each question, then send the review to HR."
+                    : managerSealed
+                      ? "The manager assessment is not available until the line manager submits."
+                      : "Submitted by the line manager. View only."}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-5">
@@ -438,9 +487,13 @@ export default function PerformanceReviewDetail() {
                       {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Submit assessment to HR
                     </Button>
                   </>
+                ) : managerSealed ? (
+                  <p className="text-sm text-muted-foreground rounded-md border border-dashed p-4">
+                    Manager assessment and proposed rating are sealed until the line manager submits.
+                  </p>
                 ) : (
                   <AnswerList
-                    fields={MANAGER_FIELDS}
+                    fields={MANAGER_DISPLAY_FIELDS}
                     source={
                       typeof review.manager_review === "object" && review.manager_review
                         ? review.manager_review
@@ -485,6 +538,10 @@ export default function PerformanceReviewDetail() {
                       {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Complete review
                     </Button>
                   </>
+                ) : hrSealed ? (
+                  <p className="text-sm text-muted-foreground rounded-md border border-dashed p-4">
+                    The final HR review is available after HR completes and finalises the review.
+                  </p>
                 ) : (
                   <AnswerList
                     fields={HR_FIELDS}

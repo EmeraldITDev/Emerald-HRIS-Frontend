@@ -273,48 +273,32 @@ export default function Performance() {
   // Check if any filters are active
   const hasActiveFilters = searchTerm || statusFilter || periodFilter || departmentFilter
   
-  // Performance reviews run twice a month (Early = 1–15, Late = 16–end).
-  const MONTH_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"] as const
-  const formatHalfMonthPeriod = (year: number, monthIndex: number, half: "Early" | "Late") =>
-    `${half} ${MONTH_SHORT[monthIndex]} ${year}`
-
+  // Performance reviews run twice a year (H1 = Jan–Jun, H2 = Jul–Dec).
   const currentPeriod = (() => {
     const now = new Date()
-    const half: "Early" | "Late" = now.getDate() <= 15 ? "Early" : "Late"
-    return formatHalfMonthPeriod(now.getFullYear(), now.getMonth(), half)
+    const half = now.getMonth() < 6 ? 1 : 2
+    return `H${half} ${now.getFullYear()}`
   })()
 
-  // Twice-a-month options: 3 months back through 3 months forward (14 slots).
+  // Half-year options: two halves back through three forward.
   const periodOptions = (() => {
     const now = new Date()
     let year = now.getFullYear()
-    let month = now.getMonth() // 0–11
-    let half: "Early" | "Late" = now.getDate() <= 15 ? "Early" : "Late"
-    // Step back 6 half-month slots from current.
-    for (let i = 0; i < 6; i++) {
-      if (half === "Late") {
-        half = "Early"
-      } else {
-        half = "Late"
-        month -= 1
-        if (month < 0) {
-          month = 11
-          year -= 1
-        }
+    let half = now.getMonth() < 6 ? 1 : 2
+    for (let i = 0; i < 2; i++) {
+      half -= 1
+      if (half < 1) {
+        half = 2
+        year -= 1
       }
     }
     const options: string[] = []
-    for (let i = 0; i < 14; i++) {
-      options.push(formatHalfMonthPeriod(year, month, half))
-      if (half === "Early") {
-        half = "Late"
-      } else {
-        half = "Early"
-        month += 1
-        if (month > 11) {
-          month = 0
-          year += 1
-        }
+    for (let i = 0; i < 6; i++) {
+      options.push(`H${half} ${year}`)
+      half += 1
+      if (half > 2) {
+        half = 1
+        year += 1
       }
     }
     return options

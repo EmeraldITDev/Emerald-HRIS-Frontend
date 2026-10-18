@@ -199,7 +199,7 @@ export default function PerformanceCycles() {
                 data-testid="cycle-period"
                 value={form.period_label}
                 onChange={(e) => setForm({ ...form, period_label: e.target.value })}
-                placeholder="Early Oct 2026"
+                placeholder="H1 2026"
               />
             </div>
             <div className="grid grid-cols-2 gap-2">

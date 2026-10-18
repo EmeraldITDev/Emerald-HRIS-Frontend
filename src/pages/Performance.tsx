@@ -102,10 +102,36 @@ export default function Performance() {
   const { toast } = useToast()
   const { user } = useAuth()
   
+  const [dash, setDash] = useState<any>(null)
+  const [dashCycleId, setDashCycleId] = useState<string>("")
+  const isHrUser = user?.role === 'hr_manager' || user?.role === 'corporate_hr' || user?.role === 'executive'
+
   useEffect(() => {
     fetchEmployees()
     fetchReviews()
   }, [])
+
+  useEffect(() => {
+    const status = searchParams.get('status')
+    if (status) setStatusFilter(statusLabel(status) === status ? statusLabel(status) : statusLabel(status))
+    // Prefer raw status filter match via rawStatus below when using dashboard deep-links
+    if (status) setStatusFilter(statusLabel(status))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams])
+
+  useEffect(() => {
+    if (!isHrUser) return
+    void (async () => {
+      try {
+        const res = await apiService.getPerformanceDashboard(
+          dashCycleId ? { cycle_id: Number(dashCycleId) } : undefined,
+        )
+        setDash(res?.data ?? res)
+      } catch (e) {
+        console.error('Failed to load performance dashboard', e)
+      }
+    })()
+  }, [isHrUser, dashCycleId])
   
   const fetchEmployees = async () => {
     try {
@@ -125,6 +151,7 @@ export default function Performance() {
     self_assessment_requested: 'Awaiting Self-Assessment',
     self_assessment_submitted: 'Self-Assessment Submitted',
     manager_review: 'With Line Manager',
+    hod_review: 'Awaiting HOD',
     hr_review: 'With HR',
     completed: 'Completed',
   }
@@ -188,8 +215,13 @@ export default function Performance() {
       if (!matchesSearch) return false
     }
     
-    // Status filtering
-    if (statusFilter && review.status !== statusFilter) return false
+    // Status filtering (label or raw backend status from dashboard deep-links)
+    if (statusFilter) {
+      const want = statusFilter.toLowerCase()
+      const raw = String(review.rawStatus || '').toLowerCase()
+      const label = String(review.status || '').toLowerCase()
+      if (raw !== want && label !== want && label !== statusLabel(want).toLowerCase()) return false
+    }
     
     // Period filtering
     if (periodFilter && review.reviewPeriod !== periodFilter) return false
@@ -335,20 +367,8 @@ export default function Performance() {
   }
   
   const openSelfAssessment = async (review: Review) => {
-    setSelfAssessmentPeriod(review.reviewPeriod)
-    setSelfAssessmentReviewId(Number(review.id))
-    setSelfAssessmentData({ ...EMPTY_SELF_ASSESSMENT })
-    setSelfAssessmentObjectives([])
-    setSelfAssessmentOpen(true)
-    try {
-      const full = await apiService.getPerformanceReview(review.id)
-      setSelfAssessmentData(hydrateSelfAssessment(full?.self_assessment))
-      setSelfAssessmentObjectives(Array.isArray(full?.objectives) ? full.objectives : [])
-      if (full?.period) setSelfAssessmentPeriod(full.period)
-      if (full?.id) setSelfAssessmentReviewId(Number(full.id))
-    } catch (e) {
-      console.error('Failed to load self-assessment draft', e)
-    }
+    // Batch 6: supported self-assessment path is the detail page (Batch 3 schema).
+    navigate(`/performance/${review.id}`)
   }
 
   const handleSaveSelfAssessmentDraft = async () => {
@@ -666,7 +686,7 @@ export default function Performance() {
               setIsDialogOpen(open)
             }}>
               <DialogTrigger asChild>
-                <Button className="bg-emerald-600 hover:bg-emerald-700 text-white w-full sm:w-auto">
+                <Button className="bg-emerald-600 hover:bg-emerald-700 text-white w-full sm:w-auto" data-testid="new-review-legacy">
                   <Plus className="mr-2 h-4 w-4" />
                   <span className="text-sm md:text-base">New Review</span>
                 </Button>
@@ -732,6 +752,75 @@ export default function Performance() {
           )}
         </div>
       </div>
+
+      {isHrUser && (
+        <Card data-testid="performance-hr-dashboard">
+          <CardHeader className="pb-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <CardTitle className="text-base">HR performance dashboard</CardTitle>
+                <CardDescription>
+                  Counts derived from live review status{dash?.as_of ? ` · as of ${dash.as_of}` : ""}
+                </CardDescription>
+              </div>
+              <Select value={dashCycleId || "all"} onValueChange={(v) => setDashCycleId(v === "all" ? "" : v)}>
+                <SelectTrigger className="w-56" data-testid="dashboard-cycle-filter">
+                  <SelectValue placeholder="All cycles" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All cycles</SelectItem>
+                  {(dash?.cycles || []).map((c: any) => (
+                    <SelectItem key={c.id} value={String(c.id)}>
+                      {c.name || c.period_label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3" data-testid="dashboard-counts">
+              {[
+                ["due", "Due soon / overdue"],
+                ["in_progress", "In progress"],
+                ["submitted", "Awaiting manager"],
+                ["overdue", "Overdue"],
+                ["awaiting_hod", "Awaiting HOD"],
+                ["awaiting_hr_quality", "Awaiting HR"],
+                ["returned_or_reopened", "Returned / reopened"],
+                ["finalised", "Finalised"],
+              ].map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  className="rounded-md border p-3 text-left hover:bg-muted/40"
+                  data-testid={`dash-count-${key}`}
+                  onClick={() => {
+                    const map: Record<string, string> = {
+                      submitted: "self_assessment_submitted",
+                      awaiting_hod: "hod_review",
+                      awaiting_hr_quality: "hr_review",
+                      finalised: "completed",
+                      in_progress: "self_assessment_requested",
+                    }
+                    if (map[key]) setStatusFilter(statusLabel(map[key]))
+                  }}
+                >
+                  <p className="text-xs text-muted-foreground">{label}</p>
+                  <p className="text-2xl font-semibold">{dash?.counts?.[key] ?? "—"}</p>
+                </button>
+              ))}
+            </div>
+            {(dash?.development_actions || []).length > 0 && (
+              <p className="text-xs text-muted-foreground mt-3" data-testid="dashboard-dev-actions">
+                Development actions tracked: {dash.development_actions.length}
+                {" · "}
+                Overdue: {dash.development_actions.filter((d: any) => d.overdue).length}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Search and Filters */}
       <Card>

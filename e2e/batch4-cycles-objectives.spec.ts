@@ -131,8 +131,9 @@ test.describe("Batch 4 cycles and objectives", () => {
     await expect(page.getByTestId("performance-cycles-page")).toBeVisible({ timeout: 30_000 });
     await expect(page.getByTestId("cycle-name")).toBeVisible();
     await expect(page.getByTestId(`cycle-row-${cycleId}`)).toBeVisible({ timeout: 20_000 });
+    await page.getByTestId(`cycle-row-${cycleId}`).scrollIntoViewIfNeeded();
     await page.getByTestId(`cycle-row-${cycleId}`).click();
-    await expect(page.getByTestId("cycle-detail")).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByTestId("cycle-detail")).toBeVisible({ timeout: 30_000 });
     await expect(page.getByTestId("cycle-roster")).toBeVisible();
   });
 

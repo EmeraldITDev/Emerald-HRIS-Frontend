@@ -1822,6 +1822,50 @@ class ApiService {
     return this.request<any>(`/performance/${id}/revisions`);
   }
 
+  // Batch 6: dashboard, audit timeline, reports
+  async getPerformanceDashboard(params?: Record<string, string | number | undefined>): Promise<any> {
+    const q = new URLSearchParams();
+    Object.entries(params || {}).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && String(v) !== '') q.set(k, String(v));
+    });
+    const suffix = q.toString() ? `?${q.toString()}` : '';
+    return this.request<any>(`/performance/dashboard${suffix}`);
+  }
+
+  async getPerformanceAuditTimeline(id: number | string): Promise<any> {
+    return this.request<any>(`/performance/${id}/audit-timeline`);
+  }
+
+  async getPerformanceApprovals(id: number | string): Promise<any> {
+    return this.request<any>(`/performance/${id}/approvals`);
+  }
+
+  async getPerformanceReport(params?: Record<string, string | number | undefined>): Promise<any> {
+    const q = new URLSearchParams();
+    Object.entries(params || {}).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && String(v) !== '') q.set(k, String(v));
+    });
+    const suffix = q.toString() ? `?${q.toString()}` : '';
+    return this.request<any>(`/performance/report${suffix}`);
+  }
+
+  async exportPerformanceOutstandingCsv(params?: Record<string, string | number | undefined>): Promise<Blob> {
+    const q = new URLSearchParams();
+    Object.entries(params || {}).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && String(v) !== '') q.set(k, String(v));
+    });
+    const suffix = q.toString() ? `?${q.toString()}` : '';
+    const token = localStorage.getItem('auth_token');
+    const res = await fetch(`${this.baseUrl}/performance/report/export${suffix}`, {
+      headers: {
+        Accept: 'text/csv',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    });
+    if (!res.ok) throw new Error(`Export failed (${res.status})`);
+    return res.blob();
+  }
+
   // Training Assignments
   async getTrainingAssignments(): Promise<any[]> {
     return this.request<any[]>('/training/assignments');

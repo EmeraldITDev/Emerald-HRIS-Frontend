@@ -106,8 +106,8 @@ export default function PerformanceCycles() {
         eligible_departments: form.eligible_departments,
         hod_approval_required: form.hod_approval_required,
         reminder_schedule: form.reminder_schedule_note
-          ? { note: form.reminder_schedule_note, execution: "not_claimed_batch4" }
-          : null,
+          ? { note: form.reminder_schedule_note, days_before: [7, 3, 1] }
+          : { days_before: [7, 3, 1] },
       };
       const res = await apiService.createPerformanceCycle(payload);
       toast({ title: "Cycle created" });
@@ -177,8 +177,8 @@ export default function PerformanceCycles() {
           <CardHeader>
             <CardTitle className="text-base">Create cycle</CardTitle>
             <CardDescription>
-              HOD approval and reminder fields are stored as configuration only — they do not run
-              workflows in Batch 4.
+              Configure deadlines and eligibility. Reminder execution requires the deployed scheduler
+              (`performance:send-reminders`). HOD confidential access remains policy-gated.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -203,6 +203,16 @@ export default function PerformanceCycles() {
               />
             </div>
             <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <Label htmlFor="cycle-opens-at">Opens at</Label>
+                <Input
+                  id="cycle-opens-at"
+                  type="date"
+                  data-testid="cycle-opens-at"
+                  value={form.opens_at}
+                  onChange={(e) => setForm({ ...form, opens_at: e.target.value })}
+                />
+              </div>
               <div className="space-y-1">
                 <Label>Coverage start</Label>
                 <Input

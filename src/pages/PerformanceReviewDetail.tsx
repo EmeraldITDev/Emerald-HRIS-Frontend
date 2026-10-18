@@ -409,6 +409,8 @@ export default function PerformanceReviewDetail() {
   const [hodRatingReason, setHodRatingReason] = useState("");
   const [reopenReason, setReopenReason] = useState("");
   const [reopenTarget, setReopenTarget] = useState("manager_review");
+  const [auditTimeline, setAuditTimeline] = useState<any>(null);
+  const [auditFilter, setAuditFilter] = useState("");
 
   const load = async () => {
     if (!id) return;
@@ -714,6 +716,18 @@ export default function PerformanceReviewDetail() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [review?.id, status, review?.employee_acknowledgement, review?.discussion_completed_at]);
+
+  useEffect(() => {
+    if (!review?.id) return;
+    void (async () => {
+      try {
+        const res = await apiService.getPerformanceAuditTimeline(review.id);
+        setAuditTimeline(res?.data ?? res);
+      } catch {
+        setAuditTimeline(null);
+      }
+    })();
+  }, [review?.id, review?.status, review?.reopen_count]);
 
   const submitHr = () => {
     if (!discussionRecorded) {
@@ -1583,6 +1597,52 @@ export default function PerformanceReviewDetail() {
               HOD pathway blocked: set <code>hod_confidential_access_authorised</code> on the cycle only after HR
               confirms whether HODs may see manager assessments without self-assessment contents (current least-privilege).
             </p>
+          )}
+
+          {auditTimeline?.events && (
+            <Card data-testid="performance-audit-timeline">
+              <CardHeader>
+                <CardTitle className="text-base">Audit history</CardTitle>
+                <CardDescription>
+                  Workflow events for this review
+                  {auditTimeline.reopen_count > 0
+                    ? ` · reopened ${auditTimeline.reopen_count} time(s); historical snapshots marked separately`
+                    : ""}
+                  . Assessment narratives are redacted for non-HR viewers.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Input
+                  data-testid="audit-event-filter"
+                  placeholder="Filter by event type…"
+                  value={auditFilter}
+                  onChange={(e) => setAuditFilter(e.target.value)}
+                />
+                <ul className="space-y-2 max-h-80 overflow-y-auto text-sm">
+                  {(auditTimeline.events as any[])
+                    .filter((ev) =>
+                      !auditFilter
+                        || String(ev.event_type || "").toLowerCase().includes(auditFilter.toLowerCase())
+                        || String(ev.description || "").toLowerCase().includes(auditFilter.toLowerCase()),
+                    )
+                    .map((ev) => (
+                      <li key={ev.id} className="border-b border-dashed pb-2" data-testid="audit-event-row">
+                        <p className="font-medium">{ev.event_type}</p>
+                        <p className="text-muted-foreground">{ev.description}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {ev.timestamp?.slice?.(0, 19)?.replace("T", " ") || "—"}
+                          {ev.actor_name ? ` · ${ev.actor_name}` : ""}
+                          {ev.reason ? ` · reason: ${ev.reason}` : ""}
+                          {ev.version_context ? ` · ${ev.version_context}` : ""}
+                        </p>
+                      </li>
+                    ))}
+                </ul>
+                {(auditTimeline.events as any[]).length === 0 && (
+                  <p className="text-sm text-muted-foreground">No audit events recorded yet.</p>
+                )}
+              </CardContent>
+            </Card>
           )}
         </>
       )}

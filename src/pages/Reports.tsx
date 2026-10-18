@@ -22,11 +22,24 @@ export default function Reports() {
   const [selectedEmployee, setSelectedEmployee] = useState("")
   const [reportData, setReportData] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [perfReport, setPerfReport] = useState<any>(null)
   const { toast } = useToast()
   
   useEffect(() => {
     fetchEmployees()
   }, [])
+
+  useEffect(() => {
+    if (!isExecutiveOrHR) return
+    void (async () => {
+      try {
+        const res = await apiService.getPerformanceReport()
+        setPerfReport(res?.data ?? res)
+      } catch (e) {
+        console.error('Performance report failed', e)
+      }
+    })()
+  }, [isExecutiveOrHR])
   
   const fetchEmployees = async () => {
     try {
@@ -410,6 +423,77 @@ export default function Reports() {
         </Button>
       </div>
 
+      {isExecutiveOrHR && (
+        <Card data-testid="performance-aggregate-report">
+          <CardHeader>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <CardTitle>Performance review report</CardTitle>
+                <CardDescription>
+                  Aggregate status and outstanding actions (no assessment narratives)
+                  {perfReport?.as_of ? ` · as of ${perfReport.as_of}` : ""}
+                </CardDescription>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                data-testid="export-performance-csv"
+                onClick={async () => {
+                  try {
+                    const blob = await apiService.exportPerformanceOutstandingCsv()
+                    const url = URL.createObjectURL(blob)
+                    const a = document.createElement("a")
+                    a.href = url
+                    a.download = "performance-outstanding.csv"
+                    a.click()
+                    URL.revokeObjectURL(url)
+                  } catch (e: any) {
+                    toast({ title: "Export failed", description: e?.message, variant: "destructive" })
+                  }
+                }}
+              >
+                <Download className="mr-2 h-4 w-4" /> Export outstanding CSV
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {!perfReport ? (
+              <p className="text-sm text-muted-foreground">Loading performance aggregates…</p>
+            ) : (
+              <>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3" data-testid="performance-report-counts">
+                  {Object.entries(perfReport.summary || {}).filter(([k]) => k !== "by_status" && k !== "total").map(([k, v]) => (
+                    <div key={k} className="rounded border p-3">
+                      <p className="text-xs text-muted-foreground">{k.replace(/_/g, " ")}</p>
+                      <p className="text-xl font-semibold">{String(v)}</p>
+                    </div>
+                  ))}
+                </div>
+                {perfReport.rating_distribution && Object.keys(perfReport.rating_distribution).length > 0 && (
+                  <div data-testid="rating-distribution">
+                    <p className="text-sm font-medium mb-2">Finalised rating distribution</p>
+                    <div className="flex flex-wrap gap-2">
+                      {Object.entries(perfReport.rating_distribution).map(([rating, count]) => (
+                        <Badge key={rating} variant="secondary">
+                          {rating}: {String(count)}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {(perfReport.outstanding || []).length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No outstanding reviews for the current filters.</p>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Outstanding reviews listed: {(perfReport.outstanding || []).length}
+                  </p>
+                )}
+              </>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Employee Selection */}
       <Card>
         <CardHeader>
@@ -599,6 +683,33 @@ export default function Reports() {
                 </div>
               </CardContent>
             </Card>
+
+            {reportData.performance && (
+              <Card data-testid="employee-performance-summary">
+                <CardHeader>
+                  <CardTitle>Performance summary</CardTitle>
+                  <CardDescription>Status only — narratives excluded</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span>Open reviews</span>
+                    <span>{reportData.performance.open_count ?? "—"}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Completed reviews</span>
+                    <span>{reportData.performance.completed_count ?? "—"}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Latest status</span>
+                    <span>{reportData.performance.last_review?.status ?? "N/A"}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Last final rating</span>
+                    <span>{reportData.performance.last_completed?.final_rating ?? "N/A"}</span>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {reportData.attendance && (
               <Card>

@@ -302,7 +302,7 @@ export function generatePayslipCsv(p: PayslipLike, filename: string) {
     ["NHF", String(p.nhf ?? "")],
     ["Total Deductions", String(p.totalDeductions ?? "")],
     ["Net Pay", String(p.net ?? "")],
-  ];
+  );
   const esc = (s: string) => `"${(s || "").replace(/"/g, '""')}"`;
   const csv = rows.map(([k, v]) => `${esc(k)},${esc(v)}`).join("\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });

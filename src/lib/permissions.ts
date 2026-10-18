@@ -88,11 +88,13 @@ export function canEditAttendanceProfile(
   return user.role === "hr_manager" || user.role === "corporate_hr";
 }
 
-/** Chairman's executive view — executives and HR Managers only. */
+/** Chairman's executive view — executives and HR Managers only (not Corporate HR). */
 export function canViewExecutiveView(
   user: (User & Record<string, any>) | null | undefined,
 ): boolean {
   if (!user) return false;
+  // Corporate HR must never use Chairman's View — they use the standard Dashboard.
+  if (user.role === "corporate_hr") return false;
   // Backend exposes can_view_chairman_dashboard on login/me — trust it so
   // FE access stays in sync with backend data access.
   if ((user as any).can_view_chairman_dashboard || user.canViewChairmanDashboard) return true;

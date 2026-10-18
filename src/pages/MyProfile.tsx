@@ -202,7 +202,7 @@ export default function MyProfile() {
       it_power_user: 'IT Power User',
       consulting_hr: 'Consulting HR',
       contract_hr: 'Contract HR',
-      corporate_user: 'Corporate User',
+      corporate_user: 'General Employee',
       contract_staff: 'Contract Staff',
       contract_employee: 'Contract Employee',
       general_employee: 'Employee'

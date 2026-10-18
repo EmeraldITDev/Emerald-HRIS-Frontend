@@ -8,8 +8,18 @@ import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Star, Plus, Eye, Download, Calendar, CheckCircle, ClipboardCheck, FileText, Search, Filter, X } from "lucide-react"
+import { Star, Plus, Eye, Download, Calendar, CheckCircle, ClipboardCheck, FileText, Search, Filter, X, Trash2 } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { DEPARTMENTS } from '@/constants/departments'
 import { useToast } from "@/hooks/use-toast"
@@ -76,6 +86,8 @@ export default function Performance() {
   const [manageReviewDialogOpen, setManageReviewDialogOpen] = useState(false)
   const [hrReviewDialogOpen, setHrReviewDialogOpen] = useState(false)
   const [selectedReview, setSelectedReview] = useState<Review | null>(null)
+  const [reviewPendingDelete, setReviewPendingDelete] = useState<Review | null>(null)
+  const [deletingReview, setDeletingReview] = useState(false)
   const [employeeComment, setEmployeeComment] = useState("")
   const [selfAssessmentPeriod, setSelfAssessmentPeriod] = useState("")
   const [selfAssessmentReviewId, setSelfAssessmentReviewId] = useState<number | null>(null)
@@ -197,6 +209,7 @@ export default function Performance() {
   const canManageReviews = isExecutiveOrHR || isLineManager
   // Only HR opens a review cycle; managers contribute to existing ones.
   const canCreateReviews = user?.role === 'hr_manager' || user?.role === 'corporate_hr'
+  const canDeleteReviews = user?.role === 'hr_manager' || user?.role === 'corporate_hr'
   const userDepartment = user?.department
   const currentEmployeeIdFromUser = user?.employee_id ? String(user.employee_id) : undefined
   
@@ -260,15 +273,34 @@ export default function Performance() {
   // Check if any filters are active
   const hasActiveFilters = searchTerm || statusFilter || periodFilter || departmentFilter
   
-  const currentPeriod = `Q${Math.floor(new Date().getMonth() / 3) + 1} ${new Date().getFullYear()}`
+  // Performance reviews run twice a year (H1 = Jan–Jun, H2 = Jul–Dec).
+  const currentPeriod = (() => {
+    const now = new Date()
+    const half = now.getMonth() < 6 ? 1 : 2
+    return `H${half} ${now.getFullYear()}`
+  })()
 
-  // Quarter options: two quarters back through three forward.
+  // Half-year options: two halves back through three forward.
   const periodOptions = (() => {
     const now = new Date()
+    let year = now.getFullYear()
+    let half = now.getMonth() < 6 ? 1 : 2
+    // Step back two halves from the current period.
+    for (let i = 0; i < 2; i++) {
+      half -= 1
+      if (half < 1) {
+        half = 2
+        year -= 1
+      }
+    }
     const options: string[] = []
-    for (let offset = -2; offset <= 3; offset++) {
-      const d = new Date(now.getFullYear(), now.getMonth() + offset * 3, 1)
-      options.push(`Q${Math.floor(d.getMonth() / 3) + 1} ${d.getFullYear()}`)
+    for (let i = 0; i < 6; i++) {
+      options.push(`H${half} ${year}`)
+      half += 1
+      if (half > 2) {
+        half = 1
+        year += 1
+      }
     }
     return options
   })()
@@ -334,6 +366,29 @@ export default function Performance() {
     })
   }
   
+  const handleDeleteReview = async () => {
+    if (!reviewPendingDelete) return
+    const target = reviewPendingDelete
+    setDeletingReview(true)
+    try {
+      await apiService.deletePerformanceReview(Number(target.id))
+      setReviewPendingDelete(null)
+      await fetchReviews()
+      toast({
+        title: "Review deleted",
+        description: `The ${target.reviewPeriod} review for ${target.employeeName} has been removed.`,
+      })
+    } catch (error: any) {
+      toast({
+        title: "Could not delete review",
+        description: error?.message || "Failed to delete this performance review.",
+        variant: "destructive",
+      })
+    } finally {
+      setDeletingReview(false)
+    }
+  }
+
   const handleAddEmployeeComment = async () => {
     if (!selectedReview || !employeeComment.trim()) {
       toast({
@@ -722,7 +777,7 @@ export default function Performance() {
                     onValueChange={(value) => setNewReview({ ...newReview, reviewPeriod: value })}
                   >
                     <SelectTrigger id="review-period">
-                      <SelectValue placeholder="Select quarter" />
+                      <SelectValue placeholder="Select half-year period" />
                     </SelectTrigger>
                     <SelectContent>
                       {periodOptions.map((option) => (
@@ -965,6 +1020,18 @@ export default function Performance() {
                         <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hidden sm:inline-flex" onClick={() => handleExportReview(review)}>
                           <Download className="h-3 w-3 md:h-4 md:w-4" />
                         </Button>
+
+                        {canDeleteReviews && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                            onClick={() => setReviewPendingDelete(review)}
+                            title="Delete review"
+                          >
+                            <Trash2 className="h-3 w-3 md:h-4 md:w-4" />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -1355,6 +1422,37 @@ export default function Performance() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog
+        open={!!reviewPendingDelete}
+        onOpenChange={(open) => {
+          if (!open && !deletingReview) setReviewPendingDelete(null)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this performance review?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {reviewPendingDelete
+                ? `This permanently removes the ${reviewPendingDelete.reviewPeriod} review for ${reviewPendingDelete.employeeName}, including assessments and related history. This cannot be undone.`
+                : "This permanently removes the review and related history."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletingReview}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deletingReview}
+              onClick={(e) => {
+                e.preventDefault()
+                void handleDeleteReview()
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deletingReview ? "Deleting…" : "Delete review"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
-}// Performance page updated Wed Oct 29 19:10:53 EDT 2025
+}

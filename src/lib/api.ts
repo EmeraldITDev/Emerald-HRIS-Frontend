@@ -1588,6 +1588,12 @@ class ApiService {
     });
   }
 
+  async deletePerformanceReview(id: number | string): Promise<any> {
+    return this.request<any>(`/performance/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
   async submitSelfAssessment(
     id: number,
     payload?: { self_assessment?: any; kpis?: any; draft?: boolean },

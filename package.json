@@ -16,7 +16,8 @@
     "test:e2e:batch4": "playwright test e2e/batch4-cycles-objectives.spec.ts",
     "test:e2e:batch5": "playwright test e2e/batch5-governance.spec.ts",
     "test:e2e:batch6": "playwright test e2e/batch6-operations.spec.ts",
-    "test:e2e:performance": "playwright test e2e/batch1-independence.spec.ts e2e/batch2-discussion-acknowledgement.spec.ts e2e/batch3-forms-ratings-drafts.spec.ts e2e/batch4-cycles-objectives.spec.ts e2e/batch5-governance.spec.ts e2e/batch6-operations.spec.ts",
+    "test:e2e:acceptance": "playwright test e2e/production-acceptance.spec.ts",
+    "test:e2e:performance": "playwright test e2e/batch1-independence.spec.ts e2e/batch2-discussion-acknowledgement.spec.ts e2e/batch3-forms-ratings-drafts.spec.ts e2e/batch4-cycles-objectives.spec.ts e2e/batch5-governance.spec.ts e2e/batch6-operations.spec.ts e2e/production-acceptance.spec.ts",
     "test:e2e:report": "playwright show-report"
   },
   "dependencies": {

@@ -34,7 +34,6 @@ import PayrollReview from "./pages/PayrollReview";
 import ManagerApprovals from "./pages/attendance/ManagerApprovals";
 import OrgAttendanceDashboard from "./pages/attendance/OrgAttendanceDashboard";
 import ExecutiveView from "./pages/ExecutiveView";
-import { canViewExecutiveView } from "@/lib/permissions";
 import React, { useEffect, useState } from "react";
 import { getUsers } from "./api";
 import { PasswordChangeModal } from "./components/PasswordChangeModal";
@@ -77,7 +76,9 @@ const AppContent = () => {
                   <Route
                     path="/"
                     element={
-                      canViewExecutiveView(user) ? (
+                      // Only the executive role auto-lands on Chairman's View.
+                      // Corporate HR (and other roles) must land on the standard Dashboard.
+                      user?.role === "executive" ? (
                         <Navigate to="/executive" replace />
                       ) : (
                         <Dashboard />

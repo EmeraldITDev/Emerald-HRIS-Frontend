@@ -37,13 +37,22 @@ export interface User {
 function mapApiUser(apiUser: any): User {
   const name = String(apiUser?.name ?? '');
   const parts = name.trim().split(/\s+/).filter(Boolean);
+  // Legacy "corporate_user" is retired — treat as general employee.
+  const rawRole = String(apiUser.role || '');
+  const role = (rawRole === 'corporate_user' ? 'general_employee' : rawRole) as UserRole;
+  const roleLabel =
+    rawRole === 'corporate_user'
+      ? 'General Employee'
+      : typeof apiUser.role_label === 'string'
+        ? apiUser.role_label
+        : undefined;
   return {
     id: String(apiUser.id),
     firstName: parts[0] || '',
     lastName: parts.slice(1).join(' '),
     email: apiUser.email,
-    role: apiUser.role as UserRole,
-    roleLabel: typeof apiUser.role_label === 'string' ? apiUser.role_label : undefined,
+    role,
+    roleLabel,
     department: apiUser.department || 'General',
     employee_id: apiUser.employee_id,
     mustChangePassword: apiUser.must_change_password,
@@ -119,10 +128,13 @@ const rolePermissions: Record<UserRole, string[]> = {
     'benefits.view',
     'leave.request'
   ],
+  // Kept for any in-flight session that still carries the retired role slug.
   corporate_user: [
     'payroll.view_own',
     'benefits.view',
-    'leave.request'
+    'leave.request',
+    'dashboard.view',
+    'profile.view',
   ],
   contract_staff: [
     'payroll.view_own',

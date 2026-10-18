@@ -28,7 +28,6 @@ export const SYSTEM_ROLE_OPTIONS = [
   { label: 'Finance', value: 'finance' },
   { label: 'IT Power User', value: 'it_power_user' },
   { label: 'Contract HR', value: 'contract_hr' },
-  { label: 'Corporate User', value: 'corporate_user' },
   { label: 'Contract Staff', value: 'contract_staff' },
   { label: 'General Employee', value: 'general_employee' },
 ];
@@ -46,7 +45,8 @@ export const ROLE_PREFIX: Record<string, string> = {
   it_power_user: 'ITP',
   consulting_hr: 'COH',
   contract_hr: 'CRH',
-  corporate_user: 'CU',
+  // Legacy corporate_user accounts are treated as general employees.
+  corporate_user: 'EMP',
   contract_staff: 'CS',
   contract_employee: 'CE',
   general_employee: 'EMP',

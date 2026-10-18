@@ -33,6 +33,7 @@ import { useNavigate } from "react-router-dom"
 import { useToast } from "@/hooks/use-toast"
 import { format } from "date-fns"
 import apiService, { Employee } from "@/lib/api"
+import { isEmployeeSelfServiceRole } from "@/constants/roles"
 import { cn } from "@/lib/utils"
 import {
   parseCSVFileForAPI, 
@@ -233,10 +234,14 @@ export default function Dashboard() {
   }
 
   const getRoleSpecificTitle = () => {
-    const isLineManager = user?.role === 'line_manager'
     const department = user?.department
-    
-    switch (user?.role) {
+    const role = user?.role || ''
+
+    if (isEmployeeSelfServiceRole(role) || role === 'it_admin') {
+      return 'Employee Self-Service'
+    }
+
+    switch (role) {
       case 'executive':
         return 'Executive Dashboard'
       case 'hr_manager':
@@ -247,16 +252,19 @@ export default function Dashboard() {
         return `${department} - Line Manager Dashboard`
       case 'it_power_user':
         return 'IT Power User Dashboard'
-      case 'it_admin':
-        return 'Employee Self-Service'
-      case 'finance':
-        return 'Employee Self-Service'
-      case 'general_employee':
-        return 'Employee Self-Service'
       default:
         return 'HRIS Dashboard'
     }
   }
+
+  /** Org-wide admin KPIs are for HR roles only — not contract/general employees. */
+  const hideOrgAdminStats =
+    isEmployeeSelfServiceRole(user?.role) ||
+    ['line_manager', 'it_admin', 'executive'].includes(user?.role || '')
+
+  const showPersonalSelfService =
+    isEmployeeSelfServiceRole(user?.role) ||
+    ['line_manager', 'it_admin', 'executive'].includes(user?.role || '')
 
   const getRoleSpecificActions = () => {
     const actions = []
@@ -659,7 +667,7 @@ export default function Dashboard() {
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-foreground">{getRoleSpecificTitle()}</h1>
           <p className="text-sm md:text-base text-muted-foreground">
-            {['general_employee', 'finance'].includes(user?.role || '')
+            {isEmployeeSelfServiceRole(user?.role)
               ? `Welcome ${user.firstName}! Access your payroll, benefits, and leave requests here.`
               : user?.role === 'line_manager'
               ? 'Manage your team, view reports, and handle approvals'
@@ -736,8 +744,8 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Hide aggregate stats for general_employee, finance, line_manager, it_admin, executive (corporate_hr sees HR admin view) */}
-      {!['general_employee', 'finance', 'line_manager', 'it_admin', 'executive'].includes(user?.role || '') && (
+      {/* Hide aggregate stats for self-service employees (incl. contract_staff); corporate_hr still sees HR admin view */}
+      {!hideOrgAdminStats && (
         <div className="grid gap-3 md:gap-4 lg:gap-6 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
           <Card className="border-border/50 shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-3 md:p-6">
@@ -1003,7 +1011,7 @@ export default function Dashboard() {
                   </div>
                 ))}
               </div>
-            ) : ['general_employee', 'finance', 'line_manager', 'it_admin', 'executive'].includes(user?.role || '') ? (
+            ) : showPersonalSelfService ? (
               (() => {
                 const items: Array<{ label: string; status: string; tone: 'warning' | 'info' | 'success' }> = []
                 if (selfReviewPending) {
@@ -1081,7 +1089,7 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        {!['general_employee', 'finance', 'line_manager', 'it_admin'].includes(user?.role || '') && (
+        {!hideOrgAdminStats && (
           <RoleBasedComponent allowedRoles={['executive', 'hr_manager', 'corporate_hr']}>
             <Card className="border-border/50 shadow-sm">
               <CardHeader>
@@ -1130,8 +1138,8 @@ export default function Dashboard() {
           </RoleBasedComponent>
         )}
 
-        {/* Personal Benefits & Payroll for specific roles */}
-        {['general_employee', 'finance', 'line_manager', 'it_admin', 'executive'].includes(user?.role || '') && (
+        {/* Personal Benefits & Payroll for self-service + similar roles */}
+        {showPersonalSelfService && (
           <Card className="border-border/50 shadow-sm">
             <CardHeader>
               <CardTitle className="text-primary">My Benefits & Payroll</CardTitle>
@@ -1177,8 +1185,8 @@ export default function Dashboard() {
           </Card>
         )}
 
-        {/* Department Breakdown - Hidden for general employees and finance */}
-        {!['general_employee', 'finance'].includes(user?.role || '') && (
+        {/* Department Breakdown - Hidden for employee self-service roles (incl. contract_staff) */}
+        {!isEmployeeSelfServiceRole(user?.role) && (
           <Card className="border-border/50 shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center text-primary">
@@ -1224,7 +1232,7 @@ export default function Dashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {['general_employee', 'finance'].includes(user?.role || '') ? (
+            {isEmployeeSelfServiceRole(user?.role) ? (
               <div className="space-y-3">
                 <Button 
                   variant="outline" 

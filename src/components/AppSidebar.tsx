@@ -115,7 +115,9 @@ const navigationItems: NavItem[] = [
     permission: "*",
     roles: [
       'general_employee',
+      'contract_staff',
       'contract_employee',
+      'contract_hr',
       'line_manager',
       'finance',
       'it_power_user',

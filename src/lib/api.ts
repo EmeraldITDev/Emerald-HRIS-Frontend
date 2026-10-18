@@ -68,6 +68,9 @@ export interface Employee {
   sort_code?: string;
   employee_code?: string;
   employee_display?: string;
+  /** Optional EMR Staff ID (separate from employee_code). */
+  staff_id?: string | null;
+  staffId?: string | null;
   national_id?: string;
   passport_number?: string;
   bvn?: string;
@@ -331,11 +334,14 @@ class ApiService {
   private normalizeEmployee(employee: Employee): Employee {
     const financial = (employee as any)?.financial_details || {};
     const raw = employee as any;
+    const staffId = raw.staff_id ?? raw.staffId ?? null;
     return {
       ...employee,
       user_id: raw.user_id ?? raw.userId ?? null,
       user_role: raw.user_role ?? raw.userRole ?? null,
       user_roles: raw.user_roles ?? raw.userRoles ?? [],
+      staff_id: staffId,
+      staffId: staffId,
       gross_salary: employee.gross_salary ?? financial.gross_salary,
       basic_salary: employee.basic_salary ?? financial.basic_salary,
       housing_allowance: employee.housing_allowance ?? financial.housing_allowance,
@@ -458,6 +464,8 @@ class ApiService {
     page?: number;
     department?: string;
     status?: string;
+    search?: string;
+    hasStaffId?: boolean | 'true' | 'false' | 'assigned' | 'unassigned';
   }): Promise<any> {
     const qp = new URLSearchParams();
     if (params?.startDateFrom) qp.append('startDateFrom', params.startDateFrom);
@@ -465,6 +473,10 @@ class ApiService {
     if (params?.page) qp.append('page', String(params.page));
     if (params?.department) qp.append('department', params.department);
     if (params?.status) qp.append('status', params.status);
+    if (params?.search) qp.append('search', params.search);
+    if (params?.hasStaffId !== undefined && params?.hasStaffId !== null) {
+      qp.append('hasStaffId', String(params.hasStaffId));
+    }
     const q = qp.toString();
     const response = await this.request<any>(`/employees-full${q ? `?${q}` : ''}`);
     if (Array.isArray(response)) return response.map((employee) => this.normalizeEmployee(employee));
@@ -472,6 +484,11 @@ class ApiService {
       return { ...response, data: response.data.map((employee: Employee) => this.normalizeEmployee(employee)) };
     }
     return response;
+  }
+
+  /** Next unused Staff ID (Corporate HR / HR Manager). */
+  async getNextAvailableStaffId(): Promise<{ staffId: string; staff_id: string }> {
+    return this.request<{ staffId: string; staff_id: string }>('/employees/staff-id/next-available');
   }
 
   // Upcoming work anniversaries (Requirement 3)

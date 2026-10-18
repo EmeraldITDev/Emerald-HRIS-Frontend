@@ -68,6 +68,15 @@ import { useAuth } from "@/contexts/AuthContext";
 import { WorkLocationField } from "@/components/WorkLocationField";
 import { STANDARD_WORK_LOCATIONS, matchesWorkLocationFilter } from "@/constants/workLocations";
 import { formatGrossSalaryDisplay, parseGrossSalaryInput } from "@/lib/grossSalaryFormat";
+import {
+  canEditStaffId,
+  formatStaffIdInput,
+  isValidStaffIdOrEmpty,
+  messageForStaffIdError,
+  normalizeStaffId,
+  staffIdFromEmployee,
+} from "@/lib/staffId";
+import { Copy } from "lucide-react";
 
 // Put near top of file
 const VALID_SYSTEM_ROLES = new Set([
@@ -89,9 +98,15 @@ export default function Employees() {
   const [filterEmploymentType, setFilterEmploymentType] = useState("");
   const [filterStartDate, setFilterStartDate] = useState("");
   const [filterStartDateTo, setFilterStartDateTo] = useState("");
+  const [filterStaffId, setFilterStaffId] = useState<"all" | "assigned" | "unassigned">("all");
+  const [listPage, setListPage] = useState(1);
+  const [staffIdFieldError, setStaffIdFieldError] = useState<string | null>(null);
+  const [editStaffIdFieldError, setEditStaffIdFieldError] = useState<string | null>(null);
+  const [nextStaffIdLoading, setNextStaffIdLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
+  const staffIdEditable = canEditStaffId(user?.role);
   const [formErrors, setFormErrors] = useState<{ [key: string]: boolean }>({});
   const [currentTab, setCurrentTab] = useState("personal");
   const [editFormErrors, setEditFormErrors] = useState<{ [key: string]: boolean }>({});
@@ -183,6 +198,7 @@ export default function Employees() {
     sortCode: "",
     // Government IDs
     employeeId: "",
+    staffId: "",
     nationalId: "",
     passportNumber: "",
     tin: "",
@@ -443,13 +459,16 @@ export default function Employees() {
   }, []);
 
   const filteredEmployees = employeeList.filter((employee) => {
+    const q = searchTerm.toLowerCase();
+    const staffIdVal = staffIdFromEmployee(employee)?.toLowerCase() || "";
     const matchesSearch =
-      employee.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      employee.last_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      employee.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      employee.employee_code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      employee.department?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      employee.job_title?.toLowerCase().includes(searchTerm.toLowerCase());
+      employee.first_name?.toLowerCase().includes(q) ||
+      employee.last_name?.toLowerCase().includes(q) ||
+      employee.email?.toLowerCase().includes(q) ||
+      employee.employee_code?.toLowerCase().includes(q) ||
+      staffIdVal.includes(q) ||
+      employee.department?.toLowerCase().includes(q) ||
+      employee.job_title?.toLowerCase().includes(q);
 
     const matchesLocation = matchesWorkLocationFilter(employee.work_location, filterLocation);
     const matchesDepartment =
@@ -464,6 +483,11 @@ export default function Employees() {
     const matchesStartDateFrom = !filterStartDate || (hireDate && hireDate >= filterStartDate);
     const matchesStartDateTo = !filterStartDateTo || (hireDate && hireDate <= filterStartDateTo);
     const matchesStartDate = matchesStartDateFrom && matchesStartDateTo;
+    const hasStaff = !!staffIdFromEmployee(employee);
+    const matchesStaffIdFilter =
+      filterStaffId === "all" ||
+      (filterStaffId === "assigned" && hasStaff) ||
+      (filterStaffId === "unassigned" && !hasStaff);
 
     // Department-aware filtering for line managers
     const matchesDepartmentAccess =
@@ -481,9 +505,18 @@ export default function Employees() {
       matchesDepartment &&
       matchesEmploymentType &&
       matchesStartDate &&
+      matchesStaffIdFilter &&
       matchesDepartmentAccess
     );
   });
+
+  const PAGE_SIZE = 25;
+  const totalPages = Math.max(1, Math.ceil(filteredEmployees.length / PAGE_SIZE));
+  const pagedEmployees = filteredEmployees.slice((listPage - 1) * PAGE_SIZE, listPage * PAGE_SIZE);
+
+  useEffect(() => {
+    setListPage(1);
+  }, [searchTerm, filterLocation, filterDepartment, filterEmploymentType, filterStartDate, filterStartDateTo, filterStaffId]);
 
   // Standard work locations for filter dropdown (Item 8)
   // Use official departments list instead of unique values from employees

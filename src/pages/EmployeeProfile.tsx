@@ -32,8 +32,10 @@ import {
   TrendingUp,
   Briefcase,
   Cake,
-  Loader2
+  Loader2,
+  Copy,
 } from "lucide-react"
+import { staffIdFromEmployee } from "@/lib/staffId"
 import jsPDF from "jspdf"
 import { format } from "date-fns"
 import { getWorkAnniversaryDate, getYearsOfService } from "@/utils/celebrations"
@@ -165,6 +167,7 @@ export default function EmployeeProfile() {
       const personalInfo = [
         ['Full Name', `${employee.first_name} ${employee.last_name}`],
         ['Employee ID', employee.employee_code || `EMP${String(employee.id).padStart(3, '0')}`],
+        ['Staff ID', staffIdFromEmployee(employee) || 'Not assigned'],
         ['Email', employee.email],
         ['Phone', employee.phone_number || 'N/A'],
         ['Address', employee.address || 'N/A'],
@@ -407,8 +410,28 @@ export default function EmployeeProfile() {
             <IdCard className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{employee.id}</div>
-            <p className="text-xs text-muted-foreground">Employee Code: {employee.employee_code || 'N/A'}</p>
+            <div className="text-2xl font-bold">{employee.employee_code || `EMP${String(employee.id).padStart(3, '0')}`}</div>
+            <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+              <span>Staff ID: {staffIdFromEmployee(employee) || 'Not assigned'}</span>
+              {staffIdFromEmployee(employee) && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  title="Copy Staff ID"
+                  onClick={() => {
+                    const v = staffIdFromEmployee(employee)
+                    if (v) {
+                      navigator.clipboard.writeText(v)
+                      toast({ title: 'Copied', description: v })
+                    }
+                  }}
+                >
+                  <Copy className="h-3 w-3" />
+                </Button>
+              )}
+            </div>
           </CardContent>
         </Card>
 

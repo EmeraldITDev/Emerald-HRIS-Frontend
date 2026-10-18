@@ -1169,7 +1169,7 @@ export default function Payroll() {
                     return {
                       value: emp.id,
                       label: `${emp.name} - ${emp.employmentType}${noGross ? " (no annual gross)" : ""}`,
-                      keywords: `${full?.employee_code || ''} ${full?.department || ''}`,
+                      keywords: `${full?.employee_code || ''} ${full?.staff_id || full?.staffId || ''} ${full?.department || ''}`,
                     }
                   })}
                 />

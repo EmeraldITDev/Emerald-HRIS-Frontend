@@ -1188,7 +1188,7 @@ export default function Attendance() {
                           .map((emp) => ({
                             value: emp.id?.toString() || '0',
                             label: emp.employee_display || `${emp.employee_code ? emp.employee_code + ' - ' : ''}${emp.first_name} ${emp.last_name}`,
-                            keywords: `${emp.employee_code || ''} ${emp.department || ''} ${emp.email || ''}`,
+                            keywords: `${emp.employee_code || ''} ${emp.staff_id || emp.staffId || ''} ${emp.department || ''} ${emp.email || ''}`,
                           }))}
                       />
                     ) : (
@@ -1526,7 +1526,7 @@ export default function Attendance() {
                           ...employees.map((emp) => ({
                             value: emp.id?.toString() || '',
                             label: `${emp.first_name} ${emp.last_name}`,
-                            keywords: `${emp.employee_code || ''} ${emp.department || ''}`,
+                            keywords: `${emp.employee_code || ''} ${emp.staff_id || emp.staffId || ''} ${emp.department || ''}`,
                           })),
                         ]}
                       />

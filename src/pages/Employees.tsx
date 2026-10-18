@@ -35,6 +35,7 @@ import {
   FileText,
   Trash2,
   KeyRound,
+  Copy,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -76,7 +77,6 @@ import {
   normalizeStaffId,
   staffIdFromEmployee,
 } from "@/lib/staffId";
-import { Copy } from "lucide-react";
 
 // Put near top of file
 const VALID_SYSTEM_ROLES = new Set([
@@ -979,14 +979,38 @@ export default function Employees() {
 
         // System Role for user account creation
         system_role: systemRole || null,
+        ...(staffIdEditable
+          ? { staff_id: normalizeStaffId(newEmployee.staffId) }
+          : {}),
       };
+
+      if (staffIdEditable && !isValidStaffIdOrEmpty(newEmployee.staffId)) {
+        setStaffIdFieldError("Staff ID must look like EMR 001");
+        setCurrentTab("government");
+        return;
+      }
+      setStaffIdFieldError(null);
 
       console.log("Sending employee data to API:", employeeData); // Debug log
       console.log("System role:", systemRole); // Debug log
       console.log("Generated employee code:", newEmployee.employeeId); // Debug log
 
       // Call the API to create the employee
-      const response = await apiService.createEmployee(employeeData);
+      let response;
+      try {
+        response = await apiService.createEmployee(employeeData);
+      } catch (err: any) {
+        const staffMsg = messageForStaffIdError(err);
+        if (staffMsg) {
+          setStaffIdFieldError(staffMsg);
+          setCurrentTab("government");
+          if (err?.data?.error === "STAFF_ID_FORBIDDEN") {
+            await refreshUser();
+          }
+          return;
+        }
+        throw err;
+      }
 
       // Refresh the employee list from the database
       await fetchEmployees();
@@ -1070,6 +1094,7 @@ export default function Employees() {
         nuban: "",
         sortCode: "",
         employeeId: "",
+        staffId: "",
         nationalId: "",
         passportNumber: "",
         tin: "",
@@ -1087,6 +1112,7 @@ export default function Employees() {
         otherDocuments: [],
         companyAssets: [],
       });
+      setStaffIdFieldError(null);
 
       // Reset system role
       setSystemRole("");
@@ -1126,10 +1152,12 @@ export default function Employees() {
   const handleEditEmployee = (employee: Employee) => {
     setEditFormErrors({});
     setEditActiveTab("personal");
+    setEditStaffIdFieldError(null);
     setEditEmployee({
       // Employee ID - Format it properly
       id: employee.id,
       employeeId: employee.employee_code || `EMP${employee.id?.toString().padStart(3, "0")}` || "",
+      staffId: staffIdFromEmployee(employee) || "",
 
       // Personal Information - Map database fields to form fields
       firstName: employee.first_name || "",
@@ -1442,7 +1470,17 @@ export default function Employees() {
         ...(canAssignSystemRole(editEmployee)
           ? { system_role: editSystemRole || null }
           : {}),
+        ...(staffIdEditable
+          ? { staff_id: normalizeStaffId(editEmployee.staffId) }
+          : {}),
       };
+
+      if (staffIdEditable && !isValidStaffIdOrEmpty(editEmployee.staffId)) {
+        setEditStaffIdFieldError("Staff ID must look like EMR 001");
+        setEditActiveTab("government");
+        return;
+      }
+      setEditStaffIdFieldError(null);
 
       // Call the API to update the employee
       console.log("[UpdateEmployee] PUT payload:", {
@@ -1453,7 +1491,21 @@ export default function Employees() {
         middle_name: employeeData.middle_name,
         hire_date: employeeData.hire_date,
       });
-      const updateResp = await apiService.updateEmployee(editEmployee.id, employeeData);
+      let updateResp;
+      try {
+        updateResp = await apiService.updateEmployee(editEmployee.id, employeeData);
+      } catch (err: any) {
+        const staffMsg = messageForStaffIdError(err);
+        if (staffMsg) {
+          setEditStaffIdFieldError(staffMsg);
+          setEditActiveTab("government");
+          if (err?.data?.error === "STAFF_ID_FORBIDDEN") {
+            await refreshUser();
+          }
+          return;
+        }
+        throw err;
+      }
       console.log("[UpdateEmployee] PUT response:", updateResp);
 
       // Refresh the employee list from the database.
@@ -1667,8 +1719,9 @@ export default function Employees() {
   const handleExportData = () => {
     const exportData = employeeList.map((emp: any) => ({
       // Personal Information
-      "Employee ID": emp.id || emp.employeeId || "",
-      "First Name": emp.firstName || "",
+      "Employee ID": emp.employee_code || emp.id || emp.employeeId || "",
+      "Staff ID": staffIdFromEmployee(emp) || "",
+      "First Name": emp.first_name || emp.firstName || "",
       "Middle Name": emp.middleName || "",
       "Last Name": emp.lastName || "",
       "Date of Birth": emp.dateOfBirth ? format(new Date(emp.dateOfBirth), "yyyy-MM-dd") : "",
@@ -2764,6 +2817,58 @@ export default function Employees() {
                           disabled={!!systemRole} // Disable when system role is selected
                         />
                       </div>
+                      {staffIdEditable && (
+                        <div className="space-y-2">
+                          <Label htmlFor="staffId">Staff ID</Label>
+                          <div className="flex gap-2">
+                            <Input
+                              id="staffId"
+                              value={newEmployee.staffId}
+                              onChange={(e) => {
+                                setStaffIdFieldError(null);
+                                setNewEmployee({
+                                  ...newEmployee,
+                                  staffId: formatStaffIdInput(e.target.value),
+                                });
+                              }}
+                              placeholder="EMR 001"
+                              className={staffIdFieldError ? "border-destructive" : ""}
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="whitespace-nowrap"
+                              disabled={nextStaffIdLoading}
+                              onClick={async () => {
+                                try {
+                                  setNextStaffIdLoading(true);
+                                  const res = await apiService.getNextAvailableStaffId();
+                                  setNewEmployee((prev) => ({
+                                    ...prev,
+                                    staffId: res.staffId || res.staff_id,
+                                  }));
+                                  setStaffIdFieldError(null);
+                                } catch (err: any) {
+                                  const msg = messageForStaffIdError(err) || err?.message || "Could not fetch next Staff ID";
+                                  setStaffIdFieldError(msg);
+                                  if (err?.data?.error === "STAFF_ID_FORBIDDEN") await refreshUser();
+                                } finally {
+                                  setNextStaffIdLoading(false);
+                                }
+                              }}
+                            >
+                              Use next available
+                            </Button>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            Optional. Format: EMR followed by a number.
+                          </p>
+                          {staffIdFieldError && (
+                            <p className="text-xs text-destructive">{staffIdFieldError}</p>
+                          )}
+                        </div>
+                      )}
                       <div className="space-y-2">
                         <Label htmlFor="nationalId">National ID (NIN) *</Label>
                         <Input
@@ -3037,7 +3142,7 @@ export default function Employees() {
                 <div className="relative flex-1 max-w-md">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Search employees..."
+                    placeholder="Search by name, Employee ID, Staff ID, email..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-10"
@@ -3089,6 +3194,20 @@ export default function Employees() {
                   </SelectContent>
                 </Select>
 
+                <Select
+                  value={filterStaffId}
+                  onValueChange={(v: "all" | "assigned" | "unassigned") => setFilterStaffId(v)}
+                >
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Staff ID" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover border shadow-lg">
+                    <SelectItem value="all">Staff ID: All</SelectItem>
+                    <SelectItem value="assigned">Staff ID: Assigned</SelectItem>
+                    <SelectItem value="unassigned">Staff ID: Not assigned</SelectItem>
+                  </SelectContent>
+                </Select>
+
                 <div className="flex items-center space-x-2">
                   <Label htmlFor="startDate" className="text-sm whitespace-nowrap">
                     Hired From:
@@ -3115,12 +3234,13 @@ export default function Employees() {
             </div>
           </CardHeader>
           <CardContent>
-            {/* Mobile-responsive table wrapper */}
+            {/* Mobile-responsive table wrapper — horizontal scroll keeps Actions reachable */}
             <div className="overflow-x-auto -mx-3 md:mx-0">
-              <Table className="min-w-full text-xs md:text-sm">
+              <Table className="min-w-[960px] text-xs md:text-sm">
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-xs md:text-sm">Employee ID</TableHead>
+                    <TableHead className="text-xs md:text-sm whitespace-nowrap">Employee ID</TableHead>
+                    <TableHead className="text-xs md:text-sm whitespace-nowrap">Staff ID</TableHead>
                     <TableHead className="text-xs md:text-sm">Name</TableHead>
                     <TableHead className="hidden sm:table-cell text-xs md:text-sm">Email</TableHead>
                     <TableHead className="hidden md:table-cell text-xs md:text-sm">Department</TableHead>
@@ -3128,13 +3248,15 @@ export default function Employees() {
                     <TableHead className="hidden lg:table-cell text-xs md:text-sm">Status</TableHead>
                     <TableHead className="hidden lg:table-cell text-xs md:text-sm">Employment Type</TableHead>
                     <TableHead className="hidden lg:table-cell text-xs md:text-sm">Vacation Days</TableHead>
-                    <TableHead className="text-right text-xs md:text-sm">Actions</TableHead>
+                    <TableHead className="text-right text-xs md:text-sm sticky right-0 bg-background z-10 shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.12)]">
+                      Actions
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {isLoading ? (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center py-8">
+                      <TableCell colSpan={10} className="text-center py-8">
                         <div className="flex items-center justify-center space-x-2">
                           <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
                           <span className="text-muted-foreground">Loading employees...</span>
@@ -3143,15 +3265,22 @@ export default function Employees() {
                     </TableRow>
                   ) : filteredEmployees.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                         No employees found matching your search criteria.
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredEmployees.map((employee) => (
+                    pagedEmployees.map((employee) => (
                       <TableRow key={employee.id}>
                         <TableCell className="font-medium whitespace-nowrap">
                           {employee.employee_code || `EMP${employee.id?.toString().padStart(3, "0")}`}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          {staffIdFromEmployee(employee) ? (
+                            <span className="font-medium">{staffIdFromEmployee(employee)}</span>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
                         </TableCell>
                         <TableCell className="max-w-[160px]">
                           <div className="truncate font-medium">
@@ -3174,7 +3303,7 @@ export default function Employees() {
                         </TableCell>
                         <TableCell className="hidden lg:table-cell">{employee.employment_type}</TableCell>
                         <TableCell className="hidden lg:table-cell">{employee.vacation_days || 0}</TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="text-right sticky right-0 bg-background z-10 shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.12)]">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" className="h-8 w-8 p-0">
@@ -3227,6 +3356,33 @@ export default function Employees() {
                 </TableBody>
               </Table>
             </div>
+            {filteredEmployees.length > PAGE_SIZE && (
+              <div className="flex items-center justify-between mt-4 gap-2">
+                <p className="text-sm text-muted-foreground">
+                  Page {listPage} of {totalPages} ({filteredEmployees.length} employees)
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={listPage <= 1}
+                    onClick={() => setListPage((p) => Math.max(1, p - 1))}
+                  >
+                    Previous
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={listPage >= totalPages}
+                    onClick={() => setListPage((p) => Math.min(totalPages, p + 1))}
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -3325,6 +3481,34 @@ export default function Employees() {
                         {selectedEmployee.employee_code || `EMP${selectedEmployee.id?.toString().padStart(3, "0")}`}
                       </p>
                     </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-muted-foreground">Staff ID</Label>
+                      <div className="flex items-center gap-2">
+                        <p className="text-base font-medium">
+                          {staffIdFromEmployee(selectedEmployee) || "Not assigned"}
+                        </p>
+                        {staffIdFromEmployee(selectedEmployee) && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            title="Copy Staff ID"
+                            onClick={() => {
+                              const v = staffIdFromEmployee(selectedEmployee);
+                              if (v) {
+                                navigator.clipboard.writeText(v);
+                                toast({ title: "Copied", description: v });
+                              }
+                            }}
+                          >
+                            <Copy className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <Label className="text-sm font-medium text-muted-foreground">System Role</Label>
                       <p className="text-base font-medium text-primary">
@@ -4385,17 +4569,40 @@ export default function Employees() {
                       <Label htmlFor="editEmployeeId">Employee ID</Label>
                       <Input
                         id="editEmployeeId"
-                        value={editEmployee.id || editEmployee.employeeId || ""}
+                        value={editEmployee.employeeId || ""}
                         onChange={(e) =>
                           setEditEmployee({
                             ...editEmployee,
-                            id: e.target.value,
                             employeeId: e.target.value,
                           })
                         }
                         disabled
                       />
                     </div>
+                    {staffIdEditable && (
+                      <div className="space-y-2">
+                        <Label htmlFor="editStaffId">Staff ID</Label>
+                        <Input
+                          id="editStaffId"
+                          value={editEmployee.staffId || ""}
+                          onChange={(e) => {
+                            setEditStaffIdFieldError(null);
+                            setEditEmployee({
+                              ...editEmployee,
+                              staffId: formatStaffIdInput(e.target.value),
+                            });
+                          }}
+                          placeholder="EMR 001"
+                          className={editStaffIdFieldError ? "border-destructive" : ""}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Optional. Format: EMR followed by a number.
+                        </p>
+                        {editStaffIdFieldError && (
+                          <p className="text-xs text-destructive">{editStaffIdFieldError}</p>
+                        )}
+                      </div>
+                    )}
                     <div className="space-y-2">
                       <Label htmlFor="editNationalId">National ID (NIN) *</Label>
                       <Input

@@ -10,6 +10,9 @@ export interface SelectableEmployee {
   last_name?: string
   name?: string
   employee_id?: string
+  employee_code?: string
+  staff_id?: string | null
+  staffId?: string | null
   department?: string
 }
 
@@ -37,7 +40,9 @@ export function EmployeeMultiSelect({
     const q = query.trim().toLowerCase()
     if (!q) return employees
     return employees.filter((e) =>
-      [label(e), e.employee_id, e.department].filter(Boolean).some((v) => String(v).toLowerCase().includes(q)),
+      [label(e), e.employee_id, e.employee_code, e.staff_id, e.staffId, e.department]
+        .filter(Boolean)
+        .some((v) => String(v).toLowerCase().includes(q)),
     )
   }, [employees, query])
 
@@ -56,7 +61,7 @@ export function EmployeeMultiSelect({
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search by name, ID or department"
+            placeholder="Search by name, Employee ID, Staff ID or department"
             className="pl-9"
           />
         </div>
@@ -96,7 +101,12 @@ export function EmployeeMultiSelect({
                 <Checkbox checked={checked} onCheckedChange={(v) => toggle(id, !!v)} />
                 <span className="text-sm">
                   {label(employee)}
-                  {employee.employee_id ? ` · ${employee.employee_id}` : ""}
+                  {(employee.employee_code || employee.employee_id)
+                    ? ` · ${employee.employee_code || employee.employee_id}`
+                    : ""}
+                  {(employee.staff_id || employee.staffId)
+                    ? ` · ${employee.staff_id || employee.staffId}`
+                    : ""}
                   {employee.department ? ` — ${employee.department}` : ""}
                 </span>
               </label>

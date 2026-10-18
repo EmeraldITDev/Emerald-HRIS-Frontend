@@ -86,6 +86,9 @@ export default function PayslipDetail() {
             <div>
               <CardTitle>Payslip — {data.payPeriodLabel || period}</CardTitle>
               <p className="text-sm text-muted-foreground mt-1">{data.employeeCode} · {data.employeeName}</p>
+              {(data.staffId || data.staff_id) && (
+                <p className="text-xs text-muted-foreground mt-0.5">Staff ID: {data.staffId || data.staff_id}</p>
+              )}
               <p className="text-xs text-muted-foreground">{data.department} · {data.jobTitle}</p>
             </div>
             <Badge variant="outline">{data.status}</Badge>

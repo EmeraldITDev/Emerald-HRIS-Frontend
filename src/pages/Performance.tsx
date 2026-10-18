@@ -765,7 +765,7 @@ export default function Performance() {
                     options={filteredEmployees.map((employee) => ({
                       value: employee.id?.toString() || '',
                       label: `${employee.first_name} ${employee.last_name} - ${employee.department}`,
-                      keywords: `${employee.employee_code || ''} ${employee.email || ''}`,
+                      keywords: `${employee.employee_code || ''} ${employee.staff_id || employee.staffId || ''} ${employee.email || ''}`,
                     }))}
                   />
                 </div>

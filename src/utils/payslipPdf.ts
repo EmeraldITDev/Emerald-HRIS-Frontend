@@ -29,6 +29,7 @@ const loadImageDataUrl = async (src: string): Promise<string | null> => {
 export interface PayslipLike {
   employeeName?: string;
   employeeCode?: string;
+  staffId?: string | null;
   department?: string;
   jobTitle?: string;
   payPeriod?: string;
@@ -60,6 +61,7 @@ export function toPayslipLike(src: any): PayslipLike {
       src.employeeName ||
       (emp.first_name ? `${emp.first_name} ${emp.last_name || ""}`.trim() : undefined),
     employeeCode: src.employeeCode || emp.employee_id || emp.id,
+    staffId: src.staffId ?? src.staff_id ?? emp.staff_id ?? emp.staffId ?? null,
     department: src.department || emp.department,
     jobTitle: src.jobTitle || emp.job_title,
     payPeriod: src.payPeriodLabel || src.pay_period || src.payPeriod,
@@ -131,15 +133,18 @@ export async function generatePayslipPdf(p: PayslipLike, filename: string) {
   const metaLeft: Array<[string, string]> = [
     ["Employee Name", p.employeeName || "—"],
     ["Employee ID", String(p.employeeCode || "—")],
-    ["Department", p.department || "—"],
   ];
+  if (p.staffId) {
+    metaLeft.push(["Staff ID", String(p.staffId)]);
+  }
+  metaLeft.push(["Department", p.department || "—"]);
   const metaRight: Array<[string, string]> = [
     ["Job Title", p.jobTitle || "—"],
     ["Pay Date", p.payDate ? formatPayDate(p.payDate) : "—"],
     ["Status", p.status ? String(p.status) : "—"],
   ];
   const metaRowH = 6.5;
-  const metaH = metaRowH * metaLeft.length + 4;
+  const metaH = metaRowH * Math.max(metaLeft.length, metaRight.length) + 4;
   pdf.setFillColor(245, 247, 246);
   pdf.rect(M, y, contentW, metaH, "F");
   pdf.setDrawColor(200);
@@ -276,6 +281,11 @@ export function generatePayslipCsv(p: PayslipLike, filename: string) {
   const rows: Array<[string, string]> = [
     ["Employee", p.employeeName || ""],
     ["Employee ID", String(p.employeeCode || "")],
+  ];
+  if (p.staffId) {
+    rows.push(["Staff ID", String(p.staffId)]);
+  }
+  rows.push(
     ["Department", p.department || ""],
     ["Job Title", p.jobTitle || ""],
     ["Pay Period", p.payPeriod || ""],

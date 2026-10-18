@@ -35,6 +35,31 @@ import {
   hydrateSelfAssessment,
   type SelfAssessmentDraft,
 } from '@/lib/performanceFormSchema'
+import { isNaRating } from '@/lib/performanceRatings'
+
+/** List stars: prefer HR final → manager `ratings` (current) → legacy overall_rating keys. */
+function resolveListRating(r: PerformanceReview): { value: number; label: string } {
+  const mr = (r as any).manager_review
+  const hr = (r as any).hr_review
+  const raw =
+    hr?.final_rating ??
+    mr?.ratings ??
+    mr?.overall_rating ??
+    mr?.rating ??
+    (r as any).self_assessment?.overallRating ??
+    null
+  if (raw == null || String(raw).trim() === '') {
+    return { value: 0, label: '—' }
+  }
+  if (isNaRating(raw)) {
+    return { value: 0, label: 'N/A' }
+  }
+  const n = Number(raw)
+  if (!Number.isFinite(n) || n < 1) {
+    return { value: 0, label: '—' }
+  }
+  return { value: n, label: `${n}/5` }
+}
 
 interface Review {
   id: string
@@ -44,6 +69,7 @@ interface Review {
   reviewPeriod: string
   reviewDate: string
   rating: number
+  ratingLabel: string
   status: string
   rawStatus?: string
   reviewer: string
@@ -176,14 +202,17 @@ export default function Performance() {
   const fetchReviews = async () => {
     try {
       const data = await apiService.getPerformanceReviews()
-      const mapped = (Array.isArray(data) ? data : []).map((r: PerformanceReview) => ({
+      const mapped = (Array.isArray(data) ? data : []).map((r: PerformanceReview) => {
+        const resolved = resolveListRating(r)
+        return {
         id: String(r.id || ''),
         employeeId: String(r.employee_id),
         employeeName: `${r.employee?.first_name ?? ''} ${r.employee?.last_name ?? ''}`.trim() || 'Employee',
         department: r.employee?.department ?? 'N/A',
         reviewPeriod: r.period,
         reviewDate: (r.created_at || '').split('T')[0] || '',
-        rating: Number(r.manager_review?.overall_rating ?? r.self_assessment?.overallRating ?? 0),
+        rating: resolved.value,
+        ratingLabel: resolved.label,
         status: statusLabel(r.status),
         rawStatus: r.status,
         reviewer: r.manager?.name ?? '—',
@@ -195,7 +224,7 @@ export default function Performance() {
         employeeSignedDate: r.employee_signed_at ? r.employee_signed_at.split('T')[0] : undefined,
         managerSignedDate: r.manager_signed_at ? r.manager_signed_at.split('T')[0] : undefined,
         hrApprovedDate: r.hr_approved_at ? r.hr_approved_at.split('T')[0] : undefined,
-      }))
+      }})
       setReviews(mapped as any)
     } catch (error) {
       console.error('Failed to fetch performance reviews:', error)
@@ -705,7 +734,11 @@ export default function Performance() {
     }
   }
   
-  const renderStars = (rating: number) => {
+  const renderStars = (rating: number, label?: string) => {
+    const text = label ?? (rating > 0 ? `${rating}/5` : '—')
+    if (text === 'N/A' || text === '—') {
+      return <span className="text-sm text-muted-foreground">{text}</span>
+    }
     return (
       <div className="flex items-center gap-1">
         {[1, 2, 3, 4, 5].map((star) => (
@@ -718,7 +751,7 @@ export default function Performance() {
             }`}
           />
         ))}
-        <span className="ml-2 text-sm text-muted-foreground">{rating}/5</span>
+        <span className="ml-2 text-sm text-muted-foreground">{text}</span>
       </div>
     )
   }
@@ -1010,7 +1043,7 @@ export default function Performance() {
                     <TableCell className="hidden md:table-cell text-xs md:text-sm">{review.department}</TableCell>
                     <TableCell className="text-xs md:text-sm">{review.reviewPeriod}</TableCell>
                     <TableCell className="hidden lg:table-cell text-xs md:text-sm text-muted-foreground">{review.reviewer}</TableCell>
-                    <TableCell className="hidden sm:table-cell text-xs md:text-sm">{renderStars(review.rating)}</TableCell>
+                    <TableCell className="hidden sm:table-cell text-xs md:text-sm">{renderStars(review.rating, review.ratingLabel)}</TableCell>
                     <TableCell className="text-xs md:text-sm">
                       <Badge className={
                         review.status === 'Signed Off' ? 'bg-success/10 text-success border-success/20 text-xs' :
@@ -1098,7 +1131,7 @@ export default function Performance() {
               
               <div>
                 <Label className="text-sm text-muted-foreground">Rating</Label>
-                {renderStars(selectedReview.rating)}
+                {renderStars(selectedReview.rating, selectedReview.ratingLabel)}
               </div>
               
               <div>
@@ -1309,7 +1342,7 @@ export default function Performance() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Rating</p>
-                  {renderStars(selectedReview.rating)}
+                  {renderStars(selectedReview.rating, selectedReview.ratingLabel)}
                 </div>
               </div>
               

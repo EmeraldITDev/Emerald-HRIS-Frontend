@@ -196,7 +196,7 @@ export default function Performance() {
         managerSignedDate: r.manager_signed_at ? r.manager_signed_at.split('T')[0] : undefined,
         hrApprovedDate: r.hr_approved_at ? r.hr_approved_at.split('T')[0] : undefined,
       }))
-      if (mapped.length) setReviews(mapped as any)
+      setReviews(mapped as any)
     } catch (error) {
       console.error('Failed to fetch performance reviews:', error)
     }
@@ -273,33 +273,48 @@ export default function Performance() {
   // Check if any filters are active
   const hasActiveFilters = searchTerm || statusFilter || periodFilter || departmentFilter
   
-  // Performance reviews run twice a year (H1 = Jan–Jun, H2 = Jul–Dec).
+  // Performance reviews run twice a month (Early = 1–15, Late = 16–end).
+  const MONTH_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"] as const
+  const formatHalfMonthPeriod = (year: number, monthIndex: number, half: "Early" | "Late") =>
+    `${half} ${MONTH_SHORT[monthIndex]} ${year}`
+
   const currentPeriod = (() => {
     const now = new Date()
-    const half = now.getMonth() < 6 ? 1 : 2
-    return `H${half} ${now.getFullYear()}`
+    const half: "Early" | "Late" = now.getDate() <= 15 ? "Early" : "Late"
+    return formatHalfMonthPeriod(now.getFullYear(), now.getMonth(), half)
   })()
 
-  // Half-year options: two halves back through three forward.
+  // Twice-a-month options: 3 months back through 3 months forward (14 slots).
   const periodOptions = (() => {
     const now = new Date()
     let year = now.getFullYear()
-    let half = now.getMonth() < 6 ? 1 : 2
-    // Step back two halves from the current period.
-    for (let i = 0; i < 2; i++) {
-      half -= 1
-      if (half < 1) {
-        half = 2
-        year -= 1
+    let month = now.getMonth() // 0–11
+    let half: "Early" | "Late" = now.getDate() <= 15 ? "Early" : "Late"
+    // Step back 6 half-month slots from current.
+    for (let i = 0; i < 6; i++) {
+      if (half === "Late") {
+        half = "Early"
+      } else {
+        half = "Late"
+        month -= 1
+        if (month < 0) {
+          month = 11
+          year -= 1
+        }
       }
     }
     const options: string[] = []
-    for (let i = 0; i < 6; i++) {
-      options.push(`H${half} ${year}`)
-      half += 1
-      if (half > 2) {
-        half = 1
-        year += 1
+    for (let i = 0; i < 14; i++) {
+      options.push(formatHalfMonthPeriod(year, month, half))
+      if (half === "Early") {
+        half = "Late"
+      } else {
+        half = "Early"
+        month += 1
+        if (month > 11) {
+          month = 0
+          year += 1
+        }
       }
     }
     return options
@@ -369,21 +384,48 @@ export default function Performance() {
   const handleDeleteReview = async () => {
     if (!reviewPendingDelete) return
     const target = reviewPendingDelete
+    const reviewId = Number(target.id)
+    if (!Number.isFinite(reviewId) || reviewId <= 0) {
+      toast({
+        title: "Could not delete review",
+        description: "This row has an invalid review id. Refresh the page and try again.",
+        variant: "destructive",
+      })
+      setReviewPendingDelete(null)
+      await fetchReviews()
+      return
+    }
     setDeletingReview(true)
     try {
-      await apiService.deletePerformanceReview(Number(target.id))
+      await apiService.deletePerformanceReview(reviewId)
       setReviewPendingDelete(null)
+      setReviews((prev) => prev.filter((r) => String(r.id) !== String(target.id)))
       await fetchReviews()
       toast({
         title: "Review deleted",
         description: `The ${target.reviewPeriod} review for ${target.employeeName} has been removed.`,
       })
     } catch (error: any) {
-      toast({
-        title: "Could not delete review",
-        description: error?.message || "Failed to delete this performance review.",
-        variant: "destructive",
-      })
+      const status = error?.status
+      const alreadyGone =
+        status === 404 ||
+        error?.data?.error === "NOT_FOUND" ||
+        /no query results|no longer exists|not found/i.test(String(error?.message || ""))
+      if (alreadyGone) {
+        setReviewPendingDelete(null)
+        setReviews((prev) => prev.filter((r) => String(r.id) !== String(target.id)))
+        await fetchReviews()
+        toast({
+          title: "Review already removed",
+          description: "That review is no longer on the server. The list has been refreshed.",
+        })
+      } else {
+        toast({
+          title: "Could not delete review",
+          description: error?.data?.message || error?.message || "Failed to delete this performance review.",
+          variant: "destructive",
+        })
+      }
     } finally {
       setDeletingReview(false)
     }

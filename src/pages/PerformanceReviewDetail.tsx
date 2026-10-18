@@ -21,9 +21,14 @@ import apiService from "@/lib/api";
 import { PERFORMANCE_RATING_OPTIONS, isNaRating } from "@/lib/performanceRatings";
 import {
   EMPTY_MANAGER_ASSESSMENT,
+  EMPTY_SELF_ASSESSMENT,
   MANAGER_SUBMIT_REQUIRED_KEYS,
+  SELF_ASSESSMENT_FIELDS,
+  SELF_ASSESSMENT_REQUIRED_KEYS,
   hydrateManagerAssessment,
+  hydrateSelfAssessment,
   toManagerReviewPayload,
+  type SelfAssessmentDraft,
 } from "@/lib/performanceFormSchema";
 import { Input } from "@/components/ui/input";
 
@@ -386,6 +391,7 @@ export default function PerformanceReviewDetail() {
   const [saving, setSaving] = useState(false);
   const [step, setStep] = useState(0);
   const [managerValues, setManagerValues] = useState<Record<string, string>>({});
+  const [selfValues, setSelfValues] = useState<SelfAssessmentDraft>({ ...EMPTY_SELF_ASSESSMENT });
   const [hrValues, setHrValues] = useState<Record<string, string>>({});
   const [objAssessments, setObjAssessments] = useState<Record<number, Record<string, string>>>({});
   const [newObjective, setNewObjective] = useState({
@@ -465,6 +471,8 @@ export default function PerformanceReviewDetail() {
   const hrDone = status === "completed";
 
   const discussionRecorded = !!review?.discussion_completed_at;
+  const canEditSelf =
+    isOwner && status === "self_assessment_requested" && !selfSealed;
   const canEditManager =
     (isManager || isHr) &&
     !managerDone &&
@@ -509,6 +517,9 @@ export default function PerformanceReviewDetail() {
   // Prefill any answers already saved, so reopening the review keeps them.
   useEffect(() => {
     if (!review) return;
+    if (!review.self_assessment_sealed) {
+      setSelfValues(hydrateSelfAssessment(review.self_assessment));
+    }
     const mr =
       typeof review.manager_review === "object" && review.manager_review
         ? review.manager_review
@@ -556,6 +567,38 @@ export default function PerformanceReviewDetail() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const saveSelfDraft = () => {
+    act(
+      () =>
+        apiService.submitSelfAssessment(review.id, {
+          draft: true,
+          self_assessment: selfValues,
+        }),
+      "Self-assessment draft saved",
+    );
+  };
+
+  const submitSelf = () => {
+    const missing = SELF_ASSESSMENT_REQUIRED_KEYS.filter(
+      (k) => !String(selfValues[k] || "").trim(),
+    );
+    if (missing.length) {
+      toast({
+        title: "Please complete every question",
+        description: `Still to answer: ${missing.length} required field(s).`,
+        variant: "destructive",
+      });
+      return;
+    }
+    act(
+      () =>
+        apiService.submitSelfAssessment(review.id, {
+          self_assessment: selfValues,
+        }),
+      "Self-assessment submitted to your line manager",
+    );
   };
 
   const saveManagerDraft = () => {
@@ -1107,13 +1150,65 @@ export default function PerformanceReviewDetail() {
                     Employee ratings and comments are hidden until your manager assessment is submitted.
                     Complete your assessment on the next step without referring to the self-assessment.
                   </p>
+                ) : canEditSelf ? (
+                  <div className="space-y-5" data-testid="self-assessment-form">
+                    <p className="text-sm text-muted-foreground">
+                      Answer each question for this review period. You can save a draft and return later.
+                    </p>
+                    {(review.objectives || []).length > 0 && (
+                      <div className="space-y-2 rounded-md border p-3" data-testid="self-objectives-list">
+                        <p className="text-sm font-medium">Agreed / proposed objectives</p>
+                        <ul className="text-sm space-y-2">
+                          {(review.objectives || []).map((o: any) => (
+                            <li key={o.id}>
+                              <span className="font-medium">{o.title}</span>
+                              {o.target ? ` — target: ${o.target}` : ""}
+                              {o.is_agreed ? " (agreed)" : " (proposed)"}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {SELF_ASSESSMENT_FIELDS.map((field, index) => (
+                      <div key={field.key} className="space-y-2">
+                        <Label htmlFor={field.key}>
+                          {index + 1}. {field.label}
+                        </Label>
+                        <Textarea
+                          id={field.key}
+                          data-testid={`self-${field.key}`}
+                          value={selfValues[field.key] || ""}
+                          onChange={(e) =>
+                            setSelfValues((prev) => ({
+                              ...prev,
+                              [field.key]: e.target.value,
+                            }))
+                          }
+                          className="min-h-[80px]"
+                        />
+                      </div>
+                    ))}
+                    <div className="flex flex-wrap gap-2 justify-end pt-2">
+                      <Button
+                        variant="secondary"
+                        disabled={saving}
+                        onClick={saveSelfDraft}
+                        data-testid="save-self-draft"
+                      >
+                        {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                        Save draft
+                      </Button>
+                      <Button
+                        disabled={saving}
+                        onClick={submitSelf}
+                        data-testid="submit-self-assessment"
+                      >
+                        Submit to Manager
+                      </Button>
+                    </div>
+                  </div>
                 ) : (
                   <ReadOnlyBlock value={review.self_assessment} emptyText="Not submitted yet." />
-                )}
-                {status === "self_assessment_requested" && isOwner && (
-                  <Button onClick={() => navigate("/performance?selfAssessment=1")}>
-                    Complete my self-assessment
-                  </Button>
                 )}
                 <div className="flex justify-end">
                   <Button variant="outline" size="sm" className="gap-2" onClick={() => setStep(1)}>

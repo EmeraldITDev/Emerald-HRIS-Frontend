@@ -36,6 +36,9 @@ export interface Employee {
   employment_type?: string;
   grade_level?: string;
   supervisor_name?: string;
+  /** FK to employees.id — authoritative reporting line for performance / leave routing. */
+  supervisor_id?: number | null;
+  supervisorId?: number | null;
   work_location?: string;
   hire_date?: string;
   probation_period?: string;

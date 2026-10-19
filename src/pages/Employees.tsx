@@ -67,6 +67,7 @@ import { ROLE_OPTIONS, ROLE_PREFIX, SYSTEM_ROLE_OPTIONS } from "@/constants/role
 import { EmployeeCredentialsModal } from "@/components/EmployeeCredentialsModal";
 import { useAuth } from "@/contexts/AuthContext";
 import { WorkLocationField } from "@/components/WorkLocationField";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { STANDARD_WORK_LOCATIONS, matchesWorkLocationFilter } from "@/constants/workLocations";
 import { formatGrossSalaryDisplay, parseGrossSalaryInput } from "@/lib/grossSalaryFormat";
 import {
@@ -77,6 +78,10 @@ import {
   normalizeStaffId,
   staffIdFromEmployee,
 } from "@/lib/staffId";
+
+function employeeFullName(emp: { first_name?: string; last_name?: string }) {
+  return `${emp.first_name || ""} ${emp.last_name || ""}`.trim();
+}
 
 // Put near top of file
 const VALID_SYSTEM_ROLES = new Set([
@@ -173,6 +178,7 @@ export default function Employees() {
     employmentType: "",
     gradeLevel: "",
     supervisorName: "",
+    supervisorId: "" as string,
     workLocation: "",
     hireDate: undefined as Date | undefined,
     probationPeriod: "",
@@ -641,7 +647,9 @@ export default function Employees() {
       if (!newEmployee.department.trim()) errors.department = true;
       if (!newEmployee.employmentType.trim()) errors.employmentType = true;
       if (!newEmployee.gradeLevel.trim()) errors.gradeLevel = true;
-      if (!newEmployee.supervisorName.trim()) errors.supervisorName = true;
+      if (!newEmployee.supervisorId && !newEmployee.supervisorName.trim()) {
+        errors.supervisorName = true;
+      }
       if (!newEmployee.workLocation.trim()) errors.workLocation = true;
       if (!newEmployee.hireDate) errors.hireDate = true;
       if (!newEmployee.probationPeriod.trim()) errors.probationPeriod = true;
@@ -946,6 +954,7 @@ export default function Employees() {
         nationality: newEmployee.nationality,
         grade_level: newEmployee.gradeLevel,
         supervisor_name: newEmployee.supervisorName,
+        supervisor_id: newEmployee.supervisorId ? Number(newEmployee.supervisorId) : null,
         work_location: newEmployee.workLocation,
         probation_period: newEmployee.probationPeriod,
         confirmation_date: newEmployee.confirmationDate ? format(newEmployee.confirmationDate, "yyyy-MM-dd") : null,
@@ -1074,6 +1083,7 @@ export default function Employees() {
         employmentType: "",
         gradeLevel: "",
         supervisorName: "",
+        supervisorId: "",
         workLocation: "",
         hireDate: undefined,
         probationPeriod: "",
@@ -1210,6 +1220,21 @@ export default function Employees() {
       employment_type: employee.employment_type || "",
       grade_level: employee.grade_level || "",
       supervisor_name: employee.supervisor_name || "",
+      supervisor_id: (() => {
+        const fromFk =
+          employee.supervisor_id ?? employee.supervisorId ?? null
+        if (fromFk) return String(fromFk)
+        // Resolve legacy free-text supervisor_name to an employee id when possible
+        const name = (employee.supervisor_name || "").trim().toLowerCase()
+        if (!name) return ""
+        const match = employeeList.find(
+          (e) =>
+            e.id &&
+            employeeFullName(e).toLowerCase() === name &&
+            String(e.id) !== String(employee.id),
+        )
+        return match?.id ? String(match.id) : ""
+      })(),
       work_location: employee.work_location || "",
       hireDate: employee.hire_date ? new Date(employee.hire_date) : undefined,
       probationPeriod: employee.probation_period || "",
@@ -1358,7 +1383,11 @@ export default function Employees() {
       req("department", editEmployee.department, "job");
       req("employment_type", editEmployee.employment_type, "job");
       req("grade_level", editEmployee.grade_level, "job");
-      req("supervisor_name", editEmployee.supervisor_name, "job");
+      req(
+        "supervisor_name",
+        editEmployee.supervisor_id || editEmployee.supervisor_name,
+        "job",
+      );
       req("work_location", editEmployee.work_location, "job");
       req(
         "hireDate",
@@ -1408,6 +1437,9 @@ export default function Employees() {
         nationality: editEmployee.nationality,
         grade_level: editEmployee.grade_level,
         supervisor_name: editEmployee.supervisor_name,
+        supervisor_id: editEmployee.supervisor_id
+          ? Number(editEmployee.supervisor_id)
+          : null,
         work_location: editEmployee.work_location,
         probation_period: editEmployee.probationPeriod,
         confirmation_date: editEmployee.confirmationDate ? format(editEmployee.confirmationDate, "yyyy-MM-dd") : null,
@@ -2369,18 +2401,34 @@ export default function Employees() {
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="supervisorName">Supervisor Name *</Label>
-                        <Input
-                          id="supervisorName"
-                          value={newEmployee.supervisorName}
-                          onChange={(e) =>
+                        <Label htmlFor="supervisorName">Line manager / supervisor *</Label>
+                        <SearchableSelect
+                          value={newEmployee.supervisorId || undefined}
+                          onValueChange={(value) => {
+                            const selected = employeeList.find((e) => String(e.id) === value)
                             setNewEmployee({
                               ...newEmployee,
-                              supervisorName: e.target.value,
+                              supervisorId: value,
+                              supervisorName: selected
+                                ? employeeFullName(selected)
+                                : newEmployee.supervisorName,
                             })
-                          }
+                          }}
+                          options={employeeList
+                            .filter((e) => e.id)
+                            .map((e) => ({
+                              value: String(e.id),
+                              label: `${employeeFullName(e)}${e.job_title ? ` — ${e.job_title}` : ""}`,
+                              keywords: `${employeeFullName(e)} ${e.department || ""} ${e.employee_code || ""} ${e.email || ""}`,
+                            }))}
+                          placeholder="Search supervisor by name…"
+                          searchPlaceholder="Type supervisor name…"
+                          emptyText="No matching employees"
                           className={formErrors.supervisorName ? "border-destructive" : ""}
                         />
+                        <p className="text-xs text-muted-foreground">
+                          Performance self-assessments go to this person — not every line manager in the department.
+                        </p>
                       </div>
                       <WorkLocationField
                         id="workLocation"
@@ -3549,8 +3597,11 @@ export default function Employees() {
                       <p className="text-base">{selectedEmployee.grade_level || "N/A"}</p>
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium text-muted-foreground">Supervisor Name</Label>
+                      <Label className="text-sm font-medium text-muted-foreground">Line manager / supervisor</Label>
                       <p className="text-base">{selectedEmployee.supervisor_name || "N/A"}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Performance reviews are routed to this supervisor only.
+                      </p>
                     </div>
                   </div>
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -4188,19 +4239,42 @@ export default function Employees() {
 
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <Label htmlFor="editSupervisorName">Supervisor Name *</Label>
-                      <Input
-                        id="editSupervisorName"
-                        value={editEmployee.supervisor_name || ""}
-                        onChange={(e) =>
+                      <Label htmlFor="editSupervisorName">Line manager / supervisor *</Label>
+                      <SearchableSelect
+                        value={
+                          editEmployee.supervisor_id
+                            ? String(editEmployee.supervisor_id)
+                            : undefined
+                        }
+                        onValueChange={(value) => {
+                          const selected = employeeList.find((e) => String(e.id) === value)
                           setEditEmployee({
                             ...editEmployee,
-                            supervisor_name: e.target.value,
+                            supervisor_id: value,
+                            supervisor_name: selected
+                              ? employeeFullName(selected)
+                              : editEmployee.supervisor_name,
                           })
-                        }
-                        placeholder="Supervisor's full name"
+                        }}
+                        options={employeeList
+                          .filter((e) => e.id && String(e.id) !== String(editEmployee.id))
+                          .map((e) => ({
+                            value: String(e.id),
+                            label: `${employeeFullName(e)}${e.job_title ? ` — ${e.job_title}` : ""}`,
+                            keywords: `${employeeFullName(e)} ${e.department || ""} ${e.employee_code || ""} ${e.email || ""}`,
+                          }))}
+                        placeholder="Search supervisor by name…"
+                        searchPlaceholder="Type supervisor name…"
+                        emptyText="No matching employees"
                         className={editFormErrors.supervisor_name ? "border-destructive" : ""}
                       />
+                      <p className="text-xs text-muted-foreground">
+                        Self-assessments and manager review are routed to this supervisor only
+                        {editEmployee.supervisor_name
+                          ? ` (currently: ${editEmployee.supervisor_name})`
+                          : ""}
+                        .
+                      </p>
                     </div>
                     <WorkLocationField
                       id="editWorkLocation"

@@ -185,14 +185,6 @@ export const EMPTY_MANAGER_ASSESSMENT: ManagerAssessmentDraft = {
 };
 
 export const MANAGER_SUBMIT_REQUIRED_KEYS = [
-  "objectives_clear",
-  "measures_clear",
-  "material_changes_recorded",
-  "objective_assessments_narrative",
-  "behaviour_skills_rating",
-  "behaviour_skills_example",
-  "behaviour_collaboration_rating",
-  "behaviour_collaboration_example",
   "behaviour_ownership_rating",
   "behaviour_ownership_example",
   "behaviour_learning_rating",

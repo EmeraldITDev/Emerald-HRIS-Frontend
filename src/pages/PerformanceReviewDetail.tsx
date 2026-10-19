@@ -77,53 +77,6 @@ type ManagerField = {
 
 const MANAGER_FIELDS: ManagerField[] = [
   {
-    key: "objectives_clear",
-    label: "Are objectives clear, relevant to the role, and linked to team/business priorities?",
-    type: "yes_no_na",
-    section: "A. Objective agreement",
-  },
-  {
-    key: "measures_clear",
-    label: "Are measures, targets and due dates clear?",
-    type: "yes_no_na",
-    section: "A. Objective agreement",
-  },
-  {
-    key: "material_changes_recorded",
-    label: "Were material changes to objectives or dependencies recorded (or Not Applicable)?",
-    type: "yes_no_na",
-    section: "A. Objective agreement",
-  },
-  {
-    key: "objective_assessments_narrative",
-    label:
-      "Overall narrative across objectives (legacy / summary). Use the structured objective assessment fields below when objectives exist.",
-    aliases: ["performance_assessment", "observations"],
-    section: "B. Assessment of each objective",
-  },
-  {
-    key: "behaviour_skills_rating",
-    label: "Application of the skills and knowledge required for the role",
-    type: "rating",
-    section: "C. Role effectiveness and behaviours",
-  },
-  {
-    key: "behaviour_skills_example",
-    label: "Supporting example — skills and knowledge",
-    section: "C. Role effectiveness and behaviours",
-  },
-  {
-    key: "behaviour_collaboration_rating",
-    label: "Collaboration and contribution to team outcomes",
-    type: "rating",
-    section: "C. Role effectiveness and behaviours",
-  },
-  {
-    key: "behaviour_collaboration_example",
-    label: "Supporting example — collaboration",
-    section: "C. Role effectiveness and behaviours",
-  },
-  {
     key: "behaviour_ownership_rating",
     label: "Ownership, professionalism, integrity and compliance",
     type: "rating",
@@ -602,16 +555,11 @@ export default function PerformanceReviewDetail() {
   };
 
   const saveManagerDraft = () => {
-    const objective_assessments = (review.objectives || []).map((o: any) => ({
-      objective_id: o.id,
-      ...(objAssessments[o.id] || {}),
-    }));
     const payload = {
       ...toManagerReviewPayload({
         ...EMPTY_MANAGER_ASSESSMENT,
         ...managerValues,
       }),
-      objective_assessments,
     };
     act(
       () => apiService.managerReview(review.id, payload, { draft: true }),
@@ -645,8 +593,6 @@ export default function PerformanceReviewDetail() {
       }
     }
     for (const [ratingKey, exampleKey] of [
-      ["behaviour_skills_rating", "behaviour_skills_example"],
-      ["behaviour_collaboration_rating", "behaviour_collaboration_example"],
       ["behaviour_ownership_rating", "behaviour_ownership_example"],
       ["behaviour_learning_rating", "behaviour_learning_example"],
     ] as const) {
@@ -670,26 +616,11 @@ export default function PerformanceReviewDetail() {
       });
       return;
     }
-    const objective_assessments = (review.objectives || []).map((o: any) => ({
-      objective_id: o.id,
-      ...(objAssessments[o.id] || {}),
-    }));
-    for (const row of objective_assessments) {
-      if (isNaRating(row.rating) && !String(row.rating_explanation || row.evidence || row.actual_result || "").trim()) {
-        toast({
-          title: "N/A requires an explanation",
-          description: "Provide evidence or an explanation for N/A objective ratings.",
-          variant: "destructive",
-        });
-        return;
-      }
-    }
     const payload = {
       ...toManagerReviewPayload({
         ...EMPTY_MANAGER_ASSESSMENT,
         ...managerValues,
       }),
-      objective_assessments,
     };
     act(() => apiService.managerReview(review.id, payload), "Sent to HR for final review");
   };
@@ -976,20 +907,16 @@ export default function PerformanceReviewDetail() {
             </CardContent>
           </Card>
 
-          {/* Structured objectives — shared planning (not sealed assessments) */}
+          {/* Key Performance Indicators — shared planning (not sealed assessments) */}
           <Card data-testid="objectives-panel">
             <CardHeader>
-              <CardTitle className="text-base">Structured objectives</CardTitle>
-              <CardDescription>
-                Agreed objectives for this review. Visible to authorised parties without revealing
-                sealed assessment answers. Agreement requires both employee and manager confirmation.
-              </CardDescription>
+              <CardTitle className="text-base">Key Performance Indicators</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {(review.objectives || []).length === 0 ? (
                 <p className="text-sm text-muted-foreground">
                   {review.cycle_id
-                    ? "No objectives yet."
+                    ? "No KPIs yet."
                     : "Legacy review without structured objectives — narrative assessments still apply."}
                 </p>
               ) : (
@@ -1004,8 +931,11 @@ export default function PerformanceReviewDetail() {
                     <p className="text-xs text-muted-foreground whitespace-pre-wrap">
                       {[
                         o.success_measure && `Measure: ${o.success_measure}`,
-                        o.target && `Target: ${o.target}`,
-                        o.due_date && `Due: ${String(o.due_date).slice(0, 10)}`,
+                        o.target &&
+                          `Rating: ${
+                            PERFORMANCE_RATING_OPTIONS.find((r) => r.value === String(o.target))
+                              ?.label || o.target
+                          }`,
                         o.support_requirements && `Support: ${o.support_requirements}`,
                       ]
                         .filter(Boolean)
@@ -1069,10 +999,10 @@ export default function PerformanceReviewDetail() {
 
               {canManageObjectives && (
                 <div className="space-y-2 border-t pt-4">
-                  <p className="text-sm font-medium">Propose objective</p>
+                  <p className="text-sm font-medium">Propose Key Performance Indicator</p>
                   <Input
                     data-testid="new-objective-title"
-                    placeholder="Objective / key deliverable"
+                    placeholder="key Deliverable"
                     value={newObjective.title}
                     onChange={(e) => setNewObjective({ ...newObjective, title: e.target.value })}
                   />
@@ -1085,19 +1015,25 @@ export default function PerformanceReviewDetail() {
                       setNewObjective({ ...newObjective, success_measure: e.target.value })
                     }
                   />
-                  <div className="grid sm:grid-cols-2 gap-2">
-                    <Input
-                      data-testid="new-objective-target"
-                      placeholder="Target"
-                      value={newObjective.target}
-                      onChange={(e) => setNewObjective({ ...newObjective, target: e.target.value })}
-                    />
-                    <Input
-                      type="date"
-                      data-testid="new-objective-due"
-                      value={newObjective.due_date}
-                      onChange={(e) => setNewObjective({ ...newObjective, due_date: e.target.value })}
-                    />
+                  <div className="space-y-2">
+                    <Label htmlFor="new-kpi-rating">Rating</Label>
+                    <Select
+                      value={newObjective.target || undefined}
+                      onValueChange={(value) =>
+                        setNewObjective({ ...newObjective, target: value, due_date: "" })
+                      }
+                    >
+                      <SelectTrigger id="new-kpi-rating" data-testid="new-objective-target">
+                        <SelectValue placeholder="Select rating (1–5)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {PERFORMANCE_RATING_OPTIONS.filter((o) => o.value !== "N/A").map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <Textarea
                     placeholder="Support, resources or dependencies (optional)"
@@ -1108,7 +1044,7 @@ export default function PerformanceReviewDetail() {
                     }
                   />
                   <Button disabled={saving} onClick={createObjective} data-testid="create-objective">
-                    Add objective
+                    Add KPI
                   </Button>
                 </div>
               )}
@@ -1241,66 +1177,6 @@ export default function PerformanceReviewDetail() {
                       values={managerValues}
                       onChange={(k, v) => setManagerValues((p) => ({ ...p, [k]: v }))}
                     />
-                    {(review.objectives || []).length > 0 && (
-                      <div className="space-y-4 border-t pt-4" data-testid="manager-objective-assessments">
-                        <h3 className="text-sm font-semibold">Per-objective assessment</h3>
-                        {(review.objectives || []).map((o: any) => (
-                          <div key={o.id} className="space-y-2 rounded-md border p-3">
-                            <p className="text-sm font-medium">{o.title}</p>
-                            <p className="text-xs text-muted-foreground">
-                              Target: {o.target || "—"} · Measure: {o.success_measure || "—"}
-                            </p>
-                            <Label>Rating (1–5 or N/A)</Label>
-                            <Select
-                              value={objAssessments[o.id]?.rating || ""}
-                              onValueChange={(v) =>
-                                setObjAssessments((p) => ({
-                                  ...p,
-                                  [o.id]: { ...(p[o.id] || {}), rating: v },
-                                }))
-                              }
-                            >
-                              <SelectTrigger data-testid={`obj-rating-${o.id}`}>
-                                <SelectValue placeholder="Select rating" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {RATING_OPTIONS.map((r) => (
-                                  <SelectItem key={r.value} value={r.value}>
-                                    {r.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            {(
-                              [
-                                ["actual_result", "Actual result"],
-                                ["evidence", "Supporting evidence"],
-                                ["rating_explanation", "N/A / rating explanation"],
-                                ["went_well", "What went well and impact"],
-                                ["not_met_reason", "Reasons target not fully met"],
-                                ["dependency_changes", "Priority / resource / dependency changes"],
-                                ["continue_stop_differently", "Continue / stop / do differently"],
-                              ] as const
-                            ).map(([key, label]) => (
-                              <div key={key} className="space-y-1">
-                                <Label className="text-xs">{label}</Label>
-                                <Textarea
-                                  rows={2}
-                                  data-testid={`obj-${key}-${o.id}`}
-                                  value={objAssessments[o.id]?.[key] || ""}
-                                  onChange={(e) =>
-                                    setObjAssessments((p) => ({
-                                      ...p,
-                                      [o.id]: { ...(p[o.id] || {}), [key]: e.target.value },
-                                    }))
-                                  }
-                                />
-                              </div>
-                            ))}
-                          </div>
-                        ))}
-                      </div>
-                    )}
                     <div className="flex flex-wrap gap-2">
                       <Button
                         variant="secondary"

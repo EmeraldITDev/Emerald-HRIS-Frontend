@@ -2398,7 +2398,7 @@ export default function Employees() {
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                       <div className="space-y-2">
-                        <Label>Hire Date *</Label>
+                        <Label>Date joined (hire date) *</Label>
                         <DateInput
                           value={newEmployee.hireDate}
                           onChange={(date) =>
@@ -3559,10 +3559,11 @@ export default function Employees() {
                       <p className="text-base">{selectedEmployee.work_location || "N/A"}</p>
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium text-muted-foreground">Hire Date</Label>
+                      <Label className="text-sm font-medium text-muted-foreground">Date joined (hire date)</Label>
                       <p className="text-base">
                         {selectedEmployee.hire_date ? format(new Date(selectedEmployee.hire_date), "PPP") : "N/A"}
                       </p>
+                      <p className="text-xs text-muted-foreground">Date the employee joined — not confirmation.</p>
                     </div>
                   </div>
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -4217,7 +4218,7 @@ export default function Employees() {
 
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <Label htmlFor="editHireDate">Hire Date *</Label>
+                      <Label htmlFor="editHireDate">Date joined (hire date) *</Label>
                       <DateInput
                         value={
                           editEmployee.hireDate instanceof Date

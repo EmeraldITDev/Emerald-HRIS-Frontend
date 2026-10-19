@@ -550,23 +550,33 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
                 <div className="space-y-2">
                   {/* Mode is picked here — geolocation only runs after this choice */}
                   <p className="text-xs text-muted-foreground">Where are you working from today?</p>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     {(["Physical", "WFH"] as const).map((mode) => {
                       const active = (selectedMode ?? expectedMode) === mode;
+                      const isOffice = mode === "Physical";
                       return (
                         <Button
                           key={mode}
                           type="button"
                           size="sm"
-                          variant={active ? "secondary" : "outline"}
+                          variant="outline"
+                          aria-pressed={active}
                           onClick={() => {
                             setSelectedMode(mode);
                             resetLocationState();
                           }}
-                          className="gap-2"
+                          className={cn(
+                            "gap-2 border-2 font-medium transition-colors",
+                            active
+                              ? isOffice
+                                ? "bg-emerald-600 text-white border-emerald-500 hover:bg-emerald-600 hover:text-white shadow-sm"
+                                : "bg-sky-600 text-white border-sky-500 hover:bg-sky-600 hover:text-white shadow-sm"
+                              : "bg-background text-muted-foreground border-muted-foreground/30 hover:bg-muted/60",
+                          )}
                         >
-                          {mode === "WFH" ? <Home className="h-4 w-4" /> : <MapPin className="h-4 w-4" />}
-                          {mode === "WFH" ? "Working from home" : "At the office"}
+                          {isOffice ? <MapPin className="h-4 w-4" /> : <Home className="h-4 w-4" />}
+                          {isOffice ? "At the office" : "Working from home"}
+                          {active ? " ✓" : ""}
                         </Button>
                       );
                     })}

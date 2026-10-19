@@ -567,9 +567,10 @@ export default function EmployeeProfile() {
                   <div>
                     <label className="text-sm font-medium text-muted-foreground flex items-center space-x-1">
                       <Award className="h-3 w-3" />
-                      <span>Hire Date</span>
+                      <span>Date joined (hire date)</span>
                     </label>
                     <p className="text-sm">{employee.hire_date ? format(new Date(employee.hire_date), 'PPP') : 'N/A'}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Join date — not confirmation.</p>
                     {employee.hire_date && (
                       <div className="text-xs text-muted-foreground mt-1 space-y-1">
                         <p>

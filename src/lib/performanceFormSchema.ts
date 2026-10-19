@@ -46,7 +46,7 @@ export const SELF_ASSESSMENT_REQUIRED_KEYS = [
 ] as const;
 
 export const SELF_ASSESSMENT_FIELDS: Array<{
-  key: keyof typeof EMPTY_SELF_ASSESSMENT;
+  key: (typeof SELF_ASSESSMENT_REQUIRED_KEYS)[number];
   label: string;
   legacyKeys?: string[];
 }> = [

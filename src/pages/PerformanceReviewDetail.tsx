@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,94 @@ import {
   type SelfAssessmentDraft,
 } from "@/lib/performanceFormSchema";
 import { Input } from "@/components/ui/input";
+
+type JsonRecord = Record<string, unknown>;
+
+type PerformanceObjective = {
+  id: number;
+  title?: string;
+  success_measure?: string;
+  target?: string;
+  due_date?: string;
+  support_requirements?: string;
+  is_agreed?: boolean;
+  status?: string;
+};
+
+type ChecklistItem = {
+  status?: string;
+  detail?: string;
+  source?: string;
+};
+
+type QualityChecklist = {
+  items?: Record<string, ChecklistItem>;
+  blocking?: string[];
+  pathway_blocked?: boolean;
+};
+
+type AuditEvent = {
+  id: number | string;
+  event_type?: string;
+  description?: string;
+  timestamp?: string;
+  actor_name?: string;
+  reason?: string;
+  version_context?: string;
+};
+
+type AuditTimeline = {
+  events?: AuditEvent[];
+  reopen_count?: number;
+};
+
+/** Detail payload from GET /performance/:id (extends list shape with workflow extras). */
+type ReviewDetail = {
+  id: number;
+  employee_id?: number | string;
+  manager_id?: number | string;
+  period?: string;
+  status?: string;
+  cycle_id?: number | null;
+  employee?: { id?: number | string; first_name?: string; last_name?: string; department?: string };
+  manager?: { id?: number | string; name?: string };
+  self_assessment?: JsonRecord | string | null;
+  manager_review?: JsonRecord | null;
+  hr_review?: JsonRecord | null;
+  self_assessment_sealed?: boolean;
+  manager_review_sealed?: boolean;
+  hr_review_sealed?: boolean;
+  discussion_completed_at?: string | null;
+  meeting_notes?: string | null;
+  employee_acknowledgement?: {
+    acknowledged?: boolean;
+    comments?: string;
+    disagrees?: boolean;
+    disagreement_explanation?: string;
+    acknowledged_at?: string;
+  } | null;
+  objectives?: PerformanceObjective[];
+  workflow?: {
+    can_manage_objectives?: boolean;
+    can_record_discussion?: boolean;
+    can_acknowledge?: boolean;
+    can_hod_decide?: boolean;
+    hod_pathway_blocked?: boolean;
+    acknowledgement_statement?: string;
+  };
+  hod_status?: string | null;
+  updated_at?: string;
+  [key: string]: unknown;
+};
+
+function errorMessage(err: unknown, fallback = "Something went wrong"): string {
+  if (err && typeof err === "object" && "message" in err) {
+    const msg = (err as { message?: unknown }).message;
+    if (typeof msg === "string" && msg.trim()) return msg;
+  }
+  if (typeof err === "string" && err.trim()) return err;
+  return fallback;
+}
 
 const ACK_STATEMENT =
   "I confirm that I have received/discussed this review. This does not necessarily mean that I agree with every assessment or rating.";
@@ -172,12 +260,13 @@ const MANAGER_DISPLAY_FIELDS: ManagerField[] = [
 
 /** Read a manager/HR answer, tolerating older field names. */
 function pickAnswer(
-  source: any,
+  source: unknown,
   field: { key: string; aliases?: string[] },
 ): string {
   if (!source || typeof source !== "object") return "";
+  const record = source as JsonRecord;
   for (const k of [field.key, ...(field.aliases || [])]) {
-    const v = source[k];
+    const v = record[k];
     if (v !== undefined && v !== null && String(v).trim() !== "") return String(v);
   }
   return "";
@@ -190,7 +279,7 @@ function AnswerList({
   emptyText,
 }: {
   fields: Array<{ key: string; label: string; aliases?: string[] }>;
-  source: any;
+  source: unknown;
   emptyText: string;
 }) {
   const rows = fields
@@ -227,14 +316,17 @@ function prettyKey(k: string) {
   return k.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase());
 }
 
-function ReadOnlyBlock({ value, emptyText }: { value: any; emptyText: string }) {
-  if (!value || (typeof value === "object" && Object.keys(value).length === 0)) {
+function ReadOnlyBlock({ value, emptyText }: { value: unknown; emptyText: string }) {
+  if (!value || (typeof value === "object" && Object.keys(value as object).length === 0)) {
     return <p className="text-sm text-muted-foreground">{emptyText}</p>;
   }
   if (typeof value === "string") return <p className="text-sm whitespace-pre-wrap">{value}</p>;
+  if (typeof value !== "object") {
+    return <p className="text-sm whitespace-pre-wrap">{String(value)}</p>;
+  }
   return (
     <div className="space-y-3">
-      {Object.entries(value).map(([k, v]) => (
+      {Object.entries(value as JsonRecord).map(([k, v]) => (
         <div key={k}>
           <p className="text-xs uppercase tracking-wide text-muted-foreground">{prettyKey(k)}</p>
           <p className="text-sm whitespace-pre-wrap">
@@ -272,7 +364,10 @@ function StructuredForm({
             )}
             <Label htmlFor={f.key}>{f.label}</Label>
             {f.type === "rating" ? (
-              <Select value={values[f.key] || ""} onValueChange={(v) => onChange(f.key, v)}>
+              <Select
+                value={values[f.key] ? values[f.key] : undefined}
+                onValueChange={(v) => onChange(f.key, v)}
+              >
                 <SelectTrigger id={f.key} className="max-w-md" data-testid={`mgr-${f.key}`}>
                   <SelectValue placeholder="Select a rating" />
                 </SelectTrigger>
@@ -285,7 +380,10 @@ function StructuredForm({
                 </SelectContent>
               </Select>
             ) : f.type === "yes_no_na" ? (
-              <Select value={values[f.key] || ""} onValueChange={(v) => onChange(f.key, v)}>
+              <Select
+                value={values[f.key] ? values[f.key] : undefined}
+                onValueChange={(v) => onChange(f.key, v)}
+              >
                 <SelectTrigger id={f.key} className="max-w-xs" data-testid={`mgr-${f.key}`}>
                   <SelectValue placeholder="Select" />
                 </SelectTrigger>
@@ -298,7 +396,10 @@ function StructuredForm({
                 </SelectContent>
               </Select>
             ) : f.type === "yes_no" ? (
-              <Select value={values[f.key] || ""} onValueChange={(v) => onChange(f.key, v)}>
+              <Select
+                value={values[f.key] ? values[f.key] : undefined}
+                onValueChange={(v) => onChange(f.key, v)}
+              >
                 <SelectTrigger id={f.key} className="max-w-xs" data-testid={`mgr-${f.key}`}>
                   <SelectValue placeholder="Select" />
                 </SelectTrigger>
@@ -338,7 +439,7 @@ export default function PerformanceReviewDetail() {
   const { user } = useAuth();
   const { toast } = useToast();
 
-  const [review, setReview] = useState<any>(null);
+  const [review, setReview] = useState<ReviewDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -346,14 +447,13 @@ export default function PerformanceReviewDetail() {
   const [managerValues, setManagerValues] = useState<Record<string, string>>({});
   const [selfValues, setSelfValues] = useState<SelfAssessmentDraft>({ ...EMPTY_SELF_ASSESSMENT });
   const [hrValues, setHrValues] = useState<Record<string, string>>({});
-  const [objAssessments, setObjAssessments] = useState<Record<number, Record<string, string>>>({});
   const [newObjective, setNewObjective] = useState({
     title: "",
     success_measure: "",
     target: "",
-    due_date: "",
     support_requirements: "",
   });
+  const autoLandedReviewId = useRef<string | number | null>(null);
   const [amendDraft, setAmendDraft] = useState<Record<number, { title: string; change_reason: string }>>({});
   const [discussionHeld, setDiscussionHeld] = useState(false);
   const [discussionSummary, setDiscussionSummary] = useState("");
@@ -362,13 +462,13 @@ export default function PerformanceReviewDetail() {
   const [ackComments, setAckComments] = useState("");
   const [disagrees, setDisagrees] = useState<"yes" | "no" | "">("");
   const [disagreementExplanation, setDisagreementExplanation] = useState("");
-  const [checklist, setChecklist] = useState<any>(null);
+  const [checklist, setChecklist] = useState<QualityChecklist | null>(null);
   const [hodNotes, setHodNotes] = useState("");
   const [hodNewRating, setHodNewRating] = useState("");
   const [hodRatingReason, setHodRatingReason] = useState("");
   const [reopenReason, setReopenReason] = useState("");
   const [reopenTarget, setReopenTarget] = useState("manager_review");
-  const [auditTimeline, setAuditTimeline] = useState<any>(null);
+  const [auditTimeline, setAuditTimeline] = useState<AuditTimeline | null>(null);
   const [auditFilter, setAuditFilter] = useState("");
 
   const load = async () => {
@@ -376,7 +476,7 @@ export default function PerformanceReviewDetail() {
     setLoading(true);
     setLoadError(null);
     try {
-      const data = await apiService.getPerformanceReview(id);
+      const data = (await apiService.getPerformanceReview(id)) as ReviewDetail;
       setReview(data);
       if (data?.discussion_completed_at) {
         setDiscussionHeld(true);
@@ -392,9 +492,9 @@ export default function PerformanceReviewDetail() {
         setDisagrees(ack.disagrees ? "yes" : "no");
         setDisagreementExplanation(String(ack.disagreement_explanation || ""));
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       setReview(null);
-      setLoadError(e?.message || "We couldn't reach the server.");
+      setLoadError(errorMessage(e, "We couldn't reach the server."));
     } finally {
       setLoading(false);
     }
@@ -412,8 +512,8 @@ export default function PerformanceReviewDetail() {
   const isManager = user?.role === "line_manager";
   const isOwner =
     !!review &&
-    (String(review.employee_id) === String((user as any)?.employee_id) ||
-      String(review.employee?.id) === String((user as any)?.employee_id));
+    (String(review.employee_id) === String(user?.employee_id) ||
+      String(review.employee?.id) === String(user?.employee_id));
 
   const selfSealed = !!review?.self_assessment_sealed;
   const managerSealed = !!review?.manager_review_sealed;
@@ -453,10 +553,12 @@ export default function PerformanceReviewDetail() {
     [],
   );
 
-  // Land on the step the current user needs to act on.
-  // Order: self → manager → discussion → acknowledgement → HR finalise.
+  // Land once per review on the step the current user needs to act on.
+  // Do not re-force after the user manually switches tabs.
   useEffect(() => {
-    if (!review) return;
+    if (!review?.id) return;
+    if (autoLandedReviewId.current === review.id) return;
+    autoLandedReviewId.current = review.id;
     if (canEditManager) setStep(1);
     else if (canRecordDiscussion && !discussionRecorded) setStep(2);
     else if (canAcknowledge) setStep(3);
@@ -465,7 +567,7 @@ export default function PerformanceReviewDetail() {
     else if (status === "hod_review") setStep(1);
     else setStep(0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [review?.id, status, discussionRecorded, canAcknowledge]);
+  }, [review?.id]);
 
   // Prefill any answers already saved, so reopening the review keeps them.
   useEffect(() => {
@@ -479,23 +581,6 @@ export default function PerformanceReviewDetail() {
         : {};
     const hr = typeof review.hr_review === "object" && review.hr_review ? review.hr_review : review;
     setManagerValues(hydrateManagerAssessment(mr));
-    const rows = Array.isArray(mr.objective_assessments) ? mr.objective_assessments : [];
-    const mapped: Record<number, Record<string, string>> = {};
-    rows.forEach((r: any) => {
-      if (r?.objective_id) {
-        mapped[Number(r.objective_id)] = {
-          rating: String(r.rating || ""),
-          rating_explanation: String(r.rating_explanation || ""),
-          actual_result: String(r.actual_result || ""),
-          evidence: String(r.evidence || ""),
-          went_well: String(r.went_well || ""),
-          not_met_reason: String(r.not_met_reason || ""),
-          dependency_changes: String(r.dependency_changes || ""),
-          continue_stop_differently: String(r.continue_stop_differently || ""),
-        };
-      }
-    });
-    setObjAssessments(mapped);
     setHrValues((prev) => {
       const next = { ...prev };
       HR_FIELDS.forEach((f) => {
@@ -509,14 +594,18 @@ export default function PerformanceReviewDetail() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [review?.id, review?.manager_review, review?.hr_review]);
 
-  const act = async (fn: () => Promise<any>, successMsg: string) => {
+  const act = async (fn: () => Promise<unknown>, successMsg: string) => {
     setSaving(true);
     try {
       await fn();
       toast({ title: successMsg });
       await load();
-    } catch (e: any) {
-      toast({ title: "Action failed", description: e?.message, variant: "destructive" });
+    } catch (e: unknown) {
+      toast({
+        title: "Action failed",
+        description: errorMessage(e),
+        variant: "destructive",
+      });
     } finally {
       setSaving(false);
     }
@@ -636,18 +725,22 @@ export default function PerformanceReviewDetail() {
     }
     setSaving(true);
     try {
-      await apiService.createPerformanceObjective(review.id, newObjective);
+      await apiService.createPerformanceObjective(review.id, {
+        title: newObjective.title.trim(),
+        success_measure: newObjective.success_measure.trim() || undefined,
+        target: newObjective.target || undefined,
+        support_requirements: newObjective.support_requirements.trim() || undefined,
+      });
       setNewObjective({
         title: "",
         success_measure: "",
         target: "",
-        due_date: "",
         support_requirements: "",
       });
-      toast({ title: "Objective created" });
+      toast({ title: "KPI added" });
       await load();
-    } catch (e: any) {
-      toast({ title: "Action failed", description: e?.message, variant: "destructive" });
+    } catch (e: unknown) {
+      toast({ title: "Action failed", description: errorMessage(e), variant: "destructive" });
     } finally {
       setSaving(false);
     }
@@ -735,7 +828,7 @@ export default function PerformanceReviewDetail() {
       await apiService.savePerformanceQualityChecklist(review.id, { checklist_reviewed: true });
       try {
         await apiService.completePerformanceReview(review.id, hrValues);
-      } catch (e: any) {
+      } catch (e: unknown) {
         await loadChecklist();
         throw e;
       }
@@ -920,7 +1013,7 @@ export default function PerformanceReviewDetail() {
                     : "Legacy review without structured objectives — narrative assessments still apply."}
                 </p>
               ) : (
-                (review.objectives || []).map((o: any) => (
+                (review.objectives || []).map((o: PerformanceObjective) => (
                   <div key={o.id} className="border rounded-md p-3 space-y-2" data-testid={`objective-${o.id}`}>
                     <div className="flex flex-wrap justify-between gap-2">
                       <p className="font-medium text-sm">{o.title}</p>
@@ -1020,7 +1113,7 @@ export default function PerformanceReviewDetail() {
                     <Select
                       value={newObjective.target || undefined}
                       onValueChange={(value) =>
-                        setNewObjective({ ...newObjective, target: value, due_date: "" })
+                        setNewObjective({ ...newObjective, target: value })
                       }
                     >
                       <SelectTrigger id="new-kpi-rating" data-testid="new-objective-target">
@@ -1095,7 +1188,7 @@ export default function PerformanceReviewDetail() {
                       <div className="space-y-2 rounded-md border p-3" data-testid="self-objectives-list">
                         <p className="text-sm font-medium">Agreed / proposed objectives</p>
                         <ul className="text-sm space-y-2">
-                          {(review.objectives || []).map((o: any) => (
+                          {(review.objectives || []).map((o: PerformanceObjective) => (
                             <li key={o.id}>
                               <span className="font-medium">{o.title}</span>
                               {o.target ? ` — target: ${o.target}` : ""}
@@ -1326,7 +1419,7 @@ export default function PerformanceReviewDetail() {
                     <div className="space-y-2">
                       <Label>Do you wish to record a disagreement with any part of the assessment?</Label>
                       <Select
-                        value={disagrees}
+                        value={disagrees || undefined}
                         onValueChange={(v) => setDisagrees(v as "yes" | "no")}
                       >
                         <SelectTrigger className="max-w-xs">
@@ -1433,7 +1526,7 @@ export default function PerformanceReviewDetail() {
                   <div className="space-y-2 rounded-md border p-3">
                     <p className="text-sm font-medium">Quality checklist (derived from records)</p>
                     <ul className="space-y-1 text-sm">
-                      {Object.entries(checklist.items as Record<string, any>).map(([key, item]) => (
+                      {Object.entries(checklist.items).map(([key, item]) => (
                         <li key={key} className="flex gap-2">
                           <span className="uppercase text-xs tracking-wide text-muted-foreground w-24 shrink-0">
                             {String(item.status)}
@@ -1590,7 +1683,7 @@ export default function PerformanceReviewDetail() {
                   onChange={(e) => setAuditFilter(e.target.value)}
                 />
                 <ul className="space-y-2 max-h-80 overflow-y-auto text-sm">
-                  {(auditTimeline.events as any[])
+                  {(auditTimeline.events || [])
                     .filter((ev) =>
                       !auditFilter
                         || String(ev.event_type || "").toLowerCase().includes(auditFilter.toLowerCase())
@@ -1609,7 +1702,7 @@ export default function PerformanceReviewDetail() {
                       </li>
                     ))}
                 </ul>
-                {(auditTimeline.events as any[]).length === 0 && (
+                {(auditTimeline.events || []).length === 0 && (
                   <p className="text-sm text-muted-foreground">No audit events recorded yet.</p>
                 )}
               </CardContent>

@@ -45,8 +45,11 @@ export const SELF_ASSESSMENT_REQUIRED_KEYS = [
   "next_priorities",
 ] as const;
 
+/** Named form fields only — excludes the string-index legacy catch-all on SelfAssessmentDraft. */
+export type SelfAssessmentFieldKey = (typeof SELF_ASSESSMENT_REQUIRED_KEYS)[number];
+
 export const SELF_ASSESSMENT_FIELDS: Array<{
-  key: keyof typeof EMPTY_SELF_ASSESSMENT;
+  key: SelfAssessmentFieldKey;
   label: string;
   legacyKeys?: string[];
 }> = [

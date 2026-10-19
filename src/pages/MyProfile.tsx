@@ -12,9 +12,11 @@ import { useAuth } from "@/contexts/AuthContext"
 import { useToast } from "@/hooks/use-toast"
 import apiService, { Employee } from "@/lib/api"
 import { formatNaira } from "@/lib/currency"
+import { getEmployeePayrollPackage } from "@/lib/payrollCalc"
 import { staffIdFromEmployee } from "@/lib/staffId"
 import { getYearsOfService } from "@/utils/celebrations"
 import { EmployeeDocumentsPanel } from "@/components/EmployeeDocumentsPanel"
+import { NairaIcon } from "@/components/icons/NairaIcon"
 import { format } from "date-fns"
 import {
   User,
@@ -28,7 +30,6 @@ import {
   Loader2,
   Shield,
   Briefcase,
-  DollarSign,
   FileText,
   IdCard,
   Banknote,
@@ -266,16 +267,8 @@ export default function MyProfile() {
   const money = (amount?: number | string | null) =>
     formatNaira(typeof amount === "string" ? Number(amount) || 0 : amount ?? 0)
 
-  const monthlyTotal = () => {
-    if (!employeeData) return 0
-    const gross = Number(employeeData.gross_salary) || 0
-    const housing = Number(employeeData.housing_allowance) || 0
-    const transport = Number(employeeData.transport_allowance) || 0
-    // Prefer gross when it already includes the package; otherwise show gross + allowances.
-    if (gross > 0 && housing === 0 && transport === 0) return gross
-    if (gross > 0) return gross
-    return housing + transport + (Number(employeeData.basic_salary) || 0) + (Number(employeeData.meal_allowance) || 0)
-  }
+  /** Monthly figures from annual gross (÷12 + FTE split) — same rules as payroll. */
+  const payrollPackage = employeeData ? getEmployeePayrollPackage(employeeData) : null
 
   const staffId = employeeData ? staffIdFromEmployee(employeeData) : null
   /** Hire / join date only — never use confirmation_date here. */
@@ -413,11 +406,11 @@ export default function MyProfile() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Monthly package</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
+              <NairaIcon className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-xl font-bold">{money(monthlyTotal())}</div>
-              <p className="text-xs text-muted-foreground mt-1">From your employee record</p>
+              <div className="text-xl font-bold">{money(payrollPackage?.monthlyGross ?? 0)}</div>
+              <p className="text-xs text-muted-foreground mt-1">Annual gross ÷ 12</p>
             </CardContent>
           </Card>
           <Card>
@@ -461,7 +454,7 @@ export default function MyProfile() {
               Job
             </TabsTrigger>
             <TabsTrigger value="payroll" className="gap-1 text-xs sm:text-sm">
-              <DollarSign className="h-3.5 w-3.5" />
+              <NairaIcon className="h-3.5 w-3.5" />
               Payroll
             </TabsTrigger>
             <TabsTrigger value="government" className="gap-1 text-xs sm:text-sm">
@@ -507,18 +500,7 @@ export default function MyProfile() {
                 <CardContent className="grid grid-cols-1 gap-4">
                   <Field
                     label="Date joined (hire date)"
-                    value={
-                      dateJoined ? (
-                        <span>
-                          {displayLongDate(dateJoined)}
-                          <span className="block text-xs text-muted-foreground font-normal mt-1">
-                            This is the date you joined the company — not confirmation.
-                          </span>
-                        </span>
-                      ) : (
-                        "—"
-                      )
-                    }
+                    value={dateJoined ? displayLongDate(dateJoined) : "—"}
                   />
                   <Field
                     label="Confirmation date"
@@ -606,39 +588,39 @@ export default function MyProfile() {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-base">
-                    <DollarSign className="h-5 w-5" />
+                    <NairaIcon className="h-5 w-5" />
                     Compensation on record
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Gross / package</span>
-                    <span className="font-medium">{money(employeeData.gross_salary)}</span>
+                    <span className="text-muted-foreground">Annual gross</span>
+                    <span className="font-medium">{money(payrollPackage?.annualGross ?? 0)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Basic salary</span>
-                    <span className="font-medium">{money(employeeData.basic_salary)}</span>
+                    <span className="text-muted-foreground">Basic salary (monthly)</span>
+                    <span className="font-medium">{money(payrollPackage?.monthlyBasic ?? 0)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Housing allowance</span>
-                    <span className="font-medium">{money(employeeData.housing_allowance)}</span>
+                    <span className="text-muted-foreground">Housing allowance (monthly)</span>
+                    <span className="font-medium">{money(payrollPackage?.monthlyHousing ?? 0)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Transport allowance</span>
-                    <span className="font-medium">{money(employeeData.transport_allowance)}</span>
+                    <span className="text-muted-foreground">Transport allowance (monthly)</span>
+                    <span className="font-medium">{money(payrollPackage?.monthlyTransport ?? 0)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Meal allowance</span>
-                    <span className="font-medium">{money(employeeData.meal_allowance)}</span>
+                    <span className="text-muted-foreground">Meal allowance (monthly)</span>
+                    <span className="font-medium">{money(payrollPackage?.monthlyMeal ?? 0)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Other allowance</span>
-                    <span className="font-medium">{money(employeeData.other_allowance)}</span>
+                    <span className="text-muted-foreground">Other allowance (monthly)</span>
+                    <span className="font-medium">{money(payrollPackage?.monthlyOther ?? 0)}</span>
                   </div>
                   <Separator />
                   <div className="flex justify-between font-medium">
-                    <span>Shown monthly total</span>
-                    <span className="text-lg">{money(monthlyTotal())}</span>
+                    <span>Monthly package</span>
+                    <span className="text-lg">{money(payrollPackage?.monthlyGross ?? 0)}</span>
                   </div>
                   <Button
                     variant="outline"
@@ -671,7 +653,7 @@ export default function MyProfile() {
               </Card>
             </div>
             <p className="text-xs text-muted-foreground italic">
-              * Salary figures come from your HR employee record. Raise any discrepancy with HR or Finance offline.
+              * Monthly figures are annual gross ÷ 12 (with the standard FTE split). Raise any discrepancy with HR or Finance offline.
             </p>
           </TabsContent>
 

@@ -71,35 +71,39 @@ export default function ManagerApprovals() {
         apiService
           .getExceptionRequests(isHr ? { scope: "pending-hr" } : { scope: "pending-manager" })
           .catch(() => []),
-        apiService.getWFHRequests({ status: "pending" }).catch(() => []),
+        // Status values are stored capitalised; Postgres compares case-sensitively.
+        apiService.getWFHRequests({ status: "Pending" }).catch(() => []),
       ]);
+      // Your own requests are decided by your manager, never by you.
+      const notMine = (r: any) =>
+        !user?.employee_id || String(r.employee_id) !== String(user.employee_id);
       setExceptions(
-        extractRows(excRes).map((r: any) => ({
+        extractRows(excRes).filter(notMine).map((r: any) => ({
           id: r.id,
           kind: "exception" as Kind,
           employee: employeeLabel(r),
           employeeId: r.employee?.employee_id || r.employee_id,
-          typeLabel: r.exception_type || "Exception",
+          typeLabel: r.request_type || r.exception_type || "Exception",
           dates: [r.start_date, r.end_date].filter(Boolean).join(" → "),
           reason: r.description || r.reason || "",
           document: r.supporting_document_url || r.supporting_document || null,
         })),
       );
       setWfh(
-        extractRows(wfhRes).map((r: any) => ({
+        extractRows(wfhRes).filter(notMine).map((r: any) => ({
           id: r.id,
           kind: "wfh" as Kind,
           employee: employeeLabel(r),
           employeeId: r.employee?.employee_id || r.employee_id,
           typeLabel: "Work From Home",
-          dates: r.date || "",
+          dates: String(r.request_date || r.date || "").slice(0, 10),
           reason: r.reason || "",
         })),
       );
     } finally {
       setLoading(false);
     }
-  }, [isHr]);
+  }, [isHr, user?.employee_id]);
 
   useEffect(() => {
     load();

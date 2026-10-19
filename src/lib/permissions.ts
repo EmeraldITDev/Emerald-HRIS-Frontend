@@ -53,12 +53,23 @@ export function canViewOrgDashboard(
   return canHrPayroll(user);
 }
 
+/**
+ * Line-manager approval queues: line managers, plus anyone with direct reports
+ * (requests are routed to the assigned supervisor whatever their role).
+ */
+export function canApproveAsLineManager(
+  user: (User & Record<string, any>) | null | undefined,
+): boolean {
+  if (!user) return false;
+  return user.role === "line_manager" || !!user.isSupervisor;
+}
+
 /** Attendance approvals queue (late justifications, exceptions, WFH). */
 export function canApproveAttendance(
   user: (User & Record<string, any>) | null | undefined,
 ): boolean {
   if (!user) return false;
-  if (user.role === "line_manager") return true;
+  if (canApproveAsLineManager(user)) return true;
   return canViewOrgDashboard(user);
 }
 

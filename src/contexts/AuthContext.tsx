@@ -32,6 +32,8 @@ export interface User {
   mustChangePassword?: boolean;
   grossSalaryImportEnabled?: boolean;
   canViewChairmanDashboard?: boolean;
+  /** Has direct reports — approvals are routed to them whatever their role */
+  isSupervisor?: boolean;
 }
 
 function mapApiUser(apiUser: any): User {
@@ -58,6 +60,7 @@ function mapApiUser(apiUser: any): User {
     mustChangePassword: apiUser.must_change_password,
     grossSalaryImportEnabled: !!apiUser.gross_salary_import_enabled,
     canViewChairmanDashboard: !!apiUser.can_view_chairman_dashboard,
+    isSupervisor: !!apiUser.is_supervisor,
   };
 }
 

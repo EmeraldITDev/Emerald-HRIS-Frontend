@@ -835,8 +835,8 @@ export default function Attendance() {
           toast({
             title: "No line manager assigned",
             description:
-              dbError?.data?.debug_info?.message ||
-              "This employee has no resolvable supervisor. Ask HR to set 'Supervisor Name' on the employee profile (matching an existing employee's full name or firstname.lastname@emeraldcfze.com).",
+              dbError?.data?.message ||
+              "This employee has no line manager assigned. Ask HR to pick their line manager / supervisor in Employees → Job Info.",
             variant: "destructive",
           });
           return;
@@ -845,7 +845,7 @@ export default function Attendance() {
           toast({
             title: "Circular approval routing",
             description:
-              "The resolved supervisor is the requester themselves. HR must correct the 'Supervisor Name' on this employee's profile.",
+              "This employee is assigned as their own line manager. HR must pick a different line manager / supervisor in Employees → Job Info.",
             variant: "destructive",
           });
           return;

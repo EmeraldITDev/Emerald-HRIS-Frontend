@@ -9,12 +9,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Textarea } from "@/components/ui/textarea"
-import { GraduationCap, Calendar, DollarSign, Users, Plus, BookOpen, Upload, Download, Award, Bell, CheckCircle } from "lucide-react"
+import { GraduationCap, Calendar, DollarSign, Users, Plus, BookOpen, Upload, Download, Award, Bell, CheckCircle, Send, XCircle } from "lucide-react"
 import { Eye, Pencil, Trash2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/contexts/AuthContext"
 import RoleBasedComponent from "@/components/RoleBasedComponent"
 import EmployeeMultiSelect from "@/components/EmployeeMultiSelect"
+import { isEmployeeSelfServiceRole } from "@/constants/roles"
 
 interface TrainingRecord {
   id: string
@@ -47,15 +48,38 @@ const trainingTypes = [
 
 export default function Training() {
   const { user, hasPermission } = useAuth()
-  const canUploadCertificate = user?.role === 'hr_manager' || user?.role === 'executive' || user?.role === 'line_manager'
+  const canUploadCertificate =
+    user?.role === 'hr_manager' ||
+    user?.role === 'corporate_hr' ||
+    user?.role === 'executive' ||
+    user?.role === 'line_manager'
   const isLineManager = user?.role === 'line_manager'
   const isExecutiveOrHR = user?.role === 'executive' || user?.role === 'hr_manager' || user?.role === 'corporate_hr'
+  /** Schedule Training: LM + HR/exec only */
+  const canScheduleTraining = isExecutiveOrHR || isLineManager
+  /** Request Training: any staff with an employee record (incl. LM/HR requesting for themselves) */
+  const canRequestTraining = !!user?.employee_id || isEmployeeSelfServiceRole(user?.role) || canScheduleTraining
+  /** Approve/reject pending requests: supervisor LM + HR/exec */
+  const canApproveTrainingRequests = canScheduleTraining
   const userDepartment = user?.department
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [employees, setEmployees] = useState<Employee[]>([])
   const [isLoadingEmployees, setIsLoadingEmployees] = useState(true)
   const [trainingAssignments, setTrainingAssignments] = useState<any[]>([])
   const [trainings, setTrainings] = useState<TrainingRecord[]>([])
+  const [trainingRequests, setTrainingRequests] = useState<any[]>([])
+  const [isRequestDialogOpen, setIsRequestDialogOpen] = useState(false)
+  const [isSubmittingRequest, setIsSubmittingRequest] = useState(false)
+  const [rejectNotes, setRejectNotes] = useState<Record<number, string>>({})
+  const [requestForm, setRequestForm] = useState({
+    title: '',
+    category: '',
+    category_other: '',
+    justification: '',
+    preferred_date: '',
+    delivery_method: 'online' as 'online' | 'in_person' | 'hybrid',
+    estimated_cost: '',
+  })
 
   const [newTraining, setNewTraining] = useState({
     title: '',
@@ -94,7 +118,7 @@ export default function Training() {
   })
   const [deleteAssignmentId, setDeleteAssignmentId] = useState<number | null>(null)
 
-  const canManageTraining = isExecutiveOrHR || isLineManager
+  const canManageTraining = canScheduleTraining
 
   const openEditDialog = (assignment: any) => {
     setEditAssignment(assignment)
@@ -207,6 +231,7 @@ export default function Training() {
     }
     fetchEmployees()
     fetchTrainingAssignments()
+    fetchTrainingRequests()
   }, [isLineManager, isExecutiveOrHR, userDepartment])
 
   const fetchTrainingAssignments = async () => {
@@ -224,6 +249,132 @@ export default function Training() {
       console.error('Failed to fetch training assignments:', error)
     }
   }
+
+  const fetchTrainingRequests = async () => {
+    try {
+      const list = await apiService.getTrainingRequests()
+      setTrainingRequests(Array.isArray(list) ? list : [])
+    } catch (error) {
+      console.error('Failed to fetch training requests:', error)
+    }
+  }
+
+  const handleSubmitTrainingRequest = async () => {
+    if (!requestForm.title.trim() || !requestForm.justification.trim()) {
+      toast({
+        title: 'Missing information',
+        description: 'Please provide a training title and why you need it.',
+        variant: 'destructive',
+      })
+      return
+    }
+    if (requestForm.category === 'Other' && !requestForm.category_other.trim()) {
+      toast({
+        title: 'Specify the category',
+        description: 'Please describe the training category.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    setIsSubmittingRequest(true)
+    try {
+      await apiService.createTrainingRequest({
+        title: requestForm.title.trim(),
+        category: requestForm.category || undefined,
+        category_other:
+          requestForm.category === 'Other' ? requestForm.category_other.trim() : undefined,
+        justification: requestForm.justification.trim(),
+        preferred_date: requestForm.preferred_date || undefined,
+        delivery_method: requestForm.delivery_method,
+        estimated_cost: requestForm.estimated_cost
+          ? Number(requestForm.estimated_cost)
+          : undefined,
+      })
+      toast({
+        title: 'Training request sent',
+        description: 'Your line manager / supervisor has been notified for approval.',
+      })
+      setIsRequestDialogOpen(false)
+      setRequestForm({
+        title: '',
+        category: '',
+        category_other: '',
+        justification: '',
+        preferred_date: '',
+        delivery_method: 'online',
+        estimated_cost: '',
+      })
+      fetchTrainingRequests()
+    } catch (e: any) {
+      toast({
+        title: 'Request failed',
+        description:
+          e?.message ||
+          'Could not submit your training request. Check that your supervisor is set on Job Info.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsSubmittingRequest(false)
+    }
+  }
+
+  const handleApproveRequest = async (req: any) => {
+    try {
+      await apiService.approveTrainingRequest(req.id)
+      toast({
+        title: 'Request approved',
+        description: 'Training has been scheduled for the employee.',
+      })
+      fetchTrainingRequests()
+      fetchTrainingAssignments()
+    } catch (e: any) {
+      toast({
+        title: 'Approve failed',
+        description: e?.message || 'Could not approve this request.',
+        variant: 'destructive',
+      })
+    }
+  }
+
+  const handleRejectRequest = async (req: any) => {
+    const notes = (rejectNotes[req.id] || '').trim()
+    if (!notes) {
+      toast({
+        title: 'Reason required',
+        description: 'Please enter a rejection reason.',
+        variant: 'destructive',
+      })
+      return
+    }
+    try {
+      await apiService.rejectTrainingRequest(req.id, notes)
+      toast({ title: 'Request rejected', description: 'The employee has been notified.' })
+      setRejectNotes((prev) => {
+        const next = { ...prev }
+        delete next[req.id]
+        return next
+      })
+      fetchTrainingRequests()
+    } catch (e: any) {
+      toast({
+        title: 'Reject failed',
+        description: e?.message || 'Could not reject this request.',
+        variant: 'destructive',
+      })
+    }
+  }
+
+  const pendingTrainingRequests = trainingRequests.filter(
+    (r) => String(r.status || '').toLowerCase() === 'pending',
+  )
+  /** LM/HR approval queue — own pending requests stay under "My training requests". */
+  const approvalQueue = pendingTrainingRequests.filter(
+    (r) => isExecutiveOrHR || String(r.employee_id) !== String(user?.employee_id),
+  )
+  const myTrainingRequests = trainingRequests.filter(
+    (r) => String(r.employee_id) === String(user?.employee_id),
+  )
 
   const handleAddTraining = async () => {
     if (!assignmentData.employee_ids.length || !assignmentData.scheduled_at || !assignmentData.completion_deadline) {
@@ -501,10 +652,145 @@ export default function Training() {
           </p>
         </div>
         
+        <div className="flex flex-wrap gap-2">
+        {canRequestTraining && (
+          <Dialog open={isRequestDialogOpen} onOpenChange={setIsRequestDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="gap-2" data-testid="request-training">
+                <Send className="h-4 w-4" />
+                Request Training
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[560px] max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Request Training</DialogTitle>
+                <DialogDescription>
+                  Submit a request to your line manager / supervisor. They will approve or reject it.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-2">
+                <div className="space-y-2">
+                  <Label htmlFor="req-title">Training title *</Label>
+                  <Input
+                    id="req-title"
+                    value={requestForm.title}
+                    onChange={(e) => setRequestForm({ ...requestForm, title: e.target.value })}
+                    placeholder="e.g., Advanced Excel Training"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Category</Label>
+                  <Select
+                    value={requestForm.category}
+                    onValueChange={(value) =>
+                      setRequestForm({
+                        ...requestForm,
+                        category: value,
+                        category_other: value === 'Other' ? requestForm.category_other : '',
+                      })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {trainingTypes.map((type) => (
+                        <SelectItem key={type} value={type}>
+                          {type}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {requestForm.category === 'Other' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="req-category-other">Specify category *</Label>
+                    <Input
+                      id="req-category-other"
+                      value={requestForm.category_other}
+                      onChange={(e) =>
+                        setRequestForm({ ...requestForm, category_other: e.target.value })
+                      }
+                    />
+                  </div>
+                )}
+                <div className="space-y-2">
+                  <Label htmlFor="req-justification">Why do you need this training? *</Label>
+                  <Textarea
+                    id="req-justification"
+                    value={requestForm.justification}
+                    onChange={(e) =>
+                      setRequestForm({ ...requestForm, justification: e.target.value })
+                    }
+                    className="min-h-[100px]"
+                    placeholder="Explain how this supports your role or team goals…"
+                  />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="req-date">Preferred date</Label>
+                    <Input
+                      id="req-date"
+                      type="date"
+                      value={requestForm.preferred_date}
+                      onChange={(e) =>
+                        setRequestForm({ ...requestForm, preferred_date: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Delivery</Label>
+                    <Select
+                      value={requestForm.delivery_method}
+                      onValueChange={(value: 'online' | 'in_person' | 'hybrid') =>
+                        setRequestForm({ ...requestForm, delivery_method: value })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="online">Online</SelectItem>
+                        <SelectItem value="in_person">In person</SelectItem>
+                        <SelectItem value="hybrid">Hybrid</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="req-cost">Estimated cost (optional)</Label>
+                  <Input
+                    id="req-cost"
+                    type="number"
+                    min="0"
+                    value={requestForm.estimated_cost}
+                    onChange={(e) =>
+                      setRequestForm({ ...requestForm, estimated_cost: e.target.value })
+                    }
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsRequestDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSubmitTrainingRequest}
+                  disabled={isSubmittingRequest}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                >
+                  {isSubmittingRequest ? 'Sending…' : 'Submit to supervisor'}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
+
         <RoleBasedComponent allowedRoles={['hr_manager', 'corporate_hr', 'executive', 'line_manager']}>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="bg-emerald-600 hover:bg-emerald-700 text-white">
+              <Button className="bg-emerald-600 hover:bg-emerald-700 text-white" data-testid="schedule-training">
                 <Plus className="mr-2 h-4 w-4" />
                 Schedule Training
               </Button>
@@ -726,7 +1012,128 @@ export default function Training() {
           </DialogContent>
         </Dialog>
         </RoleBasedComponent>
+        </div>
       </div>
+
+      {/* Pending requests for supervisors / HR */}
+      {canApproveTrainingRequests && approvalQueue.length > 0 && (
+        <Card className="border-amber-200 dark:border-amber-900/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Bell className="h-5 w-5 text-amber-600" />
+              Training requests awaiting your decision ({approvalQueue.length})
+            </CardTitle>
+            <CardDescription>
+              These came from your direct reports (or the wider org if you are HR). Approve to schedule, or reject with a reason.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {approvalQueue.map((req) => {
+              const empName = req.employee
+                ? `${req.employee.first_name || ''} ${req.employee.last_name || ''}`.trim()
+                : 'Employee'
+              return (
+                <div
+                  key={req.id}
+                  className="rounded-lg border p-4 space-y-3"
+                  data-testid={`training-request-${req.id}`}
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div>
+                      <p className="font-semibold">{req.title}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {empName}
+                        {req.employee?.department ? ` · ${req.employee.department}` : ''}
+                        {req.category ? ` · ${req.category}` : ''}
+                      </p>
+                    </div>
+                    <Badge variant="secondary">Pending</Badge>
+                  </div>
+                  <p className="text-sm whitespace-pre-wrap">{req.justification}</p>
+                  <div className="text-xs text-muted-foreground flex flex-wrap gap-3">
+                    {req.preferred_date && (
+                      <span>Preferred: {String(req.preferred_date).slice(0, 10)}</span>
+                    )}
+                    {req.delivery_method && <span>Delivery: {req.delivery_method}</span>}
+                    {req.estimated_cost != null && (
+                      <span>Est. cost: {req.estimated_cost}</span>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs">Rejection reason (required only if rejecting)</Label>
+                    <Textarea
+                      value={rejectNotes[req.id] || ''}
+                      onChange={(e) =>
+                        setRejectNotes((prev) => ({ ...prev, [req.id]: e.target.value }))
+                      }
+                      placeholder="Optional unless rejecting…"
+                      className="min-h-[60px]"
+                    />
+                  </div>
+                  <div className="flex flex-wrap gap-2 justify-end">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1 text-destructive"
+                      onClick={() => handleRejectRequest(req)}
+                    >
+                      <XCircle className="h-4 w-4" />
+                      Reject
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="gap-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+                      onClick={() => handleApproveRequest(req)}
+                    >
+                      <CheckCircle className="h-4 w-4" />
+                      Approve &amp; schedule
+                    </Button>
+                  </div>
+                </div>
+              )
+            })}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Employee's own requests */}
+      {canRequestTraining && myTrainingRequests.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">My training requests</CardTitle>
+            <CardDescription>Status of requests you submitted to your supervisor.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {myTrainingRequests.map((req) => (
+                <div
+                  key={req.id}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-md border p-3 text-sm"
+                >
+                  <div>
+                    <p className="font-medium">{req.title}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Submitted {req.created_at ? new Date(req.created_at).toLocaleDateString() : '—'}
+                      {req.approver_notes ? ` · Note: ${req.approver_notes}` : ''}
+                    </p>
+                  </div>
+                  <Badge
+                    variant={
+                      String(req.status).toLowerCase() === 'approved'
+                        ? 'default'
+                        : String(req.status).toLowerCase() === 'rejected'
+                          ? 'destructive'
+                          : 'secondary'
+                    }
+                  >
+                    {req.status}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Training Assignment Notifications - for employees */}
       {!isExecutiveOrHR && !isLineManager && trainingAssignments.filter(a => !a.notification_read && a.status === 'scheduled').length > 0 && (

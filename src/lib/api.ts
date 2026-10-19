@@ -1897,6 +1897,51 @@ class ApiService {
     return this.request<any[]>('/training/assignments');
   }
 
+  async getTrainingRequests(status?: string): Promise<any[]> {
+    const q = status ? `?status=${encodeURIComponent(status)}` : '';
+    const res = await this.request<{ success?: boolean; data?: any[] } | any[]>(`/training/requests${q}`);
+    if (Array.isArray(res)) return res;
+    return Array.isArray((res as any)?.data) ? (res as any).data : [];
+  }
+
+  async createTrainingRequest(payload: {
+    title: string;
+    category?: string;
+    category_other?: string;
+    justification: string;
+    preferred_date?: string;
+    delivery_method?: 'online' | 'in_person' | 'hybrid';
+    estimated_cost?: number;
+  }): Promise<any> {
+    return this.request('/training/requests', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async approveTrainingRequest(
+    id: number,
+    payload?: {
+      scheduled_at?: string;
+      duration_hours?: number;
+      completion_deadline?: string;
+      approver_notes?: string;
+      cost?: number;
+    },
+  ): Promise<any> {
+    return this.request(`/training/requests/${id}/approve`, {
+      method: 'POST',
+      body: JSON.stringify(payload ?? {}),
+    });
+  }
+
+  async rejectTrainingRequest(id: number, approver_notes: string): Promise<any> {
+    return this.request(`/training/requests/${id}/reject`, {
+      method: 'POST',
+      body: JSON.stringify({ approver_notes }),
+    });
+  }
+
   async assignTraining(data: {
     training_id?: number;
     title?: string;

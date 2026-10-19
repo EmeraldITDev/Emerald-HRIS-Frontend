@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import apiService, { Employee } from "@/lib/api"
+import { canApproveAsLineManager } from "@/lib/permissions"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
@@ -59,8 +60,8 @@ export default function Training() {
   const canScheduleTraining = isExecutiveOrHR || isLineManager
   /** Request Training: any staff with an employee record (incl. LM/HR requesting for themselves) */
   const canRequestTraining = !!user?.employee_id || isEmployeeSelfServiceRole(user?.role) || canScheduleTraining
-  /** Approve/reject pending requests: supervisor LM + HR/exec */
-  const canApproveTrainingRequests = canScheduleTraining
+  /** Approve/reject pending requests: HR/exec + anyone with direct reports (requests route by supervisor) */
+  const canApproveTrainingRequests = isExecutiveOrHR || canApproveAsLineManager(user)
   const userDepartment = user?.department
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [employees, setEmployees] = useState<Employee[]>([])
@@ -369,8 +370,9 @@ export default function Training() {
     (r) => String(r.status || '').toLowerCase() === 'pending',
   )
   /** LM/HR approval queue — own pending requests stay under "My training requests". */
+  // Your own requests are decided by your supervisor (or HR), never by you.
   const approvalQueue = pendingTrainingRequests.filter(
-    (r) => isExecutiveOrHR || String(r.employee_id) !== String(user?.employee_id),
+    (r) => String(r.employee_id) !== String(user?.employee_id),
   )
   const myTrainingRequests = trainingRequests.filter(
     (r) => String(r.employee_id) === String(user?.employee_id),

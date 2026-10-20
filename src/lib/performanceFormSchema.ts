@@ -195,7 +195,6 @@ export const MANAGER_SUBMIT_REQUIRED_KEYS = [
   "strengths",
   "areas_for_improvement",
   "ratings",
-  "comments",
   "next_priorities",
   "development_action",
   "development_owner",

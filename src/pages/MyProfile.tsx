@@ -410,7 +410,6 @@ export default function MyProfile() {
             </CardHeader>
             <CardContent>
               <div className="text-xl font-bold">{money(payrollPackage?.monthlyGross ?? 0)}</div>
-              <p className="text-xs text-muted-foreground mt-1">Annual gross ÷ 12</p>
             </CardContent>
           </Card>
           <Card>

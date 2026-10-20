@@ -30,6 +30,7 @@ import {
   toManagerReviewPayload,
   type SelfAssessmentDraft,
 } from "@/lib/performanceFormSchema";
+import { ReviewAttachmentPanel } from "@/components/performance/ReviewAttachmentPanel";
 import { Input } from "@/components/ui/input";
 
 const ACK_STATEMENT =
@@ -80,85 +81,79 @@ const MANAGER_FIELDS: ManagerField[] = [
     key: "behaviour_ownership_rating",
     label: "Ownership, professionalism, integrity and compliance",
     type: "rating",
-    section: "C. Role effectiveness and behaviours",
+    section: "Role effectiveness and behaviours",
   },
   {
     key: "behaviour_ownership_example",
     label: "Supporting example — ownership and professionalism",
-    section: "C. Role effectiveness and behaviours",
+    section: "Role effectiveness and behaviours",
   },
   {
     key: "behaviour_learning_rating",
     label: "Response to feedback, learning and development",
     type: "rating",
-    section: "C. Role effectiveness and behaviours",
+    section: "Role effectiveness and behaviours",
   },
   {
     key: "behaviour_learning_example",
     label: "Supporting example — learning and development",
-    section: "C. Role effectiveness and behaviours",
+    section: "Role effectiveness and behaviours",
   },
   {
     key: "strengths",
     label: "Key strengths and valuable contributions",
     aliases: ["key_strengths"],
-    section: "D. Overall review and next steps",
+    section: "Overall review and next steps",
   },
   {
     key: "areas_for_improvement",
     label: "Important performance gaps or improvement areas",
-    section: "D. Overall review and next steps",
+    section: "Overall review and next steps",
   },
   {
     key: "ratings",
     label: "Overall manager rating (1–5; N/A only with explanation)",
     type: "rating",
     aliases: ["overall_rating", "rating"],
-    section: "D. Overall review and next steps",
-  },
-  {
-    key: "comments",
-    label: "Overall rating rationale and supporting evidence",
-    aliases: ["overall_comments", "observations"],
-    section: "D. Overall review and next steps",
+    section: "Overall review and next steps",
   },
   {
     key: "next_priorities",
     label: "Priorities for the next six months",
-    section: "D. Overall review and next steps",
+    section: "Overall review and next steps",
   },
   {
     key: "development_action",
     label: "Recommended development action",
     aliases: ["recommendations", "development_actions"],
-    section: "D. Overall review and next steps",
+    section: "Overall review and next steps",
   },
   {
     key: "development_owner",
     label: "Development action owner",
-    section: "D. Overall review and next steps",
+    section: "Overall review and next steps",
   },
   {
     key: "development_target_date",
     label: "Development action target date",
     type: "date",
-    section: "D. Overall review and next steps",
+    section: "Overall review and next steps",
   },
   {
     key: "manager_support",
     label: "Support or action the manager will provide",
-    section: "D. Overall review and next steps",
+    section: "Overall review and next steps",
   },
   {
     key: "pip_recommended",
     label: "Recommend a formal performance improvement plan?",
     type: "yes_no",
-    section: "D. Overall review and next steps",
+    section: "Overall review and next steps",
   },
   {
     key: "pip_reason",
     label: "Reason for PIP recommendation (required if Yes)",
-    section: "D. Overall review and next steps",
+    section: "Overall review and next steps",
   },
 ];
 
@@ -581,12 +576,15 @@ export default function PerformanceReviewDetail() {
     }
     if (isNaRating(managerValues.ratings)) {
       const explanation = String(
-        managerValues.comments || managerValues.objective_assessments_narrative || "",
+        managerValues.areas_for_improvement ||
+          managerValues.objective_assessments_narrative ||
+          managerValues.comments ||
+          "",
       ).trim();
       if (!explanation) {
         toast({
           title: "N/A requires an explanation",
-          description: "Provide a short rationale when a rating does not apply.",
+          description: "Explain why the overall rating does not apply under performance gaps.",
           variant: "destructive",
         });
         return;
@@ -915,9 +913,9 @@ export default function PerformanceReviewDetail() {
             <CardContent className="space-y-4">
               {(review.objectives || []).length === 0 ? (
                 <p className="text-sm text-muted-foreground">
-                  {review.cycle_id
-                    ? "No KPIs yet."
-                    : "Legacy review without structured objectives — narrative assessments still apply."}
+                  Line Manager to populate the section below with the KPIs previously communicated to
+                  and agreed upon by the employee being assessed, and rate the employee’s performance
+                  against each KPI.
                 </p>
               ) : (
                 (review.objectives || []).map((o: any) => (
@@ -936,11 +934,18 @@ export default function PerformanceReviewDetail() {
                             PERFORMANCE_RATING_OPTIONS.find((r) => r.value === String(o.target))
                               ?.label || o.target
                           }`,
-                        o.support_requirements && `Support: ${o.support_requirements}`,
                       ]
                         .filter(Boolean)
                         .join("\n")}
                     </p>
+                    <ReviewAttachmentPanel
+                      reviewId={review.id}
+                      stage="objective"
+                      objectiveId={o.id}
+                      canUpload={canManageObjectives && !managerDone}
+                      title="Supporting documents"
+                      description="Optional files linked to this KPI."
+                    />
                     <div className="flex flex-wrap gap-2">
                       {(isOwner || ((isManager || isHr) && String(review.manager_id) === String(user?.id)) || isHr) &&
                         !o.is_agreed && (
@@ -999,7 +1004,7 @@ export default function PerformanceReviewDetail() {
 
               {canManageObjectives && (
                 <div className="space-y-2 border-t pt-4">
-                  <p className="text-sm font-medium">Propose Key Performance Indicator</p>
+                  <p className="text-sm font-medium">Key Performance Indicator</p>
                   <Input
                     data-testid="new-objective-title"
                     placeholder="key Deliverable"
@@ -1035,14 +1040,9 @@ export default function PerformanceReviewDetail() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <Textarea
-                    placeholder="Support, resources or dependencies (optional)"
-                    rows={2}
-                    value={newObjective.support_requirements}
-                    onChange={(e) =>
-                      setNewObjective({ ...newObjective, support_requirements: e.target.value })
-                    }
-                  />
+                  <p className="text-xs text-muted-foreground">
+                    After adding a KPI, upload supporting documents on that KPI card.
+                  </p>
                   <Button disabled={saving} onClick={createObjective} data-testid="create-objective">
                     Add KPI
                   </Button>
@@ -1124,6 +1124,13 @@ export default function PerformanceReviewDetail() {
                         />
                       </div>
                     ))}
+                    <ReviewAttachmentPanel
+                      reviewId={review.id}
+                      stage="self_assessment"
+                      canUpload={canEditSelf}
+                      title="Supporting documents"
+                      description="Upload evidence for your self-assessment. You can edit or delete files until you submit."
+                    />
                     <div className="flex flex-wrap gap-2 justify-end pt-2">
                       <Button
                         variant="secondary"
@@ -1144,7 +1151,17 @@ export default function PerformanceReviewDetail() {
                     </div>
                   </div>
                 ) : (
-                  <ReadOnlyBlock value={review.self_assessment} emptyText="Not submitted yet." />
+                  <>
+                    <ReadOnlyBlock value={review.self_assessment} emptyText="Not submitted yet." />
+                    {!selfSealed && (
+                      <ReviewAttachmentPanel
+                        reviewId={review.id}
+                        stage="self_assessment"
+                        canUpload={false}
+                        title="Supporting documents"
+                      />
+                    )}
+                  </>
                 )}
                 <div className="flex justify-end">
                   <Button variant="outline" size="sm" className="gap-2" onClick={() => setStep(1)}>
@@ -1172,6 +1189,28 @@ export default function PerformanceReviewDetail() {
               <CardContent className="space-y-5">
                 {canEditManager ? (
                   <>
+                    {(review.objectives || []).length > 0 && (
+                      <div className="space-y-2 rounded-md border p-3">
+                        <p className="text-sm font-medium">KPIs for this assessment</p>
+                        <p className="text-xs text-muted-foreground">
+                          Populate and rate KPIs in the Key Performance Indicators section above, then complete the
+                          questions below.
+                        </p>
+                        <ul className="text-sm space-y-1">
+                          {(review.objectives || []).map((o: any) => (
+                            <li key={o.id}>
+                              <span className="font-medium">{o.title}</span>
+                              {o.target
+                                ? ` — ${
+                                    PERFORMANCE_RATING_OPTIONS.find((r) => r.value === String(o.target))?.label ||
+                                    o.target
+                                  }`
+                                : ""}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                     <StructuredForm
                       fields={MANAGER_FIELDS}
                       values={managerValues}
@@ -1196,15 +1235,44 @@ export default function PerformanceReviewDetail() {
                     Manager assessment and proposed rating are sealed until the line manager submits.
                   </p>
                 ) : (
-                  <AnswerList
-                    fields={MANAGER_DISPLAY_FIELDS}
-                    source={
-                      typeof review.manager_review === "object" && review.manager_review
-                        ? review.manager_review
-                        : review
-                    }
-                    emptyText="Not submitted yet."
-                  />
+                  <div className="space-y-5">
+                    {(review.objectives || []).length > 0 && (
+                      <div className="space-y-3" data-testid="manager-kpi-readonly">
+                        <p className="text-sm font-medium">KPIs graded by the line manager</p>
+                        {(review.objectives || []).map((o: any) => (
+                          <div key={o.id} className="rounded-md border p-3 space-y-1 text-sm">
+                            <p className="font-medium">{o.title}</p>
+                            {o.success_measure && (
+                              <p className="text-xs text-muted-foreground whitespace-pre-wrap">
+                                Measure: {o.success_measure}
+                              </p>
+                            )}
+                            <p className="text-xs">
+                              Rating:{" "}
+                              {PERFORMANCE_RATING_OPTIONS.find((r) => r.value === String(o.target))
+                                ?.label || o.target || "—"}
+                            </p>
+                            <ReviewAttachmentPanel
+                              reviewId={review.id}
+                              stage="objective"
+                              objectiveId={o.id}
+                              canUpload={false}
+                              title="Supporting documents"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <AnswerList
+                      fields={MANAGER_DISPLAY_FIELDS.filter((f) => f.key !== "comments")}
+                      source={
+                        typeof review.manager_review === "object" && review.manager_review
+                          ? review.manager_review
+                          : review
+                      }
+                      emptyText="Not submitted yet."
+                    />
+                  </div>
                 )}
                 <div className="flex justify-between">
                   <Button variant="outline" size="sm" onClick={() => setStep(0)}>
@@ -1263,6 +1331,13 @@ export default function PerformanceReviewDetail() {
                         placeholder="Agreed actions, owners, dates…"
                       />
                     </div>
+                    <ReviewAttachmentPanel
+                      reviewId={review.id}
+                      stage="discussion"
+                      canUpload
+                      title="Discussion attachments"
+                      description="Optional documents from the review discussion."
+                    />
                     <Button disabled={saving} onClick={submitDiscussion}>
                       {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Save discussion record
                     </Button>
@@ -1275,6 +1350,12 @@ export default function PerformanceReviewDetail() {
                         Recorded {String(review.discussion_completed_at).slice(0, 19).replace("T", " ")}
                       </p>
                     )}
+                    <ReviewAttachmentPanel
+                      reviewId={review.id}
+                      stage="discussion"
+                      canUpload={false}
+                      title="Discussion attachments"
+                    />
                   </div>
                 ) : (
                   <p className="text-sm text-muted-foreground rounded-md border border-dashed p-4">
@@ -1351,6 +1432,13 @@ export default function PerformanceReviewDetail() {
                         />
                       </div>
                     )}
+                    <ReviewAttachmentPanel
+                      reviewId={review.id}
+                      stage="acknowledgement"
+                      canUpload
+                      title="Acknowledgement documents"
+                      description="Optional supporting documents. You can remove them until you submit acknowledgement."
+                    />
                     <Button disabled={saving} onClick={submitAcknowledgement}>
                       {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Submit acknowledgement
                     </Button>
@@ -1385,6 +1473,12 @@ export default function PerformanceReviewDetail() {
                           </p>
                         )}
                     </div>
+                    <ReviewAttachmentPanel
+                      reviewId={review.id}
+                      stage="acknowledgement"
+                      canUpload={false}
+                      title="Acknowledgement documents"
+                    />
                   </div>
                 ) : (
                   <p className="text-sm text-muted-foreground rounded-md border border-dashed p-4">

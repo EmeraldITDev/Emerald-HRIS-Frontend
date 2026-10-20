@@ -28,10 +28,12 @@ export default function PayslipDetail() {
   const { user } = useAuth();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [unavailable, setUnavailable] = useState(false);
 
   useEffect(() => {
     const load = async () => {
       if (!period || !user?.employee_id) { setLoading(false); return; }
+      setUnavailable(false);
       try {
         const [res, profile] = await Promise.all([
           apiService.getPayslipDetail(user.employee_id, period),
@@ -39,14 +41,46 @@ export default function PayslipDetail() {
         ]);
         setData(normalizePayslipDetail(res, profile));
       } catch (e: any) {
-        toast({ title: "Failed to load payslip", description: e?.message, variant: "destructive" });
+        const status = e?.status ?? e?.response?.status ?? e?.data?.status;
+        const code = String(e?.data?.error || e?.error || "").toUpperCase();
+        const msg = String(e?.data?.message || e?.message || "").toLowerCase();
+        const isMissing =
+          status === 404 ||
+          code === "NOT_FOUND" ||
+          /not found|no longer available|deleted/i.test(msg);
+        setData(null);
+        if (isMissing) {
+          setUnavailable(true);
+        } else {
+          toast({ title: "Failed to load payslip", description: e?.message, variant: "destructive" });
+        }
       } finally { setLoading(false); }
     };
     load();
   }, [period, user?.employee_id]);
 
   if (loading) return <p className="text-sm text-muted-foreground p-6">Loading…</p>;
-  if (!data) return <p className="text-sm text-muted-foreground p-6">Payslip not found.</p>;
+  if (unavailable || !data) {
+    return (
+      <div className="max-w-3xl mx-auto space-y-4 p-6">
+        <Button variant="ghost" size="sm" onClick={() => navigate("/payroll/my-payslips")}>
+          <ArrowLeft className="h-4 w-4 mr-2" />Back to My Payslips
+        </Button>
+        <Card>
+          <CardHeader>
+            <CardTitle>Payslip unavailable</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm text-muted-foreground">
+            <p>
+              This payslip is no longer available
+              {period ? ` for ${period}` : ""}. It may have been removed by HR.
+            </p>
+            <p>If you still need a copy, contact HR or Finance.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   const e = data.earnings || {};
   const d = data.deductions || {};

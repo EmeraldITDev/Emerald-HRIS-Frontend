@@ -26,17 +26,33 @@ export function extractRecord(response: any): any | null {
   return null;
 }
 
-/** Extract HH:mm from "YYYY-MM-DD HH:MM:SS" or ISO strings. */
+const WAT_TZ = "Africa/Lagos";
+
+/** Extract HH:mm in West Africa Time from TIME, datetime, or ISO strings. */
 export function formatTimeOnly(value?: string | null): string {
   if (!value) return "";
-  const s = String(value);
-  const d = new Date(s.includes("T") ? s : s.replace(" ", "T"));
-  if (!isNaN(d.getTime())) {
-    const hh = String(d.getHours()).padStart(2, "0");
-    const mm = String(d.getMinutes()).padStart(2, "0");
-    return `${hh}:${mm}`;
+  const s = String(value).trim();
+  const timeOnly = s.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+  if (timeOnly) {
+    return `${timeOnly[1].padStart(2, "0")}:${timeOnly[2]}`;
   }
-  return s.length >= 16 ? s.slice(11, 16) : s;
+  const ms = parseAttendanceInstant(s);
+  if (Number.isNaN(ms)) {
+    return s.length >= 16 ? s.slice(11, 16) : s;
+  }
+  try {
+    const parts = new Intl.DateTimeFormat("en-GB", {
+      timeZone: WAT_TZ,
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    }).formatToParts(new Date(ms));
+    const hh = parts.find((p) => p.type === "hour")?.value ?? "00";
+    const mm = parts.find((p) => p.type === "minute")?.value ?? "00";
+    return `${hh}:${mm}`;
+  } catch {
+    return s.length >= 16 ? s.slice(11, 16) : s;
+  }
 }
 
 export function dateOnly(value?: string | null): string {
@@ -48,21 +64,12 @@ export function dateOnly(value?: string | null): string {
   return isNaN(d.getTime()) ? "" : d.toISOString().slice(0, 10);
 }
 
-/** Short label for the viewer's timezone, e.g. "WAT", "GMT+1", "EST". */
+/** Company display timezone label (West Africa Time). */
 export function timezoneLabel(): string {
-  try {
-    const parts = new Intl.DateTimeFormat(undefined, {
-      timeZoneName: "short",
-    }).formatToParts(new Date());
-    const tz = parts.find((p) => p.type === "timeZoneName")?.value;
-    if (tz) return tz;
-  } catch {
-    /* fall through */
-  }
-  return "Local";
+  return "WAT";
 }
 
-/** "15:49 (WAT)" — time plus the viewer's timezone abbreviation. */
+/** "15:49 (WAT)" — punch times are always shown in Africa/Lagos. */
 export function formatTimeWithZone(value?: string | null): string {
   const t = formatTimeOnly(value);
   return t ? `${t} (${timezoneLabel()})` : "";
@@ -165,6 +172,11 @@ export function parseAttendanceInstant(value?: string | null, dateHint?: string 
     const day = dateOnly(dateHint) || todayWAT();
     const hh = timeOnly[1].padStart(2, "0");
     return new Date(`${day}T${hh}:${timeOnly[2]}:${timeOnly[3] ?? "00"}+01:00`).getTime();
+  }
+  // "YYYY-MM-DD HH:MM:SS" without zone — treat wall clock as WAT.
+  const localDt = raw.match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}:\d{2})/);
+  if (localDt && !/[zZ]|[+-]\d{2}:?\d{2}$/.test(raw)) {
+    return new Date(`${localDt[1]}T${localDt[2]}+01:00`).getTime();
   }
   const d = new Date(raw.includes("T") ? raw : raw.replace(" ", "T"));
   return d.getTime();

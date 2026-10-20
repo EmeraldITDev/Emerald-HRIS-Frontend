@@ -1789,6 +1789,76 @@ class ApiService {
     });
   }
 
+  async listPerformanceAttachments(reviewId: number | string, stage?: string): Promise<any> {
+    const q = stage ? `?stage=${encodeURIComponent(stage)}` : "";
+    return this.request<any>(`/performance/${reviewId}/attachments${q}`);
+  }
+
+  async getPerformanceAttachmentUploadUrl(
+    reviewId: number | string,
+    filename: string,
+    stage: string,
+    contentType?: string,
+  ): Promise<{ url: string; headers: Record<string, string>; key: string }> {
+    return this.request(`/performance/${reviewId}/attachments/upload-url`, {
+      method: "POST",
+      body: JSON.stringify({ filename, stage, content_type: contentType }),
+    });
+  }
+
+  async attachPerformanceAttachment(
+    reviewId: number | string,
+    data: {
+      key: string;
+      filename: string;
+      stage: string;
+      content_type?: string;
+      size_bytes?: number;
+      objective_id?: number;
+    },
+  ): Promise<any> {
+    return this.request(`/performance/${reviewId}/attachments`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async uploadPerformanceAttachment(
+    reviewId: number | string,
+    file: File,
+    stage: string,
+    objectiveId?: number,
+  ): Promise<any> {
+    const { url, headers, key } = await this.getPerformanceAttachmentUploadUrl(
+      reviewId,
+      file.name,
+      stage,
+      file.type,
+    );
+    await this.uploadFileToS3(url, file, headers);
+    return this.attachPerformanceAttachment(reviewId, {
+      key,
+      filename: file.name,
+      stage,
+      content_type: file.type,
+      size_bytes: file.size,
+      objective_id: objectiveId,
+    });
+  }
+
+  async downloadPerformanceAttachment(reviewId: number | string, attachmentId: number): Promise<Blob> {
+    const meta: any = await this.request(
+      `/performance/${reviewId}/attachments/${attachmentId}/download?download=true`,
+    );
+    const response = await fetch(meta.url, { method: "GET" });
+    if (!response.ok) throw new Error(`Download failed: ${response.status}`);
+    return response.blob();
+  }
+
+  async deletePerformanceAttachment(reviewId: number | string, attachmentId: number): Promise<any> {
+    return this.request(`/performance/${reviewId}/attachments/${attachmentId}`, { method: "DELETE" });
+  }
+
   async getPerformanceObjectiveHistory(
     reviewId: number | string,
     objectiveId: number | string,

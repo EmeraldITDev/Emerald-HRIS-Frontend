@@ -46,7 +46,7 @@ type LocationIssue = {
 /** Soft check only — outside radius still clocks in (backend flags HR). */
 const MAX_ACCURACY_ALLOWANCE_METRES = 500;
 /** Extra metres added on top of the office radius for phone GPS drift. */
-const CLIENT_RADIUS_BUFFER_METRES = 300;
+const CLIENT_RADIUS_BUFFER_METRES = 500;
 /** If the first GPS fix is this coarse, take a second reading. */
 const RETRY_ACCURACY_METRES = 120;
 
@@ -493,9 +493,26 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
           : res?.message || res?.attendance_status || "Clock-in recorded.",
       });
     } catch (e: any) {
+      const msg = String(e?.data?.message || e?.message || "");
+      // A previous attempt may have saved the punch before the response failed
+      // (e.g. serialization error). Refresh so the UI matches the database.
+      if (/already working|already clocked/i.test(msg)) {
+        const record = await refresh();
+        if (record?.clock_in && !record?.clock_out) {
+          setJustClockedOut(false);
+          setChoosingMode(false);
+          setSelectedMode(null);
+          resetLocationState();
+          toast({
+            title: "Already clocked in",
+            description: `You're already clocked in at ${formatTimeWithZone(record.clock_in)}.`,
+          });
+          return;
+        }
+      }
       toast({
         title: "Clock-in failed",
-        description: e?.data?.message || e?.message || "Please try again.",
+        description: msg || "Please try again.",
         variant: "destructive",
       });
     } finally {

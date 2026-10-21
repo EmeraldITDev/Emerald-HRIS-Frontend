@@ -105,9 +105,10 @@ async function captureGps(): Promise<{ coords: Coords; error: LocationError }> {
 
   // Prefer a fresh high-accuracy fix; allow a short-lived cache so phones that
   // already have a good GPS lock are not forced onto a worse Wi-Fi/IP estimate.
+  // Cap waits so a slow GPS fix does not make clock-in feel like a hang (was 20s×2).
   const first = await readGpsOnce({
     enableHighAccuracy: true,
-    timeout: 20000,
+    timeout: 10000,
     maximumAge: 30_000,
   });
   if (!first.coords) return first;
@@ -119,7 +120,7 @@ async function captureGps(): Promise<{ coords: Coords; error: LocationError }> {
 
   const second = await readGpsOnce({
     enableHighAccuracy: true,
-    timeout: 20000,
+    timeout: 8000,
     maximumAge: 0,
   });
   if (!second.coords) return first;

@@ -204,6 +204,18 @@ export default function Performance() {
       const data = await apiService.getPerformanceReviews()
       const mapped = (Array.isArray(data) ? data : []).map((r: PerformanceReview) => {
         const resolved = resolveListRating(r)
+        const objectives = Array.isArray((r as any).objectives) ? (r as any).objectives : []
+        const kpiSummary =
+          objectives.length > 0
+            ? objectives
+                .map((o: any) => {
+                  const rating = o?.target ? ` (${o.target})` : ''
+                  return `${o?.title || 'KPI'}${rating}`
+                })
+                .join('; ')
+            : r.self_assessment?.futureGoals ||
+              r.self_assessment?.next_priorities ||
+              ''
         return {
         id: String(r.id || ''),
         employeeId: String(r.employee_id),
@@ -216,10 +228,11 @@ export default function Performance() {
         status: statusLabel(r.status),
         rawStatus: r.status,
         reviewer: r.manager?.name ?? '—',
-        goals: r.self_assessment?.futureGoals ?? '',
-        achievements: r.self_assessment?.achievements ?? '',
-        areasForImprovement: r.self_assessment?.areasForImprovement ?? '',
-        comments: r.manager_review?.comments ?? '',
+        goals: kpiSummary,
+        objectives,
+        achievements: r.self_assessment?.achievements_impact || r.self_assessment?.achievements || '',
+        areasForImprovement: r.manager_review?.areas_for_improvement || r.self_assessment?.areasForImprovement || '',
+        comments: r.manager_review?.comments || r.manager_review?.strengths || '',
         employeeComments: r.self_assessment?.comments ?? '',
         employeeSignedDate: r.employee_signed_at ? r.employee_signed_at.split('T')[0] : undefined,
         managerSignedDate: r.manager_signed_at ? r.manager_signed_at.split('T')[0] : undefined,
@@ -1136,7 +1149,24 @@ export default function Performance() {
               
               <div>
                 <Label className="text-sm text-muted-foreground">KPIs</Label>
-                <p className="mt-1">{selectedReview.goals}</p>
+                {Array.isArray((selectedReview as any).objectives) &&
+                (selectedReview as any).objectives.length > 0 ? (
+                  <ul className="mt-1 space-y-1 text-sm">
+                    {(selectedReview as any).objectives.map((o: any) => (
+                      <li key={o.id || o.title}>
+                        <span className="font-medium">{o.title}</span>
+                        {o.target ? ` — rating ${o.target}` : ""}
+                        {o.success_measure ? (
+                          <span className="block text-xs text-muted-foreground whitespace-pre-wrap">
+                            {o.success_measure}
+                          </span>
+                        ) : null}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="mt-1">{selectedReview.goals || "—"}</p>
+                )}
               </div>
               
               <div>
@@ -1402,8 +1432,6 @@ export default function Performance() {
             <DialogTitle>Employee self-assessment</DialogTitle>
             <DialogDescription>
               Answer each question for this review period. You can save a draft and return later.
-              Structured objectives administration arrives in a later batch — summarise results against
-              agreed objectives in the narrative fields for now.
             </DialogDescription>
           </DialogHeader>
 

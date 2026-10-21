@@ -313,7 +313,7 @@ export interface PerformanceReview {
   employee_id: number;
   manager_id: number;
   period: string;
-  status: 'draft' | 'submitted' | 'under_review' | 'meeting_scheduled' | 'discussed' | 'employee_signed' | 'manager_signed' | 'hr_approved' | 'closed';
+  status: 'draft' | 'submitted' | 'under_review' | 'meeting_scheduled' | 'discussed' | 'employee_signed' | 'manager_signed' | 'hr_approved' | 'closed' | string;
   self_assessment?: any;
   manager_review?: any;
   meeting_at?: string;
@@ -323,6 +323,8 @@ export interface PerformanceReview {
   hr_approved_at?: string;
   employee?: any;
   manager?: any;
+  /** Action the current viewer still owes on this review (from API). */
+  viewer_pending_action?: { code: string; label: string } | null;
   created_at?: string;
   updated_at?: string;
 }

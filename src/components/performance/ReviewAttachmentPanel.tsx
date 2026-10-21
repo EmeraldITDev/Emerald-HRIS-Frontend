@@ -17,7 +17,7 @@ export type ReviewAttachment = {
 
 type Props = {
   reviewId: number;
-  stage: "self_assessment" | "discussion" | "acknowledgement" | "objective";
+  stage: "self_assessment" | "discussion" | "acknowledgement" | "objective" | "hr_review";
   objectiveId?: number | null;
   canUpload: boolean;
   title?: string;
@@ -164,9 +164,7 @@ export function ReviewAttachmentPanel({
       )}
       {canUpload && (
         <div className="space-y-1">
-          <Label htmlFor={`perf-attach-${stage}-${objectiveId ?? "x"}`} className="sr-only">
-            Upload document
-          </Label>
+          <Label htmlFor={`perf-attach-${stage}-${objectiveId ?? "x"}`}>Upload document</Label>
           <div className="flex items-center gap-2">
             <InputFile
               id={`perf-attach-${stage}-${objectiveId ?? "x"}`}

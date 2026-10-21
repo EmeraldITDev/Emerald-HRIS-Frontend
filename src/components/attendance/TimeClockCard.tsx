@@ -354,10 +354,10 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
     [officeLocations, profile?.assigned_location, profile?.work_location],
   );
 
-  /** Profile work location drives the remote clock-in label (not generic "WFH"). */
+  /** Profile work location drives the remote label (e.g. Remote — Lagos). */
   const remoteWorkLabel = useMemo(() => {
     const loc = String(profile?.work_location || profile?.assigned_location || "").trim();
-    return loc ? `Working from ${loc}` : "Working from assigned location";
+    return loc ? `Remote — ${loc}` : "Remote — assigned location";
   }, [profile?.work_location, profile?.assigned_location]);
 
   const remoteWorkPlaceName = useMemo(() => {
@@ -488,10 +488,10 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
         ["Mismatch", "Outside Radius"].includes(String(record?.location_status ?? responseRecord?.location_status ?? "")) ||
         res?.location_state === "outside_office_radius";
       toast({
-        title: "Clocked in",
+        title: "Attendance confirmed",
         description: flagged
-          ? "You're clocked in. Location looked off-site, so HR may review it — you don't need to retry."
-          : res?.message || res?.attendance_status || "Clock-in recorded.",
+          ? "Attendance confirmed. Location looked off-site, so HR may review it — you don't need to retry."
+          : res?.message || res?.attendance_status || "Attendance recorded.",
       });
     } catch (e: any) {
       const msg = String(e?.data?.message || e?.message || "");
@@ -505,14 +505,14 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
           setSelectedMode(null);
           resetLocationState();
           toast({
-            title: "Already clocked in",
-            description: `You're already clocked in at ${formatTimeWithZone(record.clock_in)}.`,
+            title: "Already confirmed",
+            description: `Attendance already confirmed at ${formatTimeWithZone(record.clock_in)}.`,
           });
           return;
         }
       }
       toast({
-        title: "Clock-in failed",
+        title: "Attendance confirmation failed",
         description: msg || "Please try again.",
         variant: "destructive",
       });
@@ -577,19 +577,19 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
       if (record?.clock_out) {
         setJustClockedOut(true);
         toast({
-          title: "Clocked out",
-          description: `Clock-out recorded at ${formatTimeWithZone(record.clock_out)}.`,
+          title: "End-of-day confirmed",
+          description: `End-of-day confirmed at ${formatTimeWithZone(record.clock_out)}.`,
         });
       } else {
         toast({
-          title: "Clock-out failed",
-          description: "Your clock-out was not recorded. Please try again.",
+          title: "End-of-day confirmation failed",
+          description: "Your end-of-day confirmation was not recorded. Please try again.",
           variant: "destructive",
         });
       }
     } catch (e: any) {
       toast({
-        title: "Clock-out failed",
+        title: "End-of-day confirmation failed",
         description: e?.data?.message || e?.message || "Please try again.",
         variant: "destructive",
       });
@@ -604,7 +604,7 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
         <CardTitle className="flex items-center justify-between gap-2 text-primary">
           <span className="flex items-center">
             <Clock className="mr-2 h-5 w-5" />
-            Time Clock
+            Daily Attendance
           </span>
           {todayStatus?.attendance_status && (
             <AttendanceStatusBadge status={todayStatus.attendance_status} />
@@ -631,12 +631,12 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
                 <>
                   <div className="flex items-center gap-2">
                     <LogIn className="h-4 w-4 text-success" />
-                    <span>Clocked in at {formatTimeWithZone(todayStatus.clock_in)}</span>
+                    <span>Attendance confirmed at {formatTimeWithZone(todayStatus.clock_in)}</span>
                   </div>
                   {todayStatus?.clock_out && (
                     <div className="flex items-center gap-2">
                       <LogOut className="h-4 w-4 text-destructive" />
-                      <span>Clocked out at {formatTimeWithZone(todayStatus.clock_out)}</span>
+                      <span>End-of-day confirmed at {formatTimeWithZone(todayStatus.clock_out)}</span>
                     </div>
                   )}
                   {elapsed && (
@@ -647,14 +647,14 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
                   )}
                 </>
               ) : (
-                <span>Not clocked in today</span>
+                <span>Attendance Not Yet Confirmed</span>
               )}
             </div>
             {/* Flags raised by the backend on today's record */}
             {(todayStatus?.hr_location_review || todayStatus?.location_status === "Outside Radius") && (
               <p className="flex items-start gap-2 text-xs text-warning">
                 <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                You clocked in away from your office location — HR has been asked to review it.
+                You confirmed attendance away from your office location — HR has been asked to review it.
               </p>
             )}
             {todayStatus?.schedule_mismatch && (
@@ -678,7 +678,7 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
                   {locationIssue.accuracyMetres > 0
                     ? `, GPS accuracy ±${locationIssue.accuracyMetres} m`
                     : ""}
-                  ). You can still confirm clock-in — HR may review the location later.
+                  ). You can still confirm attendance — HR may review the location later.
                 </p>
               </div>
             )}
@@ -688,12 +688,12 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
               !choosingMode ? (
                 <Button onClick={() => setChoosingMode(true)} disabled={!employeeId} className="gap-2">
                   <LogIn className="h-4 w-4" />
-                  Clock In
+                  Confirm Attendance
                 </Button>
               ) : (
                 <div className="space-y-2">
                   {/* Mode is picked here — geolocation only runs after this choice */}
-                  <p className="text-xs text-muted-foreground">Where are you working from today?</p>
+                  <p className="text-xs text-muted-foreground">Where are you working today?</p>
                   <div className="flex flex-wrap gap-2">
                     {(["Physical", "WFH"] as const).map((mode) => {
                       const active = (selectedMode ?? expectedMode) === mode;
@@ -719,7 +719,7 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
                           )}
                         >
                           {isOffice ? <MapPin className="h-4 w-4" /> : <Home className="h-4 w-4" />}
-                          {isOffice ? "At the office" : remoteWorkLabel}
+                          {isOffice ? "Office" : remoteWorkLabel}
                           {active ? " ✓" : ""}
                         </Button>
                       );
@@ -735,8 +735,8 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
                       {isPunching
                         ? (selectedMode ?? expectedMode) === "Physical"
                           ? "Checking your location…"
-                          : "Clocking in…"
-                        : "Confirm Clock In"}
+                          : "Confirming…"
+                        : "Confirm Attendance"}
                     </Button>
                     <Button
                       type="button"
@@ -754,7 +754,7 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
                   </div>
                   {(selectedMode ?? expectedMode) === "Physical" && (
                     <p className="text-[11px] text-muted-foreground">
-                      Location is recorded for office days. Being slightly off-site will not block clock-in.
+                      Location is recorded for office days. Being slightly off-site will not block confirmation.
                     </p>
                   )}
                 </div>
@@ -767,7 +767,7 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
                 className="gap-2"
               >
                 <LogOut className="h-4 w-4" />
-                Clock Out
+                End-of-Day Confirmation
               </Button>
             )}
           </div>

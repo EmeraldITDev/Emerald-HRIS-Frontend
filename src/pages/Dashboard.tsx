@@ -720,7 +720,7 @@ export default function Dashboard() {
         className="hidden"
       />
 
-      {/* Time Clock — shared component (schedule-aware, GPS, backend gates) */}
+      {/* Daily Attendance — shared component (schedule-aware, GPS, backend gates) */}
       <MissingClockoutBanner
         employeeId={currentEmployeeId}
         todayStatus={todayStatus}

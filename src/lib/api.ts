@@ -14,6 +14,19 @@ const API_BASE_URL = API
 
 export { API_BASE_URL };
     
+export interface BenefitPlanInput {
+  name: string;
+  benefit_type: string;
+  description: string | null;
+  value: number | null;
+  start_date: string;
+  end_date: string | null;
+  notes: string | null;
+  include_dependants: boolean;
+  is_recurring: boolean;
+  recurrence: 'none' | 'monthly' | 'yearly';
+}
+
 export type EmployeeExitType = 'Resigned' | 'Terminated' | 'Retired';
 
 export interface EmployeeExitPreview {
@@ -2196,6 +2209,9 @@ class ApiService {
     start_date: string;
     end_date?: string;
     notes?: string;
+    is_recurring?: boolean;
+    recurrence?: 'none' | 'monthly' | 'yearly';
+    include_dependants?: boolean;
   }): Promise<{ success: boolean; benefits: any[] }> {
     return this.request<{ success: boolean; benefits: any[] }>('/benefits/assign', {
       method: 'POST',
@@ -2210,8 +2226,41 @@ class ApiService {
     });
   }
 
-  async revokeBenefit(id: number): Promise<{ success: boolean; benefit: any }> {
-    return this.request<{ success: boolean; benefit: any }>(`/benefits/${id}/revoke`, { method: 'PUT' });
+  // End someone's benefit on a date and keep the record
+  async revokeBenefit(id: number, endDate?: string): Promise<{ success: boolean; benefit: any }> {
+    return this.request<{ success: boolean; benefit: any }>(`/benefits/${id}/revoke`, {
+      method: 'PUT',
+      body: JSON.stringify(endDate ? { end_date: endDate } : {}),
+    });
+  }
+
+  // Benefits with the people enrolled in them
+  async getBenefitPlans(): Promise<any[]> {
+    return this.request<any[]>('/benefits/plans');
+  }
+
+  async getBenefitPlan(id: number): Promise<any> {
+    return this.request<any>(`/benefits/plans/${id}`);
+  }
+
+  async createBenefitPlan(data: BenefitPlanInput & { employee_ids?: number[] }): Promise<{ plan: any; skipped: any[] }> {
+    return this.request(`/benefits/plans`, { method: 'POST', body: JSON.stringify(data) });
+  }
+
+  // Applies to everyone on the benefit. Only send what changed.
+  async updateBenefitPlan(id: number, data: Partial<BenefitPlanInput>): Promise<{ plan: any; updated_count: number }> {
+    return this.request(`/benefits/plans/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+  }
+
+  async deleteBenefitPlan(id: number): Promise<{ success: boolean }> {
+    return this.request(`/benefits/plans/${id}`, { method: 'DELETE' });
+  }
+
+  async addBenefitPlanMembers(id: number, employeeIds: number[]): Promise<{ added_count: number; skipped: any[] }> {
+    return this.request(`/benefits/plans/${id}/members`, {
+      method: 'POST',
+      body: JSON.stringify({ employee_ids: employeeIds }),
+    });
   }
 
   async deleteBenefit(id: number): Promise<{ success: boolean; message: string }> {

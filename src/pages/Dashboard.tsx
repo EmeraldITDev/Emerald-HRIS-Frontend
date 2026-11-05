@@ -133,7 +133,9 @@ export default function Dashboard() {
   const [selfLeaveRemaining, setSelfLeaveRemaining] = useState<number | null>(null)
   const [selfBenefits, setSelfBenefits] = useState<any[]>([])
   const [selfTrainingPending, setSelfTrainingPending] = useState<number>(0)
-  const [selfReviewPending, setSelfReviewPending] = useState<boolean>(false)
+  const [performancePendingActions, setPerformancePendingActions] = useState<
+    Array<{ id: number; label: string; code: string }>
+  >([])
 
   const currentEmployee = directoryEmployees.find(
     (e) => Number(e.id) === Number(currentEmployeeId)
@@ -164,15 +166,30 @@ export default function Dashboard() {
   const pensionRegistered = !!(currentEmployee as any)?.pension_pin
 
   useEffect(() => {
-    if (!currentEmployeeId) return
     let cancelled = false
     ;(async () => {
       try {
+        // Performance pending actions are role-scoped by the API (employee / LM / HOD / HR).
+        const reviewsPromise = apiService.getPerformanceReviews().catch(() => [])
+        if (!currentEmployeeId) {
+          const reviews = await reviewsPromise
+          if (cancelled) return
+          setPerformancePendingActions(
+            (Array.isArray(reviews) ? reviews : [])
+              .filter((r: any) => r?.viewer_pending_action?.label && r?.id)
+              .map((r: any) => ({
+                id: Number(r.id),
+                label: String(r.viewer_pending_action.label),
+                code: String(r.viewer_pending_action.code || "performance"),
+              })),
+          )
+          return
+        }
         const [balance, benefits, trainings, reviews] = await Promise.all([
           apiService.getLeaveBalance(currentEmployeeId).catch(() => null),
           apiService.getEmployeeBenefitsByEmployee(currentEmployeeId).catch(() => []),
           apiService.getTrainingAssignments().catch(() => []),
-          apiService.getPerformanceReviews().catch(() => []),
+          reviewsPromise,
         ])
         if (cancelled) return
         if (balance && typeof (balance as any).remaining === "number") {
@@ -185,12 +202,15 @@ export default function Dashboard() {
             !["completed", "complete", "done"].includes(String(t?.status || "").toLowerCase())
         )
         setSelfTrainingPending(myTrainings.length)
-        const myPending = (Array.isArray(reviews) ? reviews : []).some(
-          (r: any) =>
-            Number(r?.employee_id) === Number(currentEmployeeId) &&
-            !["completed", "approved", "submitted"].includes(String(r?.status || "").toLowerCase())
+        setPerformancePendingActions(
+          (Array.isArray(reviews) ? reviews : [])
+            .filter((r: any) => r?.viewer_pending_action?.label && r?.id)
+            .map((r: any) => ({
+              id: Number(r.id),
+              label: String(r.viewer_pending_action.label),
+              code: String(r.viewer_pending_action.code || "performance"),
+            })),
         )
-        setSelfReviewPending(myPending)
       } catch {
         /* non-fatal */
       }
@@ -720,7 +740,7 @@ export default function Dashboard() {
         className="hidden"
       />
 
-      {/* Time Clock — shared component (schedule-aware, GPS, backend gates) */}
+      {/* Daily Attendance — shared component (schedule-aware, GPS, backend gates) */}
       <MissingClockoutBanner
         employeeId={currentEmployeeId}
         todayStatus={todayStatus}
@@ -1013,19 +1033,39 @@ export default function Dashboard() {
               </div>
             ) : showPersonalSelfService ? (
               (() => {
-                const items: Array<{ label: string; status: string; tone: 'warning' | 'info' | 'success' }> = []
-                if (selfReviewPending) {
-                  items.push({ label: 'Performance Review Form', status: 'Pending', tone: 'warning' })
+                const items: Array<{
+                  key: string
+                  label: string
+                  status: string
+                  tone: 'warning' | 'info' | 'success'
+                  href?: string
+                }> = []
+                for (const action of performancePendingActions) {
+                  items.push({
+                    key: `perf-${action.id}-${action.code}`,
+                    label: action.label,
+                    status: 'Pending',
+                    tone: 'warning',
+                    href: `/performance/${action.id}`,
+                  })
                 }
                 if (selfTrainingPending > 0) {
                   items.push({
+                    key: 'training',
                     label: 'Complete Training Module',
                     status: `${selfTrainingPending} assigned`,
                     tone: 'info',
+                    href: '/training',
                   })
                 }
                 if (currentEmployee && !hasEmergencyContact) {
-                  items.push({ label: 'Update Emergency Contact', status: 'Required', tone: 'warning' })
+                  items.push({
+                    key: 'emergency',
+                    label: 'Update Emergency Contact',
+                    status: 'Required',
+                    tone: 'warning',
+                    href: '/my-profile',
+                  })
                 }
                 if (items.length === 0) {
                   return (
@@ -1043,18 +1083,42 @@ export default function Dashboard() {
                 return (
                   <div className="space-y-3">
                     {items.map((it) => (
-                      <div key={it.label} className="flex items-center justify-between">
-                        <span className="text-sm">{it.label}</span>
-                        <span className={`${toneClass(it.tone)} px-2 py-1 rounded text-xs font-medium`}>
+                      <button
+                        key={it.key}
+                        type="button"
+                        className="flex w-full items-center justify-between text-left hover:opacity-90"
+                        onClick={() => it.href && navigate(it.href)}
+                      >
+                        <span className="text-sm pr-2">{it.label}</span>
+                        <span className={`${toneClass(it.tone)} px-2 py-1 rounded text-xs font-medium shrink-0`}>
                           {it.status}
                         </span>
-                      </div>
+                      </button>
                     ))}
                   </div>
                 )
               })()
             ) : (
               <div className="space-y-3">
+                {performancePendingActions.length > 0 ? (
+                  performancePendingActions.slice(0, 6).map((action) => (
+                    <button
+                      key={`perf-${action.id}-${action.code}`}
+                      type="button"
+                      className="flex w-full items-center justify-between text-left hover:opacity-90"
+                      onClick={() => navigate(`/performance/${action.id}`)}
+                    >
+                      <span className="text-sm pr-2">{action.label}</span>
+                      <span className="bg-warning/10 text-warning px-2 py-1 rounded text-xs font-medium shrink-0">
+                        Pending
+                      </span>
+                    </button>
+                  ))
+                ) : (
+                  <div className="text-sm text-muted-foreground text-center py-2">
+                    No performance actions pending
+                  </div>
+                )}
                 <div className="flex items-center justify-between">
                   <span className="text-sm">Employees on leave</span>
                   <span className="bg-warning/10 text-warning px-2 py-1 rounded text-xs font-medium">

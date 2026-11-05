@@ -7,7 +7,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { apiService } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
@@ -70,7 +69,7 @@ export function NotificationBell() {
   const fetchList = useCallback(async () => {
     setLoading(true);
     try {
-      const res: any = await apiService.getNotifications(5, 1);
+      const res: any = await apiService.getNotifications(50, 1);
       // An empty list with success: true is a valid "no notifications" state,
       // not a failure — only a thrown request error counts as one.
       setItems(readList(res));
@@ -143,7 +142,7 @@ export function NotificationBell() {
             <CheckCheck className="h-3 w-3 mr-1" /> Mark all read
           </Button>
         </div>
-        <ScrollArea className="max-h-96">
+        <div className="max-h-[min(24rem,70vh)] overflow-y-auto overscroll-contain">
           {loading ? (
             <div className="p-4 text-center text-sm text-muted-foreground">Loading…</div>
           ) : items.length === 0 ? (
@@ -182,7 +181,7 @@ export function NotificationBell() {
               ))}
             </ul>
           )}
-        </ScrollArea>
+        </div>
         <div className="border-t p-2">
           <Button
             variant="ghost"

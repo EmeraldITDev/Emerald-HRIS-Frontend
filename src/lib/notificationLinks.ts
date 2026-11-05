@@ -63,6 +63,10 @@ export function resolveNotificationLink(
     return pid != null ? `/performance/${pid}` : "/performance";
   }
 
+  if (type.startsWith("training_")) {
+    return "/training";
+  }
+
   if (raw) {
     // Announcements: app only has a list page
     if (/^\/announcements(\/|$|\?)/i.test(raw)) {

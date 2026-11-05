@@ -34,7 +34,6 @@ export const EMPTY_SELF_ASSESSMENT: SelfAssessmentDraft = {
 /** Guide §5 B — required on submit (not inventing employee self-ratings). */
 export const SELF_ASSESSMENT_REQUIRED_KEYS = [
   "achievements_impact",
-  "objective_results",
   "not_fully_achieved",
   "control_vs_external",
   "collaboration_example",
@@ -45,8 +44,11 @@ export const SELF_ASSESSMENT_REQUIRED_KEYS = [
   "next_priorities",
 ] as const;
 
+/** Named form fields only — excludes the string-index legacy catch-all on SelfAssessmentDraft. */
+export type SelfAssessmentFieldKey = (typeof SELF_ASSESSMENT_REQUIRED_KEYS)[number];
+
 export const SELF_ASSESSMENT_FIELDS: Array<{
-  key: keyof typeof EMPTY_SELF_ASSESSMENT;
+  key: SelfAssessmentFieldKey;
   label: string;
   legacyKeys?: string[];
 }> = [
@@ -55,12 +57,6 @@ export const SELF_ASSESSMENT_FIELDS: Array<{
     label:
       "What were your most important achievements during this review period? What was the impact?",
     legacyKeys: ["achievements"],
-  },
-  {
-    key: "objective_results",
-    label:
-      "For each agreed objective, what was the target, what did you achieve, and what evidence supports your answer? (Structured objectives arrive in Batch 4 — summarise here for now.)",
-    legacyKeys: ["completedGoals"],
   },
   {
     key: "not_fully_achieved",
@@ -116,6 +112,14 @@ export function hydrateSelfAssessment(source: any): SelfAssessmentDraft {
         next[field.key] = String(v);
         break;
       }
+    }
+  }
+  // objective_results was removed from the employee form — retain older answers on save.
+  for (const k of ["objective_results", "completedGoals"]) {
+    const v = source[k];
+    if (v !== undefined && v !== null && String(v).trim() !== "") {
+      next.objective_results = String(v);
+      break;
     }
   }
   // Preserve unrecognised legacy keys so we do not discard historical data on save.
@@ -192,7 +196,6 @@ export const MANAGER_SUBMIT_REQUIRED_KEYS = [
   "strengths",
   "areas_for_improvement",
   "ratings",
-  "comments",
   "next_priorities",
   "development_action",
   "development_owner",

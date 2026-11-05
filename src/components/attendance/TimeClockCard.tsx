@@ -28,6 +28,7 @@ type Coords = { lat: number; lng: number; accuracy?: number } | null;
 type OfficeLocation = {
   id?: number | string;
   name: string;
+  city?: string;
   address?: string;
   latitude: number;
   longitude: number;
@@ -38,13 +39,16 @@ type LocationIssue = {
   officeName: string;
   distanceMetres: number;
   accuracyMetres: number;
-  reason: "outside" | "imprecise";
+  allowedMetres: number;
+  reason: "outside";
 };
 
 /** Soft check only — outside radius still clocks in (backend flags HR). */
-const MAX_ACCEPTABLE_ACCURACY_METRES = 500;
+const MAX_ACCURACY_ALLOWANCE_METRES = 500;
 /** Extra metres added on top of the office radius for phone GPS drift. */
-const CLIENT_RADIUS_BUFFER_METRES = 300;
+const CLIENT_RADIUS_BUFFER_METRES = 500;
+/** If the first GPS fix is this coarse, take a second reading. */
+const RETRY_ACCURACY_METRES = 120;
 
 // Distinct states the backend recognises, mapped from the browser's own errors.
 type LocationError = "permission_denied" | "position_unavailable" | "timeout" | "unsupported" | null;
@@ -68,10 +72,7 @@ const LOCATION_ERROR_COPY: Record<Exclude<LocationError, null>, { title: string;
   },
 };
 
-async function captureGps(): Promise<{ coords: Coords; error: LocationError }> {
-  if (typeof navigator === "undefined" || !navigator.geolocation) {
-    return { coords: null, error: "unsupported" };
-  }
+function readGpsOnce(options: PositionOptions): Promise<{ coords: Coords; error: LocationError }> {
   return new Promise((resolve) => {
     navigator.geolocation.getCurrentPosition(
       (pos) =>
@@ -92,9 +93,40 @@ async function captureGps(): Promise<{ coords: Coords; error: LocationError }> {
               : "position_unavailable";
         resolve({ coords: null, error });
       },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
+      options,
     );
   });
+}
+
+async function captureGps(): Promise<{ coords: Coords; error: LocationError }> {
+  if (typeof navigator === "undefined" || !navigator.geolocation) {
+    return { coords: null, error: "unsupported" };
+  }
+
+  // Prefer a fresh high-accuracy fix; allow a short-lived cache so phones that
+  // already have a good GPS lock are not forced onto a worse Wi-Fi/IP estimate.
+  // Cap waits so a slow GPS fix does not make clock-in feel like a hang (was 20s×2).
+  const first = await readGpsOnce({
+    enableHighAccuracy: true,
+    timeout: 10000,
+    maximumAge: 30_000,
+  });
+  if (!first.coords) return first;
+
+  const firstAccuracy = first.coords.accuracy ?? Number.POSITIVE_INFINITY;
+  if (firstAccuracy <= RETRY_ACCURACY_METRES) {
+    return first;
+  }
+
+  const second = await readGpsOnce({
+    enableHighAccuracy: true,
+    timeout: 8000,
+    maximumAge: 0,
+  });
+  if (!second.coords) return first;
+
+  const secondAccuracy = second.coords.accuracy ?? Number.POSITIVE_INFINITY;
+  return secondAccuracy <= firstAccuracy ? second : first;
 }
 
 function normaliseLocation(value: unknown): string {
@@ -123,6 +155,7 @@ function unwrapOfficeLocations(raw: any): OfficeLocation[] {
     return [{
       id: row?.id,
       name: String(row?.name ?? row?.location ?? "Office"),
+      city: row?.city ? String(row.city) : undefined,
       address: row?.address ? String(row.address) : undefined,
       latitude,
       longitude,
@@ -133,17 +166,31 @@ function unwrapOfficeLocations(raw: any): OfficeLocation[] {
 
 function findAssignedOffice(offices: OfficeLocation[], assignedLocation: unknown): OfficeLocation | null {
   const assigned = normaliseLocation(assignedLocation);
-  if (!assigned) return null;
+  if (!assigned || offices.length === 0) return null;
 
-  const city = assigned.includes("calabar")
+  const cityHint = assigned.includes("calabar")
     ? "calabar"
-    : assigned.includes("lagos") || assigned.includes("victoria island")
+    : assigned.includes("lagos") || assigned.includes("victoria") || assigned.includes("sapetro")
       ? "lagos"
-      : "";
+      : assigned.includes("abuja")
+        ? "abuja"
+        : "";
+
+  const exact = offices.find((office) => {
+    const name = normaliseLocation(office.name);
+    const city = normaliseLocation(office.city);
+    return name === assigned || city === assigned;
+  });
+  if (exact) return exact;
+
+  if (cityHint) {
+    const byCity = offices.find((office) => normaliseLocation(office.city) === cityHint);
+    if (byCity) return byCity;
+  }
 
   return offices.find((office) => {
-    const searchable = normaliseLocation(`${office.name} ${office.address ?? ""}`);
-    return searchable.includes(assigned) || assigned.includes(normaliseLocation(office.name)) || (!!city && searchable.includes(city));
+    const searchable = normaliseLocation(`${office.name} ${office.city ?? ""} ${office.address ?? ""}`);
+    return searchable.includes(assigned) || assigned.includes(normaliseLocation(office.name));
   }) ?? null;
 }
 
@@ -161,20 +208,68 @@ function distanceMetres(a: Coords, office: OfficeLocation): number {
   return earthRadius * 2 * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine));
 }
 
-function checkOfficeLocation(coords: Coords, office: OfficeLocation | null): LocationIssue | null {
-  if (!coords || !office) return null;
+function allowedRadiusMetres(office: OfficeLocation, accuracyMetres: number): number {
+  return office.radiusMetres + CLIENT_RADIUS_BUFFER_METRES + Math.min(accuracyMetres, MAX_ACCURACY_ALLOWANCE_METRES);
+}
+
+/**
+ * Soft client-side check: accept the assigned office or any nearer company
+ * office inside its geofence. Low GPS accuracy alone is not treated as off-site.
+ */
+function evaluateOfficePresence(
+  coords: Coords,
+  offices: OfficeLocation[],
+  preferred: OfficeLocation | null,
+): { matched: OfficeLocation | null; issue: LocationIssue | null } {
+  if (!coords || offices.length === 0) {
+    return { matched: preferred, issue: null };
+  }
+
   const accuracyMetres = Math.max(0, coords.accuracy ?? 0);
-  const distance = distanceMetres(coords, office);
-  const isImprecise = accuracyMetres > MAX_ACCEPTABLE_ACCURACY_METRES;
-  const accuracyAllowance = Math.min(accuracyMetres, MAX_ACCEPTABLE_ACCURACY_METRES);
-  const effectiveRadius = office.radiusMetres + CLIENT_RADIUS_BUFFER_METRES + accuracyAllowance;
-  const isOutside = distance > effectiveRadius;
-  if (!isImprecise && !isOutside) return null;
+  let bestInside: { office: OfficeLocation; distance: number; allowed: number } | null = null;
+  let nearest: { office: OfficeLocation; distance: number; allowed: number } | null = null;
+
+  for (const office of offices) {
+    const distance = distanceMetres(coords, office);
+    const allowed = allowedRadiusMetres(office, accuracyMetres);
+    const row = { office, distance, allowed };
+    if (!nearest || distance < nearest.distance) nearest = row;
+    if (distance > allowed) continue;
+    const isPreferred = preferred != null && String(preferred.id) === String(office.id);
+    if (
+      !bestInside ||
+      isPreferred ||
+      (preferred == null || String(bestInside.office.id) !== String(preferred.id)) &&
+        distance < bestInside.distance
+    ) {
+      bestInside = row;
+      if (isPreferred) break;
+    }
+  }
+
+  if (bestInside) {
+    return { matched: bestInside.office, issue: null };
+  }
+
+  const fallback = preferred
+    ? {
+        office: preferred,
+        distance: distanceMetres(coords, preferred),
+        allowed: allowedRadiusMetres(preferred, accuracyMetres),
+      }
+    : nearest;
+
+  if (!fallback) return { matched: null, issue: null };
+
   return {
-    officeName: office.name,
-    distanceMetres: Math.round(distance),
-    accuracyMetres: Math.round(accuracyMetres),
-    reason: isImprecise ? "imprecise" : "outside",
+    matched: fallback.office,
+    issue: {
+      officeName: fallback.office.name,
+      distanceMetres: Math.round(fallback.distance),
+      accuracyMetres: Math.round(accuracyMetres),
+      allowedMetres: Math.round(fallback.allowed),
+      reason: "outside",
+    },
   };
 }
 
@@ -259,6 +354,16 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
     [officeLocations, profile?.assigned_location, profile?.work_location],
   );
 
+  /** Profile work location drives the remote label (e.g. Remote — Lagos). */
+  const remoteWorkLabel = useMemo(() => {
+    const loc = String(profile?.work_location || profile?.assigned_location || "").trim();
+    return loc ? `Remote — ${loc}` : "Remote — assigned location";
+  }, [profile?.work_location, profile?.assigned_location]);
+
+  const remoteWorkPlaceName = useMemo(() => {
+    return String(profile?.work_location || profile?.assigned_location || "assigned location").trim();
+  }, [profile?.work_location, profile?.assigned_location]);
+
   const resetLocationState = useCallback(() => {
     setLocationError(null);
     setLocationIssue(null);
@@ -280,18 +385,21 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
     return () => clearInterval(id);
   }, [clockedIn]);
 
-  // The backend is the source of truth for when the shift started: prefer its
-  // ISO clock_in_at, then its elapsed_seconds, and only then the local time string.
+  // Prefer the API's UTC ISO clock_in_at (built from the WAT TIME column), then
+  // reconstruct from the stored punch + attendance date, then elapsed_seconds.
   const startedAt = useMemo(() => {
     if (!todayStatus) return NaN;
     if (todayStatus.clock_in_at) {
       const t = Date.parse(todayStatus.clock_in_at);
       if (!Number.isNaN(t)) return t;
     }
+    if (todayStatus.clock_in) {
+      const t = parseAttendanceInstant(todayStatus.clock_in, todayStatus?.date);
+      if (!Number.isNaN(t)) return t;
+    }
     if (typeof todayStatus.elapsed_seconds === "number") {
       return Date.now() - todayStatus.elapsed_seconds * 1000;
     }
-    if (todayStatus.clock_in) return parseAttendanceInstant(todayStatus.clock_in, todayStatus?.date);
     return NaN;
   }, [todayStatus]);
 
@@ -321,6 +429,7 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
     try {
       let coords: Coords = null;
       let currentLocationIssue: LocationIssue | null = null;
+      let matchedOffice: OfficeLocation | null = assignedOffice;
       if (mode === "Physical") {
         // Location is captured for audit; outside radius no longer blocks clock-in.
         const gps = await captureGps();
@@ -334,7 +443,9 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
           return;
         }
         coords = gps.coords;
-        currentLocationIssue = checkOfficeLocation(coords, assignedOffice);
+        const presence = evaluateOfficePresence(coords, officeLocations, assignedOffice);
+        matchedOffice = presence.matched;
+        currentLocationIssue = presence.issue;
         setLocationIssue(currentLocationIssue);
       } else {
         // Working from home: no location is requested or required.
@@ -346,16 +457,19 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
         date: todayWAT(),
         work_mode: mode,
       };
+      if (mode === "WFH") {
+        // Backend still uses work_from_home; store the profile place for HR visibility.
+        payload.location = remoteWorkPlaceName;
+        payload.remote_work_location = remoteWorkPlaceName;
+      }
       if (coords) {
         payload.location_lat = coords.lat;
         payload.location_lng = coords.lng;
         if (coords.accuracy != null) payload.location_accuracy = Math.round(coords.accuracy);
+        if (matchedOffice?.id != null) payload.office_location_id = matchedOffice.id;
         if (mode === "Physical" && currentLocationIssue) {
           payload.force_location_review = true;
-          payload.location_review_reason =
-            currentLocationIssue.reason === "imprecise"
-              ? "Device location accuracy was low at clock-in."
-              : "Clock-in coordinates were outside the office geofence.";
+          payload.location_review_reason = "Clock-in coordinates were outside the office geofence.";
         }
       }
 
@@ -366,28 +480,56 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
       resetLocationState();
       const record = (await refresh()) ?? res;
       const responseRecord = res?.data ?? res;
+      // Trust the server's final geofence decision for the toast — client soft
+      // checks can still differ slightly before the backend nearest-office pass.
       const flagged =
-        Boolean(currentLocationIssue) ||
-        record?.hr_location_review ||
-        responseRecord?.hr_location_review ||
+        Boolean(record?.hr_location_review) ||
+        Boolean(responseRecord?.hr_location_review) ||
         ["Mismatch", "Outside Radius"].includes(String(record?.location_status ?? responseRecord?.location_status ?? "")) ||
         res?.location_state === "outside_office_radius";
       toast({
-        title: "Clocked in",
+        title: "Attendance confirmed",
         description: flagged
-          ? "You're clocked in. Location looked off-site, so HR may review it — you don't need to retry."
-          : res?.message || res?.attendance_status || "Clock-in recorded.",
+          ? "Attendance confirmed. Location looked off-site, so HR may review it — you don't need to retry."
+          : res?.message || res?.attendance_status || "Attendance recorded.",
       });
     } catch (e: any) {
+      const msg = String(e?.data?.message || e?.message || "");
+      // A previous attempt may have saved the punch before the response failed
+      // (e.g. serialization error). Refresh so the UI matches the database.
+      if (/already working|already clocked/i.test(msg)) {
+        const record = await refresh();
+        if (record?.clock_in && !record?.clock_out) {
+          setJustClockedOut(false);
+          setChoosingMode(false);
+          setSelectedMode(null);
+          resetLocationState();
+          toast({
+            title: "Already confirmed",
+            description: `Attendance already confirmed at ${formatTimeWithZone(record.clock_in)}.`,
+          });
+          return;
+        }
+      }
       toast({
-        title: "Clock-in failed",
-        description: e?.data?.message || e?.message || "Please try again.",
+        title: "Attendance confirmation failed",
+        description: msg || "Please try again.",
         variant: "destructive",
       });
     } finally {
       setIsPunching(false);
     }
-  }, [assignedOffice, employeeId, expectedMode, resetLocationState, selectedMode, refresh, toast]);
+  }, [
+    assignedOffice,
+    employeeId,
+    expectedMode,
+    officeLocations,
+    remoteWorkPlaceName,
+    resetLocationState,
+    selectedMode,
+    refresh,
+    toast,
+  ]);
 
   const handleClockOut = useCallback(async () => {
     if (!employeeId) return;
@@ -435,19 +577,19 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
       if (record?.clock_out) {
         setJustClockedOut(true);
         toast({
-          title: "Clocked out",
-          description: `Clock-out recorded at ${formatTimeWithZone(record.clock_out)}.`,
+          title: "End-of-day confirmed",
+          description: `End-of-day confirmed at ${formatTimeWithZone(record.clock_out)}.`,
         });
       } else {
         toast({
-          title: "Clock-out failed",
-          description: "Your clock-out was not recorded. Please try again.",
+          title: "End-of-day confirmation failed",
+          description: "Your end-of-day confirmation was not recorded. Please try again.",
           variant: "destructive",
         });
       }
     } catch (e: any) {
       toast({
-        title: "Clock-out failed",
+        title: "End-of-day confirmation failed",
         description: e?.data?.message || e?.message || "Please try again.",
         variant: "destructive",
       });
@@ -462,7 +604,7 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
         <CardTitle className="flex items-center justify-between gap-2 text-primary">
           <span className="flex items-center">
             <Clock className="mr-2 h-5 w-5" />
-            Time Clock
+            Daily Attendance
           </span>
           {todayStatus?.attendance_status && (
             <AttendanceStatusBadge status={todayStatus.attendance_status} />
@@ -489,12 +631,12 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
                 <>
                   <div className="flex items-center gap-2">
                     <LogIn className="h-4 w-4 text-success" />
-                    <span>Clocked in at {formatTimeWithZone(todayStatus.clock_in)}</span>
+                    <span>Attendance confirmed at {formatTimeWithZone(todayStatus.clock_in)}</span>
                   </div>
                   {todayStatus?.clock_out && (
                     <div className="flex items-center gap-2">
                       <LogOut className="h-4 w-4 text-destructive" />
-                      <span>Clocked out at {formatTimeWithZone(todayStatus.clock_out)}</span>
+                      <span>End-of-day confirmed at {formatTimeWithZone(todayStatus.clock_out)}</span>
                     </div>
                   )}
                   {elapsed && (
@@ -505,14 +647,14 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
                   )}
                 </>
               ) : (
-                <span>Not clocked in today</span>
+                <span>Attendance Not Yet Confirmed</span>
               )}
             </div>
             {/* Flags raised by the backend on today's record */}
             {(todayStatus?.hr_location_review || todayStatus?.location_status === "Outside Radius") && (
               <p className="flex items-start gap-2 text-xs text-warning">
                 <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                You clocked in away from your office location — HR has been asked to review it.
+                You confirmed attendance away from your office location — HR has been asked to review it.
               </p>
             )}
             {todayStatus?.schedule_mismatch && (
@@ -531,10 +673,12 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
               <div className="rounded-md border border-warning/40 bg-warning/5 p-3 text-xs">
                 <p className="font-medium text-warning">Location looks off-site</p>
                 <p className="mt-1 text-muted-foreground">
-                  {locationIssue.reason === "imprecise"
-                    ? `Your device location is only accurate to about ${locationIssue.accuracyMetres} metres.`
-                    : `Your device currently appears outside ${locationIssue.officeName}.`}
-                  {" "}You can still confirm clock-in — HR may review the location later.
+                  Your device currently appears about {locationIssue.distanceMetres} metres from{" "}
+                  {locationIssue.officeName} (allowed about {locationIssue.allowedMetres} metres
+                  {locationIssue.accuracyMetres > 0
+                    ? `, GPS accuracy ±${locationIssue.accuracyMetres} m`
+                    : ""}
+                  ). You can still confirm attendance — HR may review the location later.
                 </p>
               </div>
             )}
@@ -544,12 +688,12 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
               !choosingMode ? (
                 <Button onClick={() => setChoosingMode(true)} disabled={!employeeId} className="gap-2">
                   <LogIn className="h-4 w-4" />
-                  Clock In
+                  Confirm Attendance
                 </Button>
               ) : (
                 <div className="space-y-2">
                   {/* Mode is picked here — geolocation only runs after this choice */}
-                  <p className="text-xs text-muted-foreground">Where are you working from today?</p>
+                  <p className="text-xs text-muted-foreground">Where are you working today?</p>
                   <div className="flex flex-wrap gap-2">
                     {(["Physical", "WFH"] as const).map((mode) => {
                       const active = (selectedMode ?? expectedMode) === mode;
@@ -575,7 +719,7 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
                           )}
                         >
                           {isOffice ? <MapPin className="h-4 w-4" /> : <Home className="h-4 w-4" />}
-                          {isOffice ? "At the office" : "Working from home"}
+                          {isOffice ? "Office" : remoteWorkLabel}
                           {active ? " ✓" : ""}
                         </Button>
                       );
@@ -591,8 +735,8 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
                       {isPunching
                         ? (selectedMode ?? expectedMode) === "Physical"
                           ? "Checking your location…"
-                          : "Clocking in…"
-                        : "Confirm Clock In"}
+                          : "Confirming…"
+                        : "Confirm Attendance"}
                     </Button>
                     <Button
                       type="button"
@@ -610,7 +754,7 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
                   </div>
                   {(selectedMode ?? expectedMode) === "Physical" && (
                     <p className="text-[11px] text-muted-foreground">
-                      Location is recorded for office days. Being slightly off-site will not block clock-in.
+                      Location is recorded for office days. Being slightly off-site will not block confirmation.
                     </p>
                   )}
                 </div>
@@ -623,7 +767,7 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
                 className="gap-2"
               >
                 <LogOut className="h-4 w-4" />
-                Clock Out
+                End-of-Day Confirmation
               </Button>
             )}
           </div>

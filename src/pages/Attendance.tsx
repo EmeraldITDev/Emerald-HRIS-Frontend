@@ -43,18 +43,6 @@ import {
   locationStatusLabel,
 } from "@/lib/attendanceUi"
 
-// Extract HH:mm from a backend datetime string ("YYYY-MM-DD HH:MM:SS" or ISO).
-function formatAttTime(value?: string | null): string {
-  if (!value) return ""
-  const s = String(value)
-  const d = new Date(s.includes("T") ? s : s.replace(" ", "T"))
-  if (!isNaN(d.getTime())) {
-    const hh = String(d.getHours()).padStart(2, "0")
-    const mm = String(d.getMinutes()).padStart(2, "0")
-    return `${hh}:${mm}`
-  }
-  return s.length >= 16 ? s.slice(11, 16) : s
-}
 import { LeaveBalanceCard } from "@/components/LeaveBalanceCard"
 import { AttendanceApprovalsCard } from "@/components/AttendanceApprovalsCard"
 import { MyAttendanceRequestsCard } from "@/components/MyAttendanceRequestsCard"

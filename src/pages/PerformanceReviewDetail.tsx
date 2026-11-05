@@ -30,6 +30,7 @@ import {
   toManagerReviewPayload,
   type SelfAssessmentDraft,
 } from "@/lib/performanceFormSchema";
+import { ReviewAttachmentPanel } from "@/components/performance/ReviewAttachmentPanel";
 import { Input } from "@/components/ui/input";
 
 const ACK_STATEMENT =
@@ -111,15 +112,9 @@ const MANAGER_FIELDS: ManagerField[] = [
   },
   {
     key: "ratings",
-    label: "Overall manager rating (1–5; N/A only with explanation)",
+    label: "Overall manager rating (1–5)",
     type: "rating",
     aliases: ["overall_rating", "rating"],
-    section: "Overall review and next steps",
-  },
-  {
-    key: "comments",
-    label: "Overall rating rationale and supporting evidence",
-    aliases: ["overall_comments", "observations"],
     section: "Overall review and next steps",
   },
   {
@@ -214,7 +209,6 @@ const HR_FIELDS: Array<{ key: string; label: string; type?: "text" | "rating" }>
   { key: "hr_assessment", label: "HR's overall assessment of the employee's performance" },
   { key: "review_adequacy", label: "Does the review adequately reflect the employee and manager assessments?" },
   { key: "development_recommendations", label: "Recommended areas for development" },
-  { key: "final_rating", label: "Final rating (1-5)", type: "rating" },
   { key: "hr_comments", label: "Final HR comments" },
 ];
 
@@ -354,6 +348,7 @@ export default function PerformanceReviewDetail() {
     due_date: "",
     support_requirements: "",
   });
+  const [newObjectiveFile, setNewObjectiveFile] = useState<File | null>(null);
   const [amendDraft, setAmendDraft] = useState<Record<number, { title: string; change_reason: string }>>({});
   const [discussionHeld, setDiscussionHeld] = useState(false);
   const [discussionSummary, setDiscussionSummary] = useState("");
@@ -376,8 +371,20 @@ export default function PerformanceReviewDetail() {
     setLoading(true);
     setLoadError(null);
     try {
-      const data = await apiService.getPerformanceReview(id);
-      setReview(data);
+      const [data, objectivesRes] = await Promise.all([
+        apiService.getPerformanceReview(id),
+        apiService.getPerformanceObjectives(id).catch(() => null),
+      ]);
+      const fromEndpoint = Array.isArray(objectivesRes?.data)
+        ? objectivesRes.data
+        : Array.isArray(objectivesRes)
+          ? objectivesRes
+          : null;
+      const objectives =
+        (fromEndpoint && fromEndpoint.length > 0 ? fromEndpoint : null) ||
+        (Array.isArray(data?.objectives) ? data.objectives : []) ||
+        [];
+      setReview({ ...data, objectives });
       if (data?.discussion_completed_at) {
         setDiscussionHeld(true);
         const notes = String(data.meeting_notes || "");
@@ -581,12 +588,15 @@ export default function PerformanceReviewDetail() {
     }
     if (isNaRating(managerValues.ratings)) {
       const explanation = String(
-        managerValues.comments || managerValues.objective_assessments_narrative || "",
+        managerValues.areas_for_improvement ||
+          managerValues.objective_assessments_narrative ||
+          managerValues.comments ||
+          "",
       ).trim();
       if (!explanation) {
         toast({
           title: "N/A requires an explanation",
-          description: "Provide a short rationale when a rating does not apply.",
+          description: "Explain why the overall rating does not apply under performance gaps.",
           variant: "destructive",
         });
         return;
@@ -627,7 +637,10 @@ export default function PerformanceReviewDetail() {
 
   const canManageObjectives =
     !!review?.workflow?.can_manage_objectives ||
-    ((isManager || isHr) && status !== "completed");
+    ((isManager || isHr) && status !== "completed") ||
+    (!!review && String(review.manager_id) === String(user?.id) && status !== "completed");
+  /** Match backend: objective docs stay uploadable until the review is completed. */
+  const canUploadObjectiveDocs = canManageObjectives && status !== "completed";
 
   const createObjective = async () => {
     if (!newObjective.title.trim()) {
@@ -636,7 +649,10 @@ export default function PerformanceReviewDetail() {
     }
     setSaving(true);
     try {
-      await apiService.createPerformanceObjective(review.id, newObjective);
+      const res: any = await apiService.createPerformanceObjective(review.id, newObjective);
+      const created = res?.data ?? res;
+      const objectiveId = Number(created?.id);
+      const pendingFile = newObjectiveFile;
       setNewObjective({
         title: "",
         success_measure: "",
@@ -644,7 +660,26 @@ export default function PerformanceReviewDetail() {
         due_date: "",
         support_requirements: "",
       });
-      toast({ title: "Objective created" });
+      setNewObjectiveFile(null);
+      if (pendingFile && objectiveId) {
+        try {
+          await apiService.uploadPerformanceAttachment(
+            review.id,
+            pendingFile,
+            "objective",
+            objectiveId,
+          );
+          toast({ title: "KPI added with supporting document" });
+        } catch (uploadErr: any) {
+          toast({
+            title: "KPI added, but document upload failed",
+            description: uploadErr?.message || "Open the KPI card to retry the upload.",
+            variant: "destructive",
+          });
+        }
+      } else {
+        toast({ title: "KPI added" });
+      }
       await load();
     } catch (e: any) {
       toast({ title: "Action failed", description: e?.message, variant: "destructive" });
@@ -915,9 +950,9 @@ export default function PerformanceReviewDetail() {
             <CardContent className="space-y-4">
               {(review.objectives || []).length === 0 ? (
                 <p className="text-sm text-muted-foreground">
-                  {review.cycle_id
-                    ? "No KPIs yet."
-                    : "Legacy review without structured objectives — narrative assessments still apply."}
+                  Line Manager to populate the section below with the KPIs previously communicated
+                  and agreed upon by the employee being assessed, and rate the employee’s performance
+                  against each KPI.
                 </p>
               ) : (
                 (review.objectives || []).map((o: any) => (
@@ -936,11 +971,18 @@ export default function PerformanceReviewDetail() {
                             PERFORMANCE_RATING_OPTIONS.find((r) => r.value === String(o.target))
                               ?.label || o.target
                           }`,
-                        o.support_requirements && `Support: ${o.support_requirements}`,
                       ]
                         .filter(Boolean)
                         .join("\n")}
                     </p>
+                    <ReviewAttachmentPanel
+                      reviewId={review.id}
+                      stage="objective"
+                      objectiveId={o.id}
+                      canUpload={canUploadObjectiveDocs}
+                      title="Supporting documents"
+                      description="Upload evidence for this KPI (PDF, Word, Excel, or image)."
+                    />
                     <div className="flex flex-wrap gap-2">
                       {(isOwner || ((isManager || isHr) && String(review.manager_id) === String(user?.id)) || isHr) &&
                         !o.is_agreed && (
@@ -999,7 +1041,7 @@ export default function PerformanceReviewDetail() {
 
               {canManageObjectives && (
                 <div className="space-y-2 border-t pt-4">
-                  <p className="text-sm font-medium">Propose Key Performance Indicator</p>
+                  <p className="text-sm font-medium">Key Performance Indicator</p>
                   <Input
                     data-testid="new-objective-title"
                     placeholder="key Deliverable"
@@ -1035,14 +1077,25 @@ export default function PerformanceReviewDetail() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <Textarea
-                    placeholder="Support, resources or dependencies (optional)"
-                    rows={2}
-                    value={newObjective.support_requirements}
-                    onChange={(e) =>
-                      setNewObjective({ ...newObjective, support_requirements: e.target.value })
-                    }
-                  />
+                  <div className="space-y-2">
+                    <Label htmlFor="new-kpi-document">Supporting document (optional)</Label>
+                    <Input
+                      id="new-kpi-document"
+                      type="file"
+                      data-testid="new-objective-file"
+                      disabled={saving || !canUploadObjectiveDocs}
+                      onChange={(e) => setNewObjectiveFile(e.target.files?.[0] ?? null)}
+                    />
+                    {newObjectiveFile && (
+                      <p className="text-xs text-muted-foreground">
+                        Selected: {newObjectiveFile.name}
+                      </p>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      You can attach a file now, or upload more documents on the KPI card after it is
+                      added.
+                    </p>
+                  </div>
                   <Button disabled={saving} onClick={createObjective} data-testid="create-objective">
                     Add KPI
                   </Button>
@@ -1124,6 +1177,13 @@ export default function PerformanceReviewDetail() {
                         />
                       </div>
                     ))}
+                    <ReviewAttachmentPanel
+                      reviewId={review.id}
+                      stage="self_assessment"
+                      canUpload={canEditSelf}
+                      title="Supporting documents"
+                      description="Upload evidence for your self-assessment. You can edit or delete files until you submit."
+                    />
                     <div className="flex flex-wrap gap-2 justify-end pt-2">
                       <Button
                         variant="secondary"
@@ -1144,7 +1204,17 @@ export default function PerformanceReviewDetail() {
                     </div>
                   </div>
                 ) : (
-                  <ReadOnlyBlock value={review.self_assessment} emptyText="Not submitted yet." />
+                  <>
+                    <ReadOnlyBlock value={review.self_assessment} emptyText="Not submitted yet." />
+                    {!selfSealed && (
+                      <ReviewAttachmentPanel
+                        reviewId={review.id}
+                        stage="self_assessment"
+                        canUpload={false}
+                        title="Supporting documents"
+                      />
+                    )}
+                  </>
                 )}
                 <div className="flex justify-end">
                   <Button variant="outline" size="sm" className="gap-2" onClick={() => setStep(1)}>
@@ -1172,6 +1242,28 @@ export default function PerformanceReviewDetail() {
               <CardContent className="space-y-5">
                 {canEditManager ? (
                   <>
+                    {(review.objectives || []).length > 0 && (
+                      <div className="space-y-2 rounded-md border p-3">
+                        <p className="text-sm font-medium">KPIs for this assessment</p>
+                        <p className="text-xs text-muted-foreground">
+                          Populate and rate KPIs in the Key Performance Indicators section above, then complete the
+                          questions below.
+                        </p>
+                        <ul className="text-sm space-y-1">
+                          {(review.objectives || []).map((o: any) => (
+                            <li key={o.id}>
+                              <span className="font-medium">{o.title}</span>
+                              {o.target
+                                ? ` — ${
+                                    PERFORMANCE_RATING_OPTIONS.find((r) => r.value === String(o.target))?.label ||
+                                    o.target
+                                  }`
+                                : ""}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                     <StructuredForm
                       fields={MANAGER_FIELDS}
                       values={managerValues}
@@ -1194,17 +1286,53 @@ export default function PerformanceReviewDetail() {
                 ) : managerSealed ? (
                   <p className="text-sm text-muted-foreground rounded-md border border-dashed p-4">
                     Manager assessment and proposed rating are sealed until the line manager submits.
+                    Key Performance Indicators above remain visible once the manager has added them.
                   </p>
                 ) : (
-                  <AnswerList
-                    fields={MANAGER_DISPLAY_FIELDS}
-                    source={
-                      typeof review.manager_review === "object" && review.manager_review
-                        ? review.manager_review
-                        : review
-                    }
-                    emptyText="Not submitted yet."
-                  />
+                  <div className="space-y-5">
+                    <div className="space-y-3" data-testid="manager-kpi-readonly">
+                      <p className="text-sm font-medium">KPIs graded by the line manager</p>
+                      {(review.objectives || []).length === 0 ? (
+                        <p className="text-sm text-muted-foreground rounded-md border border-dashed p-3">
+                          No KPIs have been recorded on this review yet. Check the Key Performance
+                          Indicators section above after the line manager has added them.
+                        </p>
+                      ) : (
+                        (review.objectives || []).map((o: any) => (
+                          <div key={o.id} className="rounded-md border p-3 space-y-1 text-sm">
+                            <p className="font-medium">{o.title}</p>
+                            {o.success_measure && (
+                              <p className="text-xs text-muted-foreground whitespace-pre-wrap">
+                                Measure: {o.success_measure}
+                              </p>
+                            )}
+                            <p className="text-xs">
+                              Rating:{" "}
+                              {PERFORMANCE_RATING_OPTIONS.find((r) => r.value === String(o.target))
+                                ?.label || o.target || "—"}
+                            </p>
+                            <ReviewAttachmentPanel
+                              reviewId={review.id}
+                              stage="objective"
+                              objectiveId={o.id}
+                              canUpload={canUploadObjectiveDocs}
+                              title="Supporting documents"
+                              description="Upload evidence for this KPI."
+                            />
+                          </div>
+                        ))
+                      )}
+                    </div>
+                    <AnswerList
+                      fields={MANAGER_DISPLAY_FIELDS.filter((f) => f.key !== "comments")}
+                      source={
+                        typeof review.manager_review === "object" && review.manager_review
+                          ? review.manager_review
+                          : review
+                      }
+                      emptyText="Not submitted yet."
+                    />
+                  </div>
                 )}
                 <div className="flex justify-between">
                   <Button variant="outline" size="sm" onClick={() => setStep(0)}>
@@ -1263,6 +1391,13 @@ export default function PerformanceReviewDetail() {
                         placeholder="Agreed actions, owners, dates…"
                       />
                     </div>
+                    <ReviewAttachmentPanel
+                      reviewId={review.id}
+                      stage="discussion"
+                      canUpload
+                      title="Discussion attachments"
+                      description="Optional documents from the review discussion."
+                    />
                     <Button disabled={saving} onClick={submitDiscussion}>
                       {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Save discussion record
                     </Button>
@@ -1275,6 +1410,12 @@ export default function PerformanceReviewDetail() {
                         Recorded {String(review.discussion_completed_at).slice(0, 19).replace("T", " ")}
                       </p>
                     )}
+                    <ReviewAttachmentPanel
+                      reviewId={review.id}
+                      stage="discussion"
+                      canUpload={false}
+                      title="Discussion attachments"
+                    />
                   </div>
                 ) : (
                   <p className="text-sm text-muted-foreground rounded-md border border-dashed p-4">
@@ -1351,6 +1492,13 @@ export default function PerformanceReviewDetail() {
                         />
                       </div>
                     )}
+                    <ReviewAttachmentPanel
+                      reviewId={review.id}
+                      stage="acknowledgement"
+                      canUpload
+                      title="Acknowledgement documents"
+                      description="Optional supporting documents. You can remove them until you submit acknowledgement."
+                    />
                     <Button disabled={saving} onClick={submitAcknowledgement}>
                       {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Submit acknowledgement
                     </Button>
@@ -1385,6 +1533,12 @@ export default function PerformanceReviewDetail() {
                           </p>
                         )}
                     </div>
+                    <ReviewAttachmentPanel
+                      reviewId={review.id}
+                      stage="acknowledgement"
+                      canUpload={false}
+                      title="Acknowledgement documents"
+                    />
                   </div>
                 ) : (
                   <p className="text-sm text-muted-foreground rounded-md border border-dashed p-4">
@@ -1429,6 +1583,15 @@ export default function PerformanceReviewDetail() {
                     Discussion must be recorded before HR can finalise this review.
                   </p>
                 )}
+                {isHr && status === "hr_review" && !discussionRecorded && (
+                  <ReviewAttachmentPanel
+                    reviewId={review.id}
+                    stage="hr_review"
+                    canUpload
+                    title="Supporting documents"
+                    description="You can upload HR supporting documentation now; finalisation still requires the discussion to be recorded."
+                  />
+                )}
                 {isHr && checklist?.items && (
                   <div className="space-y-2 rounded-md border p-3">
                     <p className="text-sm font-medium">Quality checklist (derived from records)</p>
@@ -1460,6 +1623,13 @@ export default function PerformanceReviewDetail() {
                       values={hrValues}
                       onChange={(k, v) => setHrValues((p) => ({ ...p, [k]: v }))}
                     />
+                    <ReviewAttachmentPanel
+                      reviewId={review.id}
+                      stage="hr_review"
+                      canUpload
+                      title="Supporting documents"
+                      description="Upload HR supporting documentation for this review (PDF, Word, Excel, or image)."
+                    />
                     <Button disabled={saving} onClick={submitHr}>
                       {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Confirm checklist &amp; finalise
                     </Button>
@@ -1469,15 +1639,30 @@ export default function PerformanceReviewDetail() {
                     The final HR review is available after HR completes and finalises the review.
                   </p>
                 ) : (
-                  <AnswerList
-                    fields={HR_FIELDS}
-                    source={
-                      typeof review.hr_review === "object" && review.hr_review
-                        ? review.hr_review
-                        : review
-                    }
-                    emptyText="Not completed yet."
-                  />
+                  <div className="space-y-4">
+                    <AnswerList
+                      fields={HR_FIELDS}
+                      source={
+                        typeof review.hr_review === "object" && review.hr_review
+                          ? review.hr_review
+                          : review
+                      }
+                      emptyText="Not completed yet."
+                    />
+                    {(isHr || status === "completed" || status === "hr_review") && (
+                      <ReviewAttachmentPanel
+                        reviewId={review.id}
+                        stage="hr_review"
+                        canUpload={isHr && status !== "completed"}
+                        title="Supporting documents"
+                        description={
+                          isHr && status !== "completed"
+                            ? "Upload HR supporting documentation for this review."
+                            : "Documents attached by HR for this review."
+                        }
+                      />
+                    )}
+                  </div>
                 )}
 
                 {isHr && (status === "completed" || status === "hr_review") && (

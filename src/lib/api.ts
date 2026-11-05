@@ -313,7 +313,7 @@ export interface PerformanceReview {
   employee_id: number;
   manager_id: number;
   period: string;
-  status: 'draft' | 'submitted' | 'under_review' | 'meeting_scheduled' | 'discussed' | 'employee_signed' | 'manager_signed' | 'hr_approved' | 'closed';
+  status: 'draft' | 'submitted' | 'under_review' | 'meeting_scheduled' | 'discussed' | 'employee_signed' | 'manager_signed' | 'hr_approved' | 'closed' | string;
   self_assessment?: any;
   manager_review?: any;
   meeting_at?: string;
@@ -323,6 +323,8 @@ export interface PerformanceReview {
   hr_approved_at?: string;
   employee?: any;
   manager?: any;
+  /** Action the current viewer still owes on this review (from API). */
+  viewer_pending_action?: { code: string; label: string } | null;
   created_at?: string;
   updated_at?: string;
 }
@@ -1787,6 +1789,76 @@ class ApiService {
       method: 'POST',
       body: JSON.stringify(data),
     });
+  }
+
+  async listPerformanceAttachments(reviewId: number | string, stage?: string): Promise<any> {
+    const q = stage ? `?stage=${encodeURIComponent(stage)}` : "";
+    return this.request<any>(`/performance/${reviewId}/attachments${q}`);
+  }
+
+  async getPerformanceAttachmentUploadUrl(
+    reviewId: number | string,
+    filename: string,
+    stage: string,
+    contentType?: string,
+  ): Promise<{ url: string; headers: Record<string, string>; key: string }> {
+    return this.request(`/performance/${reviewId}/attachments/upload-url`, {
+      method: "POST",
+      body: JSON.stringify({ filename, stage, content_type: contentType }),
+    });
+  }
+
+  async attachPerformanceAttachment(
+    reviewId: number | string,
+    data: {
+      key: string;
+      filename: string;
+      stage: string;
+      content_type?: string;
+      size_bytes?: number;
+      objective_id?: number;
+    },
+  ): Promise<any> {
+    return this.request(`/performance/${reviewId}/attachments`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async uploadPerformanceAttachment(
+    reviewId: number | string,
+    file: File,
+    stage: string,
+    objectiveId?: number,
+  ): Promise<any> {
+    const { url, headers, key } = await this.getPerformanceAttachmentUploadUrl(
+      reviewId,
+      file.name,
+      stage,
+      file.type,
+    );
+    await this.uploadFileToS3(url, file, headers);
+    return this.attachPerformanceAttachment(reviewId, {
+      key,
+      filename: file.name,
+      stage,
+      content_type: file.type,
+      size_bytes: file.size,
+      objective_id: objectiveId,
+    });
+  }
+
+  async downloadPerformanceAttachment(reviewId: number | string, attachmentId: number): Promise<Blob> {
+    const meta: any = await this.request(
+      `/performance/${reviewId}/attachments/${attachmentId}/download?download=true`,
+    );
+    const response = await fetch(meta.url, { method: "GET" });
+    if (!response.ok) throw new Error(`Download failed: ${response.status}`);
+    return response.blob();
+  }
+
+  async deletePerformanceAttachment(reviewId: number | string, attachmentId: number): Promise<any> {
+    return this.request(`/performance/${reviewId}/attachments/${attachmentId}`, { method: "DELETE" });
   }
 
   async getPerformanceObjectiveHistory(

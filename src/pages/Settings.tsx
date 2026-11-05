@@ -344,6 +344,8 @@ export default function Settings() {
                   <Label>Annual Leave Days</Label>
                   <Input
                     type="number"
+                    min={7}
+                    max={18}
                     value={settings.system.annualLeaveDays}
                     onChange={(e) => update("system", { annualLeaveDays: Number(e.target.value) })}
                     disabled={!canEditSystem}

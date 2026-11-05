@@ -69,7 +69,7 @@ export const csvTemplateFields: CSVTemplateField[] = [
   { header: "Probation Period (in months)", description: "Probation period", example: "3 months", required: false, allowedValues: ALLOWED_VALUES.probationPeriod },
   
   // Financial Information
-  { header: "Gross Salary", description: "Employee's gross salary amount", example: "250000", required: false, format: "Number (no commas)" },
+  { header: "Gross Salary", description: "Employee's annual gross salary amount", example: "2500000", required: true, format: "Annual amount in Naira (no commas)" },
   
   // Bank Details
   { header: "Bank Name", description: "Employee's bank name", example: "GT Bank", required: false, allowedValues: ALLOWED_VALUES.bankNames },
@@ -84,7 +84,7 @@ export const csvTemplateFields: CSVTemplateField[] = [
   { header: "Pension PIN", description: "Pension fund PIN", example: "PEN123456789", required: false },
   { header: "NHF Number", description: "National Housing Fund number", example: "NHF123456789", required: false },
   { header: "BVN", description: "Bank Verification Number", example: "222300303393", required: false, format: "11 digits" },
-  { header: "Vacation Days (7-30 days)", description: "Annual vacation days entitlement (7-30)", example: "23", required: false, format: "Number between 7-30" }
+  { header: "Vacation Days (7-18 days)", description: "Annual vacation days entitlement (7-18)", example: "18", required: false, format: "Number between 7-18" }
 ];
 
 // Generate CSV template content with instructions

@@ -742,7 +742,7 @@ export default function Attendance() {
       const daysDiff = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1
       
       // Check leave balance
-      const availableDays = selectedEmp?.vacation_days || 25
+      const availableDays = selectedEmp?.vacation_days || 18
       const usedDays = 0
       
       if (daysDiff > availableDays - usedDays) {
@@ -821,10 +821,11 @@ export default function Attendance() {
         const errCode = dbError?.data?.error || (errorMessage === 'LEAVE_LIMIT_REACHED' ? 'LEAVE_LIMIT_REACHED' : null);
         if (errCode === 'LEAVE_LIMIT_REACHED') {
           const used = dbError?.data?.used ?? '?';
-          const limit = dbError?.data?.limit ?? 20;
+          const limit = dbError?.data?.limit ?? 18;
           toast({
             title: "Leave Quota Exceeded",
-            description: `You have used ${used} of ${limit} days this year.`,
+            // Backend message also counts requests still awaiting approval.
+            description: dbError?.data?.message || `You have used ${used} of ${limit} days this year.`,
             variant: "destructive",
           });
           return;
@@ -975,10 +976,10 @@ export default function Attendance() {
         // Requirement 1: leave cap reached at approval
         if (dbError?.data?.error === 'LEAVE_LIMIT_REACHED' || dbError?.message === 'LEAVE_LIMIT_REACHED') {
           const used = dbError?.data?.used ?? '?';
-          const limit = dbError?.data?.limit ?? 20;
+          const limit = dbError?.data?.limit ?? 18;
           toast({
             title: "Cannot Approve",
-            description: `Employee has reached annual leave limit (${used}/${limit}).`,
+            description: dbError?.data?.message || `Employee has reached annual leave limit (${used}/${limit}).`,
             variant: "destructive"
           });
           return;
@@ -1248,7 +1249,7 @@ export default function Attendance() {
                         <div className="text-sm">
                           <div className="flex justify-between">
                             <span>Annual Leave:</span>
-                            <span>{selectedEmp.vacation_days || 25} days</span>
+                            <span>{selectedEmp.vacation_days || 18} days</span>
                           </div>
                           <div className="flex justify-between">
                             <span>Remaining:</span>

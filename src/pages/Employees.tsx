@@ -84,6 +84,9 @@ function employeeFullName(emp: { first_name?: string; last_name?: string }) {
 }
 
 // Put near top of file
+// Mirrors the backend's AnnualGrossSalaryNgn rule.
+const MIN_ANNUAL_GROSS_SALARY = 12;
+
 const VALID_SYSTEM_ROLES = new Set([
   "executive",
   "hr_manager",
@@ -104,6 +107,8 @@ export default function Employees() {
   const [filterStartDate, setFilterStartDate] = useState("");
   const [filterStartDateTo, setFilterStartDateTo] = useState("");
   const [filterStaffId, setFilterStaffId] = useState<"all" | "assigned" | "unassigned">("all");
+  const [showResigned, setShowResigned] = useState(false);
+  const [resignedEmployees, setResignedEmployees] = useState<Employee[]>([]);
   const [listPage, setListPage] = useState(1);
   const [staffIdFieldError, setStaffIdFieldError] = useState<string | null>(null);
   const [editStaffIdFieldError, setEditStaffIdFieldError] = useState<string | null>(null);
@@ -445,8 +450,14 @@ export default function Employees() {
   const fetchEmployees = async () => {
     try {
       setIsLoading(true);
-      const data = await apiService.getEmployees();
+      // The default list excludes resigned staff, who are still needed for the
+      // "Resigned" view and because their employee codes stay reserved.
+      const [data, resigned] = await Promise.all([
+        apiService.getEmployees(),
+        apiService.getEmployeesFiltered({ status: "resigned" }).catch(() => null),
+      ]);
       setEmployeeList(data);
+      setResignedEmployees(Array.isArray(resigned) ? resigned : resigned?.data ?? []);
     } catch (error) {
       console.error("Failed to fetch employees:", error);
       toast({
@@ -464,7 +475,7 @@ export default function Employees() {
     fetchEmployees();
   }, []);
 
-  const filteredEmployees = employeeList.filter((employee) => {
+  const filteredEmployees = (showResigned ? resignedEmployees : employeeList).filter((employee) => {
     const q = searchTerm.toLowerCase();
     const staffIdVal = staffIdFromEmployee(employee)?.toLowerCase() || "";
     const matchesSearch =
@@ -522,7 +533,7 @@ export default function Employees() {
 
   useEffect(() => {
     setListPage(1);
-  }, [searchTerm, filterLocation, filterDepartment, filterEmploymentType, filterStartDate, filterStartDateTo, filterStaffId]);
+  }, [searchTerm, filterLocation, filterDepartment, filterEmploymentType, filterStartDate, filterStartDateTo, filterStaffId, showResigned]);
 
   // Standard work locations for filter dropdown (Item 8)
   // Use official departments list instead of unique values from employees
@@ -653,6 +664,8 @@ export default function Employees() {
       if (!newEmployee.workLocation.trim()) errors.workLocation = true;
       if (!newEmployee.hireDate) errors.hireDate = true;
       if (!newEmployee.probationPeriod.trim()) errors.probationPeriod = true;
+    } else if (tab === "financial") {
+      if (!(Number(newEmployee.grossSalary) >= MIN_ANNUAL_GROSS_SALARY)) errors.grossSalary = true;
     } else if (tab === "government") {
       if (!newEmployee.nationalId.trim()) errors.nationalId = true;
       // Passport Number is now optional
@@ -813,7 +826,8 @@ export default function Employees() {
             work_location: getField(["Work Location"]),
             probation_period: getField(["Probation Period (in months)", "Probation Period"]),
             confirmation_date: convertDateFormat(getField(["Confirmation Date"])),
-            vacation_days: parseInt(getField(["Vacation Days (7-30 days)", "Vacation Days"]) || "20") || 20,
+            // Old templates used the "(7-30 days)" header; annual leave is now 7–18 days.
+            vacation_days: parseInt(getField(["Vacation Days (7-18 days)", "Vacation Days (7-30 days)", "Vacation Days"]) || "18") || 18,
 
             // Emergency contact
             emergency_contact: getField(["Emergency Contact Name"]),
@@ -850,6 +864,7 @@ export default function Employees() {
           if (!employeeData.last_name) missingFields.push('last_name');
           if (!employeeData.email) missingFields.push('email');
           if (!employeeData.job_title) missingFields.push('job_title');
+          if (!employeeData.gross_salary) missingFields.push('gross_salary');
           
           console.log("📋 Mapped employeeData being sent:", JSON.stringify(employeeData, null, 2));
           
@@ -914,18 +929,16 @@ export default function Employees() {
   };
   const handleAddEmployee = async () => {
     // Validate all required fields before adding
-    const allTabs = ["personal", "job", "government"];
-    let hasErrors = false;
-    for (const tab of allTabs) {
-      if (!validateRequiredFields(tab)) {
-        hasErrors = true;
-        break;
-      }
-    }
-    if (hasErrors) {
+    const allTabs = ["personal", "job", "financial", "government"];
+    const invalidTab = allTabs.find((tab) => !validateRequiredFields(tab));
+    if (invalidTab) {
+      setCurrentTab(invalidTab);
       toast({
         title: "Required Fields Missing",
-        description: "Please fill all required fields before adding the employee.",
+        description:
+          invalidTab === "financial"
+            ? "Please enter the employee's annual gross salary."
+            : `Please fill all required fields in the ${invalidTab} section before adding the employee.`,
         variant: "destructive",
       });
       return;
@@ -958,7 +971,7 @@ export default function Employees() {
         work_location: newEmployee.workLocation,
         probation_period: newEmployee.probationPeriod,
         confirmation_date: newEmployee.confirmationDate ? format(newEmployee.confirmationDate, "yyyy-MM-dd") : null,
-        vacation_days: newEmployee.vacationDays ? parseInt(newEmployee.vacationDays) : 20,
+        vacation_days: newEmployee.vacationDays ? parseInt(newEmployee.vacationDays) : 18,
 
         // Financial Information
         meal_allowance: newEmployee.mealAllowance ? parseInt(newEmployee.mealAllowance) : 0,
@@ -977,7 +990,7 @@ export default function Employees() {
         // Government ID Information
         employee_code:
           newEmployee.employeeId ||
-          (systemRole ? getNextEmployeeCode(systemRole) : `EMP${String(employeeList.length + 1).padStart(3, "0")}`),
+          (systemRole ? getNextEmployeeCode(systemRole) : `EMP${String(employeeList.length + resignedEmployees.length + 1).padStart(3, "0")}`),
         national_id: newEmployee.nationalId,
         passport_number: newEmployee.passportNumber,
         bvn: newEmployee.bvn,
@@ -1144,7 +1157,7 @@ export default function Employees() {
 
   const getNextEmployeeCode = (roleValue: string): string => {
     const prefix = ROLE_PREFIX[roleValue] || "EMP";
-    const existing = (employeeList || [])
+    const existing = [...(employeeList || []), ...resignedEmployees]
       .map((e) => e.employee_code)
       .filter(Boolean)
       .filter((code) =>
@@ -1443,7 +1456,7 @@ export default function Employees() {
         work_location: editEmployee.work_location,
         probation_period: editEmployee.probationPeriod,
         confirmation_date: editEmployee.confirmationDate ? format(editEmployee.confirmationDate, "yyyy-MM-dd") : null,
-        vacation_days: editEmployee.vacation_days ? parseInt(editEmployee.vacation_days) : 20,
+        vacation_days: editEmployee.vacation_days ? parseInt(editEmployee.vacation_days) : 18,
 
         // Emergency Contact
         emergency_contact_name: editEmployee.emergencyContact || null,
@@ -1565,7 +1578,7 @@ export default function Employees() {
   const handleResignEmployee = async (employee: Employee) => {
     if (
       window.confirm(
-        `Are you sure you want to resign ${employee.first_name} ${employee.last_name}? This will move them to the former employees archive.`,
+        `Are you sure you want to resign ${employee.first_name} ${employee.last_name}? They will lose login access and leave the active employee list. Their records will be kept.`,
       )
     ) {
       try {
@@ -1578,18 +1591,17 @@ export default function Employees() {
         // Call the API to resign the employee
         await apiService.resignEmployee(employee.id!, resignationData);
 
-        // Remove from local state
-        setEmployeeList((prev) => prev.filter((emp) => emp.id !== employee.id));
+        await fetchEmployees();
 
         toast({
           title: "Employee Resigned",
-          description: `${employee.first_name} ${employee.last_name} has been resigned and moved to former employees archive.`,
+          description: `${employee.first_name} ${employee.last_name} has been resigned. Their records have been kept.`,
         });
       } catch (error) {
         console.error("Error resigning employee:", error);
         toast({
           title: "Resignation Failed",
-          description: "Failed to resign employee. Please try again.",
+          description: error instanceof Error ? error.message : "Failed to resign employee. Please try again.",
           variant: "destructive",
         });
       }
@@ -2546,7 +2558,7 @@ export default function Employees() {
                           <SelectContent className="bg-popover border shadow-lg">
                             {Array.from(
                               {
-                                length: 14,
+                                length: 12, // 7–18 days (annual leave maximum is 18)
                               },
                               (_, i) => i + 7,
                             ).map((days) => (
@@ -2577,6 +2589,7 @@ export default function Employees() {
                               })
                             }
                             placeholder="2,500,000.00"
+                            className={formErrors.grossSalary ? "border-destructive" : ""}
                           />
                           <p className="text-xs text-muted-foreground">Enter annual amount in Naira (₦). Monthly = Annual ÷ 12.</p>
                         </div>
@@ -2641,7 +2654,7 @@ export default function Employees() {
                           </p>
                         </div>
                       </>
-                    ) : newEmployee.employmentType === "Contract" ? (
+                    ) : newEmployee.employmentType ? (
                       <>
                         <div className="space-y-2">
                           <Label htmlFor="grossSalaryContract">Gross Salary (Annual) *</Label>
@@ -2657,6 +2670,7 @@ export default function Employees() {
                               })
                             }
                             placeholder="1,500,000.00"
+                            className={formErrors.grossSalary ? "border-destructive" : ""}
                           />
                           <p className="text-xs text-muted-foreground">Enter annual gross salary in Naira (₦).</p>
                         </div>
@@ -2850,21 +2864,6 @@ export default function Employees() {
 
                   <TabsContent value="government" className="space-y-4">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="employeeId">Employee ID</Label>
-                        <Input
-                          id="employeeId"
-                          value={newEmployee.employeeId}
-                          onChange={(e) =>
-                            setNewEmployee({
-                              ...newEmployee,
-                              employeeId: e.target.value,
-                            })
-                          }
-                          placeholder="Auto-generated if empty"
-                          disabled={!!systemRole} // Disable when system role is selected
-                        />
-                      </div>
                       {staffIdEditable && (
                         <div className="space-y-2">
                           <Label htmlFor="staffId">Staff ID</Label>
@@ -3190,7 +3189,7 @@ export default function Employees() {
                 <div className="relative flex-1 max-w-md">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Search by name, Employee ID, Staff ID, email..."
+                    placeholder="Search by name, Staff ID, email..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-10"
@@ -3242,6 +3241,21 @@ export default function Employees() {
                   </SelectContent>
                 </Select>
 
+                <RoleBasedComponent allowedRoles={["hr_manager", "corporate_hr"]}>
+                  <Select
+                    value={showResigned ? "resigned" : "current"}
+                    onValueChange={(v) => setShowResigned(v === "resigned")}
+                  >
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="Employees" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover border shadow-lg">
+                      <SelectItem value="current">Current employees</SelectItem>
+                      <SelectItem value="resigned">Resigned employees</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </RoleBasedComponent>
+
                 <Select
                   value={filterStaffId}
                   onValueChange={(v: "all" | "assigned" | "unassigned") => setFilterStaffId(v)}
@@ -3287,7 +3301,6 @@ export default function Employees() {
               <Table className="min-w-[960px] text-xs md:text-sm">
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-xs md:text-sm whitespace-nowrap">Employee ID</TableHead>
                     <TableHead className="text-xs md:text-sm whitespace-nowrap">Staff ID</TableHead>
                     <TableHead className="text-xs md:text-sm">Name</TableHead>
                     <TableHead className="hidden sm:table-cell text-xs md:text-sm">Email</TableHead>
@@ -3304,7 +3317,7 @@ export default function Employees() {
                 <TableBody>
                   {isLoading ? (
                     <TableRow>
-                      <TableCell colSpan={10} className="text-center py-8">
+                      <TableCell colSpan={9} className="text-center py-8">
                         <div className="flex items-center justify-center space-x-2">
                           <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
                           <span className="text-muted-foreground">Loading employees...</span>
@@ -3313,16 +3326,13 @@ export default function Employees() {
                     </TableRow>
                   ) : filteredEmployees.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                         No employees found matching your search criteria.
                       </TableCell>
                     </TableRow>
                   ) : (
                     pagedEmployees.map((employee) => (
                       <TableRow key={employee.id}>
-                        <TableCell className="font-medium whitespace-nowrap">
-                          {employee.employee_code || `EMP${employee.id?.toString().padStart(3, "0")}`}
-                        </TableCell>
                         <TableCell className="whitespace-nowrap">
                           {staffIdFromEmployee(employee) ? (
                             <span className="font-medium">{staffIdFromEmployee(employee)}</span>
@@ -3388,13 +3398,17 @@ export default function Employees() {
                                 <FileText className="mr-2 h-4 w-4" />
                                 Download Documents
                               </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => handleResignEmployee(employee)}
-                                className="text-destructive focus:text-destructive"
-                              >
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Resign Employee
-                              </DropdownMenuItem>
+                              {String(employee.employment_status || "").toLowerCase() !== "resigned" && (
+                                <RoleBasedComponent allowedRoles={["hr_manager", "corporate_hr"]}>
+                                  <DropdownMenuItem
+                                    onClick={() => handleResignEmployee(employee)}
+                                    className="text-destructive focus:text-destructive"
+                                  >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Resign Employee
+                                  </DropdownMenuItem>
+                                </RoleBasedComponent>
+                              )}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>
@@ -3523,12 +3537,6 @@ export default function Employees() {
 
                 <TabsContent value="job" className="space-y-6">
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium text-muted-foreground">Employee ID</Label>
-                      <p className="text-base font-medium">
-                        {selectedEmployee.employee_code || `EMP${selectedEmployee.id?.toString().padStart(3, "0")}`}
-                      </p>
-                    </div>
                     <div className="space-y-2">
                       <Label className="text-sm font-medium text-muted-foreground">Staff ID</Label>
                       <div className="flex items-center gap-2">
@@ -4402,7 +4410,7 @@ export default function Employees() {
                         <SelectValue placeholder="Select vacation days" />
                       </SelectTrigger>
                       <SelectContent className="bg-popover border shadow-lg">
-                        {Array.from({ length: 14 }, (_, i) => i + 7).map((days) => (
+                        {Array.from({ length: 12 }, (_, i) => i + 7).map((days) => ( // 7–18 days
                           <SelectItem key={days} value={days.toString()}>
                             {days} days
                           </SelectItem>
@@ -4429,6 +4437,7 @@ export default function Employees() {
                             })
                           }
                           placeholder="2,500,000.00"
+                          className={editFormErrors.gross_salary ? "border-destructive" : ""}
                         />
                         <p className="text-xs text-muted-foreground">Enter annual amount in Naira (₦). Monthly = Annual ÷ 12.</p>
                       </div>
@@ -4481,7 +4490,7 @@ export default function Employees() {
                         <p className="text-xs text-muted-foreground">Automatically calculated as 31% of monthly gross (annual ÷ 12).</p>
                       </div>
                     </>
-                  ) : editEmployee.employment_type === "Contract" ? (
+                  ) : editEmployee.employment_type ? (
                     <div className="space-y-2">
                       <Label htmlFor="editGrossSalaryContract">Gross Salary (Annual) *</Label>
                       <Input
@@ -4496,6 +4505,7 @@ export default function Employees() {
                           })
                         }
                         placeholder="1,500,000.00"
+                        className={editFormErrors.gross_salary ? "border-destructive" : ""}
                       />
                       <p className="text-xs text-muted-foreground">Enter annual gross salary in Naira (₦).</p>
                     </div>
@@ -4640,20 +4650,6 @@ export default function Employees() {
 
                 <TabsContent value="government" className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="editEmployeeId">Employee ID</Label>
-                      <Input
-                        id="editEmployeeId"
-                        value={editEmployee.employeeId || ""}
-                        onChange={(e) =>
-                          setEditEmployee({
-                            ...editEmployee,
-                            employeeId: e.target.value,
-                          })
-                        }
-                        disabled
-                      />
-                    </div>
                     {staffIdEditable && (
                       <div className="space-y-2">
                         <Label htmlFor="editStaffId">Staff ID</Label>

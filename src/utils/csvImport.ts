@@ -164,7 +164,7 @@ const mapCSVFields = (csvData: any): EmployeeData | null => {
     status: mappedData.status || 'Active',
     joinDate: mappedData.joinDate || new Date().toISOString().split('T')[0],
     phone: mappedData.phone || '',
-    vacationDays: parseInt(mappedData.vacationDays) || 25,
+    vacationDays: parseInt(mappedData.vacationDays) || 18,
     employmentType: mappedData.employmentType || 'FTE'
   };
 };

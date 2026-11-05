@@ -36,6 +36,7 @@ function statusBadge(status: string) {
   const s = (status || "pending").toLowerCase();
   if (s === "approved") return <Badge className="bg-success/10 text-success border-success/20">Approved</Badge>;
   if (s === "rejected") return <Badge className="bg-destructive/10 text-destructive border-destructive/20">Rejected</Badge>;
+  if (s === "cancelled") return <Badge variant="secondary">Cancelled</Badge>;
   return <Badge className="bg-warning/10 text-warning border-warning/20">Awaiting HR Approval</Badge>;
 }
 

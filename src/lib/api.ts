@@ -14,6 +14,16 @@ const API_BASE_URL = API
 
 export { API_BASE_URL };
     
+export type EmployeeExitType = 'Resigned' | 'Terminated' | 'Retired';
+
+export interface EmployeeExitPreview {
+  own_pending_requests: number;
+  pending_approvals: number;
+  direct_reports: number;
+  open_reviews: number;
+  open_reviews_as_manager: number;
+}
+
 export interface Employee {
   id?: number;
   user_id?: number;
@@ -44,6 +54,13 @@ export interface Employee {
   probation_period?: string;
   confirmation_date?: string;
   employment_status?: string;
+  /** Last working day, once employment has ended. */
+  exited_at?: string | null;
+  /** Present for HR and executives while an exit is booked but has not taken effect. */
+  scheduled_exit?: {
+    exit_type: EmployeeExitType;
+    resignation_date: string;
+  } | null;
   vacation_days?: number;
   gross_salary?: number;
   financial_details?: {
@@ -391,7 +408,18 @@ class ApiService {
       const response = await fetch(url, config);
       
       console.log('🌍 Response Status:', response.status);
-      
+
+      // The session is no longer valid (expired, or employment has ended).
+      // A wrong password is also a 401, so the login request itself is excluded.
+      if (response.status === 401 && token && !endpoint.startsWith('/auth/login')) {
+        localStorage.removeItem('hris_user');
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('last_activity');
+        if (window.location.pathname !== '/login') {
+          window.location.assign('/login');
+        }
+      }
+
       if (!response.ok) {
         const errorText = await response.text();
         console.error('❌ API Error Response:', errorText);
@@ -469,6 +497,7 @@ class ApiService {
     page?: number;
     department?: string;
     status?: string;
+    former?: boolean;
     search?: string;
     hasStaffId?: boolean | 'true' | 'false' | 'assigned' | 'unassigned';
   }): Promise<any> {
@@ -478,6 +507,7 @@ class ApiService {
     if (params?.page) qp.append('page', String(params.page));
     if (params?.department) qp.append('department', params.department);
     if (params?.status) qp.append('status', params.status);
+    if (params?.former) qp.append('former', '1');
     if (params?.search) qp.append('search', params.search);
     if (params?.hasStaffId !== undefined && params?.hasStaffId !== null) {
       qp.append('hasStaffId', String(params.hasStaffId));
@@ -592,12 +622,40 @@ class ApiService {
     //});
   //}
 
-  // Resign an employee
-  async resignEmployee(id: number, resignationData: any): Promise<{ message: string }> {
-    return this.request<{ message: string }>(`/employees-full/${id}/resign`, {
+  // What HR should know before confirming an exit
+  async getEmployeeExitPreview(id: number): Promise<EmployeeExitPreview> {
+    return this.request<EmployeeExitPreview>(`/employees-full/${id}/exit-preview`);
+  }
+
+  // End employment now, or schedule it for the end of the last working day
+  async startEmployeeExit(id: number, data: {
+    exit_type: EmployeeExitType;
+    last_working_day: string;
+    reason?: string | null;
+    end_access_now?: boolean;
+    replacement_employee_id?: number | null;
+  }): Promise<{ message: string; exit_state: 'scheduled' | 'completed' }> {
+    return this.request(`/employees-full/${id}/exit`, {
       method: 'POST',
-      body: JSON.stringify(resignationData),
+      body: JSON.stringify(data),
     });
+  }
+
+  // Cancel an exit that has not taken effect yet
+  async cancelEmployeeExit(id: number): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/employees-full/${id}/exit`, { method: 'DELETE' });
+  }
+
+  // Current staff plus anyone still due a final pay for this period (YYYY-MM)
+  async getEmployeesForPayPeriod(payPeriod: string): Promise<Employee[]> {
+    const current = await this.getEmployees();
+    const former = await this.getEmployeesFiltered({ former: true }).catch(() => null);
+    const formerList: Employee[] = Array.isArray(former) ? former : former?.data ?? [];
+
+    return [
+      ...current,
+      ...formerList.filter((e) => !!e.exited_at && e.exited_at.slice(0, 7) >= payPeriod),
+    ];
   }
 
   // Get all former employees

@@ -34,6 +34,8 @@ import {
   CalendarIcon,
   FileText,
   Trash2,
+  UserX,
+  CalendarX,
   KeyRound,
   Copy,
 } from "lucide-react";
@@ -49,6 +51,7 @@ import { downloadCSVTemplate, downloadTemplateGuide } from "@/utils/csvTemplate"
 import { validateCSVData, CSVValidationResult, ValidatedRow, getRoleValue } from "@/utils/csvValidation";
 import { CSVValidationPreview } from "@/components/CSVValidationPreview";
 import { GrossSalaryImportDialog } from "@/components/GrossSalaryImportDialog";
+import { EmployeeExitDialog } from "@/components/EmployeeExitDialog";
 import { EmployeeDocumentsReadOnly } from "@/components/EmployeeDocumentsReadOnly";
 import AttendanceProfilePanel from "@/components/attendance/AttendanceProfilePanel";
 import Papa from "papaparse";
@@ -84,6 +87,9 @@ function employeeFullName(emp: { first_name?: string; last_name?: string }) {
 }
 
 // Put near top of file
+// Mirrors Employee::EXIT_STATUSES on the backend.
+const EXIT_STATUSES = ["resigned", "terminated", "retired"];
+
 // Mirrors the backend's AnnualGrossSalaryNgn rule.
 const MIN_ANNUAL_GROSS_SALARY = 12;
 
@@ -107,8 +113,9 @@ export default function Employees() {
   const [filterStartDate, setFilterStartDate] = useState("");
   const [filterStartDateTo, setFilterStartDateTo] = useState("");
   const [filterStaffId, setFilterStaffId] = useState<"all" | "assigned" | "unassigned">("all");
-  const [showResigned, setShowResigned] = useState(false);
-  const [resignedEmployees, setResignedEmployees] = useState<Employee[]>([]);
+  const [showFormer, setShowFormer] = useState(false);
+  const [formerEmployees, setFormerEmployees] = useState<Employee[]>([]);
+  const [exitTarget, setExitTarget] = useState<Employee | null>(null);
   const [listPage, setListPage] = useState(1);
   const [staffIdFieldError, setStaffIdFieldError] = useState<string | null>(null);
   const [editStaffIdFieldError, setEditStaffIdFieldError] = useState<string | null>(null);
@@ -450,14 +457,12 @@ export default function Employees() {
   const fetchEmployees = async () => {
     try {
       setIsLoading(true);
-      // The default list excludes resigned staff, who are still needed for the
-      // "Resigned" view and because their employee codes stay reserved.
-      const [data, resigned] = await Promise.all([
-        apiService.getEmployees(),
-        apiService.getEmployeesFiltered({ status: "resigned" }).catch(() => null),
-      ]);
+      // The default list excludes former staff, who are still needed for the
+      // "Former employees" view and because their employee codes stay reserved.
+      const data = await apiService.getEmployees();
+      const former = await apiService.getEmployeesFiltered({ former: true }).catch(() => null);
       setEmployeeList(data);
-      setResignedEmployees(Array.isArray(resigned) ? resigned : resigned?.data ?? []);
+      setFormerEmployees(Array.isArray(former) ? former : former?.data ?? []);
     } catch (error) {
       console.error("Failed to fetch employees:", error);
       toast({
@@ -475,7 +480,7 @@ export default function Employees() {
     fetchEmployees();
   }, []);
 
-  const filteredEmployees = (showResigned ? resignedEmployees : employeeList).filter((employee) => {
+  const filteredEmployees = (showFormer ? formerEmployees : employeeList).filter((employee) => {
     const q = searchTerm.toLowerCase();
     const staffIdVal = staffIdFromEmployee(employee)?.toLowerCase() || "";
     const matchesSearch =
@@ -533,7 +538,7 @@ export default function Employees() {
 
   useEffect(() => {
     setListPage(1);
-  }, [searchTerm, filterLocation, filterDepartment, filterEmploymentType, filterStartDate, filterStartDateTo, filterStaffId, showResigned]);
+  }, [searchTerm, filterLocation, filterDepartment, filterEmploymentType, filterStartDate, filterStartDateTo, filterStaffId, showFormer]);
 
   // Standard work locations for filter dropdown (Item 8)
   // Use official departments list instead of unique values from employees
@@ -990,7 +995,7 @@ export default function Employees() {
         // Government ID Information
         employee_code:
           newEmployee.employeeId ||
-          (systemRole ? getNextEmployeeCode(systemRole) : `EMP${String(employeeList.length + resignedEmployees.length + 1).padStart(3, "0")}`),
+          (systemRole ? getNextEmployeeCode(systemRole) : `EMP${String(employeeList.length + formerEmployees.length + 1).padStart(3, "0")}`),
         national_id: newEmployee.nationalId,
         passport_number: newEmployee.passportNumber,
         bvn: newEmployee.bvn,
@@ -1157,7 +1162,7 @@ export default function Employees() {
 
   const getNextEmployeeCode = (roleValue: string): string => {
     const prefix = ROLE_PREFIX[roleValue] || "EMP";
-    const existing = [...(employeeList || []), ...resignedEmployees]
+    const existing = [...(employeeList || []), ...formerEmployees]
       .map((e) => e.employee_code)
       .filter(Boolean)
       .filter((code) =>
@@ -1575,36 +1580,23 @@ export default function Employees() {
       });
     }
   };
-  const handleResignEmployee = async (employee: Employee) => {
-    if (
-      window.confirm(
-        `Are you sure you want to resign ${employee.first_name} ${employee.last_name}? They will lose login access and leave the active employee list. Their records will be kept.`,
-      )
-    ) {
-      try {
-        const resignationData = {
-          resignation_date: new Date().toISOString().split("T")[0],
-          resignation_reason: "Resigned via HRIS system",
-          retention_period_months: 12,
-        };
+  const handleCancelScheduledExit = async (employee: Employee) => {
+    if (!window.confirm(`Cancel the scheduled exit for ${employee.first_name} ${employee.last_name}?`)) return;
 
-        // Call the API to resign the employee
-        await apiService.resignEmployee(employee.id!, resignationData);
-
-        await fetchEmployees();
-
-        toast({
-          title: "Employee Resigned",
-          description: `${employee.first_name} ${employee.last_name} has been resigned. Their records have been kept.`,
-        });
-      } catch (error) {
-        console.error("Error resigning employee:", error);
-        toast({
-          title: "Resignation Failed",
-          description: error instanceof Error ? error.message : "Failed to resign employee. Please try again.",
-          variant: "destructive",
-        });
-      }
+    try {
+      await apiService.cancelEmployeeExit(employee.id!);
+      await fetchEmployees();
+      toast({
+        title: "Scheduled Exit Cancelled",
+        description: `${employee.first_name} ${employee.last_name} will stay on as a current employee.`,
+      });
+    } catch (error) {
+      console.error("Error cancelling scheduled exit:", error);
+      toast({
+        title: "Could Not Cancel Exit",
+        description: error instanceof Error ? error.message : "Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -1670,14 +1662,13 @@ export default function Employees() {
     // Employee basic info
     pdf.setFontSize(12);
     pdf.text(`Name: ${employee.firstName} ${employee.lastName}`, 20, 50);
-    pdf.text(`Employee ID: ${employee.id}`, 20, 60);
-    pdf.text(`Email: ${employee.email}`, 20, 70);
-    pdf.text(`Phone: ${employee.phone || employee.phoneNumber || "N/A"}`, 20, 80);
-    pdf.text(`Department: ${employee.department}`, 20, 90);
-    pdf.text(`Position: ${employee.position || employee.jobTitle}`, 20, 100);
-    pdf.text(`Employment Type: ${employee.employmentType}`, 20, 110);
-    pdf.text(`Status: ${employee.status || employee.employmentStatus}`, 20, 120);
-    pdf.text(`Hire Date: ${employee.joinDate || employee.hireDate || "N/A"}`, 20, 130);
+    pdf.text(`Email: ${employee.email}`, 20, 60);
+    pdf.text(`Phone: ${employee.phone || employee.phoneNumber || "N/A"}`, 20, 70);
+    pdf.text(`Department: ${employee.department}`, 20, 80);
+    pdf.text(`Position: ${employee.position || employee.jobTitle}`, 20, 90);
+    pdf.text(`Employment Type: ${employee.employmentType}`, 20, 100);
+    pdf.text(`Status: ${employee.status || employee.employmentStatus}`, 20, 110);
+    pdf.text(`Hire Date: ${employee.joinDate || employee.hireDate || "N/A"}`, 20, 120);
 
     // Financial info
     pdf.text(`Salary: ${employee.salary || employee.grossSalary || "N/A"}`, 20, 150);
@@ -3243,15 +3234,15 @@ export default function Employees() {
 
                 <RoleBasedComponent allowedRoles={["hr_manager", "corporate_hr"]}>
                   <Select
-                    value={showResigned ? "resigned" : "current"}
-                    onValueChange={(v) => setShowResigned(v === "resigned")}
+                    value={showFormer ? "former" : "current"}
+                    onValueChange={(v) => setShowFormer(v === "former")}
                   >
                     <SelectTrigger className="w-[180px]">
                       <SelectValue placeholder="Employees" />
                     </SelectTrigger>
                     <SelectContent className="bg-popover border shadow-lg">
                       <SelectItem value="current">Current employees</SelectItem>
-                      <SelectItem value="resigned">Resigned employees</SelectItem>
+                      <SelectItem value="former">Former employees</SelectItem>
                     </SelectContent>
                   </Select>
                 </RoleBasedComponent>
@@ -3358,6 +3349,16 @@ export default function Employees() {
                           <Badge variant={employee.employment_status === "Active" ? "default" : "secondary"}>
                             {employee.employment_status}
                           </Badge>
+                          {employee.scheduled_exit && (
+                            <div className="mt-1 whitespace-nowrap text-[11px] text-destructive">
+                              Leaving {String(employee.scheduled_exit.resignation_date).slice(0, 10)}
+                            </div>
+                          )}
+                          {employee.exited_at && (
+                            <div className="mt-1 whitespace-nowrap text-[11px] text-muted-foreground">
+                              Left {employee.exited_at.slice(0, 10)}
+                            </div>
+                          )}
                         </TableCell>
                         <TableCell className="hidden lg:table-cell">{employee.employment_type}</TableCell>
                         <TableCell className="hidden lg:table-cell">{employee.vacation_days || 0}</TableCell>
@@ -3398,14 +3399,21 @@ export default function Employees() {
                                 <FileText className="mr-2 h-4 w-4" />
                                 Download Documents
                               </DropdownMenuItem>
-                              {String(employee.employment_status || "").toLowerCase() !== "resigned" && (
+                              {!employee.exited_at &&
+                                !EXIT_STATUSES.includes(String(employee.employment_status || "").toLowerCase()) && (
                                 <RoleBasedComponent allowedRoles={["hr_manager", "corporate_hr"]}>
+                                  {employee.scheduled_exit && (
+                                    <DropdownMenuItem onClick={() => handleCancelScheduledExit(employee)}>
+                                      <CalendarX className="mr-2 h-4 w-4" />
+                                      Cancel Scheduled Exit
+                                    </DropdownMenuItem>
+                                  )}
                                   <DropdownMenuItem
-                                    onClick={() => handleResignEmployee(employee)}
+                                    onClick={() => setExitTarget(employee)}
                                     className="text-destructive focus:text-destructive"
                                   >
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    Resign Employee
+                                    <UserX className="mr-2 h-4 w-4" />
+                                    {employee.scheduled_exit ? "Change Exit Details" : "End Employment"}
                                   </DropdownMenuItem>
                                 </RoleBasedComponent>
                               )}
@@ -4975,6 +4983,13 @@ export default function Employees() {
         <GrossSalaryImportDialog
           open={showGrossSalaryImport}
           onOpenChange={setShowGrossSalaryImport}
+        />
+
+        <EmployeeExitDialog
+          employee={exitTarget}
+          candidates={employeeList}
+          onClose={() => setExitTarget(null)}
+          onCompleted={fetchEmployees}
         />
       </div>
     </ProtectedRoute>

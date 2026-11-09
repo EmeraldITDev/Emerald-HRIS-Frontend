@@ -32,6 +32,8 @@ export interface User {
   mustChangePassword?: boolean;
   grossSalaryImportEnabled?: boolean;
   canViewChairmanDashboard?: boolean;
+  /** Has direct reports — approvals are routed to them whatever their role */
+  isSupervisor?: boolean;
 }
 
 function mapApiUser(apiUser: any): User {
@@ -58,12 +60,13 @@ function mapApiUser(apiUser: any): User {
     mustChangePassword: apiUser.must_change_password,
     grossSalaryImportEnabled: !!apiUser.gross_salary_import_enabled,
     canViewChairmanDashboard: !!apiUser.can_view_chairman_dashboard,
+    isSupervisor: !!apiUser.is_supervisor,
   };
 }
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string) => Promise<{ success: boolean; requires2FA?: boolean; tempToken?: string }>;
+  login: (email: string, password: string) => Promise<{ success: boolean; requires2FA?: boolean; tempToken?: string; message?: string }>;
   verifyOtp: (tempToken: string, code: string) => Promise<boolean>;
   logout: () => void;
   hasPermission: (permission: string) => boolean;
@@ -245,7 +248,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
   }, [user, performLogout, resetInactivityTimer]);
 
-  const login = async (email: string, password: string): Promise<{ success: boolean; requires2FA?: boolean; tempToken?: string }> => {
+  const login = async (email: string, password: string): Promise<{ success: boolean; requires2FA?: boolean; tempToken?: string; message?: string }> => {
     try {
       const response = await apiService.login(email, password);
 
@@ -262,6 +265,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
     } catch (error) {
       console.error('Login failed:', error);
+      // A disabled account (e.g. resigned staff) gets an explanation, not "invalid credentials".
+      if ((error as { data?: { error?: string } })?.data?.error === 'ACCOUNT_DISABLED') {
+        return { success: false, message: (error as Error).message };
+      }
     }
 
     return { success: false };

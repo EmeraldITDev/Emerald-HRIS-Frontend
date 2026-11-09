@@ -50,7 +50,7 @@ const Login = () => {
           description: "Welcome to the HRIS platform!",
         });
       } else {
-        setError('Invalid email or password. Please try again.');
+        setError(res.message || 'Invalid email or password. Please try again.');
       }
   // ===== 2FA DISABLED TEMPORARILY =====
   // const handleVerify = async () => {

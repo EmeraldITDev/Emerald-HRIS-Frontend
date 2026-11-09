@@ -14,7 +14,7 @@ import { Check, X, ShieldCheck, UserCheck, Paperclip } from "lucide-react";
 import { apiService } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
-import { canHrApproveLeave } from "@/lib/permissions";
+import { canApproveAsLineManager, canHrApproveLeave } from "@/lib/permissions";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -30,7 +30,8 @@ type Stage = "manager" | "hr";
 export default function LeaveApprovals() {
   const { user } = useAuth();
   const isHR = canHrApproveLeave(user);
-  const isLineManager = user?.role === "line_manager";
+  // Anyone with direct reports gets the line-manager queue, not only the line_manager role.
+  const isLineManager = canApproveAsLineManager(user);
   const [searchParams, setSearchParams] = useSearchParams();
   const stageParam = searchParams.get("stage") as Stage | null;
   const focusId = searchParams.get("id");

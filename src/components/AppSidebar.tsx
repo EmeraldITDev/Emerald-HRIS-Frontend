@@ -54,6 +54,8 @@ type NavItem = {
   icon: any;
   permission: string;
   roles?: UserRole[];
+  /** Also shown to anyone with direct reports, whatever their role */
+  supervisorAccess?: boolean;
 }
 
 const navigationItems: NavItem[] = [
@@ -131,14 +133,16 @@ const navigationItems: NavItem[] = [
     url: "/approvals/leave",
     icon: ShieldCheck,
     permission: "approvals.manage",
-    roles: ['line_manager', 'hr_manager', 'corporate_hr', 'executive']
+    roles: ['line_manager', 'hr_manager', 'corporate_hr', 'executive'],
+    supervisorAccess: true,
   },
   {
     title: "Attendance Approvals",
     url: "/approvals/attendance",
     icon: ClipboardCheck,
     permission: "approvals.manage",
-    roles: ['line_manager', 'hr_manager', 'corporate_hr', 'executive']
+    roles: ['line_manager', 'hr_manager', 'corporate_hr', 'executive'],
+    supervisorAccess: true,
   },
   {
     title: "Org Attendance",
@@ -228,7 +232,8 @@ export function AppSidebar() {
       
       // Check role if roles array is specified
       const hasRequiredRole = !item.roles || item.roles.includes(user.role);
-      
+
+      if (item.supervisorAccess && user.isSupervisor) return true;
       return hasRequiredPermission && hasRequiredRole;
     });
     

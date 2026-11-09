@@ -58,7 +58,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
     payrollFrequency: "monthly",
     taxYear: String(new Date().getFullYear()),
     autoCalculateTaxes: true,
-    annualLeaveDays: 25,
+    annualLeaveDays: 18,
     sickLeaveDays: 10,
     carryForwardLeave: true,
     reviewFrequency: "annual",

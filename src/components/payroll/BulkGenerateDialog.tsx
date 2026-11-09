@@ -65,7 +65,7 @@ export function BulkGenerateDialog({ open, onOpenChange, initialPayPeriod }: Pro
     (async () => {
       try {
         setLoadingEmployees(true);
-        const list = await apiService.getEmployees();
+        const list = await apiService.getEmployeesForPayPeriod(payPeriod);
         if (!cancelled) setEmployees(Array.isArray(list) ? list : []);
       } catch (e) {
         console.error("Failed to load employees for bulk generate", e);
@@ -76,7 +76,7 @@ export function BulkGenerateDialog({ open, onOpenChange, initialPayPeriod }: Pro
     return () => {
       cancelled = true;
     };
-  }, [open]);
+  }, [open, payPeriod]);
 
   const maxMonth = currentMonthIso();
 
@@ -227,7 +227,7 @@ export function BulkGenerateDialog({ open, onOpenChange, initialPayPeriod }: Pro
               >
                 <RadioGroupItem id="mode-all" value="all" />
                 <Users className="h-4 w-4" />
-                <span className="text-sm">All active employees</span>
+                <span className="text-sm">All employees on payroll</span>
               </label>
               <label
                 htmlFor="mode-selected"
@@ -291,6 +291,11 @@ export function BulkGenerateDialog({ open, onOpenChange, initialPayPeriod }: Pro
                               <div className="flex-1 min-w-0">
                                 <div className="text-sm truncate">
                                   {e.first_name} {e.last_name}
+                                  {e.exited_at && (
+                                    <span className="ml-2 text-xs text-muted-foreground">
+                                      Final pay (last day {e.exited_at.slice(0, 10)})
+                                    </span>
+                                  )}
                                 </div>
                                 <div className="text-xs text-muted-foreground truncate">
                                   {e.employee_code || e.email}

@@ -217,18 +217,34 @@ const validateRow = (rowData: Record<string, string>, rowNumber: number): Valida
     }
   });
 
-  // Validate vacation days range (7-30)
+  // Gross salary is an annual amount; the backend rejects anything below 12
   Object.entries(rowData).forEach(([header, value]) => {
-    const normalizedHeader = normalizeHeader(header);
-    if (normalizedHeader.includes('vacation days') && value && value.trim() !== '') {
-      const days = parseInt(value.trim(), 10);
-      if (isNaN(days) || days < 7 || days > 30) {
+    if (normalizeHeader(header).includes('gross salary') && value && value.trim() !== '') {
+      const gross = Number(value.replace(/[₦,\s]/g, ''));
+      if (!Number.isFinite(gross) || gross < 12) {
         errors.push({
           row: rowNumber,
           column: header,
           value: value,
-          expectedValues: ['7-30'],
-          message: `Vacation days must be a number between 7 and 30`
+          expectedValues: ['12 or more'],
+          message: `Gross salary must be the annual amount in Naira`
+        });
+      }
+    }
+  });
+
+  // Validate vacation days range (7-18 — annual leave maximum is 18)
+  Object.entries(rowData).forEach(([header, value]) => {
+    const normalizedHeader = normalizeHeader(header);
+    if (normalizedHeader.includes('vacation days') && value && value.trim() !== '') {
+      const days = parseInt(value.trim(), 10);
+      if (isNaN(days) || days < 7 || days > 18) {
+        errors.push({
+          row: rowNumber,
+          column: header,
+          value: value,
+          expectedValues: ['7-18'],
+          message: `Vacation days must be a number between 7 and 18`
         });
       }
     }

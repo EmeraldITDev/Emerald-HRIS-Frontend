@@ -451,7 +451,7 @@ export default function Dashboard() {
         status: emp.employment_status || 'Active',
         joinDate: emp.hire_date || new Date().toISOString().split('T')[0],
         phone: emp.phone_number || '',
-        vacationDays: emp.vacation_days || 25,
+        vacationDays: emp.vacation_days || 18,
         employmentType: emp.employment_type || 'Full-time'
       }))
       
@@ -647,7 +647,7 @@ export default function Dashboard() {
         supervisor_name: "John Manager",
         work_location: "Lagos Office",
         probation_period: "3 months",
-        vacation_days: 25,
+        vacation_days: 18,
         meal_allowance: 50000,
         housing_allowance: 100000,
         transport_allowance: 30000,

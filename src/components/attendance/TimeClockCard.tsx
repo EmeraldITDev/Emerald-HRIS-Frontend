@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Clock, LogIn, LogOut, Timer, MapPin, Home, AlertTriangle } from "lucide-react";
+import { Clock, LogIn, LogOut, Timer, MapPin, Home, AlertTriangle, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -10,7 +10,10 @@ import apiService from "@/lib/api";
 import { cn } from "@/lib/utils";
 import {
   AttendanceStatusBadge,
+  deriveAttendanceLifecycle,
+  formatPunchAmPm,
   formatTimeWithZone,
+  needsLocationReview,
   parseAttendanceInstant,
   todayWAT,
   todayDayNameWAT,
@@ -369,14 +372,15 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
     setLocationIssue(null);
   }, []);
 
-  const [justClockedOut, setJustClockedOut] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Reset the local override once a new clock-in session starts.
-  useEffect(() => {
-    if (!todayStatus?.clock_in) setJustClockedOut(false);
-  }, [todayStatus?.clock_in]);
-
-  const clockedIn = !!todayStatus?.clock_in && !todayStatus?.clock_out && !justClockedOut;
+  const lifecycle = useMemo(() => deriveAttendanceLifecycle(todayStatus), [todayStatus]);
+  const locationReview = useMemo(() => needsLocationReview(todayStatus), [todayStatus]);
+  const hrWasNotified = Boolean(todayStatus?.hr_notified);
+  const clockedIn = lifecycle === "clocked_in" || lifecycle === "on_break";
+  const attendanceCompleted = lifecycle === "completed";
+  const clockInLabel = formatPunchAmPm(todayStatus?.clock_in ?? todayStatus?.clock_in_time);
+  const clockOutLabel = formatPunchAmPm(todayStatus?.clock_out ?? todayStatus?.clock_out_time);
 
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -474,39 +478,77 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
       }
 
       const res: any = await apiService.createAttendance(payload);
-      setJustClockedOut(false);
       setChoosingMode(false);
       setSelectedMode(null);
       resetLocationState();
       const record = (await refresh()) ?? res;
       const responseRecord = res?.data ?? res;
-      // Trust the server's final geofence decision for the toast — client soft
-      // checks can still differ slightly before the backend nearest-office pass.
+      const reason = String(res?.reason_code || "");
       const flagged =
+        Boolean(res?.hr_location_review) ||
         Boolean(record?.hr_location_review) ||
         Boolean(responseRecord?.hr_location_review) ||
-        ["Mismatch", "Outside Radius"].includes(String(record?.location_status ?? responseRecord?.location_status ?? "")) ||
-        res?.location_state === "outside_office_radius";
-      toast({
-        title: "Attendance confirmed",
-        description: flagged
-          ? "Attendance confirmed. Location looked off-site, so HR may review it — you don't need to retry."
-          : res?.message || res?.attendance_status || "Attendance recorded.",
-      });
+        ["Mismatch", "Inconclusive", "Outside Radius"].includes(
+          String(record?.location_status ?? responseRecord?.location_status ?? ""),
+        ) ||
+        ["outside_office_radius", "location_verification_inconclusive"].includes(
+          String(res?.location_state || ""),
+        );
+
+      if (reason === "ATTENDANCE_COMPLETED" || res?.attendance_state === "completed") {
+        toast({
+          title: "Attendance completed",
+          description: res?.message || "Your attendance for today is already complete.",
+        });
+      } else if (reason === "ALREADY_CLOCKED_IN" || res?.idempotent) {
+        toast({
+          title: "Already clocked in",
+          description:
+            res?.message ||
+            `Your attendance was already confirmed at ${formatTimeWithZone(record?.clock_in)}.`,
+        });
+      } else if (flagged) {
+        toast({
+          title: "Attendance confirmed",
+          description:
+            res?.message ||
+            "Your attendance has been recorded, but we couldn't verify your office location. HR may review the location details.",
+        });
+      } else {
+        toast({
+          title: "Attendance confirmed",
+          description: res?.message || "Attendance recorded.",
+        });
+      }
     } catch (e: any) {
       const msg = String(e?.data?.message || e?.message || "");
+      const reason = String(e?.data?.reason_code || "");
       // A previous attempt may have saved the punch before the response failed
       // (e.g. serialization error). Refresh so the UI matches the database.
-      if (/already working|already clocked/i.test(msg)) {
+      if (
+        reason === "ALREADY_CLOCKED_IN" ||
+        reason === "ATTENDANCE_COMPLETED" ||
+        /already working|already clocked|already complete|4\/4/i.test(msg)
+      ) {
         const record = await refresh();
-        if (record?.clock_in && !record?.clock_out) {
-          setJustClockedOut(false);
-          setChoosingMode(false);
-          setSelectedMode(null);
-          resetLocationState();
+        setChoosingMode(false);
+        setSelectedMode(null);
+        resetLocationState();
+        if (record?.clock_out) {
           toast({
-            title: "Already confirmed",
-            description: `Attendance already confirmed at ${formatTimeWithZone(record.clock_in)}.`,
+            title: "Attendance completed",
+            description:
+              e?.data?.message ||
+              `Your attendance for today is complete. Clock-in: ${formatPunchAmPm(record.clock_in)}. Clock-out: ${formatPunchAmPm(record.clock_out)}.`,
+          });
+          return;
+        }
+        if (record?.clock_in) {
+          toast({
+            title: "Already clocked in",
+            description:
+              e?.data?.message ||
+              `Your attendance was already confirmed at ${formatPunchAmPm(record.clock_in)} today.`,
           });
           return;
         }
@@ -536,49 +578,15 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
     setIsPunching(true);
     try {
       const payload = { employee_id: employeeId, date: todayWAT() };
-      let res: any;
-      try {
-        res = await apiService.clockOut(payload);
-      } catch (err: any) {
-        const msg = String(err?.data?.message || err?.message || "");
-        // An open break left over from earlier blocks clock-out — close it and retry.
-        if (/break/i.test(msg)) {
-          try {
-            await apiService.endBreak(payload);
-          } catch {
-            /* break may already be closed */
-          }
-          res = await apiService.clockOut(payload);
-        } else {
-          throw err;
-        }
-      }
-      let record: any = await refresh();
+      const res: any = await apiService.clockOut(payload);
+      const record: any = await refresh();
 
-      // Some backends toggle a break instead of closing the day — detect the
-      // half-open break, close it, and clock out for real.
-      const brokeInstead =
-        /break/i.test(String(res?.message || "")) ||
-        (record?.break_start && !record?.break_end && !record?.clock_out);
-      if (brokeInstead) {
-        try {
-          await apiService.endBreak(payload);
-        } catch {
-          /* break may already be closed */
-        }
-        try {
-          await apiService.clockOut(payload);
-        } catch {
-          /* surfaced below via the refreshed record */
-        }
-        record = await refresh();
-      }
-
-      if (record?.clock_out) {
-        setJustClockedOut(true);
+      if (record?.clock_out || res?.attendance_state === "completed") {
         toast({
-          title: "End-of-day confirmed",
-          description: `End-of-day confirmed at ${formatTimeWithZone(record.clock_out)}.`,
+          title: res?.idempotent ? "Attendance completed" : "End-of-day confirmed",
+          description:
+            res?.message ||
+            `End-of-day confirmed at ${formatTimeWithZone(record?.clock_out)}.`,
         });
       } else {
         toast({
@@ -588,15 +596,44 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
         });
       }
     } catch (e: any) {
+      const reason = String(e?.data?.reason_code || "");
+      const msg = String(e?.data?.message || e?.message || "");
+      if (reason === "ATTENDANCE_COMPLETED" || /already complete|4\/4/i.test(msg)) {
+        await refresh();
+        toast({
+          title: "Attendance completed",
+          description: msg || "Your attendance for today is already complete.",
+        });
+        return;
+      }
       toast({
         title: "End-of-day confirmation failed",
-        description: e?.data?.message || e?.message || "Please try again.",
+        description: msg || "Please try again.",
         variant: "destructive",
       });
     } finally {
       setIsPunching(false);
     }
   }, [employeeId, refresh, toast]);
+
+  const handleRefreshStatus = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      await refresh();
+      toast({
+        title: "Attendance status refreshed",
+        description: "Showing the latest attendance status from the server.",
+      });
+    } catch {
+      toast({
+        title: "Refresh failed",
+        description: "Could not refresh attendance status. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [refresh, toast]);
 
   return (
     <Card className={cn("border-border/50 shadow-sm bg-gradient-to-r from-primary/5 to-primary/10", className)}>
@@ -651,10 +688,15 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
               )}
             </div>
             {/* Flags raised by the backend on today's record */}
-            {(todayStatus?.hr_location_review || todayStatus?.location_status === "Outside Radius") && (
+            {locationReview && (
               <p className="flex items-start gap-2 text-xs text-warning">
                 <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                You confirmed attendance away from your office location — HR has been asked to review it.
+                {String(todayStatus?.location_status || "").toLowerCase() === "inconclusive"
+                  ? "Your attendance was recorded, but we couldn't verify your office location from GPS."
+                  : "Your attendance was recorded, but your location could not be verified against the office."}
+                {hrWasNotified
+                  ? " HR has been asked to review it."
+                  : " HR may review the location details."}
               </p>
             )}
             {todayStatus?.schedule_mismatch && (
@@ -663,13 +705,13 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
                 Today's clock-in does not match your expected work mode ({expectedMode}).
               </p>
             )}
-            {locationError && !clockedIn && (
+            {locationError && !clockedIn && !attendanceCompleted && (
               <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-xs">
                 <p className="font-medium text-destructive">{LOCATION_ERROR_COPY[locationError].title}</p>
                 <p className="mt-1 text-muted-foreground">{LOCATION_ERROR_COPY[locationError].body}</p>
               </div>
             )}
-            {locationIssue && !clockedIn && (
+            {locationIssue && !clockedIn && !attendanceCompleted && (
               <div className="rounded-md border border-warning/40 bg-warning/5 p-3 text-xs">
                 <p className="font-medium text-warning">Location looks off-site</p>
                 <p className="mt-1 text-muted-foreground">
@@ -683,8 +725,14 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
               </div>
             )}
           </div>
-          <div className="flex flex-wrap gap-2">
-            {!clockedIn ? (
+          <div className="flex flex-wrap gap-2 items-start">
+            {attendanceCompleted ? (
+              <Button disabled variant="secondary" className="gap-2">
+                <LogOut className="h-4 w-4" />
+                Attendance Completed
+                {clockInLabel && clockOutLabel ? ` — ${clockInLabel} to ${clockOutLabel}` : ""}
+              </Button>
+            ) : !clockedIn ? (
               !choosingMode ? (
                 <Button onClick={() => setChoosingMode(true)} disabled={!employeeId} className="gap-2">
                   <LogIn className="h-4 w-4" />
@@ -760,16 +808,33 @@ export function TimeClockCard({ employeeId, todayStatus, refresh, className }: T
                 </div>
               )
             ) : (
-              <Button
-                onClick={handleClockOut}
-                disabled={isPunching}
-                variant="destructive"
-                className="gap-2"
-              >
-                <LogOut className="h-4 w-4" />
-                End-of-Day Confirmation
-              </Button>
+              <div className="flex flex-col gap-2 items-stretch sm:items-end">
+                <Button disabled variant="secondary" className="gap-2">
+                  <LogIn className="h-4 w-4" />
+                  {clockInLabel ? `Clocked In — ${clockInLabel}` : "Clocked In"}
+                </Button>
+                <Button
+                  onClick={handleClockOut}
+                  disabled={isPunching}
+                  variant="destructive"
+                  className="gap-2"
+                >
+                  <LogOut className="h-4 w-4" />
+                  {isPunching ? "Confirming…" : "Confirm End of Day"}
+                </Button>
+              </div>
             )}
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="gap-1.5 text-muted-foreground"
+              disabled={isRefreshing || isPunching}
+              onClick={handleRefreshStatus}
+            >
+              <RefreshCw className={cn("h-3.5 w-3.5", isRefreshing && "animate-spin")} />
+              Refresh Attendance Status
+            </Button>
           </div>
         </div>
       </CardContent>

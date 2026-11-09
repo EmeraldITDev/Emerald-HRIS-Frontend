@@ -5,9 +5,15 @@ import { extractRecord, todayWAT } from "@/lib/attendanceUi";
 /** Normalise the /attendance/today status shape into a full attendance record. */
 function normalize(raw: any): any | null {
   if (!raw) return null;
-  if (raw.clock_in || raw.break_start || raw.id) return raw;
+  if (raw.clock_in || raw.break_start || raw.id || raw.attendance_state) {
+    return {
+      ...raw,
+      clock_in: raw.clock_in ?? raw.clock_in_time ?? null,
+      clock_out: raw.clock_out ?? raw.clock_out_time ?? null,
+    };
+  }
   if ("is_clocked_in" in raw || "clock_in_time" in raw) {
-    if (!raw.clock_in_time) return null;
+    if (!raw.clock_in_time && !raw.is_clocked_out) return null;
     return {
       ...raw,
       clock_in: raw.clock_in_time,
@@ -33,7 +39,11 @@ export function useAttendanceToday(enabled: boolean = true, employeeId?: number 
     try {
       let record: any = null;
 
-      // Full attendance row (includes break_start / break_end) when we know the employee.
+      // Prefer /attendance/today for machine-readable state codes, then merge
+      // any richer fields from the range endpoint when available.
+      const todayRes = await apiService.getAttendanceToday(employeeId ?? undefined);
+      record = normalize(extractRecord(todayRes));
+
       if (employeeId) {
         try {
           const day = todayWAT();
@@ -42,15 +52,20 @@ export function useAttendanceToday(enabled: boolean = true, employeeId?: number 
             end_date: day,
             employee_id: employeeId,
           });
-          record = extractRecord(res);
+          const ranged = extractRecord(res);
+          if (ranged) {
+            record = {
+              ...ranged,
+              ...record,
+              clock_in: record?.clock_in ?? ranged.clock_in ?? null,
+              clock_out: record?.clock_out ?? ranged.clock_out ?? null,
+              break_start: ranged.break_start ?? record?.break_start ?? null,
+              break_end: ranged.break_end ?? record?.break_end ?? null,
+            };
+          }
         } catch {
-          /* fall through to the status endpoint */
+          /* today endpoint alone is sufficient */
         }
-      }
-
-      if (!record?.clock_in) {
-        const res = await apiService.getAttendanceToday(employeeId ?? undefined);
-        record = normalize(extractRecord(res)) ?? record;
       }
 
       setTodayStatus(record ?? null);

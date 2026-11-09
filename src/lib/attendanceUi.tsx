@@ -147,9 +147,58 @@ export function locationStatusLabel(value?: string | null): string {
   const v = String(value || "").toLowerCase();
   if (v === "verified") return "Verified ✅";
   if (v === "mismatch") return "Mismatch 🔴";
+  if (v === "inconclusive") return "Location inconclusive ⚠️";
   if (v === "exempt") return "Exempt";
   if (v === "not required") return "Not Required";
   return value ? String(value) : "N/A";
+}
+
+/** Machine-readable attendance lifecycle from /attendance/today or punch responses. */
+export type AttendanceLifecycleState =
+  | "not_confirmed"
+  | "clocked_in"
+  | "on_break"
+  | "end_of_day_pending"
+  | "completed"
+  | "location_review_required"
+  | "location_verification_unavailable";
+
+export function deriveAttendanceLifecycle(record: any): AttendanceLifecycleState {
+  if (!record) return "not_confirmed";
+  const explicit = String(record.attendance_state || "").toLowerCase();
+  if (
+    explicit === "completed" ||
+    explicit === "clocked_in" ||
+    explicit === "on_break" ||
+    explicit === "not_confirmed" ||
+    explicit === "location_verification_unavailable"
+  ) {
+    return explicit as AttendanceLifecycleState;
+  }
+  if (record.clock_out || record.clock_out_time) return "completed";
+  if (record.break_start && !record.break_end) return "on_break";
+  if (record.clock_in || record.clock_in_time) return "clocked_in";
+  return "not_confirmed";
+}
+
+export function needsLocationReview(record: any): boolean {
+  if (!record) return false;
+  if (record.hr_location_review) return true;
+  const status = String(record.location_status || "").toLowerCase();
+  return status === "mismatch" || status === "inconclusive" || status === "outside radius";
+}
+
+/** 12-hour punch label for buttons, e.g. "9:50 AM". */
+export function formatPunchAmPm(value?: string | null): string {
+  const hhmm = formatTimeOnly(value);
+  if (!hhmm) return "";
+  const [hRaw, m] = hhmm.split(":");
+  let h = Number(hRaw);
+  if (!Number.isFinite(h)) return hhmm;
+  const suffix = h >= 12 ? "PM" : "AM";
+  h = h % 12;
+  if (h === 0) h = 12;
+  return `${h}:${m} ${suffix}`;
 }
 
 /** Today's date in the WAT (UTC+1) business timezone. */

@@ -19,6 +19,10 @@ import {
 } from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast"
 import apiService, { Employee } from "@/lib/api"
+import {
+  employeeEmailFieldError,
+  employeeMutationErrorMessage,
+} from "@/lib/employeeFormErrors"
 import { DEPARTMENTS } from "@/constants/departments"
 import { WorkLocationField } from "@/components/WorkLocationField"
 import { formatGrossSalaryDisplay, parseGrossSalaryInput } from "@/lib/grossSalaryFormat"
@@ -48,10 +52,13 @@ export function EmployeeEditDialog({ employee, open, onOpenChange, onSuccess }: 
   const [loadingDocs, setLoadingDocs] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<EmployeeDocument | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [emailError, setEmailError] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState("personal")
 
   useEffect(() => {
     if (employee) {
       setFormData(employee)
+      setEmailError(null)
       fetchDocuments()
     }
   }, [employee])
@@ -161,9 +168,14 @@ export function EmployeeEditDialog({ employee, open, onOpenChange, onSuccess }: 
       onOpenChange(false)
     } catch (error) {
       console.error('Failed to update employee:', error)
+      const emailMsg = employeeEmailFieldError(error)
+      if (emailMsg) {
+        setEmailError(emailMsg)
+        setActiveTab("personal")
+      }
       toast({
-        title: "Error",
-        description: "Failed to update employee record.",
+        title: emailMsg ? "Email conflict" : "Error",
+        description: employeeMutationErrorMessage(error, "Failed to update employee record."),
         variant: "destructive"
       })
     } finally {
@@ -172,6 +184,7 @@ export function EmployeeEditDialog({ employee, open, onOpenChange, onSuccess }: 
   }
 
   const handleChange = (field: keyof Employee, value: any) => {
+    if (field === "email") setEmailError(null)
     setFormData(prev => ({ ...prev, [field]: value }))
   }
 
@@ -241,7 +254,7 @@ export function EmployeeEditDialog({ employee, open, onOpenChange, onSuccess }: 
           <DialogTitle>Edit Employee Record</DialogTitle>
         </DialogHeader>
 
-        <Tabs defaultValue="personal" className="w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="personal">Personal</TabsTrigger>
             <TabsTrigger value="job">Job Info</TabsTrigger>
@@ -272,9 +285,13 @@ export function EmployeeEditDialog({ employee, open, onOpenChange, onSuccess }: 
                 <Input
                   id="email"
                   type="email"
+                  className={emailError ? "border-destructive" : undefined}
                   value={formData.email || ''}
                   onChange={(e) => handleChange('email', e.target.value)}
                 />
+                {emailError && (
+                  <p className="text-xs text-destructive mt-1">{emailError}</p>
+                )}
               </div>
               <div>
                 <Label htmlFor="phone">Phone Number</Label>

@@ -74,6 +74,10 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import { STANDARD_WORK_LOCATIONS, matchesWorkLocationFilter } from "@/constants/workLocations";
 import { formatGrossSalaryDisplay, parseGrossSalaryInput } from "@/lib/grossSalaryFormat";
 import {
+  employeeEmailFieldError,
+  employeeMutationErrorMessage,
+} from "@/lib/employeeFormErrors";
+import {
   canEditStaffId,
   formatStaffIdInput,
   isValidStaffIdOrEmpty,
@@ -119,6 +123,7 @@ export default function Employees() {
   const [listPage, setListPage] = useState(1);
   const [staffIdFieldError, setStaffIdFieldError] = useState<string | null>(null);
   const [editStaffIdFieldError, setEditStaffIdFieldError] = useState<string | null>(null);
+  const [editEmailFieldError, setEditEmailFieldError] = useState<string | null>(null);
   const [nextStaffIdLoading, setNextStaffIdLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -1531,6 +1536,7 @@ export default function Employees() {
         return;
       }
       setEditStaffIdFieldError(null);
+      setEditEmailFieldError(null);
 
       // Call the API to update the employee
       console.log("[UpdateEmployee] PUT payload:", {
@@ -1554,6 +1560,18 @@ export default function Employees() {
           }
           return;
         }
+        const emailMsg = employeeEmailFieldError(err);
+        if (emailMsg) {
+          setEditEmailFieldError(emailMsg);
+          setEditFormErrors((prev) => ({ ...prev, email: true }));
+          setEditActiveTab("personal");
+          toast({
+            title: "Email conflict",
+            description: emailMsg,
+            variant: "destructive",
+          });
+          return;
+        }
         throw err;
       }
       console.log("[UpdateEmployee] PUT response:", updateResp);
@@ -1571,11 +1589,12 @@ export default function Employees() {
 
       setShowEditEmployee(false);
       setEditSystemRole(""); // Reset edit system role
+      setEditEmailFieldError(null);
     } catch (error) {
       console.error("Error updating employee:", error);
       toast({
         title: "Error",
-        description: "Failed to update employee",
+        description: employeeMutationErrorMessage(error, "Failed to update employee"),
         variant: "destructive",
       });
     }
@@ -4007,14 +4026,24 @@ export default function Employees() {
                         id="editEmail"
                         type="email"
                         value={editEmployee.email || ""}
-                        onChange={(e) =>
+                        className={
+                          editEmailFieldError || editFormErrors.email
+                            ? "border-destructive"
+                            : ""
+                        }
+                        onChange={(e) => {
+                          setEditEmailFieldError(null);
+                          setEditFormErrors((prev) => ({ ...prev, email: false }));
                           setEditEmployee({
                             ...editEmployee,
                             email: e.target.value,
-                          })
-                        }
+                          });
+                        }}
                         placeholder="employee@company.com"
                       />
+                      {editEmailFieldError && (
+                        <p className="text-xs text-destructive">{editEmailFieldError}</p>
+                      )}
                     </div>
                   </div>
 

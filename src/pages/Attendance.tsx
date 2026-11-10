@@ -50,7 +50,8 @@ import WeeklyAttendanceCard from "@/components/attendance/WeeklyAttendanceCard"
 import MyWorkRequestsCard from "@/components/attendance/MyWorkRequestsCard"
 import ExceptionRequestForm from "@/components/attendance/ExceptionRequestForm"
 import WFHRequestForm from "@/components/attendance/WFHRequestForm"
-import { canSubmitException, canSubmitWFH } from "@/lib/permissions"
+import AttendanceReportPanel from "@/components/attendance/AttendanceReportPanel"
+import { canSubmitException, canSubmitWFH, canApproveAttendance } from "@/lib/permissions"
 import { SearchableSelect } from "@/components/ui/searchable-select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import EmployeeLeaveBalancesCard from "@/components/EmployeeLeaveBalancesCard"
@@ -429,32 +430,9 @@ export default function Attendance() {
     }
   }
 
-  const handleGenerateReport = async (reportType: string) => {
-    const today = new Date()
-    let startDate: Date
-    let endDate: Date = new Date()
-    
-    switch(reportType) {
-      case 'Daily':
-        startDate = new Date(today)
-        break
-      case 'Weekly':
-        startDate = new Date(today)
-        startDate.setDate(today.getDate() - 7)
-        break
-      case 'Monthly':
-        startDate = new Date(today.getFullYear(), today.getMonth(), 1)
-        break
-      case 'Yearly':
-        startDate = new Date(today.getFullYear(), 0, 1)
-        break
-      default:
-        startDate = new Date(today)
-    }
-
-    const startStr = format(startDate, 'yyyy-MM-dd')
-    const endStr = format(endDate, 'yyyy-MM-dd')
-    const year = startDate.getFullYear()
+  /** Daily punch snapshot from the org dashboard. Weekly/monthly/yearly use AttendanceReportPanel. */
+  const handleGenerateDailyReport = async () => {
+    const startStr = format(new Date(), 'yyyy-MM-dd')
 
     try {
       const csvCell = (v: any) => {
@@ -464,7 +442,7 @@ export default function Attendance() {
       const brandingRows = (title: string) => [
         ['Emerald Industrial Co.'],
         [title],
-        [`Period: ${startStr} to ${endStr}`],
+        [`Period: ${startStr}`],
         [`Generated: ${format(new Date(), 'yyyy-MM-dd HH:mm')}`],
         [],
       ].map((row) => row.map(csvCell).join(','))
@@ -488,183 +466,73 @@ export default function Attendance() {
         return ''
       }
 
-      // ===== Daily report: detailed per-employee records from the org dashboard =====
-      if (reportType === 'Daily') {
-        const dash = await apiService.getOrgAttendanceDashboard({ date: startStr })
-        const records: any[] = Array.isArray(dash?.records)
-          ? dash.records
-          : Array.isArray(dash?.data)
-            ? dash.data
-            : Array.isArray(dash)
-              ? dash
-              : []
+      const dash = await apiService.getOrgAttendanceDashboard({ date: startStr })
+      const records: any[] = Array.isArray(dash?.records)
+        ? dash.records
+        : Array.isArray(dash?.data)
+          ? dash.data
+          : Array.isArray(dash)
+            ? dash
+            : []
 
-        if (records.length === 0) {
-          toast({
-            title: 'No Data',
-            description: `No attendance records found for ${startStr}.`,
-          })
-          return
-        }
-
-        const headers = [
-          'Employee ID',
-          'Employee Name',
-          'Department',
-          'Work Arrangement',
-          'Work Location',
-          'Clock In',
-          'Clock Out',
-          'Attendance Status',
-          'Late',
-          'Lunch Start',
-          'Lunch End',
-          'Lunch Duration (mins)',
-          'Location Status',
-        ]
-
-        const rows = records.map((r: any) => [
-          r.employee_code || r.employee_display || r.employee_id || '',
-          r.employee_name || [r.first_name, r.last_name].filter(Boolean).join(' ') || '',
-          r.department || '',
-          r.work_arrangement || r.employee?.work_arrangement || '',
-          r.assigned_location || r.work_location || '',
-          r.clock_in || '',
-          r.clock_out || '',
-          r.attendance_status || 'Absent',
-          String(r.attendance_status || r.status || '').toLowerCase().includes('late') || r.is_late ? 'Yes' : 'No',
-          r.lunch_start || '',
-          r.lunch_end || '',
-          lunchMinutes(r),
-          r.location_status || '',
-        ])
-
-        downloadCsv(
-          [
-            ...brandingRows('Daily Attendance Report'),
-            headers.map(csvCell).join(','),
-            ...rows.map((row: any[]) => row.map(csvCell).join(',')),
-          ],
-          `attendance_daily_${startStr}.csv`
-        )
-
+      if (records.length === 0) {
         toast({
-          title: 'Report Downloaded',
-          description: `Daily attendance report for ${startStr} has been downloaded.`,
+          title: 'No Data',
+          description: `No attendance records found for ${startStr}.`,
         })
         return
       }
 
-      // Fetch reports from backend so they are based on real database data
-      const [attendanceReport, leaveReport] = await Promise.all([
-        apiService.getAttendanceReport(startStr, endStr),
-        apiService.getLeaveReport(year),
+      const headers = [
+        'Employee ID',
+        'Employee Name',
+        'Department',
+        'Work Arrangement',
+        'Work Location',
+        'Clock In',
+        'Clock Out',
+        'Attendance Status',
+        'Late',
+        'Lunch Start',
+        'Lunch End',
+        'Lunch Duration (mins)',
+        'Location Status',
+      ]
+
+      const rows = records.map((r: any) => [
+        r.employee_code || r.employee_display || r.employee_id || '',
+        r.employee_name || [r.first_name, r.last_name].filter(Boolean).join(' ') || '',
+        r.department || '',
+        r.work_arrangement || r.employee?.work_arrangement || '',
+        r.assigned_location || r.work_location || '',
+        r.clock_in || '',
+        r.clock_out || '',
+        r.attendance_status || 'Absent',
+        String(r.attendance_status || r.status || '').toLowerCase().includes('late') || r.is_late ? 'Yes' : 'No',
+        r.lunch_start || '',
+        r.lunch_end || '',
+        lunchMinutes(r),
+        r.location_status || '',
       ])
 
-      // ===== Attendance report (by employee summary) =====
-      const attendanceByEmployee = Array.isArray(attendanceReport?.by_employee)
-        ? attendanceReport.by_employee
-        : []
+      downloadCsv(
+        [
+          ...brandingRows('Daily Attendance Report'),
+          headers.map(csvCell).join(','),
+          ...rows.map((row: any[]) => row.map(csvCell).join(',')),
+        ],
+        `attendance_daily_${startStr}.csv`
+      )
 
-      if (attendanceByEmployee.length > 0) {
-        const attendanceHeaders = [
-          'Employee ID',
-          'Employee Name',
-          'Department',
-          'Days Present',
-          'Days Absent',
-          'Late Arrivals',
-          'WFH Days',
-          'On-site Days',
-          'Total Hours Worked',
-          'Attendance Rate (%)',
-          'Period Start',
-          'Period End',
-          'Total Days in Period'
-        ]
-
-        const attendanceRows = attendanceByEmployee.map((item: any) => [
-          item.employee_code || 'N/A',
-          item.employee_name || 'N/A',
-          item.department || 'N/A',
-          item.total_present ?? 0,
-          item.total_absent ?? 0,
-          item.total_late ?? 0,
-          item.total_wfh_days ?? item.wfh_days ?? '',
-          item.total_onsite_days ?? item.onsite_days ?? '',
-          item.total_hours_worked ?? item.total_hours ?? '',
-          item.attendance_rate ?? 0,
-          attendanceReport?.period?.start || startStr,
-          attendanceReport?.period?.end || endStr,
-          attendanceReport?.period?.total_days ?? ''
-        ])
-
-        downloadCsv(
-          [
-            ...brandingRows(`${reportType} Attendance Report`),
-            attendanceHeaders.map(csvCell).join(','),
-            ...attendanceRows.map((row: any[]) => row.map(csvCell).join(','))
-          ],
-          `attendance_${reportType.toLowerCase()}_${startStr}_${endStr}.csv`
-        )
-      }
-
-      // ===== Leave report (request-level data) =====
-      const leaveRequestsReport = Array.isArray(leaveReport?.requests)
-        ? leaveReport.requests
-        : []
-
-      if (leaveRequestsReport.length > 0) {
-        const leaveHeaders = [
-          'Employee ID',
-          'Employee Name',
-          'Department',
-          'Leave Type',
-          'Start Date',
-          'End Date',
-          'Duration (days)',
-          'Status',
-          'Year'
-        ]
-
-        const leaveRows = leaveRequestsReport.map((req: any) => [
-          req.employee_code || 'N/A',
-          req.employee_name || 'N/A',
-          req.department || 'N/A',
-          req.leave_type || 'N/A',
-          req.start_date || 'N/A',
-          req.end_date || 'N/A',
-          req.days_requested ?? 'N/A',
-          (req.status || 'N/A').toString().toUpperCase(),
-          leaveReport?.year ?? year
-        ])
-
-        downloadCsv(
-          [
-            ...brandingRows(`${reportType} Leave Report`),
-            leaveHeaders.map(csvCell).join(','),
-            ...leaveRows.map((row: any[]) => row.map(csvCell).join(','))
-          ],
-          `leave_${reportType.toLowerCase()}_${year}.csv`
-        )
-      }
-
-      if (attendanceByEmployee.length === 0 && leaveRequestsReport.length === 0) {
-        toast({
-          title: "No Data",
-          description: `No attendance or leave records found in the selected ${reportType.toLowerCase()} period.`,
-        })
-      } else {
-        toast({
-          title: "Reports Downloaded",
-          description: `${reportType} attendance and leave reports have been downloaded successfully from live data.`,
-        })
-      }
+      toast({
+        title: 'Report Downloaded',
+        description: `Daily attendance report for ${startStr} has been downloaded.`,
+      })
     } catch (error) {
-      console.error('Failed to generate reports:', error)
+      console.error('Failed to generate daily report:', error)
       toast({
         title: "Error",
-        description: "Failed to generate attendance/leave reports. Please try again.",
+        description: "Failed to generate the daily attendance report. Please try again.",
         variant: "destructive"
       })
     }
@@ -1015,25 +883,17 @@ export default function Attendance() {
         </div>
         <RoleBasedComponent allowedRoles={['executive', 'hr_manager', 'corporate_hr']}>
           <div className="flex flex-wrap gap-2">
-            <Button variant="outline" onClick={() => handleGenerateReport('Daily')}>
+            <Button variant="outline" onClick={handleGenerateDailyReport}>
               <Download className="mr-2 h-4 w-4" />
               Daily Report
-            </Button>
-            <Button variant="outline" onClick={() => handleGenerateReport('Weekly')}>
-              <FileText className="mr-2 h-4 w-4" />
-              Weekly Report
-            </Button>
-            <Button variant="outline" onClick={() => handleGenerateReport('Monthly')}>
-              <Calendar className="mr-2 h-4 w-4" />
-              Monthly Report
-            </Button>
-            <Button variant="outline" onClick={() => handleGenerateReport('Yearly')}>
-              <Users className="mr-2 h-4 w-4" />
-              Yearly Report
             </Button>
           </div>
         </RoleBasedComponent>
       </div>
+
+      {canApproveAttendance(user) && (
+        <AttendanceReportPanel />
+      )}
 
       <Tabs defaultValue="my-attendance" className="space-y-6">
         <TabsList>

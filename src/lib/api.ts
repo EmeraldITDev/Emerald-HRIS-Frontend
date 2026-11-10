@@ -1639,12 +1639,40 @@ class ApiService {
     return this.request<any>(`/reports/payroll${params}`);
   }
 
-  async getAttendanceReport(startDate?: string, endDate?: string): Promise<any> {
+  async getAttendanceReport(
+    startDate?: string,
+    endDate?: string,
+    filters?: { department?: string; employee_id?: number | string },
+  ): Promise<any> {
     const params = new URLSearchParams();
     if (startDate) params.append('start_date', startDate);
     if (endDate) params.append('end_date', endDate);
+    if (filters?.department) params.append('department', filters.department);
+    if (filters?.employee_id != null) params.append('employee_id', String(filters.employee_id));
     const queryString = params.toString() ? `?${params.toString()}` : '';
     return this.request<any>(`/reports/attendance${queryString}`);
+  }
+
+  async exportAttendanceReportCsv(
+    startDate: string,
+    endDate: string,
+    filters?: { department?: string; employee_id?: number | string },
+  ): Promise<Blob> {
+    const params = new URLSearchParams({ start_date: startDate, end_date: endDate });
+    if (filters?.department) params.append('department', filters.department);
+    if (filters?.employee_id != null) params.append('employee_id', String(filters.employee_id));
+    return this.downloadBlob(`/reports/attendance/export.csv?${params.toString()}`);
+  }
+
+  async exportAttendanceReportPdf(
+    startDate: string,
+    endDate: string,
+    filters?: { department?: string; employee_id?: number | string },
+  ): Promise<Blob> {
+    const params = new URLSearchParams({ start_date: startDate, end_date: endDate });
+    if (filters?.department) params.append('department', filters.department);
+    if (filters?.employee_id != null) params.append('employee_id', String(filters.employee_id));
+    return this.downloadBlob(`/reports/attendance/export.pdf?${params.toString()}`);
   }
 
   async getLeaveReport(year?: number): Promise<any> {

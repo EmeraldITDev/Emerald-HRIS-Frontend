@@ -250,7 +250,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const login = async (email: string, password: string): Promise<{ success: boolean; requires2FA?: boolean; tempToken?: string; message?: string }> => {
     try {
-      const response = await apiService.login(email, password);
+      const response = await apiService.login(email.trim(), password);
 
       if ((response as any).requires_2fa) {
         return { success: false, requires2FA: true, tempToken: (response as any).temp_token };

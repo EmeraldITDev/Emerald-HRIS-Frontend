@@ -6,6 +6,7 @@ export const DEPARTMENTS = [
   "Executive",
   "Human Resources",
   "Technical Operations",
+  "Technical Commercial",
   "Business Development",
   "Finance",
   "IT",

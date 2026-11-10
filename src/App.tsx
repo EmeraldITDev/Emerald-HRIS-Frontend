@@ -33,6 +33,7 @@ import PayslipDetail from "./pages/PayslipDetail";
 import PayrollReview from "./pages/PayrollReview";
 import ManagerApprovals from "./pages/attendance/ManagerApprovals";
 import OrgAttendanceDashboard from "./pages/attendance/OrgAttendanceDashboard";
+import AttendanceReportsPage from "./pages/attendance/AttendanceReportsPage";
 import ExecutiveView from "./pages/ExecutiveView";
 import React, { useEffect, useState } from "react";
 import { getUsers } from "./api";
@@ -114,7 +115,10 @@ const AppContent = () => {
                   <Route path="/notifications" element={<Notifications />} />
                   <Route path="/approvals/leave" element={<LeaveApprovals />} />
                   <Route path="/approvals/attendance" element={<ManagerApprovals />} />
-                  <Route path="/attendance/org-dashboard" element={<OrgAttendanceDashboard />} />
+                  <Route path="/attendance/organization" element={<OrgAttendanceDashboard />} />
+                  <Route path="/attendance/org-dashboard" element={<Navigate to="/attendance/organization" replace />} />
+                  <Route path="/attendance/reports" element={<Navigate to="/attendance/reports/weekly" replace />} />
+                  <Route path="/attendance/reports/:preset" element={<AttendanceReportsPage />} />
                   <Route path="/payroll/my-payslips" element={<MyPayslips />} />
                   <Route path="/payroll/my-payslips/:period" element={<PayslipDetail />} />
                   <Route path="/payroll/review/:payPeriod" element={<PayrollReview />} />

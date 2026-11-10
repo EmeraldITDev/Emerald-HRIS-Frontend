@@ -27,6 +27,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { canApproveAttendance, canHrPayroll } from "@/lib/permissions";
 import apiService from "@/lib/api";
 import { extractRows } from "@/lib/attendanceUi";
+import { AttendanceApprovalsCard } from "@/components/AttendanceApprovalsCard";
 
 type Kind = "exception" | "wfh";
 
@@ -229,7 +230,7 @@ export default function ManagerApprovals() {
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-foreground">Attendance Approvals</h1>
           <p className="text-sm text-muted-foreground">
-            Review work exceptions and WFH requests from your team.
+            Review early clock-out, work exceptions, and WFH requests.
           </p>
         </div>
         <Button variant="outline" onClick={load} disabled={loading}>
@@ -237,6 +238,8 @@ export default function ManagerApprovals() {
           Refresh
         </Button>
       </div>
+
+      <AttendanceApprovalsCard />
 
       <Card className="border-border/50 shadow-sm">
         <CardHeader>

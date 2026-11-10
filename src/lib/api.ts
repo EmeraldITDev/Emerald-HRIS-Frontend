@@ -1675,6 +1675,17 @@ class ApiService {
     return this.downloadBlob(`/reports/attendance/export.pdf?${params.toString()}`);
   }
 
+  async exportAttendanceReportXlsx(
+    startDate: string,
+    endDate: string,
+    filters?: { department?: string; employee_id?: number | string },
+  ): Promise<Blob> {
+    const params = new URLSearchParams({ start_date: startDate, end_date: endDate });
+    if (filters?.department) params.append('department', filters.department);
+    if (filters?.employee_id != null) params.append('employee_id', String(filters.employee_id));
+    return this.downloadBlob(`/reports/attendance/export.xlsx?${params.toString()}`);
+  }
+
   async getLeaveReport(year?: number): Promise<any> {
     const params = year ? `?year=${year}` : '';
     return this.request<any>(`/reports/leave${params}`);

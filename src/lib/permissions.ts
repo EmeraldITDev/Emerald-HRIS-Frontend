@@ -44,12 +44,12 @@ export function canViewPayrollDrafts(
   return user.role === "line_manager";
 }
 
-/** Org-wide attendance dashboard: HR + executives only. */
+/** Organization Attendance: HR, executives, and line managers (scoped). */
 export function canViewOrgDashboard(
   user: (User & Record<string, any>) | null | undefined,
 ): boolean {
   if (!user) return false;
-  if (user.role === "executive") return true;
+  if (user.role === "executive" || user.role === "line_manager") return true;
   return canHrPayroll(user);
 }
 
@@ -71,6 +71,15 @@ export function canApproveAttendance(
   if (!user) return false;
   if (canApproveAsLineManager(user)) return true;
   return canViewOrgDashboard(user);
+}
+
+/** Period attendance reports (weekly/monthly/yearly/custom). */
+export function canViewAttendanceReports(
+  user: (User & Record<string, any>) | null | undefined,
+): boolean {
+  if (!user) return false;
+  if (canApproveAttendance(user)) return true;
+  return user.role === "general_employee" || user.role === "finance";
 }
 
 /** Every authenticated employee may request a work exception. */

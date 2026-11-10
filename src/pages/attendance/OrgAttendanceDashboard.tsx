@@ -256,10 +256,12 @@ export default function OrgAttendanceDashboard() {
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-foreground">
-            Org-Wide Attendance
+            Organization Attendance
           </h1>
           <p className="text-sm text-muted-foreground">
-            Every employee for {date} — including those who never clocked in.
+            {user?.role === "line_manager"
+              ? `Your team's attendance for ${date}.`
+              : `Staff attendance for ${date}, including employees who have not clocked in.`}
           </p>
         </div>
         <div className="flex gap-2">

@@ -43,7 +43,7 @@ export type DrillRequest = {
 
 const linkFor: Record<DrillRequest["kind"], string> = {
   employees: "/employees",
-  attendance: "/attendance/org-dashboard",
+  attendance: "/attendance/organization",
   leave: "/approvals/leave",
   payroll: "/payroll",
 };

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react"
+import { Link, Navigate, useSearchParams } from "react-router-dom"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -36,22 +37,14 @@ import { Textarea } from "@/components/ui/textarea"
 import { useAuth } from "@/contexts/AuthContext"
 import { RoleBasedComponent } from "@/components/RoleBasedComponent"
 import apiService, { Employee } from "@/lib/api"
-import {
-  AttendanceStatusBadge,
-  extractRows,
-  formatTimeWithZone,
-  locationStatusLabel,
-} from "@/lib/attendanceUi"
 
 import { LeaveBalanceCard } from "@/components/LeaveBalanceCard"
-import { AttendanceApprovalsCard } from "@/components/AttendanceApprovalsCard"
 import { MyAttendanceRequestsCard } from "@/components/MyAttendanceRequestsCard"
 import WeeklyAttendanceCard from "@/components/attendance/WeeklyAttendanceCard"
 import MyWorkRequestsCard from "@/components/attendance/MyWorkRequestsCard"
 import ExceptionRequestForm from "@/components/attendance/ExceptionRequestForm"
 import WFHRequestForm from "@/components/attendance/WFHRequestForm"
-import AttendanceReportPanel from "@/components/attendance/AttendanceReportPanel"
-import { canSubmitException, canSubmitWFH, canApproveAttendance } from "@/lib/permissions"
+import { canSubmitException, canSubmitWFH, canViewOrgDashboard } from "@/lib/permissions"
 import { SearchableSelect } from "@/components/ui/searchable-select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import EmployeeLeaveBalancesCard from "@/components/EmployeeLeaveBalancesCard"
@@ -128,6 +121,9 @@ export default function Attendance() {
   const [endDateOpen, setEndDateOpen] = useState(false)
   const { toast } = useToast()
   const { user } = useAuth()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const tabParam = searchParams.get("tab")
+  const activeTab = tabParam === "leave" ? "leave" : "my-attendance"
   const [employees, setEmployees] = useState<Employee[]>([])
   const [isLoadingEmployees, setIsLoadingEmployees] = useState(false)
   const [leaveRequests, setLeaveRequests] = useState<any[]>([])
@@ -140,95 +136,14 @@ export default function Attendance() {
   const [leaveFilterDepartment, setLeaveFilterDepartment] = useState<string>("all")
   const [leaveTypes, setLeaveTypes] = useState<any[]>([])
   const [isLoadingLeaveTypes, setIsLoadingLeaveTypes] = useState(false)
-  const [todayAttendance, setTodayAttendance] = useState<any[]>([]);
   const [selectedLeaveRequest, setSelectedLeaveRequest] = useState<any>(null);
   const [showLeaveDetailsDialog, setShowLeaveDetailsDialog] = useState(false);
   const [showApprovalDialog, setShowApprovalDialog] = useState(false);
   const [approvalAction, setApprovalAction] = useState<'approve' | 'reject'>('approve');
   const [approvalNotes, setApprovalNotes] = useState("");
   const [isSubmittingLeave, setIsSubmittingLeave] = useState(false);
-  const [showTodayAttendance, setShowTodayAttendance] = useState(true);
   const [currentEmployeeId, setCurrentEmployeeId] = useState<number | null>(null);
   const [workRequestsKey, setWorkRequestsKey] = useState(0);
-
-  // Load the org/team "Today's Attendance" table (managers & HR).
-  const loadTodayStatus = async () => {
-    if (!user) return;
-
-    try {
-      const todayStr = format(new Date(), 'yyyy-MM-dd');
-
-      // Prefer the org-dashboard payload — it is the same source the
-      // Organisation-Wide Attendance page uses and already carries employee
-      // name/code, department, work mode and location status.
-      try {
-        const orgRes: any = await apiService.getOrgAttendanceDashboard({ date: todayStr });
-        const payload: any = orgRes?.data ?? orgRes;
-        let orgRows = extractRows(payload?.rows ? payload.rows : orgRes);
-        if (orgRows.length > 0) {
-          if (user?.role === 'line_manager' && user?.department) {
-            orgRows = orgRows.filter((r: any) => r.department === user.department);
-          }
-          setTodayAttendance(orgRows);
-          return;
-        }
-      } catch (orgError) {
-        console.warn('Org dashboard unavailable, falling back to attendance list:', orgError);
-      }
-
-      const response = await apiService.getAttendance();
-      const today = format(new Date(), 'yyyy-MM-dd');
-      
-      // Handle paginated response from backend
-      // Backend returns: { success: true, data: { data: [...], current_page: 1, ... } }
-      let attendanceArray: any[] = [];
-       const res = response as any;
-       if (res && typeof res === 'object') {
-         if (Array.isArray(res)) {
-          // Direct array response
-           attendanceArray = res;
-         } else if (res.data) {
-          // Paginated response - extract the data array
-           attendanceArray = Array.isArray(res.data) 
-             ? res.data 
-             : (res.data.data || []);
-        }
-      }
-
-      // Load all today's attendance for display (already filtered by department from backend)
-      let allTodayRecords = attendanceArray.filter(
-        (record: any) => format(new Date(record.date), 'yyyy-MM-dd') === today
-      );
-      
-      // Additional frontend filtering for line managers (belt and suspenders)
-      if (user?.role === 'line_manager' && user?.department) {
-        allTodayRecords = allTodayRecords.filter(
-          (record: any) => record.employee?.department === user.department
-        );
-      }
-
-      // Normalise the legacy shape onto the org-dashboard field names.
-      setTodayAttendance(
-        allTodayRecords.map((r: any) => ({
-          ...r,
-          employee_name:
-            r.employee_name ||
-            [r.employee?.first_name, r.employee?.last_name].filter(Boolean).join(' '),
-          employee_code: r.employee_code || r.employee?.employee_code || r.employee_id,
-          department: r.department || r.employee?.department,
-          actual_mode: r.actual_mode || r.work_mode,
-          attendance_status: r.attendance_status || r.status,
-        }))
-      );
-    } catch (error) {
-      console.error('Failed to load attendance status:', error);
-    }
-  };
-
-  useEffect(() => {
-    loadTodayStatus();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, currentEmployeeId]);
 
   useEffect(() => {
     fetchEmployees()
@@ -872,6 +787,15 @@ export default function Attendance() {
     }
   }
 
+  if (tabParam === "organization" || tabParam === "approvals") {
+    return (
+      <Navigate
+        to={tabParam === "approvals" ? "/approvals/attendance" : "/attendance/organization"}
+        replace
+      />
+    )
+  }
+
   return (
     <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
@@ -891,17 +815,22 @@ export default function Attendance() {
         </RoleBasedComponent>
       </div>
 
-      {canApproveAttendance(user) && (
-        <AttendanceReportPanel />
-      )}
-
-      <Tabs defaultValue="my-attendance" className="space-y-6">
+      <Tabs
+        value={activeTab}
+        onValueChange={(value) => {
+          if (value === "organization") return;
+          setSearchParams(value === "my-attendance" ? {} : { tab: value });
+        }}
+        className="space-y-6"
+      >
         <TabsList>
           <TabsTrigger value="my-attendance">My Attendance</TabsTrigger>
           <TabsTrigger value="leave">Leave</TabsTrigger>
-          <RoleBasedComponent allowedRoles={['hr_manager', 'corporate_hr', 'executive', 'line_manager']}>
-            <TabsTrigger value="organization">Organization</TabsTrigger>
-          </RoleBasedComponent>
+          {canViewOrgDashboard(user) && (
+            <TabsTrigger value="organization" asChild>
+              <Link to="/attendance/organization">Organization Attendance</Link>
+            </TabsTrigger>
+          )}
         </TabsList>
 
       <TabsContent value="my-attendance" className="space-y-6">
@@ -927,79 +856,6 @@ export default function Attendance() {
 
       {/* Employee self-service: status of my submitted justifications */}
       <MyAttendanceRequestsCard employeeId={currentEmployeeId} />
-      </TabsContent>
-
-      <TabsContent value="organization" className="space-y-6">
-      {/* HR / Corporate HR: pending late clock-in & early clock-out approvals */}
-      <AttendanceApprovalsCard />
-
-      {/* Today's Attendance Section - Manager View */}
-      <RoleBasedComponent allowedRoles={['hr_manager', 'corporate_hr', 'executive', 'line_manager']}>
-        <Card className="border-border/50 shadow-sm mb-6">
-          <CardHeader 
-            className="cursor-pointer" 
-            onClick={() => setShowTodayAttendance(!showTodayAttendance)}
-          >
-            <CardTitle className="text-primary flex items-center justify-between">
-              <div className="flex items-center">
-                <Clock className="mr-2 h-5 w-5" />
-                {user?.role === 'line_manager' ? "Today's Attendance - My Team" : "Today's Attendance - All Staff"}
-              </div>
-              <ChevronDown className={`h-5 w-5 transition-transform ${showTodayAttendance ? 'rotate-180' : ''}`} />
-            </CardTitle>
-          </CardHeader>
-          {showTodayAttendance && (
-          <CardContent>
-            {todayAttendance.length > 0 ? (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Employee</TableHead>
-                      <TableHead>Employee ID</TableHead>
-                      <TableHead>Department</TableHead>
-                      <TableHead>Clock-In</TableHead>
-                      <TableHead>Clock-Out</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Work Mode</TableHead>
-                      <TableHead>Location Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {todayAttendance.map((record: any, i: number) => (
-                      <TableRow key={record.id ?? record.employee_id ?? i}>
-                        <TableCell className="font-medium text-sm">
-                          {record.employee_name ||
-                            [record.first_name, record.last_name].filter(Boolean).join(' ') ||
-                            `Employee #${record.employee_id}`}
-                        </TableCell>
-                        <TableCell className="text-sm">
-                          {record.employee_code || record.employee_display || record.employee_id || '—'}
-                        </TableCell>
-                        <TableCell className="text-sm">{record.department || '—'}</TableCell>
-                        <TableCell className="text-sm">{formatTimeWithZone(record.clock_in) || '—'}</TableCell>
-                        <TableCell className="text-sm">{formatTimeWithZone(record.clock_out) || '—'}</TableCell>
-                        <TableCell>
-                          <AttendanceStatusBadge status={record.attendance_status || 'Absent'} compact />
-                        </TableCell>
-                        <TableCell className="text-sm">
-                          {record.actual_mode || record.work_mode || '—'}
-                        </TableCell>
-                        <TableCell className="text-sm">
-                          {locationStatusLabel(record.location_status)}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">No attendance records for today</p>
-            )}
-          </CardContent>
-          )}
-        </Card>
-      </RoleBasedComponent>
       </TabsContent>
 
       <TabsContent value="leave" className="space-y-6">

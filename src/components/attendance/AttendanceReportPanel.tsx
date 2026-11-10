@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { format, startOfMonth, startOfYear, subDays } from "date-fns";
-import { Calendar, Download, FileText, Loader2, Search } from "lucide-react";
+import { Calendar, Download, FileSpreadsheet, FileText, Loader2, Search } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,8 +23,9 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import apiService from "@/lib/api";
 import { todayWAT } from "@/lib/attendanceUi";
+import { DEPARTMENTS } from "@/constants/departments";
 
-type PeriodPreset = "weekly" | "monthly" | "yearly" | "custom";
+export type PeriodPreset = "weekly" | "monthly" | "yearly" | "custom";
 
 type ReportRow = {
   employee_id?: number;
@@ -44,6 +45,8 @@ type ReportRow = {
   attendance_rate?: number | null;
   location_review_days?: number;
 };
+
+type ExportKind = "pdf" | "xlsx" | "csv";
 
 function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
@@ -77,17 +80,43 @@ function rateLabel(value: number | null | undefined): string {
   return `${value}%`;
 }
 
-export default function AttendanceReportPanel() {
+function friendlyError(error: any, fallback: string): string {
+  const message = String(error?.data?.message || error?.message || "").trim();
+  if (!message) return fallback;
+  if (/SQLSTATE|Undefined column|pgsql|relation |stack trace/i.test(message)) {
+    return fallback;
+  }
+  return message;
+}
+
+type Props = {
+  initialPreset?: PeriodPreset;
+  standalone?: boolean;
+};
+
+export default function AttendanceReportPanel({
+  initialPreset = "weekly",
+  standalone = false,
+}: Props) {
   const { toast } = useToast();
-  const initial = periodForPreset("weekly");
-  const [preset, setPreset] = useState<PeriodPreset>("weekly");
+  const initial = periodForPreset(initialPreset);
+  const [preset, setPreset] = useState<PeriodPreset>(initialPreset);
   const [startDate, setStartDate] = useState(initial.start);
   const [endDate, setEndDate] = useState(initial.end);
-  const [department, setDepartment] = useState("");
+  const [department, setDepartment] = useState("all");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
-  const [exporting, setExporting] = useState<"csv" | "pdf" | null>(null);
+  const [exportKind, setExportKind] = useState<ExportKind>("pdf");
+  const [exporting, setExporting] = useState(false);
   const [report, setReport] = useState<any>(null);
+
+  useEffect(() => {
+    const range = periodForPreset(initialPreset);
+    setPreset(initialPreset);
+    setStartDate(range.start);
+    setEndDate(range.end);
+    setReport(null);
+  }, [initialPreset]);
 
   const rows: ReportRow[] = Array.isArray(report?.by_employee) ? report.by_employee : [];
   const summary = report?.summary ?? {};
@@ -96,11 +125,7 @@ export default function AttendanceReportPanel() {
     const q = search.trim().toLowerCase();
     if (!q) return rows;
     return rows.filter((row) => {
-      const haystack = [
-        row.employee_name,
-        row.employee_code,
-        row.department,
-      ]
+      const haystack = [row.employee_name, row.employee_code, row.department]
         .filter(Boolean)
         .join(" ")
         .toLowerCase();
@@ -120,7 +145,7 @@ export default function AttendanceReportPanel() {
     setLoading(true);
     try {
       const data = await apiService.getAttendanceReport(startDate, endDate, {
-        department: department.trim() || undefined,
+        department: department === "all" ? undefined : department,
       });
       setReport(data);
       if (!Array.isArray(data?.by_employee) || data.by_employee.length === 0) {
@@ -131,9 +156,13 @@ export default function AttendanceReportPanel() {
       }
     } catch (error: any) {
       console.error(error);
+      setReport(null);
       toast({
         title: "Report failed",
-        description: error?.data?.message || error?.message || "Could not load the attendance report.",
+        description: friendlyError(
+          error,
+          "Could not load the attendance report. Please try again.",
+        ),
         variant: "destructive",
       });
     } finally {
@@ -141,43 +170,61 @@ export default function AttendanceReportPanel() {
     }
   };
 
-  const exportFile = async (kind: "csv" | "pdf") => {
-    setExporting(kind);
-    try {
-      const filters = { department: department.trim() || undefined };
-      const blob =
-        kind === "csv"
-          ? await apiService.exportAttendanceReportCsv(startDate, endDate, filters)
-          : await apiService.exportAttendanceReportPdf(startDate, endDate, filters);
-      downloadBlob(blob, `attendance_report_${startDate}_${endDate}.${kind}`);
+  const exportFile = async () => {
+    if (!report) {
       toast({
-        title: kind === "csv" ? "CSV downloaded" : "PDF downloaded",
+        title: "Preview required",
+        description: "Preview the report before downloading.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setExporting(true);
+    try {
+      const filters = { department: department === "all" ? undefined : department };
+      let blob: Blob;
+      let ext: string;
+      if (exportKind === "pdf") {
+        blob = await apiService.exportAttendanceReportPdf(startDate, endDate, filters);
+        ext = "pdf";
+      } else if (exportKind === "xlsx") {
+        blob = await apiService.exportAttendanceReportXlsx(startDate, endDate, filters);
+        ext = "xlsx";
+      } else {
+        blob = await apiService.exportAttendanceReportCsv(startDate, endDate, filters);
+        ext = "csv";
+      }
+      downloadBlob(blob, `attendance_report_${startDate}_${endDate}.${ext}`);
+      toast({
+        title: `${ext.toUpperCase()} downloaded`,
         description: "Export uses the same calculated dataset as the on-screen preview.",
       });
     } catch (error: any) {
       console.error(error);
       toast({
         title: "Export failed",
-        description: error?.message || `Could not download the ${kind.toUpperCase()} report.`,
+        description: friendlyError(
+          error,
+          `Could not download the ${exportKind.toUpperCase()} report.`,
+        ),
         variant: "destructive",
       });
     } finally {
-      setExporting(null);
+      setExporting(false);
     }
   };
 
   return (
     <Card className="border-border/50">
-      <CardHeader className="space-y-1">
-        <CardTitle className="flex items-center gap-2 text-lg">
-          <FileText className="h-5 w-5" />
-          Attendance Reports
-        </CardTitle>
-        <p className="text-sm text-muted-foreground">
-          Preview weekly, monthly, yearly, or custom attendance before exporting CSV or PDF.
-        </p>
-      </CardHeader>
-      <CardContent className="space-y-6">
+      {!standalone && (
+        <CardHeader className="space-y-1">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <FileText className="h-5 w-5" />
+            Attendance Reports
+          </CardTitle>
+        </CardHeader>
+      )}
+      <CardContent className={standalone ? "pt-6 space-y-6" : "space-y-6"}>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
           <div className="space-y-2">
             <Label>Period</Label>
@@ -189,7 +236,7 @@ export default function AttendanceReportPanel() {
                 <SelectItem value="weekly">Weekly</SelectItem>
                 <SelectItem value="monthly">Monthly</SelectItem>
                 <SelectItem value="yearly">Yearly</SelectItem>
-                <SelectItem value="custom">Custom range</SelectItem>
+                <SelectItem value="custom">Custom date range</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -218,13 +265,20 @@ export default function AttendanceReportPanel() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="att-report-dept">Department filter</Label>
-            <Input
-              id="att-report-dept"
-              placeholder="All departments"
-              value={department}
-              onChange={(e) => setDepartment(e.target.value)}
-            />
+            <Label>Department</Label>
+            <Select value={department} onValueChange={setDepartment}>
+              <SelectTrigger>
+                <SelectValue placeholder="All departments" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All departments</SelectItem>
+                {DEPARTMENTS.map((dept) => (
+                  <SelectItem key={dept} value={dept}>
+                    {dept}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="flex items-end">
             <Button onClick={loadReport} disabled={loading} className="w-full gap-2">
@@ -249,22 +303,17 @@ export default function AttendanceReportPanel() {
 
             <div className="rounded-md border border-border/60 bg-muted/30 p-3 text-xs text-muted-foreground space-y-1">
               <p>
-                Period {report.period?.start} to {report.period?.end} ({report.period?.timezone || "Africa/Lagos"}).
-                Calendar days: {report.period?.calendar_days ?? "—"}.
+                Period {report.period?.start} to {report.period?.end} (
+                {report.period?.timezone || "Africa/Lagos"}). Calendar days:{" "}
+                {report.period?.calendar_days ?? "—"}.
               </p>
               <p>
-                Attendance rate uses eligible scheduled working days (scheduled − approved leave − unrecorded days),
-                not raw calendar days. Clock-in without clock-out still counts as present.
+                Attendance rate uses eligible scheduled working days (scheduled − approved leave −
+                unrecorded days). Clock-in without clock-out still counts as present.
               </p>
-              {(summary.days_unrecorded ?? 0) > 0 && (
-                <p>
-                  {summary.days_unrecorded} scheduled day(s) fall before attendance tracking began and are excluded
-                  from absences and the rate denominator.
-                </p>
-              )}
             </div>
 
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
               <div className="relative max-w-sm flex-1">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -274,24 +323,29 @@ export default function AttendanceReportPanel() {
                   onChange={(e) => setSearch(e.target.value)}
                 />
               </div>
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  variant="outline"
-                  className="gap-2"
-                  disabled={!!exporting}
-                  onClick={() => exportFile("csv")}
-                >
-                  {exporting === "csv" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                  Download CSV
-                </Button>
-                <Button
-                  variant="outline"
-                  className="gap-2"
-                  disabled={!!exporting}
-                  onClick={() => exportFile("pdf")}
-                >
-                  {exporting === "pdf" ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
-                  Download PDF
+              <div className="flex flex-wrap items-end gap-2">
+                <div className="space-y-1">
+                  <Label>Export format</Label>
+                  <Select value={exportKind} onValueChange={(v) => setExportKind(v as ExportKind)}>
+                    <SelectTrigger className="w-[160px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pdf">PDF (.pdf)</SelectItem>
+                      <SelectItem value="xlsx">Excel (.xlsx)</SelectItem>
+                      <SelectItem value="csv">CSV (optional)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button className="gap-2" disabled={exporting} onClick={exportFile}>
+                  {exporting ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : exportKind === "xlsx" ? (
+                    <FileSpreadsheet className="h-4 w-4" />
+                  ) : (
+                    <Download className="h-4 w-4" />
+                  )}
+                  Download
                 </Button>
               </div>
             </div>

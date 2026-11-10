@@ -80,12 +80,6 @@ const navigationItems: NavItem[] = [
     roles: ['executive', 'hr_manager', 'corporate_hr'] // Exclude line_manager
   },
   { 
-    title: "Attendance & Leave", 
-    url: "/attendance", 
-    icon: Calendar,
-    permission: "*"
-  },
-  { 
     title: "Payroll", 
     url: "/payroll", 
     icon: NairaIcon,
@@ -145,13 +139,6 @@ const navigationItems: NavItem[] = [
     supervisorAccess: true,
   },
   {
-    title: "Org Attendance",
-    url: "/attendance/org-dashboard",
-    icon: Clock,
-    permission: "*",
-    roles: ['hr_manager', 'corporate_hr', 'executive']
-  },
-  {
     title: "Announcements",
     url: "/announcements",
     icon: MessageSquare,
@@ -163,6 +150,59 @@ const navigationItems: NavItem[] = [
     icon: Bell,
     permission: "*"
   }
+]
+
+const attendanceLeaveItems: NavItem[] = [
+  {
+    title: "My Attendance",
+    url: "/attendance?tab=my-attendance",
+    icon: Clock,
+    permission: "*",
+  },
+  {
+    title: "Leave",
+    url: "/attendance?tab=leave",
+    icon: Calendar,
+    permission: "*",
+  },
+  {
+    title: "Organization Attendance",
+    url: "/attendance/organization",
+    icon: Users,
+    permission: "*",
+    roles: ['line_manager', 'hr_manager', 'corporate_hr', 'executive'],
+  },
+]
+
+const attendanceReportItems: NavItem[] = [
+  {
+    title: "Weekly",
+    url: "/attendance/reports/weekly",
+    icon: FileText,
+    permission: "*",
+    roles: ['general_employee', 'line_manager', 'hr_manager', 'corporate_hr', 'executive', 'finance'],
+  },
+  {
+    title: "Monthly",
+    url: "/attendance/reports/monthly",
+    icon: FileText,
+    permission: "*",
+    roles: ['general_employee', 'line_manager', 'hr_manager', 'corporate_hr', 'executive', 'finance'],
+  },
+  {
+    title: "Yearly",
+    url: "/attendance/reports/yearly",
+    icon: FileText,
+    permission: "*",
+    roles: ['general_employee', 'line_manager', 'hr_manager', 'corporate_hr', 'executive', 'finance'],
+  },
+  {
+    title: "Custom date range",
+    url: "/attendance/reports/custom",
+    icon: FileText,
+    permission: "*",
+    roles: ['general_employee', 'line_manager', 'hr_manager', 'corporate_hr', 'executive', 'finance'],
+  },
 ]
 
 const managementItems: NavItem[] = [
@@ -217,7 +257,22 @@ export function AppSidebar() {
 
   if (!user) return null
 
-  const isActive = (path: string) => currentPath === path
+  const isActive = (path: string) => {
+    const [pathname, query = ""] = path.split("?")
+    if (pathname === "/attendance/organization") {
+      return currentPath === "/attendance/organization" || currentPath === "/attendance/org-dashboard"
+    }
+    if (pathname.startsWith("/attendance/reports")) {
+      return currentPath === pathname
+    }
+    if (pathname === "/attendance") {
+      if (currentPath !== "/attendance") return false
+      const wantLeave = query.includes("tab=leave")
+      const onLeave = location.search.includes("tab=leave")
+      return wantLeave ? onLeave : !onLeave
+    }
+    return currentPath === pathname
+  }
 
   const getNavClasses = (path: string) => {
     return isActive(path) 
@@ -272,6 +327,8 @@ export function AppSidebar() {
     <Sidebar className={isCollapsed ? "w-14" : "w-64"} collapsible="icon">
       <SidebarContent className="bg-card border-r">
         {renderNavGroup(navigationItems, "Main Navigation")}
+        {renderNavGroup(attendanceLeaveItems, "Attendance & Leave")}
+        {renderNavGroup(attendanceReportItems, "Attendance Reports")}
         
         <RoleBasedComponent allowedRoles={['executive', 'hr_manager', 'corporate_hr', 'line_manager']}>
           {renderNavGroup(managementItems, "Management", showManagementGroup)}

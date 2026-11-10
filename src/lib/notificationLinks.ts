@@ -47,7 +47,7 @@ export function resolveNotificationLink(
   if (type.startsWith("early_clockout_request_") || type.startsWith("late_clockin_request_")) {
     if (/_approved$|_rejected$/.test(type)) return "/attendance";
     // pending/submitted → approvers
-    if (isManager) return "/attendance?tab=approvals";
+    if (isManager) return "/approvals/attendance";
     return "/attendance";
   }
 

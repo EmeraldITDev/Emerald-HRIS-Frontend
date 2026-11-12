@@ -61,6 +61,7 @@ import { formatNaira, formatNairaAmount } from "@/lib/currency";
 import { getEmployeePayrollPackage } from "@/lib/payrollCalc";
 import * as XLSX from "xlsx";
 import apiService, { Employee } from "@/lib/api";
+import { API_BASE_URL } from "@/config/api";
 import { useLocation } from "react-router-dom";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import RoleBasedComponent from "@/components/RoleBasedComponent";
@@ -1885,7 +1886,7 @@ export default function Employees() {
 
   const testPhoneUpdate = async (employeeId: number, phoneNumber: string) => {
     try {
-      const response = await fetch(`http://localhost:8000/api/employees-full/${employeeId}`, {
+      const response = await fetch(`${API_BASE_URL}/employees-full/${employeeId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

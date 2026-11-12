@@ -12,13 +12,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Check, X, ShieldCheck, UserCheck, Paperclip } from "lucide-react";
 import { apiService } from "@/lib/api";
+import { API_BASE_URL } from "@/config/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import { canApproveAsLineManager, canHrApproveLeave } from "@/lib/permissions";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-
-const API_BASE = (import.meta.env.VITE_API_URL as string) || "";
 
 const formatDocType = (t?: string) =>
   (t || "document")
@@ -221,7 +220,7 @@ export default function LeaveApprovals() {
                               d.download_url ||
                               d.s3_url ||
                               (rawPath
-                                ? `${API_BASE}/leave-documents/${encodeURIComponent(rawPath)}`
+                                ? `${API_BASE_URL}/leave-documents/${encodeURIComponent(rawPath)}`
                                 : undefined);
                             const filename =
                               d.filename ||

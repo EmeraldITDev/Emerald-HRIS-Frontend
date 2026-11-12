@@ -37,6 +37,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { useAuth } from "@/contexts/AuthContext"
 import { RoleBasedComponent } from "@/components/RoleBasedComponent"
 import apiService, { Employee } from "@/lib/api"
+import { API_ORIGIN } from "@/config/api"
 
 import { LeaveBalanceCard } from "@/components/LeaveBalanceCard"
 import { MyAttendanceRequestsCard } from "@/components/MyAttendanceRequestsCard"
@@ -1660,10 +1661,9 @@ export default function Attendance() {
                           variant="outline"
                           onClick={() => {
                             // Construct download URL
-                            const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
                             // Remove 'public/' prefix if present, as Laravel storage serves from /storage
                             const cleanPath = doc.path?.replace('public/', '') || doc.path
-                            const fileUrl = `${baseUrl}/storage/${cleanPath}`
+                            const fileUrl = `${API_ORIGIN}/storage/${cleanPath}`
                             window.open(fileUrl, '_blank')
                           }}
                           className="ml-2"

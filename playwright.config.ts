@@ -52,14 +52,16 @@ export default defineConfig({
       },
     },
     {
-      command: `npm run dev -- --host 127.0.0.1 --port ${webPort}`,
+      // vite.e2e.config.ts swaps src/config/api.ts for e2e/api.config.ts,
+      // pointing the app at the isolated local API instead of production.
+      command: `npm run dev -- --config vite.e2e.config.ts --host 127.0.0.1 --port ${webPort}`,
       cwd: __dirname,
       url: `http://127.0.0.1:${webPort}`,
       reuseExistingServer: false,
       timeout: 120_000,
       env: {
         ...process.env,
-        VITE_API_URL: `${apiBase}/api`,
+        E2E_API_PORT: apiPort,
       },
     },
   ],

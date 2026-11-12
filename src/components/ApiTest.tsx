@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import apiService, { Employee } from '@/lib/api';
+import { API_BASE_URL } from '@/config/api';
 
 export default function ApiTest() {
   const [isLoading, setIsLoading] = useState(false);
@@ -167,7 +168,7 @@ export default function ApiTest() {
           )}
 
           <div className="text-sm text-muted-foreground">
-            <p><strong>Backend URL:</strong> http://localhost/hris-backend/public/api</p>
+            <p><strong>Backend URL:</strong> {API_BASE_URL}</p>
             <p><strong>Available Endpoints:</strong></p>
             <ul className="list-disc list-inside ml-4 space-y-1">
               <li>GET /test - Test connection</li>

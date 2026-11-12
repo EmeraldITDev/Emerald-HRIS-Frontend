@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAuth } from "@/contexts/AuthContext"
 import { useToast } from "@/hooks/use-toast"
 import apiService, { Employee } from "@/lib/api"
+import { API_ORIGIN } from "@/config/api"
 import { formatNaira } from "@/lib/currency"
 import { getEmployeePayrollPackage } from "@/lib/payrollCalc"
 import { staffIdFromEmployee } from "@/lib/staffId"
@@ -234,8 +235,7 @@ export default function MyProfile() {
     const pic = (employeeData as any).profile_picture_url || employeeData.profile_picture
     if (!pic) return ""
     if (String(pic).startsWith("http") || String(pic).startsWith("data:")) return String(pic)
-    const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:8000"
-    return `${baseUrl}/storage/${pic}`
+    return `${API_ORIGIN}/storage/${pic}`
   }
 
   const getRoleDisplayName = (role: string) => {

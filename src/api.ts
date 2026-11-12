@@ -1,4 +1,4 @@
-const apiUrl = import.meta.env.VITE_API_URL;
+import { API_BASE_URL as apiUrl } from "@/config/api";
 
 export async function getUsers() {
   const res = await fetch(`${apiUrl}/users`);

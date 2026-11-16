@@ -7,7 +7,8 @@
  * vite.e2e.config.ts) so tests hit the isolated local test backend.
  */
 //export const API_ORIGIN = 'http://localhost:8000';
-export const API_ORIGIN = 'https://hris-backend-to3i.onrender.com';
+//export const API_ORIGIN = 'https://hris-backend-to3i.onrender.com'; // Render (rollback)
+export const API_ORIGIN = 'https://hris-api.emeraldcfze.com';
 
 /** Base for API requests — the backend mounts all routes under `/api`. */
 export const API_BASE_URL = `${API_ORIGIN}/api`;

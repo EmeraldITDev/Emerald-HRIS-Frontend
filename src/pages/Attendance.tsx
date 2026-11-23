@@ -46,6 +46,7 @@ import MyWorkRequestsCard from "@/components/attendance/MyWorkRequestsCard"
 import ExceptionRequestForm from "@/components/attendance/ExceptionRequestForm"
 import WFHRequestForm from "@/components/attendance/WFHRequestForm"
 import { canSubmitException, canSubmitWFH, canViewOrgDashboard } from "@/lib/permissions"
+import { countLeaveWorkingDays } from "@/lib/leaveWorkingDays"
 import { SearchableSelect } from "@/components/ui/searchable-select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import EmployeeLeaveBalancesCard from "@/components/EmployeeLeaveBalancesCard"
@@ -304,18 +305,7 @@ export default function Attendance() {
     }
   }
 
-  const calculateDays = () => {
-    if (startDate && endDate) {
-      const start = new Date(startDate)
-      const end = new Date(endDate)
-      const timeDiff = end.getTime() - start.getTime()
-      const dayDiff = Math.ceil(timeDiff / (1000 * 3600 * 24)) + 1
-      return dayDiff > 0 ? dayDiff : 0
-    }
-    return 0
-  }
-
-    const days = calculateDays()
+  const days = countLeaveWorkingDays(startDate, endDate)
   const selectedEmp = employees.find(emp => emp.id?.toString() === selectedEmployee.toString())
   const remainingDays = selectedEmp ? (selectedEmp.vacation_days || 0) : 0
 
@@ -508,19 +498,24 @@ export default function Attendance() {
     }
 
     try {
-      // Calculate leave days
-      const start = new Date(startDate)
-      const end = new Date(endDate)
-      const daysDiff = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1
-      
-      // Check leave balance
+      const daysDiff = countLeaveWorkingDays(startDate, endDate)
+      if (daysDiff < 1) {
+        toast({
+          title: "No working days selected",
+          description: "Leave must include at least one weekday (Monday–Friday). Saturday and Sunday are excluded.",
+          variant: "destructive",
+        })
+        return
+      }
+
+      // Client-side balance hint only — backend remains authoritative.
       const availableDays = selectedEmp?.vacation_days || 18
       const usedDays = 0
-      
+
       if (daysDiff > availableDays - usedDays) {
         toast({
           title: "Insufficient Leave Balance",
-          description: `Available: ${availableDays - usedDays} days, Requested: ${daysDiff} days`,
+          description: `Available: ${availableDays - usedDays} days, Requested: ${daysDiff} working days`,
           variant: "destructive",
         })
         return
@@ -1059,10 +1054,23 @@ export default function Attendance() {
                     </div>
                   </div>
 
-                  {days > 0 && (
-                    <div className="p-3 bg-accent/50 rounded-lg">
-                      <div className="text-sm font-medium">Total Number of Days: {days}</div>
-                      {selectedEmp && (
+                  {startDate && endDate && (
+                    <div className="p-3 bg-accent/50 rounded-lg space-y-1">
+                      <div className="text-sm font-medium">
+                        Leave Duration: {days} working day{days === 1 ? "" : "s"}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {format(new Date(`${startDate}T12:00:00`), "MMM d")}–{format(new Date(`${endDate}T12:00:00`), "MMM d, yyyy")}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        Saturday and Sunday are excluded from your leave entitlement.
+                      </div>
+                      {days < 1 && (
+                        <div className="text-xs text-destructive">
+                          Select dates that include at least one weekday before submitting.
+                        </div>
+                      )}
+                      {selectedEmp && days > 0 && (
                         <div className="text-sm text-muted-foreground">
                           Remaining after approval: {remainingDays - days} days
                         </div>
@@ -1174,7 +1182,11 @@ export default function Attendance() {
                   </div>
                 </div>
 
-                <Button type="submit" className="w-full" disabled={isSubmittingLeave}>
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={isSubmittingLeave || (Boolean(startDate && endDate) && days < 1)}
+                >
                   <Plus className="mr-2 h-4 w-4" />
                   {isSubmittingLeave ? "Submitting…" : "Submit Leave Request"}
                 </Button>
@@ -1404,11 +1416,14 @@ export default function Attendance() {
                     </TableHeader>
                     <TableBody>
                       {filteredRequests.map((request) => {
-                        // Calculate days for display
-                        const start = new Date(request.start_date)
-                        const end = new Date(request.end_date)
-                        const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1
-                        
+                        // Prefer stored days_requested (source of truth). Do not silently
+                        // rewrite historical calendar-day values on the client.
+                        const storedDays = Number(request.days_requested)
+                        const weekdayRecalc = countLeaveWorkingDays(request.start_date, request.end_date)
+                        const displayDays = Number.isFinite(storedDays) ? storedDays : weekdayRecalc
+                        const daysMismatch =
+                          Number.isFinite(storedDays) && storedDays !== weekdayRecalc
+
                         return (
                           <TableRow key={request.id}>
                             {(user?.role === 'hr_manager' || user?.role === 'line_manager' || user?.role === 'corporate_hr' || user?.role === 'executive') && (
@@ -1425,7 +1440,14 @@ export default function Attendance() {
                             <TableCell>{request.leave_type || request.leaveType?.name || 'N/A'}</TableCell>
                             <TableCell>{format(new Date(request.start_date), "MMM dd, yyyy")}</TableCell>
                             <TableCell>{format(new Date(request.end_date), "MMM dd, yyyy")}</TableCell>
-                            <TableCell>{days} day{days > 1 ? 's' : ''}</TableCell>
+                            <TableCell>
+                              {displayDays} day{displayDays === 1 ? "" : "s"}
+                              {daysMismatch && (
+                                <div className="text-[11px] text-amber-700" title={`Weekday recalculation: ${weekdayRecalc}`}>
+                                  Needs review ({weekdayRecalc} working)
+                                </div>
+                              )}
+                            </TableCell>
                             <TableCell>
                               {getStatusBadge(request.status)}
                             </TableCell>

@@ -1,73 +1,87 @@
-# Welcome to your Lovable project
+# Emerald HRIS — Frontend
 
-## Project info
+Web app for Emerald's Human Resource Information System (HRIS): employee records, attendance and leave, payroll and payslips, performance reviews, training, benefits and executive reporting.
 
-**URL**: https://lovable.dev/projects/d5f4f3ae-58dc-49db-87e9-2c05509db51a
+Live at [hris.emeraldcfze.com](https://hris.emeraldcfze.com). Backend API: `hris-backend` (Laravel).
 
-## How can I edit this code?
+## Tech stack
 
-There are several ways of editing your application.
+React 18 · TypeScript · Vite · Tailwind CSS + shadcn/ui · TanStack React Query · React Hook Form + Zod · Recharts · jsPDF · Playwright
 
-**Use Lovable**
+## Getting started
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/d5f4f3ae-58dc-49db-87e9-2c05509db51a) and start prompting.
+Requires Node.js 18+.
 
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+```bash
+npm install
+npm run dev             # http://localhost:8080
 ```
 
-**Edit a file directly in GitHub**
+No `.env` file is needed.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### Backend API URL
 
-**Use GitHub Codespaces**
+The backend URL is set in one place: [`src/config/api.ts`](src/config/api.ts). Edit `API_ORIGIN` there to point the app at a different backend (for example `http://localhost:8000` for a local Laravel server). All requests go to `${API_ORIGIN}/api`.
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## Scripts
 
-## What technologies are used for this project?
+| Command | Description |
+|---|---|
+| `npm run dev` | Start the dev server |
+| `npm run build` | Production build into `dist/` |
+| `npm run preview` | Serve the production build locally |
+| `npm run lint` | Run ESLint |
+| `npm run test:e2e` | Run all Playwright tests in `e2e/` |
+| `npm run test:e2e:performance` | Run the performance-review suites (batches 1–6 and acceptance) |
+| `npm run test:e2e:report` | Open the last Playwright HTML report |
 
-This project is built with:
+## End-to-end tests
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+The Playwright tests never touch production data. [`playwright.config.ts`](playwright.config.ts) starts two servers:
 
-## How can I deploy this project?
+- a Laravel API on port `8010`, backed by SQLite, started from the `hris-backend` repo. That repo must be checked out next to this one, at `../hris-backend`;
+- the Vite dev server on port `8080`, using [`vite.e2e.config.ts`](vite.e2e.config.ts). This config swaps `src/config/api.ts` for [`e2e/api.config.ts`](e2e/api.config.ts), so the app talks to the local test API.
 
-Simply open [Lovable](https://lovable.dev/projects/d5f4f3ae-58dc-49db-87e9-2c05509db51a) and click on Share -> Publish.
+Override the ports with `E2E_API_PORT` and `E2E_WEB_PORT`.
 
-## Can I connect a custom domain to my Lovable project?
+## Modules
 
-Yes, you can!
+- **Dashboards:** HR dashboard, Chairman's View (executive overview), analytics and reports
+- **Employees:** employee records, profiles, documents, bulk CSV import, exits and resignations
+- **Attendance and leave:** clock-in/out, leave requests and balances, manager approvals, organisation dashboard, weekly/monthly/yearly reports
+- **Payroll:** payroll runs and review, gross-salary import, payslips with PDF download
+- **Performance:** review cycles, objectives, review forms, ratings and acknowledgement
+- **Training, benefits and recruitment**
+- **Communication:** announcements, notifications, company policies
+- **Account:** my profile, security and password, settings
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+Access to each module depends on the user's role (see [`src/lib/permissions.ts`](src/lib/permissions.ts) and [`src/constants/roles.ts`](src/constants/roles.ts)).
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+## Project structure
+
+```
+src/
+  pages/        Route-level screens
+  components/   UI components, grouped by module (attendance, payroll, performance, …)
+  contexts/     Auth context
+  hooks/        Shared React hooks
+  lib/          API client, permissions, payroll and performance helpers
+  utils/        CSV import/export and PDF generation
+  constants/    Roles, departments, work locations, company details
+  config/       Backend API URL
+e2e/            Playwright specs and test setup
+docs/           Feature notes and verification reports
+backend/, backend_files/, database/
+                Reference backend code and SQL kept from earlier hand-offs;
+                the live backend is the separate hris-backend repo
+```
+
+## Deployment
+
+Every push to `main` deploys to cPanel through GitHub Actions ([`.github/workflows/deploy-cpanel.yml`](.github/workflows/deploy-cpanel.yml)). The workflow builds the app and uploads the changed files in `dist/` over FTP to `public_html/hris.emeraldcfze.com/`. It reads the FTP login from the secrets `CPANEL_FTP_SERVER`, `CPANEL_FTP_USERNAME` and `CPANEL_FTP_PASSWORD`.
+
+[`public/.htaccess`](public/.htaccess) is copied into `dist/`. It sends every route to `index.html`, so client-side routing works on Apache. It also stops browsers from caching `index.html`, `version.json` and `manifest.json`. Each build writes a new `version.json`, which the app checks so it can tell users when an update is available.
+
+The backend endpoint is defined in [`src/config/api.ts`](src/config/api.ts). Changing it requires rebuilding and deploying the frontend, which a push to `main` does.
+
+`vercel.json` holds the same routing and caching rules for Vercel hosting.

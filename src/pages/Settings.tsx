@@ -14,7 +14,8 @@ import {
   Palette,
   Database,
   Settings as SettingsIcon,
-  ScrollText
+  ScrollText,
+  CalendarDays
 } from "lucide-react"
 import { useTheme } from "next-themes"
 import { useToast } from "@/hooks/use-toast"
@@ -22,6 +23,7 @@ import { useAuth } from "@/contexts/AuthContext"
 import AuditTrailPanel from "@/components/settings/AuditTrailPanel"
 import ProfileSettingsPanel from "@/components/settings/ProfileSettingsPanel"
 import CompanySettingsPanel from "@/components/settings/CompanySettingsPanel"
+import PublicHolidaysPanel from "@/components/settings/PublicHolidaysPanel"
 import { DEFAULT_SETTINGS, loadUserSettings, saveUserSettings, type UserSettings } from "@/lib/userSettings"
 
 export default function Settings() {
@@ -74,7 +76,7 @@ export default function Settings() {
       </div>
 
       <Tabs defaultValue="profile" className="space-y-4">
-        <TabsList className={`grid w-full grid-cols-3 ${canViewAuditTrail ? "lg:grid-cols-7" : "lg:grid-cols-6"}`}>
+        <TabsList className={`grid w-full grid-cols-3 ${canViewAuditTrail ? "lg:grid-cols-8" : "lg:grid-cols-7"}`}>
           <TabsTrigger value="profile">
             <User className="h-4 w-4 mr-2" />
             Profile
@@ -82,6 +84,10 @@ export default function Settings() {
           <TabsTrigger value="company">
             <Building2 className="h-4 w-4 mr-2" />
             Company
+          </TabsTrigger>
+          <TabsTrigger value="holidays">
+            <CalendarDays className="h-4 w-4 mr-2" />
+            Holidays
           </TabsTrigger>
           <TabsTrigger value="notifications">
             <Bell className="h-4 w-4 mr-2" />
@@ -113,6 +119,10 @@ export default function Settings() {
 
         <TabsContent value="company" className="space-y-4">
           <CompanySettingsPanel />
+        </TabsContent>
+
+        <TabsContent value="holidays" className="space-y-4">
+          <PublicHolidaysPanel />
         </TabsContent>
 
         <TabsContent value="notifications" className="space-y-4">

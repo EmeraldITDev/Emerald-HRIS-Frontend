@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Link, Navigate, useSearchParams } from "react-router-dom"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -46,7 +46,8 @@ import MyWorkRequestsCard from "@/components/attendance/MyWorkRequestsCard"
 import ExceptionRequestForm from "@/components/attendance/ExceptionRequestForm"
 import WFHRequestForm from "@/components/attendance/WFHRequestForm"
 import { canSubmitException, canSubmitWFH, canViewOrgDashboard } from "@/lib/permissions"
-import { countLeaveWorkingDays } from "@/lib/leaveWorkingDays"
+import { countLeaveWorkingDays, leaveDayBreakdown, yearsInRange } from "@/lib/leaveWorkingDays"
+import { usePublicHolidays } from "@/hooks/usePublicHolidays"
 import { SearchableSelect } from "@/components/ui/searchable-select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import EmployeeLeaveBalancesCard from "@/components/EmployeeLeaveBalancesCard"
@@ -109,7 +110,8 @@ export default function Attendance() {
   const [startDate, setStartDate] = useState("")
   const [endDate, setEndDate] = useState("")
   const [reason, setReason] = useState("")
-  const [contactDuringLeave, setContactDuringLeave] = useState("")
+  const [handoverContactName, setHandoverContactName] = useState("")
+  const [handoverContactPhone, setHandoverContactPhone] = useState("")
   const [medicalCertificate, setMedicalCertificate] = useState<File | null>(null)
   const [birthCertificate, setBirthCertificate] = useState<File | null>(null)
   const [deathCertificate, setDeathCertificate] = useState<File | null>(null)
@@ -227,6 +229,7 @@ export default function Attendance() {
 
   // Function to fetch leave requests from database
   const fetchLeaveRequests = async () => {
+    localStorage.removeItem('leaveRequests') // left by older versions of this page
     try {
       setIsLoadingLeaveRequests(true)
       const response = await apiService.getLeaveRequests()
@@ -246,22 +249,16 @@ export default function Attendance() {
       setLeaveRequests(requests)
     } catch (error) {
       console.error('Error fetching leave requests:', error)
-      // If API fails, try to get from localStorage as fallback
-      const savedRequests = localStorage.getItem('leaveRequests')
-      if (savedRequests) {
-        setLeaveRequests(JSON.parse(savedRequests))
-      } else {
-        // Ensure it's always an array
-        setLeaveRequests([])
-      }
+      // Keep whatever list is already showing; do not fall back to copies saved in the browser,
+      // which could include requests that never reached the server.
+      toast({
+        title: "Could not load leave requests",
+        description: "Refresh the page to try again.",
+        variant: "destructive",
+      })
     } finally {
       setIsLoadingLeaveRequests(false)
     }
-  }
-
-  // Function to save leave requests to localStorage as backup
-  const saveLeaveRequestsToStorage = (requests: any[]) => {
-    localStorage.setItem('leaveRequests', JSON.stringify(requests))
   }
 
   // Function to fetch leave types from backend
@@ -305,7 +302,22 @@ export default function Attendance() {
     }
   }
 
-  const days = countLeaveWorkingDays(startDate, endDate)
+  // Public holidays for the dates on the form and for every request in the list
+  const holidayYears = useMemo(() => {
+    const years = yearsInRange(startDate, endDate)
+    ;(Array.isArray(leaveRequests) ? leaveRequests : []).forEach((r: { start_date?: string; end_date?: string }) => {
+      years.push(...yearsInRange(r?.start_date, r?.end_date))
+    })
+    years.push(new Date().getFullYear())
+    return years
+  }, [startDate, endDate, leaveRequests])
+  const { holidaysByDate, holidayDates, isReady: holidaysReady } = usePublicHolidays(holidayYears)
+
+  const leaveBreakdown = leaveDayBreakdown(startDate, endDate, holidayDates)
+  const days = leaveBreakdown.workingDays
+  const excludedHolidays = leaveBreakdown.holidayDates
+    .map((d) => holidaysByDate.get(d))
+    .filter((h): h is NonNullable<typeof h> => Boolean(h))
   const selectedEmp = employees.find(emp => emp.id?.toString() === selectedEmployee.toString())
   const remainingDays = selectedEmp ? (selectedEmp.vacation_days || 0) : 0
 
@@ -458,6 +470,15 @@ export default function Attendance() {
       return
     }
 
+    if (!handoverContactName.trim() || !handoverContactPhone.trim()) {
+      toast({
+        title: "Contact during leave required",
+        description: "Enter the name and phone number of the person covering for you while you are on leave.",
+        variant: "destructive",
+      })
+      return
+    }
+
     // Find the leave type ID from the selected leave type name
     const selectedLeaveType = leaveTypes.find(lt => 
       lt.name === leaveType || lt.id?.toString() === leaveType
@@ -498,11 +519,11 @@ export default function Attendance() {
     }
 
     try {
-      const daysDiff = countLeaveWorkingDays(startDate, endDate)
+      const daysDiff = countLeaveWorkingDays(startDate, endDate, holidayDates)
       if (daysDiff < 1) {
         toast({
           title: "No working days selected",
-          description: "Leave must include at least one weekday (Monday–Friday). Saturday and Sunday are excluded.",
+          description: "Leave must include at least one working day. Saturdays, Sundays and public holidays are not counted.",
           variant: "destructive",
         })
         return
@@ -532,10 +553,9 @@ export default function Attendance() {
         formData.append('end_date', endDate)
         formData.append('reason', reason || 'Leave request submitted')
         
-        // Add contact during leave if provided
-        if (contactDuringLeave) {
-          formData.append('contact_during_leave', contactDuringLeave)
-        }
+        // The colleague covering for the employee while they are away
+        formData.append('handover_contact_name', handoverContactName.trim())
+        formData.append('handover_contact_phone', handoverContactPhone.trim())
         
         // Collect all documents into an array
         const documents: File[] = []
@@ -609,6 +629,16 @@ export default function Attendance() {
           });
           return;
         }
+        if (errCode === 'NO_WORKING_DAYS') {
+          toast({
+            title: "No working days selected",
+            description:
+              dbError?.data?.message ||
+              "Leave must include at least one working day. Saturdays, Sundays and public holidays are not counted.",
+            variant: "destructive",
+          });
+          return;
+        }
         if (errCode === 'CIRCULAR_ROUTING_DETECTED') {
           toast({
             title: "Circular approval routing",
@@ -629,35 +659,17 @@ export default function Attendance() {
           return; // Don't fallback to local storage if there's a validation error
         }
         
+        // The request did not reach HR. Say so plainly and keep the form filled in so the
+        // employee can try again; never record it only on this device.
+        const unreachable = !dbError?.status
         toast({
-          title: "Error",
-          description: errorMessage,
+          title: "Leave request not submitted",
+          description: unreachable
+            ? "Could not reach the server. Check your internet connection and try again."
+            : errorMessage,
           variant: "destructive",
         })
-        
-        // Fallback to local state and localStorage only for network errors
-        const newRequest = {
-          id: Date.now(),
-          employee_id: parseInt(selectedEmployee),
-          employee_name: selectedEmp ? `${selectedEmp.first_name} ${selectedEmp.last_name}` : "Unknown",
-          leave_type: selectedLeaveType.name,
-          leave_type_id: selectedLeaveType.id,
-          start_date: startDate,
-          end_date: endDate,
-          status: "Pending",
-          reason: reason,
-          contact_during_leave: contactDuringLeave,
-          days_requested: daysDiff
-        }
-        
-        const updatedRequests = [newRequest, ...leaveRequests]
-        setLeaveRequests(updatedRequests)
-        saveLeaveRequestsToStorage(updatedRequests)
-        
-        toast({
-          title: "Success (Local)",
-          description: `Leave request submitted for ${selectedEmp ? `${selectedEmp.first_name} ${selectedEmp.last_name}` : "Employee"}`,
-        })
+        return
       }
       
       // Reset form
@@ -666,7 +678,8 @@ export default function Attendance() {
       setStartDate("")
       setEndDate("")
       setReason("")
-      setContactDuringLeave("")
+      setHandoverContactName("")
+      setHandoverContactPhone("")
       setMedicalCertificate(null)
       setBirthCertificate(null)
       setDeathCertificate(null)
@@ -933,13 +946,36 @@ export default function Attendance() {
                   )}
 
                   <div className="space-y-2">
-                    <Label htmlFor="contactDuringLeave">Contact During Leave</Label>
-                    <Input
-                      id="contactDuringLeave"
-                      value={contactDuringLeave}
-                      onChange={(e) => setContactDuringLeave(e.target.value)}
-                      placeholder="Phone number or email for emergencies"
-                    />
+                    <Label>Contact During Leave *</Label>
+                    <p className="text-xs text-muted-foreground">
+                      The person covering for you or handling your work while you are away.
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <Label htmlFor="handoverContactName" className="text-xs">Full name</Label>
+                        <Input
+                          id="handoverContactName"
+                          value={handoverContactName}
+                          onChange={(e) => setHandoverContactName(e.target.value)}
+                          placeholder="e.g. Bisi Lawal"
+                          maxLength={255}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor="handoverContactPhone" className="text-xs">Phone number</Label>
+                        <Input
+                          id="handoverContactPhone"
+                          type="tel"
+                          inputMode="tel"
+                          value={handoverContactPhone}
+                          onChange={(e) => setHandoverContactPhone(e.target.value)}
+                          placeholder="e.g. 0803 123 4567"
+                          maxLength={50}
+                          required
+                        />
+                      </div>
+                    </div>
                   </div>
 
                   <RoleBasedComponent allowedRoles={['hr_manager', 'corporate_hr', 'executive']}>
@@ -1063,11 +1099,18 @@ export default function Attendance() {
                         {format(new Date(`${startDate}T12:00:00`), "MMM d")}–{format(new Date(`${endDate}T12:00:00`), "MMM d, yyyy")}
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        Saturday and Sunday are excluded from your leave entitlement.
+                        Saturdays, Sundays and public holidays are not taken from your leave entitlement.
                       </div>
+                      {excludedHolidays.length > 0 && (
+                        <div className="text-xs text-muted-foreground">
+                          Not counted: {excludedHolidays
+                            .map((h) => `${h.name} (${format(new Date(`${h.date}T12:00:00`), "MMM d")})`)
+                            .join(", ")}
+                        </div>
+                      )}
                       {days < 1 && (
                         <div className="text-xs text-destructive">
-                          Select dates that include at least one weekday before submitting.
+                          Select dates that include at least one working day before submitting.
                         </div>
                       )}
                       {selectedEmp && days > 0 && (
@@ -1419,10 +1462,10 @@ export default function Attendance() {
                         // Prefer stored days_requested (source of truth). Do not silently
                         // rewrite historical calendar-day values on the client.
                         const storedDays = Number(request.days_requested)
-                        const weekdayRecalc = countLeaveWorkingDays(request.start_date, request.end_date)
+                        const weekdayRecalc = countLeaveWorkingDays(request.start_date, request.end_date, holidayDates)
                         const displayDays = Number.isFinite(storedDays) ? storedDays : weekdayRecalc
                         const daysMismatch =
-                          Number.isFinite(storedDays) && storedDays !== weekdayRecalc
+                          holidaysReady && Number.isFinite(storedDays) && storedDays !== weekdayRecalc
 
                         return (
                           <TableRow key={request.id}>
@@ -1443,7 +1486,7 @@ export default function Attendance() {
                             <TableCell>
                               {displayDays} day{displayDays === 1 ? "" : "s"}
                               {daysMismatch && (
-                                <div className="text-[11px] text-amber-700" title={`Weekday recalculation: ${weekdayRecalc}`}>
+                                <div className="text-[11px] text-amber-700" title={`Working days (no weekends or public holidays): ${weekdayRecalc}`}>
                                   Needs review ({weekdayRecalc} working)
                                 </div>
                               )}
@@ -1652,7 +1695,26 @@ export default function Attendance() {
                 </div>
               )}
 
-              {selectedLeaveRequest.contact_during_leave && (
+              {(selectedLeaveRequest.handover_contact_name || selectedLeaveRequest.handover_contact_phone) ? (
+                <div>
+                  <Label className="text-sm text-muted-foreground flex items-center gap-2">
+                    <Phone className="h-4 w-4" />
+                    Contact During Leave
+                  </Label>
+                  <div className="mt-1 p-3 bg-muted rounded-lg">
+                    <p className="font-medium">{selectedLeaveRequest.handover_contact_name || "Name not given"}</p>
+                    {selectedLeaveRequest.handover_contact_phone && (
+                      <a
+                        href={`tel:${selectedLeaveRequest.handover_contact_phone.replace(/\s+/g, "")}`}
+                        className="text-sm text-primary hover:underline"
+                      >
+                        {selectedLeaveRequest.handover_contact_phone}
+                      </a>
+                    )}
+                  </div>
+                </div>
+              ) : selectedLeaveRequest.contact_during_leave && (
+                // Requests made before the name/phone fields existed
                 <div>
                   <Label className="text-sm text-muted-foreground flex items-center gap-2">
                     <Phone className="h-4 w-4" />
@@ -1701,6 +1763,8 @@ export default function Attendance() {
 
               {(!selectedLeaveRequest.documents || !Array.isArray(selectedLeaveRequest.documents) || selectedLeaveRequest.documents.length === 0) && 
                !selectedLeaveRequest.contact_during_leave && 
+               !selectedLeaveRequest.handover_contact_name && 
+               !selectedLeaveRequest.handover_contact_phone && 
                !selectedLeaveRequest.reason && (
                 <div className="text-center py-4 text-muted-foreground text-sm">
                   No additional information available

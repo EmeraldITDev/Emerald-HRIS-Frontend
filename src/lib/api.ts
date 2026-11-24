@@ -188,6 +188,9 @@ export interface LeaveRequest {
   end_date: string;
   days_requested: number;
   reason?: string;
+  contact_during_leave?: string;
+  handover_contact_name?: string;
+  handover_contact_phone?: string;
   status: string;
   approved_by?: number;
   approved_at?: string;
@@ -195,6 +198,14 @@ export interface LeaveRequest {
   rejection_reason?: string;
   created_at?: string;
   updated_at?: string;
+}
+
+export interface PublicHoliday {
+  id: number;
+  date: string; // YYYY-MM-DD
+  name: string;
+  is_standard: boolean;
+  is_estimated: boolean;
 }
 
 export interface PayrollRecord {
@@ -886,6 +897,38 @@ class ApiService {
     });
   }
 
+  // Public holidays — not charged as leave days. Standard ones are added on first view of a year.
+  async getPublicHolidays(year: number): Promise<PublicHoliday[]> {
+    const response = await this.request<{ success: boolean; data: PublicHoliday[] }>(`/public-holidays?year=${year}`);
+    return Array.isArray(response?.data) ? response.data : [];
+  }
+
+  // Changes return how many leave requests awaiting approval were recounted.
+  async createPublicHoliday(data: { date: string; name: string }): Promise<{ data: PublicHoliday; pending_requests_recounted?: number }> {
+    return this.request('/public-holidays', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updatePublicHoliday(id: number, data: { date: string; name: string }): Promise<{ data: PublicHoliday; pending_requests_recounted?: number }> {
+    return this.request(`/public-holidays/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deletePublicHoliday(id: number): Promise<{ pending_requests_recounted?: number }> {
+    return this.request(`/public-holidays/${id}`, { method: 'DELETE' });
+  }
+
+  async restoreStandardPublicHolidays(year: number): Promise<{ restored: number; pending_requests_recounted?: number }> {
+    return this.request('/public-holidays/restore-standard', {
+      method: 'POST',
+      body: JSON.stringify({ year }),
+    });
+  }
+
   // Self-service leave submit — no employee_id needed; backend uses authed user.
   async submitLeaveSelf(data: {
     leave_type_id: number;
@@ -893,6 +936,8 @@ class ApiService {
     end_date: string;
     reason?: string;
     contact_during_leave?: string;
+    handover_contact_name?: string;
+    handover_contact_phone?: string;
   }): Promise<{ message: string }> {
     return this.request<{ message: string }>('/leave/submit-self', {
       method: 'POST',

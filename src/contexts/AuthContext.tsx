@@ -90,7 +90,8 @@ const rolePermissions: Record<UserRole, string[]> = {
     'payroll.view_own',
     'benefits.view',
     'training.view',
-    'reports.view'
+    'reports.view',
+    'system.controls' // Settings in the sidebar (public holidays, audit trail)
   ],
   line_manager: [
     'dashboard.view',

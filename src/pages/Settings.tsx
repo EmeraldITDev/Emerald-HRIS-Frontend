@@ -25,6 +25,7 @@ import ProfileSettingsPanel from "@/components/settings/ProfileSettingsPanel"
 import CompanySettingsPanel from "@/components/settings/CompanySettingsPanel"
 import PublicHolidaysPanel from "@/components/settings/PublicHolidaysPanel"
 import { DEFAULT_SETTINGS, loadUserSettings, saveUserSettings, type UserSettings } from "@/lib/userSettings"
+import { apiService } from "@/lib/api"
 
 export default function Settings() {
   const { toast } = useToast()
@@ -43,6 +44,41 @@ export default function Settings() {
   useEffect(() => {
     setSettings(loadUserSettings(user?.id))
   }, [user?.id])
+
+  // The email switch is stored on the server (it decides whether emails are sent);
+  // the other preferences on this page are kept in this browser.
+  useEffect(() => {
+    if (!user?.id) return
+    let cancelled = false
+    apiService
+      .getNotificationPreferences()
+      .then((res) => {
+        const enabled = res?.data?.email_enabled
+        if (!cancelled && typeof enabled === "boolean") {
+          setSettings((prev) => ({ ...prev, notifications: { ...prev.notifications, email: enabled } }))
+        }
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [user?.id])
+
+  const saveNotificationPreferences = async () => {
+    setLoading(true)
+    try {
+      await apiService.updateNotificationPreferences({ email_enabled: settings.notifications.email })
+    } catch {
+      setLoading(false)
+      toast({
+        title: "Could not save",
+        description: "Your email preference could not be saved. Please try again.",
+        variant: "destructive"
+      })
+      return
+    }
+    handleSave("Notification")
+  }
 
   const update = <K extends keyof UserSettings>(section: K, patch: Partial<UserSettings[K]>) => {
     setSettings((prev) => ({ ...prev, [section]: { ...prev[section], ...patch } }))
@@ -134,7 +170,7 @@ export default function Settings() {
             <CardContent className="space-y-6">
               <div className="space-y-4">
                 {[
-                  { key: "email", label: "Email Notifications", hint: "Receive notifications via email" },
+                  { key: "email", label: "Email Notifications", hint: "Also email me about approvals, decisions and reminders. Account and password emails are always sent." },
                   { key: "onboarding", label: "New Employee Onboarding", hint: "Notify when new employees join" },
                   { key: "leaveRequests", label: "Leave Requests", hint: "Notify about pending leave requests" },
                   { key: "payrollReminders", label: "Payroll Reminders", hint: "Remind about payroll deadlines" },
@@ -153,7 +189,7 @@ export default function Settings() {
                   </div>
                 ))}
               </div>
-              <Button onClick={() => handleSave("Notification")} disabled={loading}>
+              <Button onClick={saveNotificationPreferences} disabled={loading}>
                 Save Preferences
               </Button>
             </CardContent>

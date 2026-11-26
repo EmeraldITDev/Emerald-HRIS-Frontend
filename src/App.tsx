@@ -3,10 +3,11 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "next-themes";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import Layout from "./components/Layout";
 import Login from "./pages/Login";
+import SetPassword from "./pages/SetPassword";
 import Dashboard from "./pages/Dashboard";
 import Employees from "./pages/Employees";
 import Attendance from "./pages/Attendance";
@@ -58,8 +59,10 @@ const AppContent = () => {
 
   // Protected Route Component - defined inside AppContent to ensure it's within AuthProvider
   const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+    const location = useLocation();
     if (!isAuthenticated) {
-      return <Navigate to="/login" replace />;
+      // Remember the page (e.g. a link from an email) so sign-in can return to it.
+      return <Navigate to="/login" replace state={{ from: `${location.pathname}${location.search}` }} />;
     }
     
     return <>{children}</>;
@@ -70,6 +73,7 @@ const AppContent = () => {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/set-password" element={<SetPassword />} />
           <Route path="/*" element={
             <ProtectedRoute>
               <Layout>

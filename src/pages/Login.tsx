@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,8 +11,18 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { toast } from '@/hooks/use-toast';
 
+/** Only same-app paths, so a crafted link cannot send people to another site. */
+function safeReturnPath(from: unknown): string {
+  if (typeof from !== 'string' || !from.startsWith('/') || from.startsWith('//')) return '/';
+  if (from.startsWith('/login') || from.startsWith('/set-password')) return '/';
+  return from;
+}
+
 const Login = () => {
-  const [email, setEmail] = useState('');
+  const location = useLocation();
+  const navState = (location.state ?? {}) as { from?: unknown; passwordSet?: boolean; email?: string };
+  const returnTo = safeReturnPath(navState.from);
+  const [email, setEmail] = useState(typeof navState.email === 'string' ? navState.email : '');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -24,7 +34,7 @@ const Login = () => {
   const [otp, setOtp] = useState('');
 
   if (isAuthenticated) {
-    return <Navigate to="/" replace />;
+    return <Navigate to={returnTo} replace />;
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -138,6 +148,12 @@ const Login = () => {
                   </Button>
                 </div>
               </div>
+
+              {navState.passwordSet && !error && (
+                <Alert>
+                  <AlertDescription>Your password has been set. Sign in with your new password.</AlertDescription>
+                </Alert>
+              )}
 
               {error && (
                 <Alert variant="destructive">

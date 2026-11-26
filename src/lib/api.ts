@@ -603,6 +603,7 @@ class ApiService {
       temporary_password: string;
       role: string;
       must_change_password: boolean;
+      setup_email_sent?: boolean;
     };
   }> {
     return this.request<{ 
@@ -613,6 +614,7 @@ class ApiService {
         temporary_password: string;
         role: string;
         must_change_password: boolean;
+        setup_email_sent?: boolean;
       };
     }>('/employees-full', {
       method: 'POST',
@@ -987,6 +989,18 @@ class ApiService {
     });
   }
 
+  /** Public: set a password from the one-time link in a welcome or reset email. */
+  async setPasswordFromLink(data: {
+    token: string;
+    password: string;
+    password_confirmation: string;
+  }): Promise<{ message: string; email?: string }> {
+    return this.request<{ message: string; email?: string }>('/auth/set-password', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
   async resetUserPassword(userId: number, employeeId: number): Promise<{
     message: string;
     user_credentials: {
@@ -994,6 +1008,7 @@ class ApiService {
       temporary_password: string;
       role: string;
       must_change_password: boolean;
+      setup_email_sent?: boolean;
     };
   }> {
     return this.request<{
@@ -1003,6 +1018,7 @@ class ApiService {
         temporary_password: string;
         role: string;
         must_change_password: boolean;
+        setup_email_sent?: boolean;
       };
     }>(`/auth/reset-user-password/${userId}`, {
       method: 'POST',
@@ -1351,6 +1367,15 @@ class ApiService {
   // ========== Notifications ==========
   async getNotifications(per_page: number = 15, page: number = 1): Promise<any> {
     return this.request(`/notifications?per_page=${per_page}&page=${page}`);
+  }
+  async getNotificationPreferences(): Promise<{ success: boolean; data: { email_enabled: boolean } }> {
+    return this.request('/notifications/preferences');
+  }
+  async updateNotificationPreferences(prefs: { email_enabled: boolean }): Promise<{ success: boolean; data: { email_enabled: boolean } }> {
+    return this.request('/notifications/preferences', {
+      method: 'PUT',
+      body: JSON.stringify(prefs),
+    });
   }
   async getUnreadNotificationCount(): Promise<{ unread_count: number }> {
     return this.request('/notifications/unread-count');

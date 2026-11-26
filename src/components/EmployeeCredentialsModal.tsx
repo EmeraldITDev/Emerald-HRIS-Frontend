@@ -12,6 +12,8 @@ interface EmployeeCredentialsModalProps {
     email: string;
     temporary_password: string;
     role: string;
+    /** True when the backend queued a "set your password" email to this address. */
+    setup_email_sent?: boolean;
   } | null;
   employeeName: string;
   onClose: () => void;
@@ -74,6 +76,12 @@ export const EmployeeCredentialsModal: React.FC<EmployeeCredentialsModalProps> =
             </div>
           </div>
         </div>
+
+        {credentials.setup_email_sent && (
+          <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg p-3 mb-4 text-sm text-green-800 dark:text-green-200">
+            We also emailed {credentials.email} a link to choose their own password. Share the temporary password only if the email doesn't arrive.
+          </div>
+        )}
 
         <div className="space-y-4">
           <div className="space-y-2">

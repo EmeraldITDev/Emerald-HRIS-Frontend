@@ -1664,9 +1664,11 @@ export default function Employees() {
         });
       } catch (error) {
         console.error("Error resetting password:", error);
+        // The server explains refusals (not allowed, former employee, wrong account).
+        const serverMessage = (error as { data?: { message?: string } } | undefined)?.data?.message;
         toast({
           title: "Reset Failed",
-          description: "Failed to reset password. Please try again.",
+          description: serverMessage || "Failed to reset password. Please try again.",
           variant: "destructive",
         });
       }
